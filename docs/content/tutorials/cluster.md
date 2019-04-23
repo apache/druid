@@ -24,7 +24,7 @@ title: "Clustering"
 
 # Clustering
 
-Druid is designed to be deployed as a scalable, fault-tolerant cluster.
+Apache Druid (incubating) is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
 your needs. 

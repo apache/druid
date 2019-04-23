@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
+title: "Apache Druid (incubating) vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
   ~ under the License.
   -->
 
-# Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)
+# Apache Druid (incubating) vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)
 
 Druid is highly optimized for scans and aggregations, it supports arbitrarily deep drill downs into data sets. This same functionality 
 is supported in key/value stores in 2 ways:

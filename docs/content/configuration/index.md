@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Configuration Reference"
+title: "Apache Druid (incubating) Configuration Reference"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Configuration Reference"
   ~ under the License.
   -->
 
-# Configuration Reference
+# Apache Druid (incubating) Configuration Reference
 
 This page documents all of the configuration properties for each Druid service type.
 
@@ -32,7 +32,7 @@ This page documents all of the configuration properties for each Druid service t
     * [JVM Configuration Best Practices](#jvm-configuration-best-practices)
     * [Extensions](#extensions)
     * [Modules](#modules)
-    * [Zookeeper](#zookeper)
+    * [Zookeeper](#zookeeper)
     * [Exhibitor](#exhibitor)
     * [TLS](#tls)
     * [Authentication & Authorization](#authentication-and-authorization)

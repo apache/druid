@@ -237,6 +237,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectPadFamily() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "LPAD('foo', 5, 'x'),\n"
+        + "LPAD('foo', 2, 'x'),\n"
+        + "LPAD('foo', 5),\n"
+        + "RPAD('foo', 5, 'x'),\n"
+        + "RPAD('foo', 2, 'x'),\n"
+        + "RPAD('foo', 5),\n"
+        + "COUNT(*)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .postAggregators(
+                      expressionPostAgg("p0", "'xxfoo'"),
+                      expressionPostAgg("p1", "'fo'"),
+                      expressionPostAgg("p2", "'  foo'"),
+                      expressionPostAgg("p3", "'fooxx'"),
+                      expressionPostAgg("p4", "'fo'"),
+                      expressionPostAgg("p5", "'foo  '")
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"xxfoo", "fo", "  foo", "fooxx", "fo", "foo  ", 6L}
+        )
+    );
+  }
+
+
+  @Test
   public void testExplainSelectConstantExpression() throws Exception
   {
     testQuery(

@@ -18,7 +18,8 @@
   -->
 
 # IntelliJ Setup
-This document contains some examples and instructions on how to get IntelliJ setup to run local debugging and test setups of Druid.
+This document contains some examples and instructions on how to get IntelliJ setup to run local debugging and test
+setups of Druid.
 
 ## Project SDK
 

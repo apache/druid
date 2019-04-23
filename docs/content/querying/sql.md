@@ -36,7 +36,7 @@ Built-in SQL is an <a href="../development/experimental.html">experimental</a> f
 subject to change.
 </div>
 
-Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
+Apache Druid (incubating) SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
 parser and planner based on [Apache Calcite](https://calcite.apache.org/). Druid SQL translates SQL into native Druid
 queries on the query Broker (the first process you query), which are then passed down to data processes as native Druid
 queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
@@ -198,6 +198,9 @@ String functions accept strings, and return a type appropriate to the function.
 |`UPPER(expr)`|Returns expr in all uppercase.|
 |`REVERSE(expr)`|Reverses expr.|
 |`REPEAT(expr, [N])`|Repeats expr N times|
+|`LPAD(expr, length[, chars])`|Returns a string of "length" from "expr" left-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
+|`RPAD(expr, length[, chars])`|Returns a string of "length" from "expr" right-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
+
 
 ### Time functions
 

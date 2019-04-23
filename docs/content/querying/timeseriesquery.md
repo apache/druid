@@ -68,7 +68,7 @@ There are 7 main parts to a timeseries query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "timeseries"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
+|queryType|This String should always be "timeseries"; this is the first thing Apache Druid (incubating) looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
 |descending|Whether to make descending ordered result. Default is `false`(ascending).|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|

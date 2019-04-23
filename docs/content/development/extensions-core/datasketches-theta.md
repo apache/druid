@@ -24,7 +24,7 @@ title: "DataSketches Theta Sketch module"
 
 # DataSketches Theta Sketch module
 
-This module provides Druid aggregators based on Theta sketch from [datasketches](http://datasketches.github.io/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc. 
+This module provides Apache Druid (incubating) aggregators based on Theta sketch from [datasketches](http://datasketches.github.io/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc. 
 At ingestion time, this aggregator creates the Theta sketch objects which get stored in Druid segments. Logically speaking, a Theta sketch object can be thought of as a Set data structure. At query time, sketches are read and aggregated (set unioned) together. In the end, by default, you receive the estimate of the number of unique entries in the sketch object. Also, you can use post aggregators to do union, intersection or difference on sketch columns in the same row. 
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using the same. It will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 

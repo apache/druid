@@ -42,8 +42,10 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
@@ -600,6 +602,33 @@ public class ExpressionsTest extends CalciteTestBase
         "  hey ther"
     );
   }
+
+  @Test
+  public void testPad()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new LPadOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("x")
+        ),
+        DruidExpression.fromExpression("lpad(\"s\",5,'x')"),
+        "xxfoo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RPadOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("x")
+        ),
+        DruidExpression.fromExpression("rpad(\"s\",5,'x')"),
+        "fooxx"
+    );
+  }
+
 
   @Test
   public void testTimeFloor()

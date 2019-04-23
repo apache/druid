@@ -24,7 +24,7 @@ title: "Post-Aggregations"
 
 # Post-Aggregations
 
-Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
+Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Apache Druid (incubating). If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.
 

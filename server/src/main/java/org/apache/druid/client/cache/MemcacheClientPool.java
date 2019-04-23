@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import net.spy.memcached.MemcachedClientIF;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.logger.Logger;
-import sun.misc.Cleaner;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -93,16 +93,16 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     private final AtomicInteger count = new AtomicInteger(0);
     private final MemcachedClientIF clientIF;
     /**
-     * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+     * The point of cleanable is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
      * to be used directly.
      */
     @SuppressWarnings("unused")
-    private final Cleaner cleaner;
+    private final Cleaners.Cleanable cleanable;
 
     private CountingHolder(final MemcachedClientIF clientIF)
     {
       this.clientIF = clientIF;
-      cleaner = Cleaner.create(this, new ClientLeakNotifier(count, clientIF));
+      cleanable = Cleaners.register(this, new ClientLeakNotifier(count, clientIF));
     }
   }
 

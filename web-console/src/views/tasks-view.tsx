@@ -31,6 +31,7 @@ import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
+  booleanCustomTableFilter,
   countBy,
   formatDuration,
   getDruidErrorMessage, LocalStorageKeys,
@@ -493,7 +494,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: 'status',
+            accessor: (row) => { return {status: row.status, created_time: row.created_time}; },
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
@@ -521,9 +522,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
-            sortMethod: (status1: string, status2: string) => {
+            sortMethod: (d1, d2) => {
               const statusRanking: any = this.statusRanking;
-              return statusRanking[status1] - statusRanking[status2];
+              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
+            },
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.status.status);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },

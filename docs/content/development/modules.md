@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Extending Druid With Custom Modules"
+title: "Extending Apache Druid (incubating) With Custom Modules"
 ---
 
 <!--

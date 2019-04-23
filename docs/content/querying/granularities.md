@@ -39,7 +39,7 @@ Supported granularity strings are: `all`, `none`, `second`, `minute`, `fifteen_m
 
 #### Example:
 
-Suppose you have data below stored in Druid with millisecond ingestion granularity,
+Suppose you have data below stored in Apache Druid (incubating) with millisecond ingestion granularity,
 
 ``` json
 {"timestamp": "2013-08-31T01:02:33Z", "page": "AAA", "language" : "en"}

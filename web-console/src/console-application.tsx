@@ -127,7 +127,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = datasource;
+    this.datasource = `"${datasource}"`;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
     this.resetInitialsDelay();

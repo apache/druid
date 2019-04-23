@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Expressions"
+title: "Apache Druid (incubating) Expressions"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Druid Expressions"
   ~ under the License.
   -->
 
-# Druid Expressions
+# Apache Druid (incubating) Expressions
 
 <div class="note info">
 This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to have significant inefficiencies.
@@ -85,6 +85,8 @@ The following built-in functions are available.
 |upper|upper(expr) converts a string to uppercase|
 |reverse|reverse(expr) reverses a string|
 |repeat|repeat(expr, N) repeats a string N times|
+|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
+|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
 
 ## Time functions
 

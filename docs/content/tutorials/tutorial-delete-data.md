@@ -26,7 +26,7 @@ title: "Tutorial: Deleting data"
 
 This tutorial demonstrates how to delete existing data.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in 
+For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
 Completing [Tutorial: Configuring retention](../tutorials/tutorial-retention.html) first is highly recommended, as we will be using retention rules in this tutorial.

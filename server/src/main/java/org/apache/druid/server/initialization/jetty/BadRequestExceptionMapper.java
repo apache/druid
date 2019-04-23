@@ -17,24 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom;
+package org.apache.druid.server.initialization.jetty;
 
-import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.ColumnValueSelector;
+import com.google.common.collect.ImmutableMap;
 
-import java.nio.ByteBuffer;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
-public final class BloomFilterMergeBufferAggregator extends BaseBloomFilterBufferAggregator<ColumnValueSelector<ByteBuffer>>
+@Provider
+public class BadRequestExceptionMapper implements ExceptionMapper<BadRequestException>
 {
-  public BloomFilterMergeBufferAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries)
-  {
-    super(selector, maxNumEntries);
-  }
-
   @Override
-  public void bufferAdd(ByteBuffer buf)
+  public Response toResponse(BadRequestException exception)
   {
-    ByteBuffer other = selector.getObject();
-    BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
+    return Response.status(Status.BAD_REQUEST)
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of("error", exception.getMessage()))
+                   .build();
   }
 }
