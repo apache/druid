@@ -256,7 +256,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           try {
             return jsonMapper.readValue(StreamSupport.stream(
                 handle.createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
                         getSegmentsTable()
                     )
@@ -267,7 +267,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 .map(ByteArrayMapper.FIRST)
                 .spliterator(), false
             ).findFirst().orElseThrow(
-                () -> new UnknownSegmentIdException(String.format("Cannot find segment id [%s]", segmentId))
+                () -> new UnknownSegmentIdException(StringUtils.format("Cannot find segment id [%s]", segmentId))
             ), DataSegment.class);
           }
           catch (IOException e) {
