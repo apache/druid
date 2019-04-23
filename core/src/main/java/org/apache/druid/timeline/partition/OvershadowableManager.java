@@ -196,6 +196,8 @@ public class OvershadowableManager<T extends Overshadowable<T>>
         // visible which overshadows the current visible one.
         findOvershadowedBy(aug, State.VISIBLE)
             .forEach(entry -> transitPartitionChunkState(entry.getValue(), State.VISIBLE, State.OVERSHADOWED));
+        findOvershadowedBy(aug, State.STANDBY)
+            .forEach(entry -> transitPartitionChunkState(entry.getValue(), State.STANDBY, State.OVERSHADOWED));
         transitPartitionChunkState(aug, State.STANDBY, State.VISIBLE);
       }
     }

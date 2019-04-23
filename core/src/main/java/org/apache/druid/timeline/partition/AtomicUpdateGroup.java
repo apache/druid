@@ -41,13 +41,14 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
 
   public void add(PartitionChunk<T> chunk)
   {
-    if (isFull()) {
-      throw new IAE("Can't add more chunk[%s] to atomicUpdateGroup[%s]", chunk, chunks);
-    }
-    if (!isSameAtomicUpdateGroup(chunks.get(0), chunk)) {
-      throw new IAE("Can't add chunk[%s] to a different atomicUpdateGroup[%s]", chunk, chunks);
-    }
-    if (replaceChunkWith(chunk) == null) {
+    final PartitionChunk<T> existing = replaceChunkWith(chunk);
+    if (existing == null) {
+      if (isFull()) {
+        throw new IAE("Can't add more chunk[%s] to atomicUpdateGroup[%s]", chunk, chunks);
+      }
+      if (!isSameAtomicUpdateGroup(chunks.get(0), chunk)) {
+        throw new IAE("Can't add chunk[%s] to a different atomicUpdateGroup[%s]", chunk, chunks);
+      }
       chunks.add(chunk);
     }
   }

@@ -1912,6 +1912,56 @@ public class VersionedIntervalTimelineTest
     );
   }
 
+  @Test
+  public void testAddSameChunkToFullAtomicUpdateGroup()
+  {
+    timeline = makeStringIntegerTimeline();
+    final Interval interval = Intervals.of("2019-01-01/2019-01-02");
+    add(interval, "0", makeNumbered(0, 0));
+    add(interval, "0", makeNumberedOverwriting(0, 0, 0, 1, 1, 1));
+    add(interval, "0", makeNumbered(0, 1));
+
+    final Set<TimelineObjectHolder<String, OvershadowableInteger>> overshadowed = timeline.findFullyOvershadowed();
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new TimelineObjectHolder<>(
+                interval,
+                "0",
+                new PartitionHolder<>(ImmutableList.of(makeNumbered(0, 1)))
+            )
+        ),
+        overshadowed
+    );
+  }
+
+  @Test
+  public void testOvershadowMultipleStandbyAtomicUpdateGroup()
+  {
+    timeline = makeStringIntegerTimeline();
+    final Interval interval = Intervals.of("2019-01-01/2019-01-02");
+    add(interval, "0", makeNumberedOverwriting(0, 0, 0, 1, 1, 2));
+    add(interval, "0", makeNumberedOverwriting(1, 0, 0, 1, 2, 2));
+    add(interval, "0", makeNumberedOverwriting(2, 0, 0, 1, 3, 2)); // <-- full atomicUpdateGroup
+    add(interval, "0", makeNumberedOverwriting(3, 1, 0, 1, 3, 2)); // <-- full atomicUpdateGroup
+
+    final Set<TimelineObjectHolder<String, OvershadowableInteger>> overshadowed = timeline.findFullyOvershadowed();
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new TimelineObjectHolder<>(
+                interval,
+                "0",
+                new PartitionHolder<>(
+                    ImmutableList.of(
+                        makeNumberedOverwriting(0, 0, 0, 1, 1, 2),
+                        makeNumberedOverwriting(1, 0, 0, 1, 2, 2)
+                    )
+                )
+            )
+        ),
+        overshadowed
+    );
+  }
+
   // TODO: test if the middle segment is missing (B among A <- B <- C)
 
   // TODO: test fall back when the middle segment is missing
