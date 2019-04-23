@@ -113,15 +113,15 @@ public class ImmutableDruidDataSource
   }
 
   /**
-   * This method finds the fully overshadowed segments in this datasource
+   * This method finds the overshadowed segments in this datasource
    *
-   * @return set of overshadowed segments
+   * @return set of overshadowed segment ids
    */
-  public Set<SegmentId> getFullyOvershadowedSegments()
+  public Set<SegmentId> determineOvershadowedSegments()
   {
     final Collection<DataSegment> segments = this.getSegments();
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
-        segments);
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline
+        .buildTimelines(segments);
 
     final Set<SegmentId> overshadowedSegments = new HashSet<>();
     for (DataSegment dataSegment : segments) {

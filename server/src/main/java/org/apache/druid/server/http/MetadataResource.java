@@ -163,23 +163,10 @@ public class MetadataResource
     final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
     if (includeOvershadowedStatus != null) {
-      final Set<SegmentId> overshadowedSegments = new HashSet<>();
-      for (ImmutableDruidDataSource dataSource : druidDataSources) {
-        overshadowedSegments.addAll(dataSource.getFullyOvershadowedSegments());
-      }
-      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments.map(segment -> new SegmentWithOvershadowedStatus(
-          segment,
-          overshadowedSegments.contains(segment.getId())
-      ));
-
-      final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = findAuthorizedSegmentWithOvershadowedStatus(
           req,
-          segmentsWithOvershadowedStatus::iterator,
-          raGenerator,
-          authorizerMapper
+          druidDataSources,
+          metadataSegments
       );
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
@@ -198,6 +185,34 @@ public class MetadataResource
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
     }
+  }
+
+  private Iterable<SegmentWithOvershadowedStatus> findAuthorizedSegmentWithOvershadowedStatus(
+      HttpServletRequest req,
+      Collection<ImmutableDruidDataSource> druidDataSources,
+      Stream<DataSegment> metadataSegments
+  )
+  {
+    final Set<SegmentId> overshadowedSegments = new HashSet<>();
+    for (ImmutableDruidDataSource dataSource : druidDataSources) {
+      overshadowedSegments.addAll(dataSource.determineOvershadowedSegments());
+    }
+    final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
+        .map(segment -> new SegmentWithOvershadowedStatus(
+            segment,
+            overshadowedSegments.contains(segment.getId())
+        ));
+
+    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
+
+    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        segmentsWithOvershadowedStatus::iterator,
+        raGenerator,
+        authorizerMapper
+    );
+    return authorizedSegments;
   }
 
   @GET

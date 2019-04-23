@@ -139,8 +139,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
   private Set<DataSegment> determineOvershadowedSegments(DruidCoordinatorRuntimeParams params)
   {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
-        params.getAvailableSegments());
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline
+        .buildTimelines(params.getAvailableSegments());
     Set<DataSegment> overshadowed = new HashSet<>();
     for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
