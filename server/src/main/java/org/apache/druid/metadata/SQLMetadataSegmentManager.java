@@ -79,7 +79,6 @@ import java.util.stream.StreamSupport;
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
-  private static final Interval FOREVER = Intervals.of("0000-01-01/3000-01-01");
 
   /**
    * Use to synchronize {@link #start()}, {@link #stop()}, {@link #poll()}, and {@link #isStarted()}. These methods
@@ -219,7 +218,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource)
+  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Interval interval)
   {
     return connector.inReadOnlyTransaction(
         (handle, status) -> VersionedIntervalTimeline.forSegments(
@@ -227,12 +226,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 handle
                     .createQuery(
                         StringUtils.format(
-                            "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                            getSegmentsTable()
+                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start >= :start AND %2$send%2$s <= :end",
+                            getSegmentsTable(), connector.getQuoteString()
                         )
                     )
                     .setFetchSize(connector.getStreamingFetchSize())
                     .bind("dataSource", dataSource)
+                    .bind("start", interval.getStart().toString())
+                    .bind("end", interval.getEnd().toString())
                     .map(ByteArrayMapper.FIRST)
                     .iterator(),
                 payload -> {
@@ -244,8 +245,34 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                   }
                 }
             )
-
         )
+    );
+  }
+
+  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Collection<String> segmentIds) {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> VersionedIntervalTimeline.forSegments(segmentIds.stream().map(segmentId -> {
+          try {
+            return jsonMapper.readValue(StreamSupport.stream(
+                handle.createQuery(
+                    String.format(
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
+                        getSegmentsTable()
+                    )
+                )
+                .setFetchSize(connector.getStreamingFetchSize())
+                .bind("dataSource", dataSource)
+                .bind("id", segmentId)
+                .map(ByteArrayMapper.FIRST)
+                .spliterator(), false
+            ).findFirst().orElseThrow(
+                () -> new UnknownSegmentIdException(String.format("Cannot find segment id [%s]", segmentId))
+            ), DataSegment.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }).collect(Collectors.toList()))
     );
   }
 
@@ -265,7 +292,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean enableDataSource(final String dataSource)
   {
     try {
-      return enableSegments(dataSource, FOREVER);
+      return enableSegments(dataSource, Intervals.ETERNITY) != 0;
     }
     catch (Exception e) {
       log.error(e, "Exception enabling datasource %s", dataSource);
@@ -274,9 +301,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean enableSegments(final String dataSource, final Interval interval)
+  public int enableSegments(final String dataSource, final Interval interval)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource);
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, interval);
 
     return enableSegments(
         segmentIdsForInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
@@ -285,29 +312,33 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean enableSegments(final String dataSource, final Collection<String> segmentIds)
+  public int enableSegments(final String dataSource, final Collection<String> segmentIds)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource);
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, segmentIds);
+    versionedIntervalTimeline.getAllTimelineEntries().keySet().stream().reduce(
+        (acc, val) -> acc.withStartMillis(Math.min(acc.getStartMillis(), val.getStartMillis())).withEndMillis(Math.max(acc.getEndMillis(), val.getEndMillis()))
+    ).ifPresent(interval -> VersionedIntervalTimeline.addSegments(
+        versionedIntervalTimeline,
+        dataSources.get(dataSource).getSegments().stream().filter(segment -> interval.contains(segment.getInterval())).iterator()
+    ));
 
     return enableSegments(
-        segmentIdsForInterval(versionedIntervalTimeline, FOREVER)
-            .filter(segmentId -> segmentIds.contains(segmentId.toString()))
-            .collect(Collectors.toSet()),
+        segmentIdsForInterval(versionedIntervalTimeline, Intervals.ETERNITY).collect(Collectors.toSet()),
         versionedIntervalTimeline
     );
   }
 
-  private boolean enableSegments(
+  private int enableSegments(
       final Collection<SegmentId> segmentIds,
       final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline
   )
   {
     if (segmentIds.isEmpty()) {
       log.warn("No segments found to update!");
-      return false;
+      return 0;
     }
 
-    connector.getDBI().withHandle(handle -> {
+    return connector.getDBI().withHandle(handle -> {
       Batch batch = handle.createBatch();
       segmentIds
           .stream()
@@ -322,10 +353,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                   segmentId
               )
           ));
-      return batch.execute();
+      return batch.execute().length;
     });
-
-    return true;
   }
 
   @Override

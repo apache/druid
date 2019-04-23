@@ -230,12 +230,10 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment of a datasource.
 
-##### PUT
-
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
 
 Enables segments of a datasource by the interval or by an array of segment id's passed in the request payload. 
-It will enable only those segments which are not overshadowed by other sergments.
+It will enable only those segments which are not overshadowed by other segments.
 
 JSON Payload:
 

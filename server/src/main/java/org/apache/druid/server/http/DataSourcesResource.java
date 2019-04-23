@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +44,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.UnknownSegmentIdException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -65,7 +67,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -705,7 +706,7 @@ public class DataSourcesResource
     return false;
   }
 
-  @PUT
+  @POST
   @Path("/{dataSourceName}/markUsed")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
@@ -728,30 +729,38 @@ public class DataSourcesResource
       return Response.noContent().build();
     }
 
-    boolean success;
+    int modified;
     try {
       if (payload.getInterval() != null) {
-        success = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getInterval());
+        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getInterval());
       } else {
-        success = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getSegmentIds());
+        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getSegmentIds());
       }
     }
     catch (Exception e) {
+      if (e.getCause() instanceof UnknownSegmentIdException) {
+        return Response.status(Response.Status.NOT_FOUND).entity(
+            ImmutableMap.of(
+                "message",
+                e.getCause().getMessage()
+            )
+        ).build();
+      }
       return Response.serverError().entity(
           ImmutableMap.of(
               "error",
               "Exception occurred.",
               "message",
-              e.toString()
+              e.getMessage()
           )
       ).build();
     }
 
-    if (!success) {
+    if (modified == 0) {
       return Response.noContent().build();
     }
 
-    return Response.ok().build();
+    return Response.ok().entity(new MarkDatasourceSegmentsEntity(modified)).build();
   }
 
   @VisibleForTesting
@@ -783,6 +792,20 @@ public class DataSourcesResource
     public boolean isValid()
     {
       return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+    }
+  }
+
+  private static class MarkDatasourceSegmentsEntity
+  {
+    private final int segmentsUpdated;
+
+    public MarkDatasourceSegmentsEntity(int segmentsUpdated) {
+      this.segmentsUpdated = segmentsUpdated;
+    }
+
+    @JsonGetter
+    public int getSegmentsUpdated() {
+      return segmentsUpdated;
     }
   }
 }

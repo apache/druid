@@ -719,7 +719,7 @@ public class DataSourcesResourceTest
     DruidDataSource dataSource = new DruidDataSource("datasource1", new HashMap<>());
     Interval interval = Intervals.of("2010-01-22/P1D");
     EasyMock.expect(metadataSegmentManager.enableSegments(EasyMock.eq("datasource1"), EasyMock.eq(interval)))
-            .andReturn(true)
+            .andReturn(3)
             .once();
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource).once();
@@ -746,13 +746,13 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testEnableDatasourceSegmentsIntervalFailed()
+  public void testEnableDatasourceSegmentsIntervalNoneUpdated()
   {
     MetadataSegmentManager metadataSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     DruidDataSource dataSource = new DruidDataSource("datasource1", new HashMap<>());
     Interval interval = Intervals.of("2010-01-22/P1D");
     EasyMock.expect(metadataSegmentManager.enableSegments(EasyMock.eq("datasource1"), EasyMock.eq(interval)))
-            .andReturn(false)
+            .andReturn(0)
             .once();
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource).once();
@@ -785,7 +785,7 @@ public class DataSourcesResourceTest
     DruidDataSource dataSource = new DruidDataSource("datasource1", new HashMap<>());
     Set<String> segmentIds = ImmutableSet.of(dataSegmentList.get(1).getId().toString());
     EasyMock.expect(metadataSegmentManager.enableSegments(EasyMock.eq("datasource1"), EasyMock.eq(segmentIds)))
-            .andReturn(true)
+            .andReturn(3)
             .once();
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource).once();
