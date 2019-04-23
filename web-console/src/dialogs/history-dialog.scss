@@ -49,10 +49,6 @@
         border-style: dot-dash;
         word-wrap: break-word;
 
-        hr {
-          margin: 5px 0 5px 0;
-        }
-
         .bp3-card {
           padding-bottom: 10px;
         }
@@ -60,13 +56,14 @@
         .history-record-title {
           justify-content: space-between;
           display: flex;
-
-
-        }
-
-        .history-record-comment-title {
           margin-bottom: 5px;
+
+          .history-record-title-change {
+            font-weight: bold;
+            font-size: 18px;
+          }
         }
+
 
         .json-collapse {
           button {
