@@ -92,6 +92,14 @@ public class SeekableStreamSupervisorStateManager
     }
   }
 
+  public enum StreamErrorTransience
+  {
+    TRANSIENT,
+    POSSIBLY_TRANSIENT,
+    NON_TRANSIENT,
+    NON_STREAM_ERROR
+  }
+
   private State supervisorState;
   private final int healthinessThreshold;
   private final int unhealthinessThreshold;
@@ -101,7 +109,7 @@ public class SeekableStreamSupervisorStateManager
   private boolean atLeastOneSuccessfulRun = false;
   private boolean currentRunSuccessful = true;
   private final CircularBuffer<TaskState> completedTaskHistory;
-  private final CircularBuffer<State> stateHistory; // From previous runs
+  private final CircularBuffer<State> supervisorStateHistory; // From previous runs
   private final ExceptionEventStore eventStore;
 
   public SeekableStreamSupervisorStateManager(
@@ -125,10 +133,15 @@ public class SeekableStreamSupervisorStateManager
         supervisorConfig.isStoringStackTraces()
     );
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
-    this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
+    this.supervisorStateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
 
-  public Optional<State> setStateAndCheckIfFirstRun(State newState)
+  /**
+   * Certain supervisor states can only be set if the supervisor hasn't had a successful iteration yet.  This function
+   * checks if there's been at least one successful iteration if needed and sets supervisor state to an appropriate
+   * new state.
+   */
+  public Optional<State> setState(State newState)
   {
     if (newState.isOnlySetWhenNoSuccessfulRunYet()) {
       if (!atLeastOneSuccessfulRun) {
@@ -169,11 +182,14 @@ public class SeekableStreamSupervisorStateManager
 
     for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStore.getNonTransientRecentEvents().entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
-        if (events.getKey().equals(NonTransientStreamException.class)) {
-          currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
-        } else if (events.getKey().equals(TransientStreamException.class) ||
-                   events.getKey().equals(PossiblyTransientStreamException.class)) {
-          currentRunState = getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM);
+        if (events.getKey().equals(NonTransientStreamException.class) ||
+            events.getKey().equals(TransientStreamException.class) ||
+            events.getKey().equals(PossiblyTransientStreamException.class)) {
+          if (atLeastOneSuccessfulRun) {
+            currentRunState = getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM);
+          } else {
+            currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
+          }
         } else {
           currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_SUPERVISOR);
         }
@@ -208,13 +224,13 @@ public class SeekableStreamSupervisorStateManager
       }
     }
 
-    stateHistory.add(currentRunState);
+    supervisorStateHistory.add(currentRunState);
 
     if (currentRunState.isHealthy() && supervisorState == State.UNHEALTHY_SUPERVISOR) {
       currentRunState = State.UNHEALTHY_SUPERVISOR;
-      boolean supervisorHealthy = stateHistory.size() >= healthinessThreshold;
-      for (int i = 0; i < Math.min(healthinessThreshold, stateHistory.size()); i++) {
-        if (!stateHistory.getLatest(i).isHealthy()) {
+      boolean supervisorHealthy = supervisorStateHistory.size() >= healthinessThreshold;
+      for (int i = 0; i < Math.min(healthinessThreshold, supervisorStateHistory.size()); i++) {
+        if (!supervisorStateHistory.getLatest(i).isHealthy()) {
           supervisorHealthy = false;
         }
       }
@@ -245,40 +261,53 @@ public class SeekableStreamSupervisorStateManager
     return s1.priority < s2.priority ? s1 : s2;
   }
 
-  @JsonPropertyOrder({"timestamp", "exceptionClass", "message", "stackTrace"})
+  @JsonPropertyOrder({"timestamp", "exceptionClass", "streamErrorTransience", "message"})
   public static class ExceptionEvent
   {
-    private Class clazz;
+    private Class exceptionClass;
     // Contains full stackTrace if storingStackTraces is true
     private String errorMessage;
     private DateTime timestamp;
+    private StreamErrorTransience streamErrorTransience;
+
+    public ExceptionEvent()
+    {
+    }
 
     public ExceptionEvent(
         Throwable t,
-        boolean storingStackTraces
+        boolean storingStackTraces,
+        StreamErrorTransience streamErrorTransience
     )
     {
-      this.clazz = t.getClass();
+      this.exceptionClass = t.getClass();
       this.errorMessage = storingStackTraces ? ExceptionUtils.getStackTrace(t) : t.getMessage();
       this.timestamp = DateTimes.nowUtc();
+      this.streamErrorTransience = streamErrorTransience;
     }
 
-    @JsonProperty
+    @JsonProperty("exceptionClass")
     public Class getExceptionClass()
     {
-      return clazz;
+      return exceptionClass;
     }
 
-    @JsonProperty
+    @JsonProperty("message")
     public String getErrorMessage()
     {
       return errorMessage;
     }
 
-    @JsonProperty
+    @JsonProperty("timestamp")
     public DateTime getTimestamp()
     {
       return timestamp;
+    }
+
+    @JsonProperty("errorTransience")
+    public StreamErrorTransience getStreamErrorTransience()
+    {
+      return streamErrorTransience;
     }
   }
 
@@ -306,7 +335,18 @@ public class SeekableStreamSupervisorStateManager
           new ConcurrentLinkedQueue<>()
       );
 
-      ExceptionEvent eventToAdd = new ExceptionEvent(t, storeStackTraces);
+      StreamErrorTransience transience;
+      if (t instanceof PossiblyTransientStreamException) {
+        transience = StreamErrorTransience.POSSIBLY_TRANSIENT;
+      } else if (t instanceof TransientStreamException) {
+        transience = StreamErrorTransience.TRANSIENT;
+      } else if (t instanceof NonTransientStreamException) {
+        transience = StreamErrorTransience.NON_TRANSIENT;
+      } else {
+        transience = StreamErrorTransience.NON_STREAM_ERROR;
+      }
+
+      ExceptionEvent eventToAdd = new ExceptionEvent(t, storeStackTraces, transience);
 
       recentEventsQueue.add(eventToAdd);
 

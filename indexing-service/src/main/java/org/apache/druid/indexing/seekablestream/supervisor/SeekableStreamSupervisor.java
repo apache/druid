@@ -1034,9 +1034,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
     possiblyRegisterListener();
-    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     updatePartitionDataFromStream();
-    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
     discoverTasks();
     updateTaskStatus();
     checkTaskDuration();
@@ -1046,13 +1046,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // if suspended, ensure tasks have been requested to gracefully stop
     if (!spec.isSuspended()) {
       log.info("[%s] supervisor is running.", dataSource);
-      stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+      stateManager.setState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
       createNewTasks();
-      stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
+      stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     } else {
       log.info("[%s] supervisor is suspended.", dataSource);
       gracefulShutdownInternal();
-      stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.SUSPENDED);
+      stateManager.setState(SeekableStreamSupervisorStateManager.State.SUSPENDED);
     }
 
     if (log.isDebugEnabled()) {
