@@ -142,13 +142,13 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
           tableInfoButtons.map((d: any) => {
             return <Button
               className={`info-button`}
-              minimal={activeEndpoint !== d.endpoint}
               icon={<Icon icon={d.icon} iconSize={20}/>}
               key={d.text}
               text={d.text}
               intent={activeEndpoint === d.endpoint ? Intent.PRIMARY : Intent.NONE}
-              onClick={async () => {
-                await this.getJsonInfo(d.endpoint);
+              minimal={activeEndpoint !== d.endpoint}
+              onClick={() => {
+                this.getJsonInfo(d.endpoint);
                 this.setState({activeEndpoint: d.endpoint});
               }}
             />;
