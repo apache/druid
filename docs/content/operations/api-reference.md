@@ -233,9 +233,7 @@ Enables a segment of a datasource.
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
 
 Marks segments unused for a datasource by interval or set of segment Ids. The request payload contains the interval or set of segment Ids to be marked unused.
-Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).
-Interval specifies the start and end times as IS0 8601 strings.
-`interval=(start/end)` where start and end both are inclusive.
+Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive.
 
 JSON Request Payload:
 
