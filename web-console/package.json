@@ -58,11 +58,13 @@
   "devDependencies": {
     "@types/classnames": "^2.2.7",
     "@types/d3-array": "^2.0.0",
+    "@types/file-saver": "^2.0.0",
     "@types/hjson": "^2.4.1",
     "@types/jest": "^24.0.11",
     "@types/lodash.debounce": "^4.0.6",
     "@types/node": "^11.13.4",
     "@types/numeral": "^0.0.25",
+    "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-router-dom": "^4.3.2",
     "@types/react-table": "^6.8.1",
