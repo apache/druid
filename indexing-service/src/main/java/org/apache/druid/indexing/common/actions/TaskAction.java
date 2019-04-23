@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = "lockAcquire", value = TimeChunkLockAcquireAction.class),
     @JsonSubTypes.Type(name = "lockTryAcquire", value = TimeChunkLockTryAcquireAction.class),
     @JsonSubTypes.Type(name = "segmentLockTryAcquire", value = SegmentLockTryAcquireAction.class),
+    @JsonSubTypes.Type(name = "segmentLockAcquire", value = SegmentLockAquireAction.class),
     @JsonSubTypes.Type(name = "lockList", value = LockListAction.class),
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),

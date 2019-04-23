@@ -162,7 +162,7 @@ public class TaskMonitorTest
 
     TestTask(String id, long runTime, boolean shouldFail)
     {
-      super(id, "testDataSource", runTime, 0, null, null, null);
+      super(id, null, "testDataSource", runTime, 0, null, null, null);
       this.shouldFail = shouldFail;
     }
 

@@ -118,7 +118,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testManySegmentsSameInterval()
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getTaskLockbox().add(task);
 
@@ -187,7 +187,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testResumeSequence()
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getTaskLockbox().add(task);
 
@@ -324,7 +324,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testMultipleSequences()
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getTaskLockbox().add(task);
 
@@ -433,7 +433,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testAddToExistingLinearShardSpecsSameGranularity() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(
@@ -496,7 +496,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testAddToExistingNumberedShardSpecsSameGranularity() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(
@@ -557,7 +557,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testAddToExistingNumberedShardSpecsCoarserPreferredGranularity() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(
@@ -594,7 +594,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testAddToExistingNumberedShardSpecsFinerPreferredGranularity() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(
@@ -631,7 +631,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testCannotAddToExistingNumberedShardSpecsWithCoarserQueryGranularity() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(
@@ -660,7 +660,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testCannotDoAnythingWithSillyQueryGranularity()
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
 
     final SegmentIdWithShardSpec id1 = allocate(task, PARTY_TIME, Granularities.DAY, Granularities.HOUR, "s1", null);
@@ -671,7 +671,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testCannotAddToExistingSingleDimensionShardSpecs() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
 
     taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
         ImmutableSet.of(

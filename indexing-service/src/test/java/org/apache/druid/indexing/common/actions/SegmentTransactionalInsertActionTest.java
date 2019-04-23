@@ -97,7 +97,7 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
@@ -138,7 +138,7 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testFailTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
@@ -157,7 +157,7 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testFailBadVersion() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);

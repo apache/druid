@@ -95,7 +95,7 @@ public class RemoteTaskActionClientTest
     expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,
@@ -127,7 +127,7 @@ public class RemoteTaskActionClientTest
     expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,

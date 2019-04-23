@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -39,6 +40,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -55,8 +57,10 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -835,38 +839,6 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLockWithDifferentGranularity()
-  {
-    final Task task = NoopTask.create("test", 10);
-    lockbox.add(task);
-
-    Assert.assertTrue(
-        lockbox.tryLock(
-            task,
-            new TimeChunkLockRequest(
-                TaskLockType.EXCLUSIVE,
-                task,
-                Intervals.of("2015-01-01/2015-01-02"),
-                "v1"
-            )
-        ).isOk()
-    );
-
-    Assert.assertFalse(
-        lockbox.tryLock(
-            task,
-            new SpecificSegmentLockRequest(
-                TaskLockType.EXCLUSIVE,
-                task,
-                Intervals.of("2015-01-01/2015-01-02"),
-                "v1",
-                3
-            )
-        ).isOk()
-    );
-  }
-
-  @Test
   public void testSegmentLockForSameIntervalAndSamePartition()
   {
     final Task task1 = NoopTask.create();
@@ -980,7 +952,7 @@ public class TaskLockboxTest
     final Task task = NoopTask.create();
     lockbox.add(task);
     allocateSegmentsAndAssert(task, "seq", 3, NumberedShardSpecFactory.instance());
-    allocateSegmentsAndAssert(task, "seq2", 2, NumberedShardSpecFactory.instance()); //TODO ImmutableSet.of(0, 1, 2) for overwriting
+    allocateSegmentsAndAssert(task, "seq2", 2, new NumberedOverwritingShardSpecFactory(0, 3, (short) 1));
 
     final List<TaskLock> locks = lockbox.findLocksForTask(task);
     Assert.assertEquals(5, locks.size());
@@ -989,6 +961,9 @@ public class TaskLockboxTest
       Assert.assertTrue(lock instanceof SegmentLock);
       final SegmentLock segmentLock = (SegmentLock) lock;
       Assert.assertEquals(expectedPartitionId++, segmentLock.getPartitionId());
+      if (expectedPartitionId == 3) {
+        expectedPartitionId = ShardSpec.NON_ROOT_GEN_START_PARTITION_ID;
+      }
     }
   }
 
@@ -1077,6 +1052,74 @@ public class TaskLockboxTest
     Assert.assertNotEquals(null, taskLockPosse1);
     Assert.assertNotEquals(taskLockPosse1, taskLockPosse2);
     Assert.assertEquals(taskLockPosse1, taskLockPosse3);
+  }
+
+  @Test
+  public void testGetTimeChunkAndSegmentLockForSameGroup()
+  {
+    final Task task1 = NoopTask.withGroupId("groupId");
+    final Task task2 = NoopTask.withGroupId("groupId");
+
+    lockbox.add(task1);
+    lockbox.add(task2);
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            task1,
+            new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)
+        ).isOk()
+    );
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            task2,
+            new SpecificSegmentLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), "version", 0)
+        ).isOk()
+    );
+
+    final List<TaskLockPosse> posses = lockbox
+        .getAllLocks()
+        .get(task1.getDataSource())
+        .get(DateTimes.of("2017"))
+        .get(Intervals.of("2017/2018"));
+    Assert.assertEquals(2, posses.size());
+
+    Assert.assertEquals(LockGranularity.TIME_CHUNK, posses.get(0).getTaskLock().getGranularity());
+    final TimeChunkLock timeChunkLock = (TimeChunkLock) posses.get(0).getTaskLock();
+    Assert.assertEquals("none", timeChunkLock.getDataSource());
+    Assert.assertEquals("groupId", timeChunkLock.getGroupId());
+    Assert.assertEquals(Intervals.of("2017/2018"), timeChunkLock.getInterval());
+
+    Assert.assertEquals(LockGranularity.SEGMENT, posses.get(1).getTaskLock().getGranularity());
+    final SegmentLock segmentLock = (SegmentLock) posses.get(1).getTaskLock();
+    Assert.assertEquals("none", segmentLock.getDataSource());
+    Assert.assertEquals("groupId", segmentLock.getGroupId());
+    Assert.assertEquals(Intervals.of("2017/2018"), segmentLock.getInterval());
+    Assert.assertEquals(0, segmentLock.getPartitionId());
+  }
+
+  @Test
+  public void testGetTimeChunkAndSegmentLockForDifferentGroup()
+  {
+    final Task task1 = NoopTask.withGroupId("groupId");
+    final Task task2 = NoopTask.withGroupId("groupId2");
+
+    lockbox.add(task1);
+    lockbox.add(task2);
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            task1,
+            new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)
+        ).isOk()
+    );
+
+    Assert.assertFalse(
+        lockbox.tryLock(
+            task2,
+            new SpecificSegmentLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), "version", 0)
+        ).isOk()
+    );
   }
 
   private Set<TaskLock> getAllLocks(List<Task> tasks)
