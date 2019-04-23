@@ -26,7 +26,7 @@
   }
 
   .side-bar {
-    width: 20%;
+    width: 15%;
 
     .info-button {
       &.active {
@@ -36,33 +36,33 @@
       width: 100%;
       height: 10vh;
       cursor: pointer;
+      display: flex;
+      flex-direction: column;
 
-      .icon {
-        position: relative;
-        left: 45%;
-        top: 2vh;
+      .bp3-icon {
+        margin-right: 0;
       }
 
-      .text {
-        position: relative;
-        left: 28%;
-        top: 5vh;
+      .bp3-button-text {
+        margin-top: 5px;
       }
     }
   }
 
+  .bp3-divider {
+    margin: 0;
+  }
+
   .main-section {
-    width: 76%;
+    width: 82%;
     height: 100%;
     padding-left: 1vw;
 
     .top-actions {
 
-      margin: 0.5vh 0;
-
-      .right-buttons {
-        float: right;
-      }
+      display: flex;
+      justify-content: space-between;
+      margin: 1vh 0;
     }
 
     textarea {
@@ -72,12 +72,12 @@
 
     .bottom-buttons {
       margin: 2vh 0;
+      display: flex;
+      justify-content: space-between;
 
       button {
         width: 100px;
-      }
-      .button-done {
-        float: right;
+        margin: 0 5px;
       }
     }
   }

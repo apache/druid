@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Dialog, Intent, TextArea} from '@blueprintjs/core';
+import {Button, ButtonGroup, Dialog, Divider, Icon, Intent, TextArea} from '@blueprintjs/core';
 import axios from 'axios';
 import * as FileSaver from 'file-saver';
 import * as React from 'react';
@@ -143,7 +143,7 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
             return <Button
               className={`info-button`}
               minimal={activeEndpoint !== d.endpoint}
-              icon={d.icon}
+              icon={<Icon icon={d.icon} iconSize={20}/>}
               key={d.text}
               text={d.text}
               intent={activeEndpoint === d.endpoint ? Intent.PRIMARY : Intent.NONE}
@@ -156,12 +156,14 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
         }
       </div>
 
+      <Divider/>
+
       <div className={'main-section'}>
 
         <div className={'top-actions'}>
           {
-            mode === 'task' && (activeEndpoint === 'log?offset=-8192' || activeEndpoint === 'log' ) &&
-            <ButtonGroup>
+            mode === 'task' && (activeEndpoint === 'log?offset=-8192' || activeEndpoint === 'log' )
+            ? <ButtonGroup>
               <Button
                 className={'view-all-button'}
                 text={activeEndpoint === 'log' ? 'View last 8kb' : 'View all'}
@@ -175,6 +177,7 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
                 }}
               />
             </ButtonGroup>
+            : <div/>
           }
           <ButtonGroup className={'right-buttons'}>
             <Button
@@ -205,16 +208,16 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
         />
 
         <div className={'bottom-buttons'}>
-          <ButtonGroup>
+          <div>
             {tableActionButtions}
-          </ButtonGroup>
-          <ButtonGroup className={'button-done'}>
+          </div>
+          <div>
             <Button
               text={'Done'}
               intent={Intent.PRIMARY}
               onClick={onClose}
             />
-          </ButtonGroup>
+          </div>
         </div>
 
       </div>

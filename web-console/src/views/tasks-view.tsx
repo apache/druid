@@ -444,6 +444,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'id',
+            width: 70,
             filterable: false,
             Cell: row => {
               const id = row.value;
@@ -606,6 +607,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'task_id',
+            width: 70,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';
