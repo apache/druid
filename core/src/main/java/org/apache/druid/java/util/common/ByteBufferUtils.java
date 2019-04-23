@@ -93,6 +93,9 @@ public class ByteBufferUtils
     }
   }
 
+  /**
+   * NB: while Druid no longer support Java 7, this method would still work with that version as well.
+   */
   private static MethodHandle unmapJava7Or8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
     // "Compile" a MethodHandle that is roughly equivalent to the following lambda:
