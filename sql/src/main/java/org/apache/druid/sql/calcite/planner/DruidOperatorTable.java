@@ -53,12 +53,14 @@ import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
@@ -196,6 +198,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new TrimOperatorConversion())
           .add(new TruncateOperatorConversion())
           .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
+          .add(new LPadOperatorConversion())
+          .add(new RPadOperatorConversion())
           // value coercion operators
           .add(new CastOperatorConversion())
           .add(new ReinterpretOperatorConversion())
