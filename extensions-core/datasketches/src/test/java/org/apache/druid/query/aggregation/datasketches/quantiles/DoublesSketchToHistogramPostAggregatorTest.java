@@ -58,6 +58,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
     final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
 
     final Aggregator agg = new DoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
     for (int i = 0; i < values.length; i++) {
       agg.aggregate();
       selector.increment();
