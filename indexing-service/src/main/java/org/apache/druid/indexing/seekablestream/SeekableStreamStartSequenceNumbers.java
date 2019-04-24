@@ -50,21 +50,35 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
   @JsonCreator
   public SeekableStreamStartSequenceNumbers(
       @JsonProperty("stream") final String stream,
+      // kept for backward compatibility
+      @JsonProperty("topic") final String topic,
       @JsonProperty("partitionSequenceNumberMap")
       final Map<PartitionIdType, SequenceOffsetType> partitionSequenceNumberMap,
+      // kept for backward compatibility
+      @JsonProperty("partitionOffsetMap") final Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap,
       @JsonProperty("exclusivePartitions") @Nullable final Set<PartitionIdType> exclusivePartitions
   )
   {
-    this.stream = Preconditions.checkNotNull(stream, "stream");
-    this.partitionSequenceNumberMap = Preconditions.checkNotNull(
-        partitionSequenceNumberMap,
-        "partitionIdToSequenceNumberMap"
-    );
+    this.stream = stream == null ? topic : stream;
+    this.partitionSequenceNumberMap = partitionOffsetMap == null ? partitionSequenceNumberMap : partitionOffsetMap;
+
+    Preconditions.checkNotNull(this.stream, "stream");
+    Preconditions.checkNotNull(this.partitionSequenceNumberMap, "partitionIdToSequenceNumberMap");
+
     // exclusiveOffset can be null if this class is deserialized from metadata store. Note that only end offsets are
     // stored in metadata store.
     // The default is true because there was only Kafka indexing service before in which the end offset is always
     // exclusive.
     this.exclusivePartitions = exclusivePartitions == null ? Collections.emptySet() : exclusivePartitions;
+  }
+
+  public SeekableStreamStartSequenceNumbers(
+      String stream,
+      Map<PartitionIdType, SequenceOffsetType> partitionSequenceNumberMap,
+      Set<PartitionIdType> exclusivePartitions
+  )
+  {
+    this(stream, null, partitionSequenceNumberMap, null, exclusivePartitions);
   }
 
   @Override
@@ -74,9 +88,29 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
     return stream;
   }
 
+  /**
+   * Identical to {@link #getStream()}. Here for backwards compatibility, so a serialized
+   * SeekableStreamStartSequenceNumbers can be read by older Druid versions as a KafkaPartitions object.
+   */
+  @JsonProperty
+  public String getTopic()
+  {
+    return stream;
+  }
+
   @Override
   @JsonProperty
   public Map<PartitionIdType, SequenceOffsetType> getPartitionSequenceNumberMap()
+  {
+    return partitionSequenceNumberMap;
+  }
+
+  /**
+   * Identical to {@link #getPartitionSequenceNumberMap()} ()}. Here for backwards compatibility, so a serialized
+   * SeekableStreamStartSequenceNumbers can be read by older Druid versions as a KafkaPartitions object.
+   */
+  @JsonProperty
+  public Map<PartitionIdType, SequenceOffsetType> getPartitionOffsetMap()
   {
     return partitionSequenceNumberMap;
   }

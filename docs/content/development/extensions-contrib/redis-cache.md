@@ -24,6 +24,8 @@ title: "Druid Redis Cache"
 
 # Druid Redis Cache
 
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-redis-cache` extension.
+
 A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
 
 # Configuration

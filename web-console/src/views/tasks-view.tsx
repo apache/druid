@@ -19,7 +19,6 @@
 import { Alert, Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
@@ -31,6 +30,7 @@ import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
+  booleanCustomTableFilter,
   countBy,
   formatDuration,
   getDruidErrorMessage, LocalStorageKeys,
@@ -47,6 +47,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
+  noSqlMode: boolean;
 }
 
 export interface TasksViewState {
@@ -72,6 +73,23 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 }
 
+interface TaskQueryResultRow {
+  created_time: string;
+  datasource: string;
+  duration: number;
+  error_msg: string | null;
+  location: string | null;
+  rank: number;
+  status: string;
+  task_id: string;
+  type: string;
+}
+
+interface SupervisorQueryResultRow {
+  id: string;
+  spec: any;
+}
+
 function statusToColor(status: string): string {
   switch (status) {
     case 'RUNNING': return '#2167d5';
@@ -84,11 +102,11 @@ function statusToColor(status: string): string {
 }
 
 export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<string, any[]>;
-  private taskQueryManager: QueryManager<string, any[]>;
+  private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
+  private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
-  private statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+  static statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -125,7 +143,24 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     );
   }
 
+  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
+    return data.map((d: any) => {
+      return {
+        created_time: d.createdTime,
+        datasource: d.dataSource,
+        duration: d.duration ? d.duration : 0,
+        error_msg: d.errorMsg,
+        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        rank: (TasksView.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
+        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+        task_id: d.id,
+        type: d.typTasksView
+      };
+    });
+  }
+
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -144,7 +179,16 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        return await queryDruidSql({ query });
+        if (!noSqlMode) {
+          return await queryDruidSql({ query });
+        } else {
+          const taskEndpoints: string[] = ['completeTasks', 'runningTasks', 'waitingTasks', 'pendingTasks'];
+          const result: TaskQueryResultRow[][] = await Promise.all(taskEndpoints.map(async (endpoint: string) => {
+            const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
+            return TasksView.parseTasks(resp.data);
+          }));
+          return [].concat.apply([], result);
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -522,8 +566,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
             sortMethod: (d1, d2) => {
-              const statusRanking: any = this.statusRanking;
+              const statusRanking: any = TasksView.statusRanking;
               return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
+            },
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.status.status);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
@@ -566,7 +613,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
@@ -605,11 +652,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Refresh"
           onClick={() => this.taskQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
-        />
+        {
+          !noSqlMode &&
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+          />
+        }
         <Button
           icon={IconNames.PLUS}
           text="Submit task"

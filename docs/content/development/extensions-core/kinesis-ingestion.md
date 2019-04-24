@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Kinesis Indexing Service"
+title: "Amazon Kinesis Indexing Service"
 ---
 
 <!--
@@ -31,7 +31,7 @@ able to read non-recent events from Kinesis and are not subject to the window pe
 ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core extension (see
+The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../operations/including-extensions.html)). Please note that this is
 currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).

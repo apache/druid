@@ -24,7 +24,7 @@ title: "Select Queries"
 
 # Select Queries
 
-Select queries return raw Druid rows and support pagination.
+Select queries return raw Apache Druid (incubating) rows and support pagination.
 
 ```json
  {

@@ -30,7 +30,7 @@ A virtual column can potentially draw from multiple underlying columns, although
 
 Virtual columns can be used as dimensions or as inputs to aggregators.
 
-Each Druid query can accept a list of virtual columns as a parameter. The following scan query is provided as an example:
+Each Apache Druid (incubating) query can accept a list of virtual columns as a parameter. The following scan query is provided as an example:
 
 ```
 {

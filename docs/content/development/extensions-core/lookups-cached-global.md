@@ -28,7 +28,7 @@ title: "Globally Cached Lookups"
 Lookups are an <a href="../experimental.html">experimental</a> feature.
 </div>
 
-Make sure to [include](../../operations/including-extensions.html) `druid-lookups-cached-global` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-lookups-cached-global` as an extension.
 
 ## Configuration
 <div class="note caution">
