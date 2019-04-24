@@ -282,14 +282,18 @@ Compared to the Theta sketch, the HLL sketch does not support set operations and
 #### Cardinality/HyperUnique (Deprecated)
 
 <div class="note caution">
-The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-theta.html">DataSketches Theta Sketch</a> or <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+The Cardinality and HyperUnique aggregators are deprecated.
+For new use cases, we recommend evaluating <a href="../development/extensions-core/datasketches-theta.html">DataSketches Theta Sketch</a> or <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+For existing users, we recommend evaluating the newer DataSketches aggregators and migrating if possible.
 </div>
 
 The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer DataSketches Theta and HLL extension-provided aggregators described above have superior accuracy and performance and are recommended instead. 
 
 The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we have deprecated Druid's original HLL aggregator.
 
-Please note that `hyperUnique` aggregators are not mutually compatible with Datasketches HLL or Theta sketches.
+Please note that `hyperUnique` aggregators are not mutually compatible with Datasketches HLL or Theta sketches. 
+
+Although deprecated, we will continue to support the older Cardinality/HyperUnique aggregators for backwards compatibility. 
 
 ##### Multi-column handling
 
@@ -316,6 +320,11 @@ We do not recommend the fixed buckets histogram for general use, as its usefulne
 
 #### Approximate Histogram (Deprecated)
 
+<div class="note caution">
+The Approximate Histogram aggregator is deprecated.
+We recommend using <a href="../development/extensions-core/datasketches-quantiles.html">DataSketches Quantiles</a> instead.
+</div>
+
 The [Approximate Histogram](../development/extensions-core/approximate-histograms.html) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 
 The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
@@ -327,7 +336,7 @@ A [study published by the DataSketches team](https://datasketches.github.io/docs
 
 It is not possible to determine a priori how well this aggregator will behave for a given input stream, nor does the aggregator provide any indication that serious distortions are present in the output.
 
-For these reasons, we have deprecated this aggregator and do not recommend its use.
+For these reasons, we have deprecated this aggregator and recommend using the DataSketches Quantiles aggregator instead for new and existing use cases, although we will continue to support Approximate Histogram for backwards compatibility.
 
 ## Miscellaneous Aggregations
 
