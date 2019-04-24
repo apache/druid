@@ -39,11 +39,9 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-// TODO: rename
-
 /**
+ *
  * Not thread-safe
- * @param <T>
  */
 public class OvershadowableManager<T extends Overshadowable<T>>
 {

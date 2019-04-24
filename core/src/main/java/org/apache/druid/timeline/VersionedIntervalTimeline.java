@@ -374,8 +374,6 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
-  // TODO: check this is correct
-  // TODO: add test
   public boolean isOvershadowed(Interval interval, VersionType version, ObjectType object)
   {
     try {

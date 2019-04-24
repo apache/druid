@@ -45,10 +45,6 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @JsonIgnore
   private final List<String> partitionDimensions;
 
-  // TODO: check what's the valid partitions. is it (max existing partitionId) + # of new partitions?
-  // or just # of new partitions?
-  // or do we need a start partitionId?
-
   @JsonCreator
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,    // partitionId

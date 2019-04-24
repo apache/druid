@@ -1962,11 +1962,27 @@ public class VersionedIntervalTimelineTest
     );
   }
 
-  // TODO: test if the middle segment is missing (B among A <- B <- C)
+  @Test
+  public void testIsOvershadowedForOverwritingSegments()
+  {
+    timeline = makeStringIntegerTimeline();
+    final Interval interval = Intervals.of("2019-01-01/2019-01-02");
+    add(interval, "0", makeNumberedOverwriting(0, 0, 5, 10, 10, 1));
 
-  // TODO: test fall back when the middle segment is missing
+    for (int i = 0; i < 5; i++) {
+      Assert.assertTrue(timeline.isOvershadowed(interval, "0", makeNumbered(i + 5, 0).getObject()));
+    }
 
-  // TODO: test isOvershadowed()
+    Assert.assertFalse(timeline.isOvershadowed(interval, "0", makeNumbered(4, 0).getObject()));
+    Assert.assertFalse(timeline.isOvershadowed(interval, "0", makeNumbered(11, 0).getObject()));
+
+    Assert.assertTrue(timeline.isOvershadowed(interval, "0", makeNumberedOverwriting(1, 0, 5, 6, 5, 2).getObject()));
+    Assert.assertTrue(timeline.isOvershadowed(interval, "0", makeNumberedOverwriting(1, 0, 7, 8, 5, 2).getObject()));
+    Assert.assertTrue(timeline.isOvershadowed(interval, "0", makeNumberedOverwriting(1, 0, 8, 10, 5, 2).getObject()));
+
+    Assert.assertFalse(timeline.isOvershadowed(interval, "0", makeNumberedOverwriting(1, 0, 5, 10, 12, 2).getObject()));
+    Assert.assertFalse(timeline.isOvershadowed(interval, "0", makeNumberedOverwriting(1, 0, 4, 15, 12, 2).getObject()));
+  }
 
   private TimelineObjectHolder<String, OvershadowableInteger> makeTimelineObjectHolder(
       String interval,

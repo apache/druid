@@ -31,7 +31,11 @@ import java.util.Objects;
 
 class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<AtomicUpdateGroup<T>>
 {
-  // TODO: map??
+  // Perhaps it would be worth to store these in a map of (partitionId -> partitionChunk)
+  // because sometimes we need to search for a particular partitionChunk corresponding to a partitionId.
+  // However, there's a tradeoff between time and space. Storing in a map would be faster than storing in a list,
+  // but it would take at least additional 4 bytes per chunk to store its key.
+  // This may matter if there are a lot of segments to keep in memory as in brokers or the coordinator.
   private final List<PartitionChunk<T>> chunks = new ArrayList<>();
 
   public AtomicUpdateGroup(PartitionChunk<T> chunk)
