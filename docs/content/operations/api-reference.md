@@ -220,6 +220,11 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+#### Note for coordinator's POST and DELETE API's
+The segments would be enabled/disabled when these API's are called, but then can be disabled/enabled again by the coordinator if any loadRule/dropRule matches. If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed. 
+
+Caution : Avoid using indexing or kill tasks and these API's at the same time.
+
 ##### POST
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`

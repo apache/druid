@@ -421,8 +421,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         segmentIds
             .forEach(segmentId -> batch.add(
                 StringUtils.format(
-                    "UPDATE %s SET used=false WHERE id = '%s'",
+                    "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s' ",
                     getSegmentsTable(),
+                    dataSource,
                     segmentId
                 )
             ));
@@ -443,13 +444,17 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       return connector.getDBI().withHandle(
           handle -> handle
-              .createStatement(StringUtils.format(
-                  "UPDATE %s SET used=false WHERE datasource = :datasource and created_date between :start_date and :end_date",
-                  getSegmentsTable()
-              ))
+              .createStatement(
+                  StringUtils
+                      .format(
+                          "UPDATE %s SET used=false WHERE datasource = :datasource "
+                          + "AND start >= :start AND %2$send%2$s <= :end",
+                          getSegmentsTable(),
+                          connector.getQuoteString()
+                      ))
               .bind("datasource", dataSource)
-              .bind("start_data", interval.getStart().toString())
-              .bind("end_data", interval.getEnd().toString())
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
               .execute()
       );
     }
