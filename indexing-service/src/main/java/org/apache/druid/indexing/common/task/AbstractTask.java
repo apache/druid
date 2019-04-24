@@ -343,7 +343,7 @@ public abstract class AbstractTask implements Task
     }
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean lockVisibleSegments)
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean lockVisibleSegmentsOnly)
       throws IOException
   {
     if (requireLockInputSegments()) {
@@ -378,9 +378,11 @@ public abstract class AbstractTask implements Task
         }
         return true;
       } else {
-        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments);
         final List<DataSegment> segmentsToLock;
-        if (lockVisibleSegments) {
+        if (lockVisibleSegmentsOnly) {
+          final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+              segments
+          );
           segmentsToLock = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
                                                             .stream()
                                                             .map(TimelineObjectHolder::getObject)
@@ -391,18 +393,14 @@ public abstract class AbstractTask implements Task
                                                             .map(PartitionChunk::getObject)
                                                             .collect(Collectors.toList());
         } else {
-          segmentsToLock = timeline.findFullyOvershadowed()
-                                   .stream()
-                                   .flatMap(holder -> holder.getObject().stream())
-                                   .map(PartitionChunk::getObject)
-                                   .collect(Collectors.toList());
+          segmentsToLock = segments;
         }
 
         final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
         for (DataSegment segment : segmentsToLock) {
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
         }
-        if (lockVisibleSegments) {
+        if (lockVisibleSegmentsOnly) {
           intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
         }
         for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
