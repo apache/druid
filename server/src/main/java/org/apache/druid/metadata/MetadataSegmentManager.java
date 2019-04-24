@@ -37,12 +37,21 @@ public interface MetadataSegmentManager
 
   void stop();
 
+  /**
+   * Enables all segments for a dataSource which will not be overshadowed.
+   */
   boolean enableDataSource(String dataSource);
 
   boolean enableSegment(String segmentId);
 
+  /**
+   * Enables all segments contained in the interval which are not overshadowed by any currently enabled segments.
+   */
   int enableSegments(String dataSource, Interval interval);
 
+  /**
+   * Enables the segments passed which are not overshadowed by any currently enabled segments.
+   */
   int enableSegments(String dataSource, Collection<String> segmentIds);
 
   boolean removeDataSource(String dataSource);

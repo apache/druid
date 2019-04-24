@@ -218,7 +218,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Interval interval)
+  /**
+   * Builds a VersionedIntervalTimeline from all segments that are contained in the provided Interval.
+   * Segments are added to the timeline regardless if they are enabled or disabled.
+   */
+  private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
+      final String dataSource,
+      final Interval interval
+  )
   {
     return connector.inReadOnlyTransaction(
         (handle, status) -> VersionedIntervalTimeline.forSegments(
@@ -249,7 +256,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     );
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Collection<String> segmentIds)
+  /**
+   * Builds a VersionedIntervalTimeline containing only the segments passed.
+   * Segments are added to the timeline regardless if they are enabled or disabled.
+   */
+  private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
+      final String dataSource,
+      final Collection<String> segmentIds
+  )
   {
     return connector.inReadOnlyTransaction(
         (handle, status) -> VersionedIntervalTimeline.forSegments(segmentIds.stream().map(segmentId -> {
@@ -289,7 +303,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     );
   }
 
-  private Stream<SegmentId> segmentIdsForInterval(
+  private Stream<SegmentId> getSegmentIdsContainedByInterval(
       final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
       final Interval interval
   )
@@ -318,11 +332,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public int enableSegments(final String dataSource, final Interval interval)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, interval);
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(dataSource, interval);
     addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval);
 
     return enableSegments(
-        segmentIdsForInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
+        getSegmentIdsContainedByInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
         versionedIntervalTimeline
     );
   }
@@ -330,13 +344,13 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public int enableSegments(final String dataSource, final Collection<String> segmentIds)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, segmentIds);
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(dataSource, segmentIds);
     versionedIntervalTimeline.getAllTimelineEntries().keySet().stream().reduce(
         (acc, val) -> acc.withStartMillis(Math.min(acc.getStartMillis(), val.getStartMillis())).withEndMillis(Math.max(acc.getEndMillis(), val.getEndMillis()))
     ).ifPresent(interval -> addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval));
 
     return enableSegments(
-        segmentIdsForInterval(versionedIntervalTimeline, Intervals.ETERNITY)
+        getSegmentIdsContainedByInterval(versionedIntervalTimeline, Intervals.ETERNITY)
             .filter(segmentId -> segmentIds.contains(segmentId.toString()))
             .collect(Collectors.toSet()),
         versionedIntervalTimeline
