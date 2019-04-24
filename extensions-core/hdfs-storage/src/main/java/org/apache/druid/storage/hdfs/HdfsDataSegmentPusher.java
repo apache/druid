@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -107,55 +106,28 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         fullyQualifiedStorageDirectory.get(),
         storageDir
     );
+    final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
 
-    Path tmpIndexFile = new Path(StringUtils.format(
-        "%s/%s/%s/%s_index.zip",
+    final Path outIndexFile = new Path(StringUtils.format(
+        "%s/%s/%d_%sindex.zip",
         fullyQualifiedStorageDirectory.get(),
-        segment.getDataSource(),
-        UUIDUtils.generateUuid(),
-        segment.getShardSpec().getPartitionNum()
+        storageDir,
+        segment.getShardSpec().getPartitionNum(),
+        uniquePrefix
     ));
-    FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
-
-    fs.mkdirs(tmpIndexFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
+    FileSystem fs = outIndexFile.getFileSystem(hadoopConfig);
+    // Create parent if it does not exist, recreation is not an error
+    fs.mkdirs(outIndexFile.getParent());
+    log.info("Compressing files from[%s] to [%s]", inDir, outIndexFile);
 
     final long size;
-    final DataSegment dataSegment;
-    try {
-      try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
-        size = CompressionUtils.zip(inDir, out);
-      }
-
-      final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
-      final Path outIndexFile = new Path(StringUtils.format(
-          "%s/%s/%d_%sindex.zip",
-          fullyQualifiedStorageDirectory.get(),
-          storageDir,
-          segment.getShardSpec().getPartitionNum(),
-          uniquePrefix
-      ));
-
-      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
-                           .withSize(size)
-                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
-
-      // Create parent if it does not exist, recreation is not an error
-      fs.mkdirs(outIndexFile.getParent());
-      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
-    }
-    finally {
-      try {
-        if (fs.exists(tmpIndexFile.getParent()) && !fs.delete(tmpIndexFile.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpIndexFile.getParent());
-        }
-      }
-      catch (IOException ex) {
-        log.error(ex, "Failed to delete temp directory[%s]", tmpIndexFile.getParent());
-      }
+    try (FSDataOutputStream out = fs.create(outIndexFile)) {
+      size = CompressionUtils.zip(inDir, out);
     }
 
-    return dataSegment;
+    return segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
+                  .withSize(size)
+                  .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
   }
 
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
