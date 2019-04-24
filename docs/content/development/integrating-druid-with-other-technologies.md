@@ -22,7 +22,7 @@ title: "Integrating Apache Druid (incubating) With Other Technologies"
   ~ under the License.
   -->
 
-# Integrating Druid With Other Technologies
+# Integrating Apache Druid (incubating) With Other Technologies
 
 This page discusses how we can integrate Druid with other technologies. 
 

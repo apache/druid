@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) vs Spark"
   ~ under the License.
   -->
 
-# Druid vs Spark
+# Apache Druid (incubating) vs Apache Spark
 
 Druid and Spark are complementary solutions as Druid can be used to accelerate OLAP queries in Spark.
 
