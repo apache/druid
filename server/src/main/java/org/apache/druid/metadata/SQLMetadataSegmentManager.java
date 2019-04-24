@@ -226,7 +226,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 handle
                     .createQuery(
                         StringUtils.format(
-                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start",
+                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start >= :start AND %2$send%2$s <= :end",
                             getSegmentsTable(), connector.getQuoteString()
                         )
                     )
@@ -277,6 +277,18 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     );
   }
 
+  private void addOverlappingEnabledSegmentsToVersionIntervalTimeline(
+      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    VersionedIntervalTimeline.addSegments(
+        versionedIntervalTimeline,
+        dataSources.get(dataSource).getSegments().stream().filter(segment -> interval.overlaps(segment.getInterval())).iterator()
+    );
+  }
+
   private Stream<SegmentId> segmentIdsForInterval(
       final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
       final Interval interval
@@ -307,6 +319,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public int enableSegments(final String dataSource, final Interval interval)
   {
     VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, interval);
+    addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval);
 
     return enableSegments(
         segmentIdsForInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
@@ -320,10 +333,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource, segmentIds);
     versionedIntervalTimeline.getAllTimelineEntries().keySet().stream().reduce(
         (acc, val) -> acc.withStartMillis(Math.min(acc.getStartMillis(), val.getStartMillis())).withEndMillis(Math.max(acc.getEndMillis(), val.getEndMillis()))
-    ).ifPresent(interval -> VersionedIntervalTimeline.addSegments(
-        versionedIntervalTimeline,
-        dataSources.get(dataSource).getSegments().stream().filter(segment -> interval.contains(segment.getInterval())).iterator()
-    ));
+    ).ifPresent(interval -> addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval));
 
     return enableSegments(
         segmentIdsForInterval(versionedIntervalTimeline, Intervals.ETERNITY)
