@@ -316,10 +316,10 @@ public abstract class AbstractTask implements Task
   boolean tryLockWithIntervals(TaskActionClient client, Set<Interval> intervals)
       throws IOException
   {
-    return tryLockWithIntervals(client, new ArrayList<>(intervals), true);
+    return tryLockWithIntervals(client, new ArrayList<>(intervals));
   }
 
-  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals, boolean lockVisibleSegments)
+  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals)
       throws IOException
   {
     if (requireLockInputSegments()) {
@@ -332,7 +332,7 @@ public abstract class AbstractTask implements Task
 
       // TODO: race - a new segment can be added after findInputSegments. change to lockAllSegmentsInIntervals
       if (!intervalsToFindInput.isEmpty()) {
-        return tryLockWithSegments(client, findInputSegments(client, intervalsToFindInput), lockVisibleSegments);
+        return tryLockWithSegments(client, findInputSegments(client, intervalsToFindInput));
       } else {
         return true;
       }
@@ -343,7 +343,7 @@ public abstract class AbstractTask implements Task
     }
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean lockVisibleSegmentsOnly)
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
       throws IOException
   {
     if (requireLockInputSegments()) {
@@ -379,30 +379,24 @@ public abstract class AbstractTask implements Task
         return true;
       } else {
         final List<DataSegment> segmentsToLock;
-        if (lockVisibleSegmentsOnly) {
-          final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
-              segments
-          );
-          segmentsToLock = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
-                                                            .stream()
-                                                            .map(TimelineObjectHolder::getObject)
-                                                            .flatMap(partitionHolder -> StreamSupport.stream(
-                                                                partitionHolder.spliterator(),
-                                                                false
-                                                            ))
-                                                            .map(PartitionChunk::getObject)
-                                                            .collect(Collectors.toList());
-        } else {
-          segmentsToLock = segments;
-        }
+        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+            segments
+        );
+        segmentsToLock = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
+                                 .stream()
+                                 .map(TimelineObjectHolder::getObject)
+                                 .flatMap(partitionHolder -> StreamSupport.stream(
+                                     partitionHolder.spliterator(),
+                                     false
+                                 ))
+                                 .map(PartitionChunk::getObject)
+                                 .collect(Collectors.toList());
 
         final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
         for (DataSegment segment : segmentsToLock) {
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
         }
-        if (lockVisibleSegmentsOnly) {
-          intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
-        }
+        intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
         for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
           final Interval interval = entry.getKey();
           final Set<Integer> partitionIds = entry.getValue().stream()

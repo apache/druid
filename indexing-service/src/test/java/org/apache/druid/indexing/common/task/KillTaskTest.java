@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -48,11 +49,12 @@ public class KillTaskTest extends IngestionTestBase
   @Test
   public void testKill() throws Exception
   {
+    final String version = DateTimes.nowUtc().toString();
     final Set<DataSegment> segments = ImmutableSet.of(
-        newSegment(Intervals.of("2019-01-01/2019-02-01")),
-        newSegment(Intervals.of("2019-02-01/2019-03-01")),
-        newSegment(Intervals.of("2019-03-01/2019-04-01")),
-        newSegment(Intervals.of("2019-04-01/2019-05-01"))
+        newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
+        newSegment(Intervals.of("2019-02-01/2019-03-01"), version),
+        newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
+        newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
     final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
 
@@ -61,13 +63,13 @@ public class KillTaskTest extends IngestionTestBase
     Assert.assertTrue(
         getMetadataSegmentManager().removeSegment(
             DATA_SOURCE,
-            newSegment(Intervals.of("2019-02-01/2019-03-01")).getId().toString()
+            newSegment(Intervals.of("2019-02-01/2019-03-01"), version).getId().toString()
         )
     );
     Assert.assertTrue(
         getMetadataSegmentManager().removeSegment(
             DATA_SOURCE,
-            newSegment(Intervals.of("2019-03-01/2019-04-01")).getId().toString()
+            newSegment(Intervals.of("2019-03-01/2019-04-01"), version).getId().toString()
         )
     );
 
@@ -80,22 +82,22 @@ public class KillTaskTest extends IngestionTestBase
         Intervals.of("2019/2020")
     );
 
-    Assert.assertEquals(ImmutableList.of(newSegment(Intervals.of("2019-02-01/2019-03-01"))), unusedSegments);
+    Assert.assertEquals(ImmutableList.of(newSegment(Intervals.of("2019-02-01/2019-03-01"), version)), unusedSegments);
     Assert.assertEquals(
         ImmutableList.of(
-            newSegment(Intervals.of("2019-01-01/2019-02-01")),
-            newSegment(Intervals.of("2019-04-01/2019-05-01"))
+            newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
+            newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
         ),
         getMetadataStorageCoordinator().getUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"))
     );
   }
 
-  private static DataSegment newSegment(Interval interval)
+  private static DataSegment newSegment(Interval interval, String version)
   {
     return new DataSegment(
         DATA_SOURCE,
         interval,
-        "version",
+        version,
         null,
         null,
         null,

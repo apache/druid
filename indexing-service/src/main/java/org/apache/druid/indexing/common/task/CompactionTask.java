@@ -281,7 +281,7 @@ public class CompactionTask extends AbstractTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.checkAndGetSegments(taskActionClient);
-    return tryLockWithSegments(taskActionClient, segments, true);
+    return tryLockWithSegments(taskActionClient, segments);
   }
 
   @Override

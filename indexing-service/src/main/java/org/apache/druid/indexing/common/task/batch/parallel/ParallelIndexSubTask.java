@@ -158,7 +158,7 @@ public class ParallelIndexSubTask extends AbstractTask
   private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
   {
     try {
-      return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), true);
+      return tryLockWithIntervals(actionClient, new ArrayList<>(intervals));
     }
     catch (Exception e) {
       log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
@@ -416,7 +416,7 @@ public class ParallelIndexSubTask extends AbstractTask
           } else {
             final Granularity segmentGranularity = findSegmentGranularity(granularitySpec);
             final Interval timeChunk = segmentGranularity.bucket(inputRow.getTimestamp());
-            if (!tryLockWithIntervals(toolbox.getTaskActionClient(), Collections.singletonList(timeChunk), true)) {
+            if (!tryLockWithIntervals(toolbox.getTaskActionClient(), Collections.singletonList(timeChunk))) {
               throw new ISE("Failed to get locks for interval[%s]", timeChunk);
             }
           }

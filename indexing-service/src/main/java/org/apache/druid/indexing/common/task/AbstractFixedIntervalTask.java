@@ -22,10 +22,11 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.Map;
 
 public abstract class AbstractFixedIntervalTask extends AbstractTask
@@ -71,7 +72,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return tryLockWithIntervals(taskActionClient, Collections.singletonList(interval), false);
+    return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
   }
 
   @JsonProperty

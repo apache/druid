@@ -296,7 +296,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       }
     }
 
-    return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), true);
+    return tryLockWithIntervals(actionClient, new ArrayList<>(intervals));
   }
 
   @GET
