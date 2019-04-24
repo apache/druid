@@ -226,7 +226,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 handle
                     .createQuery(
                         StringUtils.format(
-                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start >= :start AND %2$send%2$s <= :end",
+                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start",
                             getSegmentsTable(), connector.getQuoteString()
                         )
                     )
@@ -284,8 +284,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   {
     return versionedIntervalTimeline.lookup(interval).stream().flatMap(
         objectHolder -> StreamSupport.stream(objectHolder.getObject().spliterator(), false).map(
-            dataSegmentPartitionChunk -> dataSegmentPartitionChunk.getObject().getId()
+            dataSegmentPartitionChunk -> dataSegmentPartitionChunk.getObject()
         )
+        .filter(segment -> interval.contains(segment.getInterval()))
+        .map(segment -> segment.getId())
     );
   }
 
@@ -324,7 +326,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     ));
 
     return enableSegments(
-        segmentIdsForInterval(versionedIntervalTimeline, Intervals.ETERNITY).collect(Collectors.toSet()),
+        segmentIdsForInterval(versionedIntervalTimeline, Intervals.ETERNITY)
+            .filter(segmentId -> segmentIds.contains(segmentId.toString()))
+            .collect(Collectors.toSet()),
         versionedIntervalTimeline
     );
   }
