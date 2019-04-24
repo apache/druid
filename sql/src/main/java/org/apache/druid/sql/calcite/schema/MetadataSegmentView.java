@@ -73,7 +73,8 @@ public class MetadataSegmentView
 
   private final boolean isCacheEnabled;
   /**
-   * Use {@link ConcurrentSkipListMap} so that the order of segments is deterministic and sys.segments queries return the segments in sorted order based on segmentId
+   * Use {@link ConcurrentSkipListMap} so that the order of segments is deterministic and
+   * sys.segments queries return the segments in sorted order based on segmentId
    * {@link CachedSegmentOvershadowedStatus} contains the overshadow status and the timestamp for the DataSegment
    */
   @Nullable

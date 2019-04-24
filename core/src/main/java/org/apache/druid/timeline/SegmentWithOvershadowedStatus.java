@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * DataSegment object plus the overshadowed status for the segment. An immutable object.
  *
- * SegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId} of the DataSegment object.
+ * SegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
+ * of the DataSegment object.
  */
 public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {

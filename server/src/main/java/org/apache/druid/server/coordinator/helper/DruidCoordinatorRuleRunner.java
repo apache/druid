@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -87,7 +88,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // find available segments which are not overshadowed by other segments in DB
     // only those would need to be loaded/dropped
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    Set<DataSegment> overshadowed = determineOvershadowedSegments(params);
+    final Set<DataSegment> overshadowed = ImmutableDruidDataSource
+        .determineOvershadowedSegments(params.getAvailableSegments());
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
@@ -135,20 +137,5 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
-  }
-
-  private Set<DataSegment> determineOvershadowedSegments(DruidCoordinatorRuntimeParams params)
-  {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline
-        .buildTimelines(params.getAvailableSegments());
-    Set<DataSegment> overshadowed = new HashSet<>();
-    for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
-      for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-        for (DataSegment dataSegment : holder.getObject().payloads()) {
-          overshadowed.add(dataSegment);
-        }
-      }
-    }
-    return overshadowed;
   }
 }
