@@ -296,7 +296,7 @@ public class ParallelIndexSubTask extends AbstractTask
                   .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
               final ShardSpecFactory shardSpecFactory;
               if (isOverwriteMode() && !isChangeSegmentGranularity()) {
-                final OverwritingSegmentMeta overwritingSegmentMeta = getOverwritingSegmentMeta(interval);
+                final OverwritingRootGenerationPartitions overwritingSegmentMeta = getOverwritingSegmentMeta(interval);
                 if (overwritingSegmentMeta == null) {
                   throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
                 }

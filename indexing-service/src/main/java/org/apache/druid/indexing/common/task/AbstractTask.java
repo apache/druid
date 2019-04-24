@@ -78,22 +78,22 @@ public abstract class AbstractTask implements Task
   private final Map<String, Object> context;
 
   @Nullable
-  private Map<Interval, OverwritingSegmentMeta> overwritingSegmentMetas; // TODO: rename?
+  private Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions;
 
   @Nullable
   private Boolean changeSegmentGranularity;
 
-  public static class OverwritingSegmentMeta
+  public static class OverwritingRootGenerationPartitions
   {
     private final int startRootPartitionId;
     private final int endRootPartitionId;
-    private final short minorVersionForNewSegments;
+    private final short maxMinorVersion;
 
-    private OverwritingSegmentMeta(int startRootPartitionId, int endRootPartitionId, short minorVersionForNewSegments)
+    private OverwritingRootGenerationPartitions(int startRootPartitionId, int endRootPartitionId, short maxMinorVersion)
     {
       this.startRootPartitionId = startRootPartitionId;
       this.endRootPartitionId = endRootPartitionId;
-      this.minorVersionForNewSegments = minorVersionForNewSegments;
+      this.maxMinorVersion = maxMinorVersion;
     }
 
     public int getStartRootPartitionId()
@@ -108,7 +108,7 @@ public abstract class AbstractTask implements Task
 
     public short getMinorVersionForNewSegments()
     {
-      return minorVersionForNewSegments;
+      return (short) (maxMinorVersion + 1);
     }
   }
 
@@ -296,10 +296,10 @@ public abstract class AbstractTask implements Task
     return context;
   }
 
-  // TODO: remove this and check by findInputSegments returns empty?
   public abstract boolean requireLockInputSegments();
 
-  public abstract List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals) throws IOException;
+  public abstract List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+      throws IOException;
 
   public abstract boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments);
 
@@ -323,22 +323,22 @@ public abstract class AbstractTask implements Task
       throws IOException
   {
     if (requireLockInputSegments()) {
-      final List<Interval> intervalsToFindInput = new ArrayList<>(intervals);
-      if (overwritingSegmentMetas != null) {
-        intervalsToFindInput.removeAll(overwritingSegmentMetas.keySet());
-      }
-
       // TODO: check changeSegmentGranularity and get timeChunkLock here
 
-      // TODO: race - a new segment can be added after findInputSegments. change to lockAllSegmentsInIntervals
-      if (!intervalsToFindInput.isEmpty()) {
-        return tryLockWithSegments(client, findInputSegments(client, intervalsToFindInput));
+      // This method finds segments falling in all given intervals and then tries to lock those segments.
+      // Thus, there might be a race between calling findInputSegments() and tryLockWithSegments(),
+      // i.e., a new segment can be added to the interval or an existing segment might be removed.
+      // Removed segments should be fine because indexing tasks would do nothing with removed segments.
+      // However, tasks wouldn't know about new segments added after findInputSegments() call, it may missing those
+      // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
+      if (!intervals.isEmpty()) {
+        return tryLockWithSegments(client, findInputSegments(client, intervals));
       } else {
         return true;
       }
     } else {
       changeSegmentGranularity = false;
-      overwritingSegmentMetas = Collections.emptyMap();
+      overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
   }
@@ -349,7 +349,7 @@ public abstract class AbstractTask implements Task
     if (requireLockInputSegments()) {
       if (segments.isEmpty()) {
         changeSegmentGranularity = false;
-        overwritingSegmentMetas = Collections.emptyMap();
+        overwritingRootGenPartitions = Collections.emptyMap();
         return true;
       }
 
@@ -358,7 +358,7 @@ public abstract class AbstractTask implements Task
 
       changeSegmentGranularity = changeSegmentGranularity(intervals);
       if (changeSegmentGranularity) {
-        overwritingSegmentMetas = Collections.emptyMap();
+        overwritingRootGenPartitions = Collections.emptyMap();
         // In this case, the intervals to lock must be alighed with segmentGranularity if it's defined
         final Set<Interval> uniqueIntervals = new HashSet<>();
         for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
@@ -403,7 +403,12 @@ public abstract class AbstractTask implements Task
                                                  .map(s -> s.getShardSpec().getPartitionNum())
                                                  .collect(Collectors.toSet());
           final List<LockResult> lockResults = client.submit(
-              new SegmentLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval, entry.getValue().get(0).getVersion(), partitionIds)
+              new SegmentLockTryAcquireAction(
+                  TaskLockType.EXCLUSIVE,
+                  interval,
+                  entry.getValue().get(0).getVersion(),
+                  partitionIds
+              )
           );
           if (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk())) {
             // TODO: unlock
@@ -414,7 +419,7 @@ public abstract class AbstractTask implements Task
       }
     } else {
       changeSegmentGranularity = false;
-      overwritingSegmentMetas = Collections.emptyMap();
+      overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
   }
@@ -476,15 +481,15 @@ public abstract class AbstractTask implements Task
         .max()
         .orElseThrow(() -> new ISE("Empty inputSegments"));
 
-    if (overwritingSegmentMetas == null) {
-      overwritingSegmentMetas = new HashMap<>();
+    if (overwritingRootGenPartitions == null) {
+      overwritingRootGenPartitions = new HashMap<>();
     }
-    overwritingSegmentMetas.put(
+    overwritingRootGenPartitions.put(
         interval,
-        new OverwritingSegmentMeta(
+        new OverwritingRootGenerationPartitions(
             inputSegments.get(0).getStartRootPartitionId(),
             inputSegments.get(inputSegments.size() - 1).getEndRootPartitionId(),
-            (short) (prevMaxMinorVersion + 1)
+            prevMaxMinorVersion
         )
     );
   }
@@ -494,22 +499,22 @@ public abstract class AbstractTask implements Task
     return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
   }
 
-  Map<Interval, OverwritingSegmentMeta> getAllOverwritingSegmentMeta()
+  Map<Interval, OverwritingRootGenerationPartitions> getAllOverwritingSegmentMeta()
   {
-    Preconditions.checkNotNull(overwritingSegmentMetas, "overwritingSegmentMetas is not initialized");
-    return overwritingSegmentMetas;
+    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
+    return Collections.unmodifiableMap(overwritingRootGenPartitions);
   }
 
   @Nullable
-  public OverwritingSegmentMeta getOverwritingSegmentMeta(Interval interval)
+  public OverwritingRootGenerationPartitions getOverwritingSegmentMeta(Interval interval)
   {
-    Preconditions.checkNotNull(overwritingSegmentMetas, "overwritingSegmentMetas is not initialized");
-    return overwritingSegmentMetas.get(interval);
+    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
+    return overwritingRootGenPartitions.get(interval);
   }
 
   public boolean isOverwriteMode()
   {
-    Preconditions.checkNotNull(overwritingSegmentMetas, "overwritingSegmentMetas is not initialized");
-    return !overwritingSegmentMetas.isEmpty();
+    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
+    return !overwritingRootGenPartitions.isEmpty();
   }
 }

@@ -717,7 +717,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   )
   {
     if (overwrite && !isChangeSegmentGranularity()) {
-      final OverwritingSegmentMeta overwritingSegmentMeta = Preconditions.checkNotNull(
+      final OverwritingRootGenerationPartitions overwritingSegmentMeta = Preconditions.checkNotNull(
           getOverwritingSegmentMeta(interval),
           "Can't find overwritingSegmentMeta for interval[%s]",
           interval
@@ -843,7 +843,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
         return new CachingRemoteSegmentAllocator(toolbox, getId(), allocateSpec);
       } else {
-        return new RemoteSegmentAllocator(toolbox, getId(), dataSchema, isOverwriteMode(), isChangeSegmentGranularity(), getAllOverwritingSegmentMeta());
+        return new RemoteSegmentAllocator(
+            toolbox,
+            getId(),
+            dataSchema,
+            isOverwriteMode(),
+            isChangeSegmentGranularity(),
+            getAllOverwritingSegmentMeta()
+        );
       }
     } else {
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.

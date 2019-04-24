@@ -53,12 +53,11 @@ import java.util.stream.Collectors;
  * segments for the given timestamp, or if the prior segments for the given timestamp are already at the
  * preferredSegmentGranularity. Otherwise, the prior segments will take precedence.
  * <p/>
- * This action implicitly acquires locks when it allocates segments. You do not have to acquire them beforehand,
+ * This action implicitly acquires segment locks when it allocates segments. You do not have to acquire them beforehand,
  * although you *do* have to release them yourself.
  * <p/>
- * If this action cannot acquire an appropriate lock, or if it cannot expand an existing segment set, it returns null.
- *
- * TODO: must be used with segment locking
+ * If this action cannot acquire an appropriate segment lock, or if it cannot expand an existing segment set, it returns
+ * null.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
@@ -275,7 +274,6 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // This action is always used by appending tasks, which cannot change the segment granularity of existing
     // dataSources. So, all lock requests should be segmentLock.
-    // TODO: don't use taskLockbox
     final LockResult lockResult = toolbox.getTaskLockbox().tryLock(
         task,
         new LockRequestForNewSegment(

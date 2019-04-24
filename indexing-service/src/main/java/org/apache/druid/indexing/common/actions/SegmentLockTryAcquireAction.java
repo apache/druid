@@ -45,7 +45,7 @@ public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
       @JsonProperty("lockType") TaskLockType type,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JsonProperty("partitionIds") Set<Integer> partitionIds // TODO: IntSet
+      @JsonProperty("partitionIds") Set<Integer> partitionIds
   )
   {
     Preconditions.checkState(partitionIds != null && !partitionIds.isEmpty(), "partitionIds is empty");

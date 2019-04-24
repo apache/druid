@@ -42,13 +42,6 @@ import java.util.Map;
 })
 public interface ShardSpec
 {
-  // TODO: move to somewhere..?
-  int ROOT_GEN_START_PARTITION_ID = 0;
-  int ROOT_GEN_END_PARTITION_ID = 32768; // exclusive
-  int NON_ROOT_GEN_START_PARTITION_ID = 32768;
-  int NON_ROOT_GEN_END_PARTITION_ID = 65536; // exclusive
-  short UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE = -1;
-
   <T> PartitionChunk<T> createChunk(T obj);
 
   boolean isInChunk(long timestamp, InputRow inputRow);

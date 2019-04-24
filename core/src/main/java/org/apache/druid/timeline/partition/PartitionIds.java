@@ -19,7 +19,13 @@
 
 package org.apache.druid.timeline.partition;
 
-// TODO: rename
-public interface OverwritingPartitionChunk<T> extends PartitionChunk<T>
+public final class PartitionIds
 {
+  public static int ROOT_GEN_START_PARTITION_ID = 0;
+  public static int ROOT_GEN_END_PARTITION_ID = 32768; // exclusive
+  public static int NON_ROOT_GEN_START_PARTITION_ID = 32768;
+  public static int NON_ROOT_GEN_END_PARTITION_ID = 65536; // exclusive
+  public static short UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE = -1;
+
+  private PartitionIds() {}
 }

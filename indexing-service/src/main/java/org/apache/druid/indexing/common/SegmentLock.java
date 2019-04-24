@@ -32,8 +32,7 @@ import org.joda.time.Interval;
 import java.util.Objects;
 
 /**
- * Lock for set of segments. Should be unique for (dataSource, interval, partitionId)??
- * TODO: is the above sentence true??
+ * Lock for set of segments. Should be unique for (dataSource, interval, version, partitionId).
  */
 public class SegmentLock implements TaskLock
 {

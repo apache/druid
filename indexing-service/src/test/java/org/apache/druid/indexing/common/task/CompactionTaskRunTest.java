@@ -56,7 +56,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -250,7 +250,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(ShardSpec.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+          segments.get(i).getShardSpec()
+      );
     }
 
     final CompactionTask compactionTask2 = builder
@@ -267,7 +270,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(ShardSpec.NON_ROOT_GEN_START_PARTITION_ID + 1, 0, 2, (short) 2, (short) 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1, 0, 2, (short) 2, (short) 1),
+          segments.get(i).getShardSpec()
+      );
     }
   }
 
@@ -352,7 +358,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(ShardSpec.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+          segments.get(i).getShardSpec()
+      );
     }
   }
 
@@ -487,8 +496,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(ShardSpec.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
+          segments.get(i).getShardSpec()
+      );
     }
 
     final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
@@ -542,8 +557,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(ShardSpec.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(
+          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
+          segments.get(i).getShardSpec()
+      );
     }
 
     final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();

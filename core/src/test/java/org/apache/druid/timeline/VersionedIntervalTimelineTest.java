@@ -34,7 +34,7 @@ import org.apache.druid.timeline.partition.NumberedOverwritingPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
@@ -2051,7 +2051,7 @@ public class VersionedIntervalTimelineTest
       int atomicUpdateGroupSize
   )
   {
-    final int partitionNum = ShardSpec.NON_ROOT_GEN_START_PARTITION_ID + partitionNumOrdinal;
+    final int partitionNum = PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + partitionNumOrdinal;
     return new NumberedOverwritingPartitionChunk<>(
         partitionNum,
         new OvershadowableInteger(

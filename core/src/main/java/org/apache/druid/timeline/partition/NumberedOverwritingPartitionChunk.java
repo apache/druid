@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 
 import java.util.Objects;
 
-public class NumberedOverwritingPartitionChunk<T> implements OverwritingPartitionChunk<T>
+public class NumberedOverwritingPartitionChunk<T> implements PartitionChunk<T>
 {
   private final int chunkId;
   private final T object;
@@ -32,12 +32,12 @@ public class NumberedOverwritingPartitionChunk<T> implements OverwritingPartitio
   public NumberedOverwritingPartitionChunk(int chunkId, T object)
   {
     Preconditions.checkArgument(
-        chunkId >= ShardSpec.NON_ROOT_GEN_START_PARTITION_ID && chunkId < ShardSpec.NON_ROOT_GEN_END_PARTITION_ID,
+        chunkId >= PartitionIds.NON_ROOT_GEN_START_PARTITION_ID && chunkId < PartitionIds.NON_ROOT_GEN_END_PARTITION_ID,
         "partitionNum[%s] >= %s && partitionNum[%s] < %s",
         chunkId,
-        ShardSpec.NON_ROOT_GEN_START_PARTITION_ID,
+        PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
         chunkId,
-        ShardSpec.NON_ROOT_GEN_END_PARTITION_ID
+        PartitionIds.NON_ROOT_GEN_END_PARTITION_ID
     );
 
     this.chunkId = chunkId;

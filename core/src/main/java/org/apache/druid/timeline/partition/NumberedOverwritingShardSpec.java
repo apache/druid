@@ -49,35 +49,38 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
   )
   {
     Preconditions.checkArgument(
-        partitionId >= NON_ROOT_GEN_START_PARTITION_ID && partitionId < NON_ROOT_GEN_END_PARTITION_ID,
+        partitionId >= PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
+        && partitionId < PartitionIds.NON_ROOT_GEN_END_PARTITION_ID,
         "partitionNum[%s] >= %s && partitionNum[%s] < %s",
         partitionId,
-        NON_ROOT_GEN_START_PARTITION_ID,
+        PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
         partitionId,
-        NON_ROOT_GEN_END_PARTITION_ID
+        PartitionIds.NON_ROOT_GEN_END_PARTITION_ID
     );
     Preconditions.checkArgument(
-        startRootPartitionId >= ROOT_GEN_START_PARTITION_ID && startRootPartitionId < ROOT_GEN_END_PARTITION_ID,
+        startRootPartitionId >= PartitionIds.ROOT_GEN_START_PARTITION_ID
+        && startRootPartitionId < PartitionIds.ROOT_GEN_END_PARTITION_ID,
         "startRootPartitionId[%s] >= %s && startRootPartitionId[%s] < %s",
         startRootPartitionId,
-        ROOT_GEN_START_PARTITION_ID,
+        PartitionIds.ROOT_GEN_START_PARTITION_ID,
         startRootPartitionId,
-        ROOT_GEN_END_PARTITION_ID
+        PartitionIds.ROOT_GEN_END_PARTITION_ID
     );
     Preconditions.checkArgument(
-        endRootPartitionId >= ROOT_GEN_START_PARTITION_ID && endRootPartitionId < ROOT_GEN_END_PARTITION_ID,
+        endRootPartitionId >= PartitionIds.ROOT_GEN_START_PARTITION_ID
+        && endRootPartitionId < PartitionIds.ROOT_GEN_END_PARTITION_ID,
         "endRootPartitionId[%s] >= %s && endRootPartitionId[%s] < %s",
         endRootPartitionId,
-        ROOT_GEN_START_PARTITION_ID,
+        PartitionIds.ROOT_GEN_START_PARTITION_ID,
         endRootPartitionId,
-        ROOT_GEN_END_PARTITION_ID
+        PartitionIds.ROOT_GEN_END_PARTITION_ID
     );
     Preconditions.checkArgument(minorVersion > 0, "minorVersion[%s] > 0", minorVersion);
     Preconditions.checkArgument(
-        atomicUpdateGroupSize > 0 || atomicUpdateGroupSize == ShardSpec.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE,
+        atomicUpdateGroupSize > 0 || atomicUpdateGroupSize == PartitionIds.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE,
         "atomicUpdateGroupSize[%s] > 0 or == %s",
         atomicUpdateGroupSize,
-        ShardSpec.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE
+        PartitionIds.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE
     );
 
     this.partitionId = partitionId;
@@ -99,7 +102,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
         startRootPartitionId,
         endRootPartitionId,
         minorVersion,
-        ShardSpec.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE
+        PartitionIds.UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE
     );
   }
 

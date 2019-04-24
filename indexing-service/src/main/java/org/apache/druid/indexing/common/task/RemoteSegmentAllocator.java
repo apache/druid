@@ -23,7 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.task.AbstractTask.OverwritingSegmentMeta;
+import org.apache.druid.indexing.common.task.AbstractTask.OverwritingRootGenerationPartitions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -47,7 +47,7 @@ public class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
       DataSchema dataSchema,
       boolean isOverwriteMode,
       boolean isChangeSegmentGranularity,
-      Map<Interval, OverwritingSegmentMeta> overwritingSegmentMetaMap
+      Map<Interval, OverwritingRootGenerationPartitions> overwritingSegmentMetaMap
   )
   {
     this.taskId = taskId;
@@ -61,7 +61,7 @@ public class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
           final ShardSpecFactory shardSpecFactory;
           if (isOverwriteMode && !isChangeSegmentGranularity) {
-            final OverwritingSegmentMeta overwritingSegmentMeta = overwritingSegmentMetaMap.get(interval);
+            final OverwritingRootGenerationPartitions overwritingSegmentMeta = overwritingSegmentMetaMap.get(interval);
             if (overwritingSegmentMeta == null) {
               throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
             }

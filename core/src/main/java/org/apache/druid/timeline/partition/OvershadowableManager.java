@@ -21,9 +21,20 @@ package org.apache.druid.timeline.partition;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import it.unimi.dsi.fastutil.objects.AbstractObjectCollection;
+import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.ObjectIterators;
+import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
+import it.unimi.dsi.fastutil.objects.ObjectSortedSets;
+import it.unimi.dsi.fastutil.shorts.AbstractShort2ObjectSortedMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectSortedMap;
+import it.unimi.dsi.fastutil.shorts.ShortComparator;
+import it.unimi.dsi.fastutil.shorts.ShortComparators;
+import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
+import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.Overshadowable;
 
@@ -35,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -56,7 +68,7 @@ public class OvershadowableManager<T extends Overshadowable<T>>
 
   // start partitionId -> end partitionId -> minorVersion -> atomicUpdateGroup
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> standbyGroups;
-  private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroup; // TODO: singleton navigable map
+  private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroup;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> overshadowedGroups;
 
   public OvershadowableManager()
@@ -84,6 +96,19 @@ public class OvershadowableManager<T extends Overshadowable<T>>
         return visibleGroup;
       case OVERSHADOWED:
         return overshadowedGroups;
+      default:
+        throw new ISE("Unknown state[%s]", state);
+    }
+  }
+
+  private Short2ObjectSortedMap<AtomicUpdateGroup<T>> createMinorVersionToAugMap(State state)
+  {
+    switch (state) {
+      case STANDBY:
+      case OVERSHADOWED:
+        return new Short2ObjectRBTreeMap<>();
+      case VISIBLE:
+        return new SingleEntryShort2ObjectSortedMap<>();
       default:
         throw new ISE("Unknown state[%s]", state);
     }
@@ -204,7 +229,7 @@ public class OvershadowableManager<T extends Overshadowable<T>>
   private void addTo(AtomicUpdateGroup<T> aug, State state)
   {
     final AtomicUpdateGroup<T> existing = getStateMap(state)
-        .computeIfAbsent(RootPartitionRange.of(aug), k -> new Short2ObjectRBTreeMap<>())
+        .computeIfAbsent(RootPartitionRange.of(aug), k -> createMinorVersionToAugMap(state))
         .put(aug.getMinorVersion(), aug);
 
     if (existing != null) {
@@ -547,6 +572,183 @@ public class OvershadowableManager<T extends Overshadowable<T>>
              "startPartitionId=" + startPartitionId +
              ", endPartitionId=" + endPartitionId +
              '}';
+    }
+  }
+
+  private static class SingleEntryShort2ObjectSortedMap<V> extends AbstractShort2ObjectSortedMap<V>
+  {
+    private short key;
+    private V val;
+
+    private SingleEntryShort2ObjectSortedMap()
+    {
+      key = -1;
+      val = null;
+    }
+
+    @Override
+    public Short2ObjectSortedMap<V> subMap(short fromKey, short toKey)
+    {
+      if (fromKey <= key && toKey > key) {
+        return this;
+      } else {
+        throw new IllegalArgumentException();
+      }
+    }
+
+    @Override
+    public Short2ObjectSortedMap<V> headMap(short toKey)
+    {
+      if (toKey > key) {
+        return this;
+      } else {
+        throw new IllegalArgumentException();
+      }
+    }
+
+    @Override
+    public Short2ObjectSortedMap<V> tailMap(short fromKey)
+    {
+      if (fromKey <= key) {
+        return this;
+      } else {
+        throw new IllegalArgumentException();
+      }
+    }
+
+    @Override
+    public short firstShortKey()
+    {
+      if (key < 0) {
+        throw new NoSuchElementException();
+      }
+      return key;
+    }
+
+    @Override
+    public short lastShortKey()
+    {
+      if (key < 0) {
+        throw new NoSuchElementException();
+      }
+      return key;
+    }
+
+    @Override
+    public ObjectSortedSet<Short2ObjectMap.Entry<V>> short2ObjectEntrySet()
+    {
+      return isEmpty() ? ObjectSortedSets.EMPTY_SET : ObjectSortedSets.singleton(new BasicEntry<>(key, val));
+    }
+
+    @Override
+    public ShortSortedSet keySet()
+    {
+      return isEmpty() ? ShortSortedSets.EMPTY_SET : ShortSortedSets.singleton(key);
+    }
+
+    @Override
+    public ObjectCollection<V> values()
+    {
+      return new AbstractObjectCollection<V>()
+      {
+        @Override
+        public ObjectIterator<V> iterator()
+        {
+          return size() > 0 ? ObjectIterators.singleton(val) : ObjectIterators.emptyIterator();
+        }
+
+        @Override
+        public int size()
+        {
+          return key < 0 ? 0 : 1;
+        }
+      };
+    }
+
+    @Override
+    public V put(final short key, final V value)
+    {
+      final V existing = isEmpty() ? null : this.val;
+      this.key = key;
+      this.val = value;
+      return existing;
+    }
+
+    @Override
+    public V get(short key)
+    {
+      return this.key == key ? val : null;
+    }
+
+    @Override
+    public V remove(final short key)
+    {
+      if (this.key == key) {
+        this.key = -1;
+        return val;
+      } else {
+        return null;
+      }
+    }
+
+    @Override
+    public boolean containsKey(short key)
+    {
+      return this.key == key;
+    }
+
+    @Override
+    public ShortComparator comparator()
+    {
+      return ShortComparators.NATURAL_COMPARATOR;
+    }
+
+    @Override
+    public int size()
+    {
+      return key < 0 ? 0 : 1;
+    }
+
+    @Override
+    public void defaultReturnValue(V rv)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public V defaultReturnValue()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isEmpty()
+    {
+      return key < 0;
+    }
+
+    @Override
+    public boolean containsValue(Object value)
+    {
+      if (key < 0) {
+        return false;
+      } else {
+        return Objects.equals(val, value);
+      }
+    }
+
+    @Override
+    public void putAll(Map<? extends Short, ? extends V> m)
+    {
+      if (!m.isEmpty()) {
+        if (m.size() == 1) {
+          final Map.Entry<? extends Short, ? extends V> entry = m.entrySet().iterator().next();
+          this.key = entry.getKey();
+          this.val = entry.getValue();
+        } else {
+          throw new IllegalArgumentException();
+        }
+      }
     }
   }
 }

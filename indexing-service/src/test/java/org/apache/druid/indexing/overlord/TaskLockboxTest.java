@@ -60,7 +60,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -962,7 +962,7 @@ public class TaskLockboxTest
       final SegmentLock segmentLock = (SegmentLock) lock;
       Assert.assertEquals(expectedPartitionId++, segmentLock.getPartitionId());
       if (expectedPartitionId == 3) {
-        expectedPartitionId = ShardSpec.NON_ROOT_GEN_START_PARTITION_ID;
+        expectedPartitionId = PartitionIds.NON_ROOT_GEN_START_PARTITION_ID;
       }
     }
   }

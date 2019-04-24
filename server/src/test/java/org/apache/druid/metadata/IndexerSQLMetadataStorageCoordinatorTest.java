@@ -42,7 +42,7 @@ import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -979,7 +979,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       Assert.assertEquals(
           StringUtils.format(
               "ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version%s",
-              "_" + (i + ShardSpec.NON_ROOT_GEN_START_PARTITION_ID)
+              "_" + (i + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID)
           ),
           identifier.toString()
       );
@@ -1022,7 +1022,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             Collections.emptyList(),
             Collections.emptyList(),
             new NumberedOverwritingShardSpec(
-                9 + ShardSpec.NON_ROOT_GEN_START_PARTITION_ID,
+                9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
                 0,
                 1,
                 (short) 9,
