@@ -46,7 +46,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
       content = <div className="no-record">No history records available</div>;
     } else {
        content = <>
-          <h3>History</h3>
+          <span className={'history-dialog-title'}>History</span>
           <div className="history-record-entries">
             {
               historyRecords.map((record: any) => {
