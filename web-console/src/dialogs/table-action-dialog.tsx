@@ -93,46 +93,48 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
     const { jsonValue, activeEndpoint } = this.state;
     const { id, mode, status, supervisorSuspended } = this.props.metaData;
 
-    const supervisorTableInfoButtons = [
+    const supervisorTableSideButtonMetadata = [
       {icon: 'align-left', text: 'Payload', endpoint: ``},
       {icon: 'dashboard', text: 'Status', endpoint: `status`},
       {icon: 'chart', text: 'Statistics', endpoint: `stats`},
       {icon: 'history', text: 'History', endpoint: `history`}
     ];
 
-    const taskTableInfoButtons = [
+    const taskTableSideButtonMetadata = [
       {icon: 'align-left', text: 'Payload', endpoint: ``},
       {icon: 'dashboard', text: 'Status', endpoint: `status`},
       {icon: 'comparison', text: 'Reports', endpoint: `reports`},
       {icon: 'align-justify', text: 'Logs', endpoint: `log?offset=-8192`}
     ];
 
-    const tableInfoButtons = mode === 'supervisor' ? supervisorTableInfoButtons : taskTableInfoButtons;
-
-    const tableActionButtions = mode === 'supervisor'
-      ? [
-          <Button
-            key="terminate"
-            text={'Terminate'}
-            intent={Intent.DANGER}
-            onClick={() => id ? terminateSupervisor(id) : null}
-          />,
-          <Button
-            key="resumesuspend"
-            text={supervisorSuspended ? 'Resume' : 'Suspend'}
-            onClick={() => id ? (supervisorSuspended ? resumeSupervisor(id) : suspendSupervisor(id)) : null}
-          />,
-          <Button
-            key="reset"
-            text={'Reset'}
-            onClick={() => id ? resetSupervisor(id) : null}
-          />
-        ]
-      : <Button
-        text={'Kill'}
+    const supervisorTableActionButtons = [
+      <Button
+        key="terminate"
+        text={'Terminate'}
         intent={Intent.DANGER}
-        onClick={() => id && (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') ? resetSupervisor(id) : null}
-      />;
+        onClick={() => id ? terminateSupervisor(id) : null}
+      />,
+      <Button
+        key="resumesuspend"
+        text={supervisorSuspended ? 'Resume' : 'Suspend'}
+        onClick={() => id ? (supervisorSuspended ? resumeSupervisor(id) : suspendSupervisor(id)) : null}
+      />,
+      <Button
+        key="reset"
+        text={'Reset'}
+        onClick={() => id ? resetSupervisor(id) : null}
+      />
+    ];
+
+    const taskTableActionButtons = <Button
+      text={'Kill'}
+      intent={Intent.DANGER}
+      onClick={() => id && (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') ? resetSupervisor(id) : null}
+    />;
+
+    const tableSideButtonMetadata = mode === 'supervisor' ? supervisorTableSideButtonMetadata : taskTableSideButtonMetadata;
+
+    const tableActionButtions = mode === 'supervisor' ? supervisorTableActionButtons : taskTableActionButtons;
 
     return <Dialog
       className={'table-action-dialog'}
@@ -142,7 +144,7 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
     >
       <div className={'side-bar'}>
         {
-          tableInfoButtons.map((d: any) => {
+          tableSideButtonMetadata.map((d: any) => {
             return <Button
               className={`info-button`}
               icon={<Icon icon={d.icon} iconSize={20}/>}
@@ -167,19 +169,19 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
           {
             mode === 'task' && (activeEndpoint === 'log?offset=-8192' || activeEndpoint === 'log' )
             ? <ButtonGroup>
-              <Button
-                className={'view-all-button'}
-                text={activeEndpoint === 'log' ? 'View last 8kb' : 'View all'}
-                minimal
-                onClick={() => {
-                  const alternate =  activeEndpoint === 'log' ? 'log?offset=-8192' : 'log';
-                  this.setState({
-                    activeEndpoint: alternate
-                  });
-                  this.getJsonInfo(alternate);
-                }}
-              />
-            </ButtonGroup>
+                <Button
+                  className={'view-all-button'}
+                  text={activeEndpoint === 'log' ? 'View last 8kb' : 'View all'}
+                  minimal
+                  onClick={() => {
+                    const alternate =  activeEndpoint === 'log' ? 'log?offset=-8192' : 'log';
+                    this.setState({
+                      activeEndpoint: alternate
+                    });
+                    this.getJsonInfo(alternate);
+                  }}
+                />
+              </ButtonGroup>
             : <div/>
           }
           <ButtonGroup className={'right-buttons'}>
