@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -31,7 +30,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionPreconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -39,6 +37,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -49,8 +48,6 @@ import java.util.stream.Collectors;
  */
 public class KillTask extends AbstractFixedIntervalTask
 {
-  private static final Logger log = new Logger(KillTask.class);
-
   @JsonCreator
   public KillTask(
       @JsonProperty("id") String id,
@@ -112,9 +109,6 @@ public class KillTask extends AbstractFixedIntervalTask
         .getTaskActionClient()
         .submit(new SegmentListUnusedAction(getDataSource(), getInterval()));
 
- //    log.info("segments to kill: %s", unusedSegments);
- //    log.info("taskLockMap: %s", taskLockMap);
-
     if (!TaskActionPreconditions.isLockCoversSegments(taskLockMap, unusedSegments)) {
       throw new ISE(
           "Locks[%s] for task[%s] can't cover segments[%s]",
@@ -125,9 +119,9 @@ public class KillTask extends AbstractFixedIntervalTask
     }
 
     // Kill segments
+    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
     for (DataSegment segment : unusedSegments) {
       toolbox.getDataSegmentKiller().kill(segment);
-      toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.of(segment)));
     }
 
     return TaskStatus.success(getId());

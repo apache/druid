@@ -221,7 +221,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
                                                                    .getGranularitySpec()
                                                                    .bucketIntervals();
 
-    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()));
+    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()), true);
   }
 
   @Override

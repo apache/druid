@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -79,7 +78,7 @@ public abstract class AbstractTask implements Task
   private final Map<String, Object> context;
 
   @Nullable
-  private Map<Interval, OverwritingSegmentMeta> overwritingSegmentMetas;
+  private Map<Interval, OverwritingSegmentMeta> overwritingSegmentMetas; // TODO: rename?
 
   @Nullable
   private Boolean changeSegmentGranularity;
@@ -314,13 +313,13 @@ public abstract class AbstractTask implements Task
   @Nullable
   public abstract Granularity getSegmentGranularity(Interval interval);
 
-  protected boolean tryLockWithIntervals(TaskActionClient client, Set<Interval> intervals)
+  boolean tryLockWithIntervals(TaskActionClient client, Set<Interval> intervals)
       throws IOException
   {
-    return tryLockWithIntervals(client, new ArrayList<>(intervals));
+    return tryLockWithIntervals(client, new ArrayList<>(intervals), true);
   }
 
-  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals)
+  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals, boolean lockVisibleSegments)
       throws IOException
   {
     if (requireLockInputSegments()) {
@@ -333,7 +332,7 @@ public abstract class AbstractTask implements Task
 
       // TODO: race - a new segment can be added after findInputSegments. change to lockAllSegmentsInIntervals
       if (!intervalsToFindInput.isEmpty()) {
-        return tryLockWithSegments(client, findInputSegments(client, intervalsToFindInput));
+        return tryLockWithSegments(client, findInputSegments(client, intervalsToFindInput), lockVisibleSegments);
       } else {
         return true;
       }
@@ -344,7 +343,8 @@ public abstract class AbstractTask implements Task
     }
   }
 
-  protected boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments) throws IOException
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean lockVisibleSegments)
+      throws IOException
   {
     if (requireLockInputSegments()) {
       if (segments.isEmpty()) {
@@ -355,16 +355,6 @@ public abstract class AbstractTask implements Task
 
       // Create a timeline to find latest segments only
       final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
-      final TimelineLookup<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments);
-      final List<DataSegment> visibleSegments = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
-                                                        .stream()
-                                                        .map(TimelineObjectHolder::getObject)
-                                                        .flatMap(partitionHolder -> StreamSupport.stream(
-                                                            partitionHolder.spliterator(),
-                                                            false
-                                                        ))
-                                                        .map(PartitionChunk::getObject)
-                                                        .collect(Collectors.toList());
 
       changeSegmentGranularity = changeSegmentGranularity(intervals);
       if (changeSegmentGranularity) {
@@ -388,20 +378,43 @@ public abstract class AbstractTask implements Task
         }
         return true;
       } else {
+        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments);
+        final List<DataSegment> segmentsToLock;
+        if (lockVisibleSegments) {
+          segmentsToLock = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
+                                                            .stream()
+                                                            .map(TimelineObjectHolder::getObject)
+                                                            .flatMap(partitionHolder -> StreamSupport.stream(
+                                                                partitionHolder.spliterator(),
+                                                                false
+                                                            ))
+                                                            .map(PartitionChunk::getObject)
+                                                            .collect(Collectors.toList());
+        } else {
+          segmentsToLock = timeline.findFullyOvershadowed()
+                                   .stream()
+                                   .flatMap(holder -> holder.getObject().stream())
+                                   .map(PartitionChunk::getObject)
+                                   .collect(Collectors.toList());
+        }
+
         final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
-        for (DataSegment segment : segments) {
+        for (DataSegment segment : segmentsToLock) {
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
         }
-        intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
+        if (lockVisibleSegments) {
+          intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
+        }
         for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
           final Interval interval = entry.getKey();
           final Set<Integer> partitionIds = entry.getValue().stream()
                                                  .map(s -> s.getShardSpec().getPartitionNum())
                                                  .collect(Collectors.toSet());
           final List<LockResult> lockResults = client.submit(
-              new SegmentLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval, visibleSegments.get(0).getVersion(), partitionIds)
+              new SegmentLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval, entry.getValue().get(0).getVersion(), partitionIds)
           );
           if (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk())) {
+            // TODO: unlock
             return false;
           }
         }
@@ -414,6 +427,10 @@ public abstract class AbstractTask implements Task
     }
   }
 
+  /**
+   * TODO: description about what this method verifies
+   * TODO: similar check in taskLockbox??
+   */
   private void verifyAndFindRootPartitionRangeAndMinorVersion(List<DataSegment> inputSegments)
   {
     if (inputSegments.isEmpty()) {
@@ -485,7 +502,7 @@ public abstract class AbstractTask implements Task
     return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
   }
 
-  public Map<Interval, OverwritingSegmentMeta> getAllOverwritingSegmentMeta()
+  Map<Interval, OverwritingSegmentMeta> getAllOverwritingSegmentMeta()
   {
     Preconditions.checkNotNull(overwritingSegmentMetas, "overwritingSegmentMetas is not initialized");
     return overwritingSegmentMetas;
