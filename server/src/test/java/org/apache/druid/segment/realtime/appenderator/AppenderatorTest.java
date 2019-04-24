@@ -37,6 +37,8 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -49,6 +51,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -730,7 +733,7 @@ public class AppenderatorTest
       final List<Result<TimeseriesResultValue>> results3 =
           QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
-          "query2",
+          "query3",
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2001"),
@@ -739,6 +742,35 @@ public class AppenderatorTest
           ),
           results3
       );
+
+      final ScanQuery query4 = Druids.newScanQueryBuilder()
+                                     .dataSource(AppenderatorTester.DATASOURCE)
+                                     .intervals(
+                                         new MultipleSpecificSegmentSpec(
+                                             ImmutableList.of(
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 ),
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001T03/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .order(ScanQuery.Order.ASCENDING)
+                                     .batchSize(10)
+                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                     .build();
+      final List<ScanResultValue> results4 =
+          QueryPlus.wrap(query4).run(appenderator, new HashMap<>()).toList();
+      Assert.assertEquals(2, results4.size()); // 1 per segment
+      // Should return the 2 rows with `met` values of 8 and 64 (based on the segment spec provided)
+      Assert.assertEquals(2, results4.get(0).toSingleEventScanResultValues().size() +
+                             results4.get(1).toSingleEventScanResultValues().size());
     }
   }
 
