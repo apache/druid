@@ -79,18 +79,15 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   public long getFirstEventTimestamp(ScanQuery.ResultFormat resultFormat)
   {
     if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-      Long timestamp = (Long) ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
-      if (timestamp == null) {
-        throw new ISE("Unable to compare timestamp for rows without a time column");
-      }
-      return timestamp;
+      Object timestampObj = ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
+      return convertTimestampObjectToLong(timestampObj);
     } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
       int timeColumnIndex = this.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);
       if (timeColumnIndex == -1) {
         throw new ISE("Unable to compare timestamp for rows without a time column");
       }
       List<Object> firstEvent = (List<Object>) ((List<Object>) this.getEvents()).get(0);
-      return (Long) firstEvent.get(timeColumnIndex);
+      return convertTimestampObjectToLong(firstEvent.get(timeColumnIndex));
     }
     throw new UOE("Unable to get first event timestamp using result format of [%s]", resultFormat.toString());
   }
@@ -103,6 +100,21 @@ public class ScanResultValue implements Comparable<ScanResultValue>
       singleEventScanResultValues.add(new ScanResultValue(segmentId, columns, Collections.singletonList(event)));
     }
     return singleEventScanResultValues;
+  }
+
+  // If timestamp is < Integer.MAX_VALUE, it'll be an Integer object which can't be cast to a Long.  This method
+  // checks the type of the timestamp object and converts to a long value
+  private long convertTimestampObjectToLong(Object timestampObj)
+  {
+    if (timestampObj == null) {
+      throw new ISE("Unable to compare timestamp for rows without a time column");
+    } else if (timestampObj instanceof Integer) {
+      return ((Integer) timestampObj).longValue();
+    } else if (timestampObj instanceof Long) {
+      return (Long) timestampObj;
+    } else {
+      throw new ISE(String.format("Invalid state: %s isn't a numerical type.", ColumnHolder.TIME_COLUMN_NAME));
+    }
   }
 
 
