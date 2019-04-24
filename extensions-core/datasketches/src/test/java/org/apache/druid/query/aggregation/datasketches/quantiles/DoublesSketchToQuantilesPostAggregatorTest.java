@@ -34,9 +34,10 @@ public class DoublesSketchToQuantilesPostAggregatorTest
   @Test
   public void emptySketch()
   {
-    final Aggregator agg = new DoublesSketchBuildAggregator(null, 8);
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(null);
+    final Aggregator agg = new DoublesSketchBuildAggregator(selector, 8);
 
-    final Map<String, Object> fields = new HashMap<String, Object>();
+    final Map<String, Object> fields = new HashMap<>();
     fields.put("sketch", agg.get());
 
     final PostAggregator postAgg = new DoublesSketchToQuantilesPostAggregator(
@@ -46,6 +47,7 @@ public class DoublesSketchToQuantilesPostAggregatorTest
     );
 
     final double[] quantiles = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(quantiles);
     Assert.assertEquals(3, quantiles.length);
     Assert.assertTrue(Double.isNaN(quantiles[0]));
     Assert.assertTrue(Double.isNaN(quantiles[1]));
@@ -65,7 +67,7 @@ public class DoublesSketchToQuantilesPostAggregatorTest
       selector.increment();
     }
 
-    final Map<String, Object> fields = new HashMap<String, Object>();
+    final Map<String, Object> fields = new HashMap<>();
     fields.put("sketch", agg.get());
 
     final PostAggregator postAgg = new DoublesSketchToQuantilesPostAggregator(
@@ -75,6 +77,7 @@ public class DoublesSketchToQuantilesPostAggregatorTest
     );
 
     final double[] quantiles = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(quantiles);
     Assert.assertEquals(3, quantiles.length);
     Assert.assertEquals(1.0, quantiles[0], 0);
     Assert.assertEquals(3.0, quantiles[1], 0);

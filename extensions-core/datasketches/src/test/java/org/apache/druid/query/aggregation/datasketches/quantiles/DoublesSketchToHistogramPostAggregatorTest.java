@@ -34,9 +34,10 @@ public class DoublesSketchToHistogramPostAggregatorTest
   @Test
   public void emptySketch()
   {
-    final Aggregator agg = new DoublesSketchBuildAggregator(null, 8);
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(null);
+    final Aggregator agg = new DoublesSketchBuildAggregator(selector, 8);
 
-    final Map<String, Object> fields = new HashMap<String, Object>();
+    final Map<String, Object> fields = new HashMap<>();
     fields.put("sketch", agg.get());
 
     final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
@@ -46,6 +47,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
     Assert.assertEquals(2, histogram.length);
     Assert.assertTrue(Double.isNaN(histogram[0]));
     Assert.assertTrue(Double.isNaN(histogram[1]));
@@ -64,7 +66,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
       selector.increment();
     }
 
-    final Map<String, Object> fields = new HashMap<String, Object>();
+    final Map<String, Object> fields = new HashMap<>();
     fields.put("sketch", agg.get());
 
     final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
@@ -74,6 +76,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
     Assert.assertEquals(2, histogram.length);
     Assert.assertEquals(3.0, histogram[0], 0);
     Assert.assertEquals(3.0, histogram[1], 0);
