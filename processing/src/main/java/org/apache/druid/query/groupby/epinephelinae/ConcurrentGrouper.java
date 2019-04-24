@@ -409,6 +409,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!closed) {
       closed = true;
+      threadLocalGrouper.remove();
       groupers.forEach(Grouper::close);
     }
   }
