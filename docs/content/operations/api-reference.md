@@ -221,9 +221,9 @@ Returns full segment metadata for a specific segment in the cluster.
 Return the tiers that a datasource exists in.
 
 #### Note for coordinator's POST and DELETE API's
-The segments would be enabled/disabled when these API's are called, but then can be disabled/enabled again by the coordinator if any loadRule/dropRule matches. If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed. 
+The segments would be enabled when these API's are called, but then can be disabled again by the coordinator if any dropRule matches. Segments enabled by these API's might not be loaded by historical processes if no loadRule matches.  If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed. 
 
-Caution : Avoid using indexing or kill tasks and these API's at the same time.
+Caution : Avoid using indexing or kill tasks and these API's at the same time for the same datasource and time chunk. (It's fine if the time chunks or datasource don't overlap)
 
 ##### POST
 
@@ -238,7 +238,7 @@ Enables a segment of a datasource.
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
 
 Marks segments unused for a datasource by interval or set of segment Ids. The request payload contains the interval or set of segment Ids to be marked unused.
-Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive.
+Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
 
 JSON Request Payload:
 
