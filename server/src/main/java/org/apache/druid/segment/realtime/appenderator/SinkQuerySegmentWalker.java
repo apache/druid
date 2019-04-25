@@ -215,7 +215,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                     final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
 
                                                     if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-                                                      // TODO Validate this doesnt blow up
                                                       return new Pair<>(Intervals.ETERNITY, new NoopQueryRunner<>());
                                                     }
 
