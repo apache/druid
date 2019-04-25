@@ -212,9 +212,10 @@ public class MovingAverageIterable implements Iterable<Row>
         if (cacheIter != null) {
           if (cacheIter.hasNext()) {
             r = cacheIter.next();
+            // Convert full event (key + metrics) to key
             Map<String, Object> key = MovingAverageHelper.getDimKeyFromRow(dims, r);
             seenKeys.add(key);
-            r = computeMovingAverage(key, r, false);
+            r = computeMovingAverage((MapBasedRow) r, false);
             if (r != null) {
               return r;
             } else {
@@ -234,9 +235,10 @@ public class MovingAverageIterable implements Iterable<Row>
             Map<String, Object> dims = averagersKeysIter.next();
             Map<String, Object> emptyEventsCopy = new HashMap<>(emptyEvents);
 
+            // Convert key to a full dummy event (key + dummy metrics).
             dims.forEach((dim, value) -> emptyEventsCopy.put(dim, value));
 
-            r = computeMovingAverage(dims, new MapBasedRow(cache.getDateTime(), emptyEventsCopy), true);
+            r = computeMovingAverage(new MapBasedRow(cache.getDateTime(), emptyEventsCopy), true);
             if (r != null) {
               return r;
             }
@@ -268,17 +270,17 @@ public class MovingAverageIterable implements Iterable<Row>
      * dummy row, it's possible that the dimensions will be known but the row empty. Hence, the values are
      * passed as two separate arguments.
      *
-     * @param key  The dimension set that this row applies to.
      * @param r    The Row to operate on
      * @param skip Indicates whether skip or add should be called
      *
      * @return The updated row containing averager results, or null if no averagers computed a result
      */
     @Nullable
-    private Row computeMovingAverage(Map<String, Object> key, Row r, boolean skip)
+    private Row computeMovingAverage(MapBasedRow r, boolean skip)
     {
-      Map<String, Object> event = ((MapBasedRow) r).getEvent();
+      Map<String, Object> event = r.getEvent();
       Map<String, Object> result = new HashMap<>(event);
+      Map<String, Object> key = MovingAverageHelper.getDimKeyFromRow(dims, r);
 
       List<Averager<?>> avg = averagers.get(key);
 
