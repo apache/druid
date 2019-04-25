@@ -74,6 +74,7 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToBindableRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
+import org.apache.druid.sql.calcite.rule.DruidRewriteEqualNullRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
@@ -243,6 +244,7 @@ public class Rules
     rules.add(SortCollapseRule.instance());
     rules.add(CaseFilteredAggregatorRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
+    rules.add(DruidRewriteEqualNullRule.instance());
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(queryMaker));

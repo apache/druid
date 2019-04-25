@@ -35,6 +35,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -416,7 +417,8 @@ public class DruidQuery
         throw new CannotBuildQueryException(project, postAggregatorRexNode);
       }
 
-      if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+      if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode) &&
+          isCastSameNullable(postAggregatorRexNode)) {
         // Direct column access, without any type cast as far as Druid's runtime is concerned.
         // (There might be a SQL-level type cast that we don't care about)
         rowOrder.add(postAggregatorExpression.getDirectColumn());
@@ -651,6 +653,29 @@ public class DruidQuery
     );
 
     return toExprType.equals(fromExprType);
+  }
+
+  /**
+   * Returns whether casting the RexNode from non-nullable to nullable or from nullable to non-nullable.
+   * This needs to be checked as false if nullable is not the same, otherwise the test such as
+   * `testFilteredAggregations` will fail due to `CaseFilteredAggregatorRule` rewriting the 
+   * aggregation `SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END)` to `CAST((COUNT() FILTER(WHERE dim1 <> '1')) AS BIGINT`
+   * which casts from `BIGINT NOT NULL` to `BIGING`
+   *
+   * @param postAggregatorRexNode RexNode for the post-aggregation expression
+   *
+   * @return yes or no
+   */
+  private static boolean isCastSameNullable(RexNode postAggregatorRexNode)
+  {
+    if (postAggregatorRexNode.getKind() == SqlKind.CAST) {
+      RexCall castCall = (RexCall) postAggregatorRexNode;
+      if (castCall.getOperands().get(0).getType().isNullable() !=
+          castCall.getType().isNullable()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public VirtualColumns getVirtualColumns(final boolean includeDimensions)

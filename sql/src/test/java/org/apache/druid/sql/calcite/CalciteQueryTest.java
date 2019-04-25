@@ -57,7 +57,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -1801,7 +1800,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(selector("dim2", "a", null))
+                  .filters(
+                      NullHandling.replaceWithDefault() ?
+                      new InDimFilter("dim2", ImmutableList.of("", "a"), null) :
+                      selector("dim2", "", null))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1809,7 +1811,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         NullHandling.replaceWithDefault() ?
         // Matches everything but "abc"
-        ImmutableList.of(new Object[]{2L}) :
+        ImmutableList.of(new Object[]{5L}) :
         // null is not eqaual to null or any other value
         ImmutableList.of(new Object[]{0L})
     );
@@ -2638,6 +2640,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           and(selector("dim2", "a", null), selector("dim1", "b", null))
                       )
                   ))
+                  .postAggregators(
+                      expressionPostAgg("p0", "\"a5\"")
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -6825,18 +6830,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec(
-                                        "d0",
-                                        OrderByColumnSpec.Direction.DESCENDING,
-                                        StringComparators.LEXICOGRAPHIC
-                                    )
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
             newScanQueryBuilder()
@@ -6960,7 +6953,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     new DefaultLimitSpec(
                         ImmutableList.of(
                             new OrderByColumnSpec(
-                                "v0",
+                                "a0",
                                 OrderByColumnSpec.Direction.ASCENDING,
                                 StringComparators.NUMERIC
                             )
@@ -7069,15 +7062,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("dim2", "d1")
                             )
                         )
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                Collections.singletonList(
-                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -7112,17 +7096,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             aggregators(new CountAggregatorFactory("a0"), new DoubleSumAggregatorFactory("a1", "m2"))
                         )
                         .setPostAggregatorSpecs(Collections.singletonList(expressionPostAgg(
-                            "s0",
+                            "p0",
                             "(\"a1\" / \"a0\")"
                         )))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                Collections.singletonList(
-                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -7150,15 +7126,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim1", "d0")
-                            )
-                        )
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                Collections.singletonList(
-                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
-                                ),
-                                Integer.MAX_VALUE
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -7221,14 +7188,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(aggregators(
                             new CountAggregatorFactory("a0")
                         ))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                Collections.singletonList(
-                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -7705,10 +7664,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                ))
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)"),
-                                   expressionPostAgg("p1", "sin((pi() / 6))"),
-                                   expressionPostAgg("p2", "cos((pi() / 6))"),
-                                   expressionPostAgg("p3", "tan((pi() / 6))"),
-                                   expressionPostAgg("p4", "cot((pi() / 6))"),
+                                   expressionPostAgg("p1", "0.49999999999999994"),
+                                   expressionPostAgg("p2", "0.8660254037844387"),
+                                   expressionPostAgg("p3", "0.5773502691896257"),
+                                   expressionPostAgg("p4", "1.7320508075688776"),
                                    expressionPostAgg("p5", "asin((exp(\"a0\") / 2))"),
                                    expressionPostAgg("p6", "acos((exp(\"a0\") / 2))"),
                                    expressionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
