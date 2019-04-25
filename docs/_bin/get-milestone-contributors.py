@@ -36,13 +36,18 @@ contributors = set()
 # Get all users who created a closed issue or merged PR for a given milestone
 while not done:
   resp = requests.get("https://api.github.com/repos/apache/incubator-druid/issues?milestone=%s&state=closed&page=%s" % (milestone_num, page_counter))
-  pagination_link = resp.headers["Link"]
 
-  # last page doesn't have a "next"
-  if "rel=\"next\"" not in pagination_link:
-    done = True
+  if "Link" in resp.headers:
+    pagination_link = resp.headers["Link"]
+
+    # last page doesn't have a "next"
+    if "rel=\"next\"" not in pagination_link:
+      done = True
+    else:
+      page_counter += 1
   else:
-    page_counter += 1
+    # Not enough issues to require pagination
+    done = True
 
   issues = json.loads(resp.text)
   for issue in issues:
