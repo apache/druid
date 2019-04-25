@@ -52,6 +52,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -164,6 +165,7 @@ public class MetadataResource
     if (includeOvershadowedStatus != null) {
       final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = findAuthorizedSegmentWithOvershadowedStatus(
           req,
+          druidDataSources,
           metadataSegments
       );
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
@@ -187,14 +189,17 @@ public class MetadataResource
 
   private Iterable<SegmentWithOvershadowedStatus> findAuthorizedSegmentWithOvershadowedStatus(
       HttpServletRequest req,
+      Collection<ImmutableDruidDataSource> druidDataSources,
       Stream<DataSegment> metadataSegments
   )
   {
     // It's fine to add all overshadowed segments to a single collection because only
     // a small fraction of the segments in the cluster are expected to be overshadowed,
     // so building this collection shouldn't generate a lot of garbage.
-    final Set<DataSegment> overshadowedSegments = ImmutableDruidDataSource
-        .determineOvershadowedSegments(() -> metadataSegments.iterator());
+    final Set<DataSegment> overshadowedSegments = new HashSet<>();
+    for (ImmutableDruidDataSource dataSource : druidDataSources) {
+      overshadowedSegments.addAll(ImmutableDruidDataSource.determineOvershadowedSegments(dataSource.getSegments()));
+    }
 
     final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
         .map(segment -> new SegmentWithOvershadowedStatus(
