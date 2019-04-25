@@ -272,11 +272,6 @@ public class TaskLockbox
   /**
    * Acquires a lock on behalf of a task.  Blocks until the lock is acquired.
    *
-   * @param granularity lock granularity
-   * @param lockType lock type
-   * @param task     task to acquire lock for
-   * @param interval interval to lock
-   *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
    *
@@ -302,12 +297,6 @@ public class TaskLockbox
 
   /**
    * Acquires a lock on behalf of a task, waiting up to the specified wait time if necessary.
-   *
-   * @param granularity lock granularity
-   * @param lockType  lock type
-   * @param task      task to acquire a lock for
-   * @param interval  interval to lock
-   * @param timeoutMs maximum time to wait
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
@@ -336,11 +325,6 @@ public class TaskLockbox
   /**
    * Attempt to acquire a lock for a task, without removing it from the queue. Can safely be called multiple times on
    * the same task until the lock is preempted.
-   *
-   * @param granularity lock granularity
-   * @param lockType type of lock to be acquired
-   * @param task     task that wants a lock
-   * @param interval interval to lock
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.

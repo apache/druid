@@ -28,14 +28,13 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
   private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
-  private final ConcurrentMap<Class<? extends TaskAction>, AtomicInteger> actionCountMap = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Class<? extends TaskAction>, AtomicInteger> actionCountMap = new ConcurrentHashMap<>();
 
   private final Task task;
   private final TaskStorage storage;
