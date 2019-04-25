@@ -145,7 +145,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     for (DataSegment segment : params.getAvailableSegments()) {
       timelines
           .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-          .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          .add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment));
     }
 
     Set<DataSegment> overshadowed = new HashSet<>();

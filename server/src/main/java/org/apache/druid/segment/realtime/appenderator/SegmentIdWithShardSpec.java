@@ -134,7 +134,7 @@ public final class SegmentIdWithShardSpec implements Comparable<SegmentIdWithSha
     return new SegmentIdWithShardSpec(
         segment.getDataSource(),
         segment.getInterval(),
-        segment.getVersion(),
+        segment.getMajorVersion(),
         segment.getShardSpec()
     );
   }

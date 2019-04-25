@@ -93,11 +93,11 @@ public class MoveTask extends AbstractFixedIntervalTask
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {
-      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
+      if (unusedSegment.getMajorVersion().compareTo(myLock.getVersion()) > 0) {
         throw new ISE(
             "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
             unusedSegment.getId(),
-            unusedSegment.getVersion(),
+            unusedSegment.getMajorVersion(),
             myLock.getVersion()
         );
       }

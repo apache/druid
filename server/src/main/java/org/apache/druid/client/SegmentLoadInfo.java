@@ -115,6 +115,12 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   }
 
   @Override
+  public String getMajorVersion()
+  {
+    return segment.getMajorVersion();
+  }
+
+  @Override
   public short getMinorVersion()
   {
     return segment.getMinorVersion();

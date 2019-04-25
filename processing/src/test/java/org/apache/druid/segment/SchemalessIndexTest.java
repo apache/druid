@@ -483,7 +483,7 @@ public class SchemalessIndexTest
       ShardSpec noneShardSpec = NoneShardSpec.instance();
 
       for (int i = 0; i < intervals.size(); i++) {
-        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(filesToMap.get(i))));
+        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(i, filesToMap.get(i))));
       }
 
       final List<IndexableAdapter> adapters = Lists.newArrayList(
@@ -576,10 +576,12 @@ public class SchemalessIndexTest
 
   private static class OvershadowableFile implements Overshadowable<OvershadowableFile>
   {
+    private final String majorVersion;
     private final File file;
 
-    OvershadowableFile(File file)
+    OvershadowableFile(int majorVersion, File file)
     {
+      this.majorVersion = Integer.toString(majorVersion);
       this.file = file;
     }
 
@@ -599,6 +601,12 @@ public class SchemalessIndexTest
     public int getEndRootPartitionId()
     {
       return 0;
+    }
+
+    @Override
+    public String getMajorVersion()
+    {
+      return majorVersion;
     }
 
     @Override

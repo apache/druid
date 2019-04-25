@@ -405,7 +405,7 @@ public class AppenderatorImpl implements Appenderator
 
       sinks.put(identifier, retVal);
       metrics.setSinkCount(sinks.size());
-      sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
+      sinkTimeline.add(retVal.getInterval(), retVal.getMajorVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
     return retVal;
@@ -1069,7 +1069,7 @@ public class AppenderatorImpl implements Appenderator
         sinks.put(identifier, currSink);
         sinkTimeline.add(
             currSink.getInterval(),
-            currSink.getVersion(),
+            currSink.getMajorVersion(),
             identifier.getShardSpec().createChunk(currSink)
         );
 
@@ -1163,7 +1163,7 @@ public class AppenderatorImpl implements Appenderator
             droppingSinks.remove(identifier);
             sinkTimeline.remove(
                 sink.getInterval(),
-                sink.getVersion(),
+                sink.getMajorVersion(),
                 identifier.getShardSpec().createChunk(sink)
             );
             for (FireHydrant hydrant : sink) {

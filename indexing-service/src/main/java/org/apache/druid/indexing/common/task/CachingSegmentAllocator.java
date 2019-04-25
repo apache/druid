@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// TODO: caching??
 public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final TaskToolbox toolbox;
@@ -110,8 +109,7 @@ public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocat
   }
 
   /**
-   * Create a sequence name from the given shardSpec and interval. The shardSpec must be the original one before calling
-   * {@link #makeShardSpec(ShardSpec, int)} to apply the proper partitioning.
+   * Create a sequence name from the given shardSpec and interval.
    *
    * See {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec} as an example of partitioning.
    */

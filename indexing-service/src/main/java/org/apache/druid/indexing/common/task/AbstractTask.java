@@ -26,9 +26,11 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.SegmentLockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
@@ -38,6 +40,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.timeline.DataSegment;
@@ -323,8 +326,6 @@ public abstract class AbstractTask implements Task
       throws IOException
   {
     if (requireLockInputSegments()) {
-      // TODO: check changeSegmentGranularity and get timeChunkLock here
-
       // This method finds segments falling in all given intervals and then tries to lock those segments.
       // Thus, there might be a race between calling findInputSegments() and tryLockWithSegments(),
       // i.e., a new segment can be added to the interval or an existing segment might be removed.
@@ -343,16 +344,15 @@ public abstract class AbstractTask implements Task
     }
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
-      throws IOException
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments) throws IOException
   {
-    if (requireLockInputSegments()) {
-      if (segments.isEmpty()) {
-        changeSegmentGranularity = false;
-        overwritingRootGenPartitions = Collections.emptyMap();
-        return true;
-      }
+    if (segments.isEmpty()) {
+      changeSegmentGranularity = false;
+      overwritingRootGenPartitions = Collections.emptyMap();
+      return true;
+    }
 
+    if (requireLockInputSegments()) {
       // Create a timeline to find latest segments only
       final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
 
@@ -397,6 +397,7 @@ public abstract class AbstractTask implements Task
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
         }
         intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
+        final Closer lockCloserOnError = Closer.create();
         for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
           final Interval interval = entry.getKey();
           final Set<Integer> partitionIds = entry.getValue().stream()
@@ -406,12 +407,20 @@ public abstract class AbstractTask implements Task
               new SegmentLockTryAcquireAction(
                   TaskLockType.EXCLUSIVE,
                   interval,
-                  entry.getValue().get(0).getVersion(),
+                  entry.getValue().get(0).getMajorVersion(),
                   partitionIds
               )
           );
+
+          lockResults.stream()
+                     .filter(LockResult::isOk)
+                     .map(result -> (SegmentLock) result.getTaskLock())
+                     .forEach(segmentLock -> lockCloserOnError.register(() -> client.submit(
+                         new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
+                     )));
+
           if (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk())) {
-            // TODO: unlock
+            lockCloserOnError.close();
             return false;
           }
         }

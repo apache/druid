@@ -168,7 +168,7 @@ public class SegmentManager
               dataSourceState.getTimeline();
           final PartitionHolder<ReferenceCountingSegment> entry = loadedIntervals.findEntry(
               segment.getInterval(),
-              segment.getVersion()
+              segment.getMajorVersion()
           );
 
           if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
@@ -178,7 +178,7 @@ public class SegmentManager
             final ReferenceCountingSegment referenceCountingSegment = new ReferenceCountingSegment(adapter);
             loadedIntervals.add(
                 segment.getInterval(),
-                segment.getVersion(),
+                segment.getMajorVersion(),
                 segment.getShardSpec().createChunk(referenceCountingSegment)
             );
             dataSourceState.addSegment(segment);
@@ -225,7 +225,7 @@ public class SegmentManager
             final ShardSpec shardSpec = segment.getShardSpec();
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
-                segment.getVersion(),
+                segment.getMajorVersion(),
                 // remove() internally searches for a partitionChunk to remove which is *equal* to the given
                 // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
                 segment.getShardSpec().createChunk(
@@ -250,7 +250,7 @@ public class SegmentManager
                   "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
                   dataSourceName,
                   segment.getInterval(),
-                  segment.getVersion()
+                  segment.getMajorVersion()
               );
             }
           }

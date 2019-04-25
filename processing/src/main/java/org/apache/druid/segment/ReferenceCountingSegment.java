@@ -213,6 +213,12 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
   }
 
   @Override
+  public String getMajorVersion()
+  {
+    return baseSegment.getId().getVersion();
+  }
+
+  @Override
   public short getMinorVersion()
   {
     return minorVersion;

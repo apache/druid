@@ -84,7 +84,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     }
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines.get(descriptor.getDataSource());
-    timeline.add(descriptor.getInterval(), descriptor.getVersion(), descriptor.getShardSpec().createChunk(new ReferenceCountingSegment(segment)));
+    timeline.add(descriptor.getInterval(), descriptor.getMajorVersion(), descriptor.getShardSpec().createChunk(new ReferenceCountingSegment(segment)));
     segments.add(descriptor);
     closeables.add(index);
     return this;

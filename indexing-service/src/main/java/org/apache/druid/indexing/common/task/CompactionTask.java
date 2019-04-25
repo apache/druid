@@ -301,7 +301,7 @@ public class CompactionTask extends AbstractTask
   public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     return (keepSegmentGranularity != null && !keepSegmentGranularity)
-        || (segmentGranularity != null); // TODO: check segmentGranularity is different
+        || (segmentGranularity != null);
   }
 
   @Override

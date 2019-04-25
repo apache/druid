@@ -650,7 +650,7 @@ public class IndexGeneratorJobTest
         final DataSegment dataSegment = segments.get(i);
         final File indexZip = indexFiles.get(i);
 
-        Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
+        Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getMajorVersion());
         Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
         Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());

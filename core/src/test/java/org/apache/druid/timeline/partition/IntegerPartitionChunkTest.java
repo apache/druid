@@ -111,6 +111,12 @@ public class IntegerPartitionChunkTest
     }
 
     @Override
+    public String getMajorVersion()
+    {
+      return "";
+    }
+
+    @Override
     public short getMinorVersion()
     {
       return 0;

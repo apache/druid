@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -121,7 +120,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           lowPriorityTask,
-          Collections.singletonMap(interval, Collections.emptyList()),
+          Collections.singletonList(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -151,7 +150,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           highPriorityTask,
-          Collections.singletonMap(interval, Collections.emptyList()),
+          Collections.singletonList(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -201,7 +200,7 @@ public class TaskLockBoxConcurrencyTest
 
     final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
         task,
-        ImmutableMap.of(intervals.get(0), Collections.emptyList(), intervals.get(1), Collections.emptyList()),
+        intervals.subList(0, 2),
         CriticalAction.<Integer>builder()
             .onValidLocks(
                 () -> {
@@ -224,7 +223,7 @@ public class TaskLockBoxConcurrencyTest
       latch.await();
       return lockbox.doInCriticalSection(
           task,
-          ImmutableMap.of(intervals.get(1), Collections.emptyList(), intervals.get(2), Collections.emptyList()),
+          intervals.subList(1, 3),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {

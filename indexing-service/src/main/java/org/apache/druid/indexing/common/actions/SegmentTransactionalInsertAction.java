@@ -37,6 +37,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -106,12 +107,11 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
-    // TODO: move this to lock checking in critical section
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
-    final Map<Interval, List<Integer>> intervalToPartitionIds = new HashMap<>();
+    final Map<Interval, Set<Integer>> intervalToPartitionIds = new HashMap<>();
     for (DataSegment segment : segments) {
-      intervalToPartitionIds.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
+      intervalToPartitionIds.computeIfAbsent(segment.getInterval(), k -> new HashSet<>())
                             .add(segment.getShardSpec().getPartitionNum());
     }
 
@@ -119,7 +119,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          intervalToPartitionIds,
+          new ArrayList<>(intervalToPartitionIds.keySet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
@@ -143,9 +143,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
     final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
     if (locks.get(0).getGranularity() == LockGranularity.SEGMENT) {
-      for (Entry<Interval, List<Integer>> entry : intervalToPartitionIds.entrySet()) {
+      for (Entry<Interval, Set<Integer>> entry : intervalToPartitionIds.entrySet()) {
         final Interval interval = entry.getKey();
-        final List<Integer> partitionIds = entry.getValue();
+        final Set<Integer> partitionIds = entry.getValue();
         partitionIds.forEach(partitionId -> toolbox.getTaskLockbox().unlock(task, interval, partitionId));
       }
     }

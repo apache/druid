@@ -22,7 +22,9 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.indexing.common.task.IndexTask.SequenceNameGenerator;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
-// TODO: rename???
-public interface IndexTaskSegmentAllocator extends SegmentAllocator, SequenceNameGenerator
+/**
+ * Segment allocator interface for {@link IndexTask}
+ */
+interface IndexTaskSegmentAllocator extends SegmentAllocator, SequenceNameGenerator
 {
 }

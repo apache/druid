@@ -149,7 +149,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(segment.getDataSource(), deserializedSegment.getDataSource());
     Assert.assertEquals(segment.getInterval(), deserializedSegment.getInterval());
-    Assert.assertEquals(segment.getVersion(), deserializedSegment.getVersion());
+    Assert.assertEquals(segment.getMajorVersion(), deserializedSegment.getMajorVersion());
     Assert.assertEquals(segment.getLoadSpec(), deserializedSegment.getLoadSpec());
     Assert.assertEquals(segment.getDimensions(), deserializedSegment.getDimensions());
     Assert.assertEquals(segment.getMetrics(), deserializedSegment.getMetrics());

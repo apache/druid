@@ -2831,9 +2831,9 @@ public class CachingClusteredClientTest
 
       @Override
       @JsonProperty
-      public String getVersion()
+      public String getMajorVersion()
       {
-        return baseSegment.getVersion();
+        return baseSegment.getMajorVersion();
       }
 
       @Override
@@ -2939,7 +2939,7 @@ public class CachingClusteredClientTest
       {
         if (getDataSource().equals(other.getDataSource())
             && getInterval().overlaps(other.getInterval())
-            && getVersion().equals(other.getVersion())) {
+            && getMajorVersion().equals(other.getMajorVersion())) {
           return getStartRootPartitionId() <= other.getStartRootPartitionId()
                  && getEndRootPartitionId() >= other.getEndRootPartitionId()
                  && getMinorVersion() > other.getMinorVersion();

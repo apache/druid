@@ -277,6 +277,12 @@ public class NumberedShardSpecTest
     }
 
     @Override
+    public String getMajorVersion()
+    {
+      return "v1";
+    }
+
+    @Override
     public short getMinorVersion()
     {
       return 0;

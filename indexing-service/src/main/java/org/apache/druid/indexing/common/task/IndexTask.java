@@ -1171,7 +1171,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
       if (shardSpecs == null || shardSpecs.isEmpty()) {
         throw new ISE("Failed to get shardSpec for interval[%s]", interval);
       }
-      // TODO: cache shardSpecLookup
       return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(row.getTimestampFromEpoch(), row);
     }
   }

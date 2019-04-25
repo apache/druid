@@ -147,7 +147,7 @@ public class CoordinatorServerView implements InventoryView
 
         timeline.add(
             segment.getInterval(),
-            segment.getVersion(),
+            segment.getMajorVersion(),
             segment.getShardSpec().createChunk(segmentLoadInfo)
         );
         segmentLoadInfos.put(segmentId, segmentLoadInfo);
@@ -174,7 +174,7 @@ public class CoordinatorServerView implements InventoryView
         segmentLoadInfos.remove(segmentId);
 
         final PartitionChunk<SegmentLoadInfo> removedPartition = timeline.remove(
-            segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(
+            segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(
                 new SegmentLoadInfo(
                     segment
                 )
@@ -185,7 +185,7 @@ public class CoordinatorServerView implements InventoryView
           log.warn(
               "Asked to remove timeline entry[interval: %s, version: %s] that doesn't exist",
               segment.getInterval(),
-              segment.getVersion()
+              segment.getMajorVersion()
           );
         }
       }

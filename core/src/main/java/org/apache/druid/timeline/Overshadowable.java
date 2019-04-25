@@ -67,7 +67,7 @@ public interface Overshadowable<T extends Overshadowable>
     return (short) getEndRootPartitionId();
   }
 
-  // TODO: majorVersion?
+  String getMajorVersion();
 
   short getMinorVersion();
 

@@ -488,7 +488,7 @@ public class RealtimePlumber implements Plumber
         }
     );
     handoffNotifier.registerSegmentHandoffCallback(
-        new SegmentDescriptor(sink.getInterval(), sink.getVersion(), config.getShardSpec().getPartitionNum()),
+        new SegmentDescriptor(sink.getInterval(), sink.getMajorVersion(), config.getShardSpec().getPartitionNum()),
         mergeExecutor, new Runnable()
         {
           @Override
@@ -736,7 +736,7 @@ public class RealtimePlumber implements Plumber
     metrics.setSinkCount(sinks.size());
     sinkTimeline.add(
         sink.getInterval(),
-        sink.getVersion(),
+        sink.getMajorVersion(),
         new SingleElementPartitionChunk<>(sink)
     );
     try {
@@ -880,7 +880,7 @@ public class RealtimePlumber implements Plumber
         metrics.setSinkCount(sinks.size());
         sinkTimeline.remove(
             sink.getInterval(),
-            sink.getVersion(),
+            sink.getMajorVersion(),
             new SingleElementPartitionChunk<>(sink)
         );
         for (FireHydrant hydrant : sink) {

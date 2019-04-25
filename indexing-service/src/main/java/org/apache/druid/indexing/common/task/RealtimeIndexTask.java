@@ -242,7 +242,6 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        // TODO: get lock before allocating segment
         Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
                 new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
@@ -268,7 +267,6 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
         // Side effect: Calling announceSegments causes locks to be acquired
-        // TODO: get lock before allocating segment
         for (DataSegment segment : segments) {
           Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
@@ -308,7 +306,6 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          // TODO: get lock to get the version?
           final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
@@ -515,7 +512,7 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public Granularity getSegmentGranularity(Interval interval)
   {
-    return null;
+    return spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @Override

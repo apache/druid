@@ -142,11 +142,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     dedupSet.clear();
   }
 
-  public String getVersion()
-  {
-    return version;
-  }
-
   public Interval getInterval()
   {
     return interval;
@@ -427,6 +422,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public int getEndRootPartitionId()
   {
     return shardSpec.getEndRootPartitionId();
+  }
+
+  @Override
+  public String getMajorVersion()
+  {
+    return version;
   }
 
   @Override

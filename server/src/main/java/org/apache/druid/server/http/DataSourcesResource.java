@@ -691,7 +691,7 @@ public class DataSourcesResource
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
-          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && segmentLoadInfo.getSegment().getMajorVersion().compareTo(descriptor.getVersion()) >= 0
           && Iterables.any(
           segmentLoadInfo.getServers(), DruidServerMetadata::segmentReplicatable
       )) {

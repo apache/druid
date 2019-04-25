@@ -402,7 +402,7 @@ public class SegmentManagerTest
           );
       expectedTimeline.add(
           segment.getInterval(),
-          segment.getVersion(),
+          segment.getMajorVersion(),
           segment.getShardSpec().createChunk(new ReferenceCountingSegment(segmentLoader.getSegment(segment)))
       );
     }

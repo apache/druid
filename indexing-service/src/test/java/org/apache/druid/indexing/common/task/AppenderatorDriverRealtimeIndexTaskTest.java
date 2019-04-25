@@ -379,7 +379,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           )
       );
@@ -441,7 +441,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           )
       );
@@ -506,7 +506,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           )
       );
@@ -573,7 +573,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           )
       );
@@ -647,7 +647,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           )
       );
@@ -777,7 +777,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Assert.assertEquals(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           ),
           entry.getKey()
@@ -880,7 +880,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Assert.assertEquals(
           new SegmentDescriptor(
               publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
+              publishedSegment.getMajorVersion(),
               publishedSegment.getShardSpec().getPartitionNum()
           ),
           entry.getKey()
@@ -1076,7 +1076,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         Assert.assertEquals(
             new SegmentDescriptor(
                 publishedSegment.getInterval(),
-                publishedSegment.getVersion(),
+                publishedSegment.getMajorVersion(),
                 publishedSegment.getShardSpec().getPartitionNum()
             ),
             entry.getKey()
@@ -1159,7 +1159,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         Assert.assertEquals(
             new SegmentDescriptor(
                 publishedSegment.getInterval(),
-                publishedSegment.getVersion(),
+                publishedSegment.getMajorVersion(),
                 publishedSegment.getShardSpec().getPartitionNum()
             ),
             entry.getKey()

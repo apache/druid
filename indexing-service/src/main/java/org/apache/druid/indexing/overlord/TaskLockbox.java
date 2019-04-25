@@ -532,63 +532,34 @@ public class TaskLockbox
    * The given action should be finished as soon as possible because all other methods in this class are blocked until
    * this method is finished.
    *
-   * @param task                   task performing a critical action
-   * @param intervalToPartitionIds partitionIds which should be locked by task
-   * @param action                 action to be performed inside of the critical section
+   * @param task      task performing a critical action
+   * @param intervals intervals
+   * @param action    action to be performed inside of the critical section
    */
-  public <T> T doInCriticalSection(
-      Task task,
-      Map<Interval, List<Integer>> intervalToPartitionIds,
-      CriticalAction<T> action
-  ) throws Exception
+  public <T> T doInCriticalSection(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
   {
     giant.lock();
 
-    // TODO: reduce contention by checking dataSource and interval.
-    // TODO: also cache taskLocks
-
     try {
-      return action.perform(isTaskLocksValid(task, intervalToPartitionIds));
+      return action.perform(isTaskLocksValid(task, intervals));
     }
     finally {
       giant.unlock();
     }
   }
 
-  private boolean isTaskLocksValid(Task task, Map<Interval, List<Integer>> intervalToPartitionIds)
+  private boolean isTaskLocksValid(Task task, List<Interval> intervals)
   {
     giant.lock();
     try {
-      return intervalToPartitionIds
-          .entrySet()
+      return intervals
           .stream()
-          .allMatch(entry -> {
-            // TODO: segment lock validation
-            // needs to check used segments, valid segment locks for used segments,
-            final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(
-                task,
-                entry.getKey(),
-                entry.getValue()
-            );
+          .allMatch(interval -> {
+            final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(task, interval);
             // Tasks cannot enter the critical section with a shared lock
-            final boolean allLocksAreValid = lockPosses.stream().allMatch(
-                posse -> !posse.getTaskLock().isRevoked() && posse.getTaskLock().getLockType() != TaskLockType.SHARED
+            return lockPosses.stream().map(TaskLockPosse::getTaskLock).allMatch(
+                lock -> !lock.isRevoked() && lock.getLockType() != TaskLockType.SHARED
             );
-
-            final Set<Integer> remainingPartitionIds = new HashSet<>(entry.getValue());
-            if (allLocksAreValid) {
-              for (TaskLockPosse lockPosse : lockPosses) {
-                if (lockPosse.getTaskLock().getGranularity() == LockGranularity.TIME_CHUNK) {
-                  return true;
-                } else {
-                  final SegmentLock segmentLock = (SegmentLock) lockPosse.getTaskLock();
-                  remainingPartitionIds.remove(segmentLock.getPartitionId());
-                }
-              }
-              return remainingPartitionIds.isEmpty();
-            } else {
-              return false;
-            }
           });
     }
     finally {
@@ -911,7 +882,7 @@ public class TaskLockbox
   {
     giant.lock();
     try {
-      return getOnlyTaskLockPosseContainingInterval(task, interval, Collections.emptyList());
+      return getOnlyTaskLockPosseContainingInterval(task, interval, Collections.emptySet());
     }
     finally {
       giant.unlock();
@@ -919,7 +890,7 @@ public class TaskLockbox
   }
 
   @VisibleForTesting
-  List<TaskLockPosse> getOnlyTaskLockPosseContainingInterval(Task task, Interval interval, List<Integer> partitionIds)
+  List<TaskLockPosse> getOnlyTaskLockPosseContainingInterval(Task task, Interval interval, Set<Integer> partitionIds)
   {
     giant.lock();
     try {

@@ -284,7 +284,6 @@ public class ParallelIndexSubTask extends AbstractTask
 
     private SegmentAllocator createSegmentAllocator()
     {
-      // TODO: what if intervals are missing?
       if (ingestionSchema.getIOConfig().isAppendToExisting() || !isChangeSegmentGranularity()) {
         return new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),

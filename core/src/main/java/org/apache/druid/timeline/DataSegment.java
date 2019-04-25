@@ -229,8 +229,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return loadSpec;
   }
 
-  @JsonProperty
-  public String getVersion()
+  @JsonProperty("version")
+  @Override
+  public String getMajorVersion()
   {
     return id.getVersion();
   }
@@ -320,7 +321,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(getInterval(), getVersion(), shardSpec.getPartitionNum());
+    return new SegmentDescriptor(getInterval(), getMajorVersion(), shardSpec.getPartitionNum());
   }
 
   public DataSegment withLoadSpec(Map<String, Object> loadSpec)
@@ -451,7 +452,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     {
       this.dataSource = segment.getDataSource();
       this.interval = segment.getInterval();
-      this.version = segment.getVersion();
+      this.version = segment.getMajorVersion();
       this.loadSpec = segment.getLoadSpec();
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();

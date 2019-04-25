@@ -94,13 +94,13 @@ public class DruidCoordinatorSegmentCompactorTest
       segments.forEach(
           segment -> timeline.remove(
               segment.getInterval(),
-              segment.getVersion(),
+              segment.getMajorVersion(),
               segment.getShardSpec().createChunk(segment)
           )
       );
       timeline.add(
           compactInterval,
-          compactSegment.getVersion(),
+          compactSegment.getMajorVersion(),
           compactSegment.getShardSpec().createChunk(compactSegment)
       );
       return "task_" + idSuffix++;
@@ -135,18 +135,18 @@ public class DruidCoordinatorSegmentCompactorTest
       for (int j = 0; j < 4; j++) {
         for (int k = 0; k < 2; k++) {
           DataSegment segment = createSegment(dataSource, j, true, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          timeline.add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment));
           segment = createSegment(dataSource, j, false, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          timeline.add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
 
       for (int j = 7; j < 9; j++) {
         for (int k = 0; k < 2; k++) {
           DataSegment segment = createSegment(dataSource, j, true, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          timeline.add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment));
           segment = createSegment(dataSource, j, false, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          timeline.add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
 
@@ -379,7 +379,7 @@ public class DruidCoordinatorSegmentCompactorTest
       Assert.assertEquals(1, chunks.size());
       DataSegment segment = chunks.get(0).getObject();
       Assert.assertEquals(expectedInterval, segment.getInterval());
-      Assert.assertEquals(expectedVersionSupplier.get(), segment.getVersion());
+      Assert.assertEquals(expectedVersionSupplier.get(), segment.getMajorVersion());
     }
   }
 
@@ -397,7 +397,7 @@ public class DruidCoordinatorSegmentCompactorTest
         for (PartitionChunk<DataSegment> chunk : chunks) {
           DataSegment segment = chunk.getObject();
           Assert.assertEquals(interval, segment.getInterval());
-          Assert.assertEquals("version", segment.getVersion());
+          Assert.assertEquals("version", segment.getMajorVersion());
         }
       }
     }
@@ -427,13 +427,13 @@ public class DruidCoordinatorSegmentCompactorTest
       DataSegment newSegment = createSegment(dataSource, day, true, i);
       dataSources.get(dataSource).add(
           newSegment.getInterval(),
-          newSegment.getVersion(),
+          newSegment.getMajorVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
       );
       newSegment = createSegment(dataSource, day, false, i);
       dataSources.get(dataSource).add(
           newSegment.getInterval(),
-          newSegment.getVersion(),
+          newSegment.getMajorVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
       );
     }

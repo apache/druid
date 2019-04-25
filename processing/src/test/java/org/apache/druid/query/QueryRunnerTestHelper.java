@@ -454,7 +454,6 @@ public class QueryRunnerTestHelper
                   segments.addAll(timeline.lookup(interval));
                 }
                 List<Sequence<T>> sequences = new ArrayList<>();
-                // TODO: use other segment instead of ReferenceCountingSegment
                 for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
                   QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(

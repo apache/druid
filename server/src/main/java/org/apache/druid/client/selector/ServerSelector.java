@@ -192,6 +192,12 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
   }
 
   @Override
+  public String getMajorVersion()
+  {
+    return segment.get().getMajorVersion();
+  }
+
+  @Override
   public short getMinorVersion()
   {
     return segment.get().getMinorVersion();
