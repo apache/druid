@@ -668,10 +668,25 @@ public class OvershadowableManager<T extends Overshadowable<T>>
     @Override
     public V put(final short key, final V value)
     {
-      final V existing = isEmpty() ? null : this.val;
-      this.key = key;
-      this.val = value;
-      return existing;
+      if (isEmpty()) {
+        this.key = key;
+        this.val = value;
+        return null;
+      } else {
+        if (this.key == key) {
+          final V existing = this.val;
+          this.val = value;
+          return existing;
+        } else {
+          throw new ISE(
+              "Can't add [%d, %s] to non-empty SingleEntryShort2ObjectSortedMap[%d, %s]",
+              key,
+              value,
+              this.key,
+              this.val
+          );
+        }
+      }
     }
 
     @Override
