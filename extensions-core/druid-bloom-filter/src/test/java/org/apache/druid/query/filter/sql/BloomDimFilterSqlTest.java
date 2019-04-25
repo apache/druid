@@ -42,7 +42,6 @@ import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
-import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.TestHelper;
@@ -150,11 +149,9 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim2\",'-foo')", ValueType.STRING))
                   .filters(
-                      new ExpressionDimFilter(
-                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
-                          createExprMacroTable()
-                      )
+                      new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
