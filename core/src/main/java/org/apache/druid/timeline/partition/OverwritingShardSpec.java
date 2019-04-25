@@ -19,7 +19,9 @@
 
 package org.apache.druid.timeline.partition;
 
-// TODO: rename
+/**
+ * TODO
+ */
 public interface OverwritingShardSpec extends ShardSpec
 {
   default OverwritingShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)

@@ -66,7 +66,7 @@ public class OvershadowableManager<T extends Overshadowable<T>>
 
   private final Map<Integer, PartitionChunk<T>> knownPartitionChunks; // served segments
 
-  // start partitionId -> end partitionId -> minorVersion -> atomicUpdateGroup
+  // (start partitionId, end partitionId) -> minorVersion -> atomicUpdateGroup
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> standbyGroups;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroup;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> overshadowedGroups;

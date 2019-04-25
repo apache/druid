@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(name = "none", value = NoneShardSpecFactory.class),
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpecFactory.class),
     @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpecFactory.class),
     @JsonSubTypes.Type(name = "numbered_overwrite", value = NumberedOverwritingShardSpecFactory.class),
