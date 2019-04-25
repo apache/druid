@@ -26,8 +26,11 @@
 
     padding: 15px 15px 0 15px;
 
-    h3 {
+    .history-dialog-title {
       padding-left: 10px;
+      margin-bottom: 2px;
+      font-size: 24px;
+      font-weight: 600;
     }
 
     .no-record {
@@ -39,7 +42,7 @@
 
     .history-record-entries {
 
-      margin-bottom: 10px;
+      margin: 10px 0;
       max-height: 60vh;
       overflow: scroll;
 
@@ -49,10 +52,6 @@
         border-style: dot-dash;
         word-wrap: break-word;
 
-        hr {
-          margin: 5px 0 5px 0;
-        }
-
         .bp3-card {
           padding-bottom: 10px;
         }
@@ -60,13 +59,14 @@
         .history-record-title {
           justify-content: space-between;
           display: flex;
-
-
-        }
-
-        .history-record-comment-title {
           margin-bottom: 5px;
+
+          .history-record-title-change {
+            font-weight: 600;
+            font-size: 16px;
+          }
         }
+
 
         .json-collapse {
           button {

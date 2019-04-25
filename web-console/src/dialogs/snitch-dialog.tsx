@@ -127,6 +127,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     const { historyRecords } = this.props;
     return <HistoryDialog
       {...this.props}
+      className={'history-dialog'}
       historyRecords={historyRecords}
     >
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
