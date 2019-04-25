@@ -21,13 +21,13 @@
     width: 700px;
     top: 5%;
     height: 70vh;
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 15% 0% 85%;
     padding-bottom: 0;
+    padding-right: 10px;
   }
 
   .side-bar {
-    width: 15%;
 
     .info-button {
       &.active {
@@ -55,21 +55,25 @@
   }
 
   .main-section {
-    width: 82%;
     height: 100%;
-    padding-left: 1vw;
+    padding-left: 10px;
     padding-bottom: 20px;
 
     .top-actions {
-
       display: flex;
       justify-content: space-between;
       margin: 1vh 0;
     }
 
-    textarea {
-      width: 100%;
+    .textarea {
       height: 85%;
+      padding:0 5px;
+
+      textarea {
+        height: 100%;
+        width: 100%;
+        resize: none;
+      }
     }
 
     .bottom-buttons {
