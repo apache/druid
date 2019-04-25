@@ -739,22 +739,24 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         <p>{alertErrorMsg}</p>
       </Alert>
       {
-        taskTableActionDialogMetaData &&
-        <TaskTableActionDialog
-          onClose={() => this.setState({taskTableActionDialogMetaData: null})}
-          metaData={taskTableActionDialogMetaData}
-          killTask={(id: string) => this.setState({ killTaskId: id })}
-        />
-      }
-      {
         supervisorTableActionDialogMetaData &&
         <SupervisorTableActionDialog
+          isOpen
           onClose={() => this.setState({supervisorTableActionDialogMetaData: null})}
           metaData={supervisorTableActionDialogMetaData}
           terminateSupervisor={(id: string) => this.setState({ terminateSupervisorId: id })}
           resetSupervisor={(id: string) => this.setState({ resetSupervisorId: id })}
           resumeSupervisor={(id: string) => this.setState({ resumeSupervisorId: id })}
           suspendSupervisor={(id: string) => this.setState({ suspendSupervisorId: id })}
+        />
+      }
+      {
+        taskTableActionDialogMetaData &&
+        <TaskTableActionDialog
+          isOpen
+          onClose={() => this.setState({taskTableActionDialogMetaData: null})}
+          metaData={taskTableActionDialogMetaData}
+          killTask={(id: string) => this.setState({ killTaskId: id })}
         />
       }
     </div>;

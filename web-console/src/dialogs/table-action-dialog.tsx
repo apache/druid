@@ -16,19 +16,14 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Dialog, Divider, Icon, IDialogProps, Intent, TextArea} from '@blueprintjs/core';
-import axios from 'axios';
-import * as FileSaver from 'file-saver';
+import { Button, Dialog, Divider, Icon, IDialogProps, Intent } from '@blueprintjs/core';
 import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
-
-import {AppToaster} from '../singletons/toaster';
-import { getDruidErrorMessage } from '../utils';
 
 import './table-action-dialog.scss';
 
 interface TableActionDialogProps extends IDialogProps {
   sideButtonMetadata: SideButtonMetaData[];
+  onClose: () => void;
 }
 
 interface TableActionDialogState {
@@ -49,7 +44,7 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
   }
 
   render() {
-    const { onClose, sideButtonMetadata } = this.props;
+    const { sideButtonMetadata, onClose } = this.props;
 
     return <Dialog
       className={'table-action-dialog'}

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
+import {Button, ButtonGroup, IDialogProps, Intent, TextArea} from '@blueprintjs/core';
 import axios from 'axios';
 import * as React from 'react';
 import * as CopyToClipboard from 'react-copy-to-clipboard';
@@ -26,7 +26,7 @@ import { downloadFile } from '../utils';
 
 import { SideButtonMetaData, TableActionDialog } from './table-action-dialog';
 
-interface TaskTableActionDialogProps extends React.Props<any> {
+interface TaskTableActionDialogProps extends IDialogProps {
   onClose: () => void;
   metaData: TaskTableActionDialogMetaData;
   killTask: (id: string) => void;
@@ -98,6 +98,7 @@ export class TaskTableActionDialog extends React.Component<TaskTableActionDialog
     return <TableActionDialog
       isOpen
       sideButtonMetadata={taskTableSideButtonMetadata}
+      onClose={onClose}
     >
       <div className={'top-actions'}>
         {
@@ -160,7 +161,7 @@ export class TaskTableActionDialog extends React.Component<TaskTableActionDialog
           : <div/>
         }
         <Button
-          text={'Done'}
+          text={'Close'}
           intent={Intent.PRIMARY}
           onClick={onClose}
         />
