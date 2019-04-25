@@ -113,7 +113,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     } else if (timestampObj instanceof Long) {
       return (Long) timestampObj;
     } else {
-      throw new ISE(String.format("Invalid state: %s isn't a numerical type.", ColumnHolder.TIME_COLUMN_NAME));
+      throw new ISE("Invalid state: [%s] isn't a numerical type.", ColumnHolder.TIME_COLUMN_NAME);
     }
   }
 
