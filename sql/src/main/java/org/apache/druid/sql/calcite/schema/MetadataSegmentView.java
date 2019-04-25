@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -47,11 +47,11 @@ import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -72,13 +72,14 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
+  private final Object lock = new Object();
   /**
-   * Use {@link ConcurrentSkipListMap} so that the order of segments is deterministic and
+   * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
    * sys.segments queries return the segments in sorted order based on segmentId
-   * {@link CachedSegmentOvershadowedStatus} contains the overshadow status and the timestamp for the DataSegment
    */
   @Nullable
-  private final ConcurrentSkipListMap<DataSegment, CachedSegmentOvershadowedStatus> publishedSegments;
+  @GuardedBy("lock")
+  private ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -100,7 +101,6 @@ public class MetadataSegmentView
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = plannerConfig.getMetadataSegmentPollPeriod();
-    this.publishedSegments = isCacheEnabled ? new ConcurrentSkipListMap<>() : null;
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
   }
 
@@ -145,24 +145,21 @@ public class MetadataSegmentView
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final long timestamp = System.currentTimeMillis();
+    final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
       final SegmentWithOvershadowedStatus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      // timestamp is used to filter deleted segments
-      publishedSegments.put(interned, new CachedSegmentOvershadowedStatus(segment.isOvershadowed(), timestamp));
+      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
+          interned,
+          segment.isOvershadowed()
+      );
+      builder.add(segmentWithOvershadowedStatus);
     }
-
-    // filter the segments from cache whose timestamp is not equal to latest timestamp stored,
-    // since the presence of a segment with an earlier timestamp indicates that
-    // "that" segment is not returned by coordinator in latest poll, so it's
-    // likely deleted and therefore we remove it from publishedSegments
-    // Since segments are not atomically replaced because it can cause high
-    // memory footprint due to large number of published segments, so
-    // we are incrementally removing deleted segments from the map
-    // This means publishedSegments will be eventually consistent with
-    // the segments in coordinator
-    publishedSegments.entrySet().removeIf(e -> e.getValue().getTimestamp() != timestamp);
+    // build operation can be expensive for high cardinality segments, so calling it outside "lock"
+    final ImmutableSortedSet<SegmentWithOvershadowedStatus> immutableSortedSet = builder.build();
+    synchronized (lock) {
+      publishedSegments = immutableSortedSet;
+    }
     cachePopulated.set(true);
   }
 
@@ -173,13 +170,9 @@ public class MetadataSegmentView
           lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS) && cachePopulated.get(),
           "hold on, still syncing published segments"
       );
-      return Iterators.transform(
-          publishedSegments.entrySet().iterator(),
-          input -> new SegmentWithOvershadowedStatus(
-              input.getKey(),
-              input.getValue().isOvershadowed()
-          )
-      );
+      synchronized (lock) {
+        return publishedSegments.iterator();
+      }
     } else {
       return getMetadataSegments(
           coordinatorDruidLeaderClient,
@@ -261,28 +254,6 @@ public class MetadataSegmentView
           scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
         }
       }
-    }
-  }
-  
-  private static class CachedSegmentOvershadowedStatus
-  {
-    final boolean overshadowed;
-    final long timestamp;
-
-    public CachedSegmentOvershadowedStatus(boolean overshadowed, long timestamp)
-    {
-      this.overshadowed = overshadowed;
-      this.timestamp = timestamp;
-    }
-
-    public boolean isOvershadowed()
-    {
-      return overshadowed;
-    }
-
-    public long getTimestamp()
-    {
-      return timestamp;
     }
   }
 
