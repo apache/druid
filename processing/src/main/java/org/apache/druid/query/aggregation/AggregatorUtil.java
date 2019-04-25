@@ -121,6 +121,10 @@ public class AggregatorUtil
   public static final byte MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID = 0x36;
   public static final byte MOMENTS_SKETCH_MERGE_CACHE_TYPE_ID = 0x37;
 
+  // Datasketches Quantiles sketch aggregator (part 2)
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_RANK_CACHE_TYPE_ID = 0x38;
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_CDF_CACHE_TYPE_ID = 0x39;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
