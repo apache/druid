@@ -46,8 +46,9 @@ while not done:
 
   issues = json.loads(resp.text)
   for issue in issues:
-    contributor_name = issue["user"]["login"]
-    contributors.add(contributor_name)
+    if "pull_request" in issue:
+      contributor_name = issue["user"]["login"]
+      contributors.add(contributor_name)
 
 # doesn't work as-is for python2, the contributor names are "unicode" instead of "str" in python2
 contributors = sorted(contributors, key=str.lower)
