@@ -85,7 +85,7 @@ public class DruidRewriteEqualNullRule extends RelOptRule
   }
 
   /** Shuttle that convert `a = null` to `a = ''` */
-  private class RewriteEqualNullRexShuttle extends RexShuttle
+  private static class RewriteEqualNullRexShuttle extends RexShuttle
   {
     RexBuilder rexBuilder;
 
@@ -94,7 +94,7 @@ public class DruidRewriteEqualNullRule extends RelOptRule
       this.rexBuilder = rexBuilder;
     }
 
-    // override RexShuttle
+    @Override
     public RexNode visitCall(RexCall call) 
     {
       RexNode newCall = super.visitCall(call);
