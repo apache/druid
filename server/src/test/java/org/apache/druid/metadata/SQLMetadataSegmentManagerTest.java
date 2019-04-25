@@ -32,6 +32,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -273,6 +274,302 @@ public class SQLMetadataSegmentManagerTest
 
     Assert.assertNull(manager.getDataSource(newDataSource));
     Assert.assertTrue(manager.removeSegment(newSegment.getId()));
+  }
+
+  @Test
+  public void testDisableSegmentsWithSegmentIds() throws IOException
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.isStarted());
+
+    final String datasource = "wikipedia2";
+    final DataSegment newSegment1 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment2 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    final ImmutableList<String> segmentIds = ImmutableList.of(newSegment1.getId().toString(), newSegment1.getId().toString());
+
+    Assert.assertEquals(segmentIds.size(), manager.disableSegments(datasource, segmentIds));
+    manager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
+    );
+  }
+
+  @Test
+  public void testDisableSegmentsWithSegmentIdsInvalidDatasource() throws IOException
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.isStarted());
+
+    final String datasource = "wikipedia2";
+    final DataSegment newSegment1 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment2 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    final ImmutableList<String> segmentIds = ImmutableList.of(
+        newSegment1.getId().toString(),
+        newSegment2.getId().toString()
+    );
+    // none of the segments are in datasource
+    Assert.assertEquals(0, manager.disableSegments("wrongDataSource", segmentIds));
+    manager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
+    );
+  }
+
+  @Test
+  public void testDisableSegmentsWithInterval() throws IOException
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.isStarted());
+
+    final String datasource = "wikipedia2";
+    final DataSegment newSegment1 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment2 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment3 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-19T00:00:00.000/2017-10-20T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    publisher.publishSegment(newSegment3);
+    final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
+
+    // 2 out of 3 segments match the interval
+    Assert.assertEquals(2, manager.disableSegments(datasource, theInterval));
+
+    manager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment3),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDisableSegmentsWithInvalidInterval() throws IOException
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.isStarted());
+
+    final String datasource = "wikipedia2";
+    final DataSegment newSegment1 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment2 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    // invalid interval start > end
+    final Interval theInterval = Intervals.of("2017-10-22T00:00:00.000/2017-10-02T00:00:00.000");
+    manager.disableSegments(datasource, theInterval);
+  }
+
+  @Test
+  public void testDisableSegmentsWithOverlappingInterval() throws IOException
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.isStarted());
+
+    final String datasource = "wikipedia2";
+    final DataSegment newSegment1 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-17T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment2 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    final DataSegment newSegment3 = new DataSegment(
+        datasource,
+        Intervals.of("2017-10-19T00:00:00.000/2017-10-22T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    publisher.publishSegment(newSegment3);
+    final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
+
+    // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be disabled
+    Assert.assertEquals(1, manager.disableSegments(datasource, theInterval));
+
+    manager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment3),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
+    );
   }
 
   @Test
