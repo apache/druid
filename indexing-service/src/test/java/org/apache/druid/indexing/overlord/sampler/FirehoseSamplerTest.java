@@ -168,7 +168,7 @@ public class FirehoseSamplerTest
   {
     FirehoseFactory firehoseFactory = getFirehoseFactory(getTestRows());
 
-    SamplerResponse response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, null, true));
+    SamplerResponse response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, null, true, null));
 
     Assert.assertNull(response.getCacheKey());
     Assert.assertEquals(3, (int) response.getNumRowsRead());
@@ -187,7 +187,7 @@ public class FirehoseSamplerTest
   {
     FirehoseFactory firehoseFactory = getFirehoseFactory(getTestRows());
 
-    SamplerResponse response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, null, false));
+    SamplerResponse response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, null, false, null));
     String cacheKey = response.getCacheKey();
 
     Assert.assertNotNull(cacheKey);
@@ -201,7 +201,7 @@ public class FirehoseSamplerTest
     Assert.assertEquals(new SamplerResponseRow(getTestRows().get(1).toString(), null, true, null), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(getTestRows().get(2).toString(), null, true, null), data.get(2));
 
-    response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, cacheKey, false));
+    response = firehoseSampler.sample(firehoseFactory, null, new SamplerConfig(3, cacheKey, false, null));
 
     Assert.assertTrue(!isCacheable() || cacheKey.equals(response.getCacheKey()));
     Assert.assertEquals(3, (int) response.getNumRowsRead());
@@ -563,7 +563,7 @@ public class FirehoseSamplerTest
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
     String cacheKey = response.getCacheKey();
 
-    response = firehoseSampler.sample(firehoseFactory, dataSchema, new SamplerConfig(null, cacheKey, false));
+    response = firehoseSampler.sample(firehoseFactory, dataSchema, new SamplerConfig(null, cacheKey, false, null));
 
     Assert.assertTrue(!isCacheable() || cacheKey.equals(response.getCacheKey()));
 

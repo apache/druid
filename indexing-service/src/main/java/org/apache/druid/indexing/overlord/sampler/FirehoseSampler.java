@@ -51,6 +51,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -184,6 +185,13 @@ public class FirehoseSampler
     if (myFirehoseFactory == null) {
       myFirehoseFactory = firehoseFactory;
       usingCachedData = false;
+    }
+
+    if (samplerConfig.getTimeoutMs() > 0) {
+      myFirehoseFactory = new TimedShutoffFirehoseFactory(
+          myFirehoseFactory,
+          DateTimes.nowUtc().plusMillis(samplerConfig.getTimeoutMs())
+      );
     }
 
     final File tempDir = Files.createTempDir();

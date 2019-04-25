@@ -26,24 +26,28 @@ public class SamplerConfig
 {
   private static final int DEFAULT_NUM_ROWS = 200;
   private static final boolean DEFAULT_SKIP_CACHE = false;
+  private static final int DEFAULT_TIMEOUT_MS = 10000;
 
-  private final Integer numRows;
+  private final int numRows;
   private final String cacheKey;
   private final boolean skipCache;
+  private final int timeoutMs;
 
   @JsonCreator
   public SamplerConfig(
       @JsonProperty("numRows") Integer numRows,
       @JsonProperty("cacheKey") String cacheKey,
-      @JsonProperty("skipCache") Boolean skipCache
+      @JsonProperty("skipCache") Boolean skipCache,
+      @JsonProperty("timeoutMs") Integer timeoutMs
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
     this.cacheKey = cacheKey;
     this.skipCache = skipCache != null ? skipCache : DEFAULT_SKIP_CACHE;
+    this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
   }
 
-  public Integer getNumRows()
+  public int getNumRows()
   {
     return numRows;
   }
@@ -58,8 +62,13 @@ public class SamplerConfig
     return skipCache;
   }
 
+  public int getTimeoutMs()
+  {
+    return timeoutMs;
+  }
+
   public static SamplerConfig empty()
   {
-    return new SamplerConfig(null, null, null);
+    return new SamplerConfig(null, null, null, null);
   }
 }

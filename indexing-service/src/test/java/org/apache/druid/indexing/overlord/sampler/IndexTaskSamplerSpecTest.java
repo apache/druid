@@ -67,7 +67,8 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
                   + "  \"samplerConfig\": {\n"
                   + "    \"numRows\": 123,\n"
                   + "    \"cacheKey\": \"eaebbfd87ec34bc6a9f8c03ecee4dd7a\",\n"
-                  + "    \"skipCache\": false\n"
+                  + "    \"skipCache\": false,\n"
+                  + "    \"timeoutMs\": 2345\n"
                   + "  },\n"
                   + "  \"spec\": {\n"
                   + "    \"dataSchema\": {\n"
@@ -120,8 +121,9 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
     Assert.assertEquals("json", ((Map) dataSchema.getParserMap().get("parseSpec")).get("format"));
 
     SamplerConfig samplerConfig = capturedSamplerConfig.getValue();
-    Assert.assertEquals(123, (int) samplerConfig.getNumRows());
+    Assert.assertEquals(123, samplerConfig.getNumRows());
     Assert.assertEquals("eaebbfd87ec34bc6a9f8c03ecee4dd7a", samplerConfig.getCacheKey());
     Assert.assertFalse(samplerConfig.isSkipCache());
+    Assert.assertEquals(2345, samplerConfig.getTimeoutMs());
   }
 }
