@@ -158,7 +158,6 @@ public final class SpecializationService
       return specializationStates.computeIfAbsent(specializationId, id -> new WindowedLoopIterationCounter<>(this, id));
     }
 
-    @SuppressWarnings("unchecked")
     T specialize(ImmutableMap<Class<?>, Class<?>> classRemapping)
     {
       String specializedClassName = specializedClassNamePrefix + specializedClassCounter.get();
@@ -169,6 +168,7 @@ public final class SpecializationService
         ClassReader prototypeClassReader = new ClassReader(getPrototypeClassBytecode());
         prototypeClassReader.accept(classTransformer, 0);
         byte[] specializedClassBytecode = specializedClassWriter.toByteArray();
+        @SuppressWarnings("unchecked")
         Class<T> specializedClass = (Class<T>) DefineClassUtils.defineClass(
             prototypeClass,
             specializedClassBytecode,

@@ -22,9 +22,8 @@ package org.apache.druid.java.util.common;
 import java.lang.reflect.Field;
 
 /**
- * This utiliy class enables runtime access to sun.misc.Unsafe
- *
- * Reflection is required because this class is not available at compile time in Java 9 and above.
+ * This utiliy class enables runtime access to sun.misc.Unsafe using reflection,
+ * since Unsafe may not be directly accessible in newer JDK versions
  */
 public class UnsafeUtils
 {
