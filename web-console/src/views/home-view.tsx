@@ -373,8 +373,9 @@ GROUP BY 1`);
         title: 'Supervisors',
         loading: state.supervisorCountLoading,
         content: <>
-          <p>{pluralIfNeeded(state.runningSupervisorCount, 'running supervisor')}</p>
-          <p>{pluralIfNeeded(state.suspendedSupervisorCount, 'suspended supervisor')}</p>
+            {!Boolean(state.runningSupervisorCount + state.suspendedSupervisorCount) && <p>0 supervisors</p>}
+            {Boolean(state.runningSupervisorCount) && <p>{pluralIfNeeded(state.runningSupervisorCount, 'running supervisor')}</p>}
+            {Boolean(state.suspendedSupervisorCount) && <p>{pluralIfNeeded(state.suspendedSupervisorCount, 'suspended supervisor')}</p>}
           </>,
         error: state.supervisorCountError
       })}
