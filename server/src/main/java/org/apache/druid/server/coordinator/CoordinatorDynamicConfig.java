@@ -232,7 +232,7 @@ public class CoordinatorDynamicConfig
     return specificDataSourcesToKillUnusedSegmentsIn;
   }
 
-  @JsonProperty
+  @JsonProperty("killAllDataSources")
   public boolean isKillUnusedSegmentsInAllDataSources()
   {
     return killUnusedSegmentsInAllDataSources;

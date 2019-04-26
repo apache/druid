@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -29,6 +28,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
@@ -39,11 +39,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DruidCoordinatorMarkAsUnusedOvershadowedSegmentsTest
 {
@@ -109,14 +105,10 @@ public class DruidCoordinatorMarkAsUnusedOvershadowedSegmentsTest
     EasyMock.expectLastCall();
     EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
 
-    druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "normal",
-            Stream.of(
-                new ServerHolder(druidServer, mockPeon)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-        ));
+    druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", new ServerHolder(druidServer, mockPeon))
+        .build();
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()

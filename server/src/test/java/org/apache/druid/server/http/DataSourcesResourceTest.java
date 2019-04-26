@@ -437,16 +437,28 @@ public class DataSourcesResourceTest
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, null, null, null, null);
 
-    Response response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("invalidDataSource", null, null);
+    Response response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals(
+        "invalidDataSource",
+        null,
+        null
+    );
     Assert.assertEquals(response.getEntity(), null);
 
-    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", null, null);
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals(
+        "datasource1",
+        null,
+        null
+    );
     TreeSet<Interval> actualIntervals = (TreeSet) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(expectedIntervals.get(0), actualIntervals.first());
     Assert.assertEquals(expectedIntervals.get(1), actualIntervals.last());
 
-    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", "simple", null);
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals(
+        "datasource1",
+        "simple",
+        null
+    );
     TreeMap<Interval, Map<DataSourcesResource.SimpleProperties, Object>> results = (TreeMap) response.getEntity();
     Assert.assertEquals(2, results.size());
     Assert.assertEquals(expectedIntervals.get(0), results.firstKey());
@@ -454,7 +466,11 @@ public class DataSourcesResourceTest
     Assert.assertEquals(1, results.firstEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
     Assert.assertEquals(1, results.lastEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
 
-    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", null, "full");
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals(
+        "datasource1",
+        null,
+        "full"
+    );
     Map<Interval, Map<SegmentId, Object>> results2 = ((Map<Interval, Map<SegmentId, Object>>) response.getEntity());
     int i = 1;
     for (Map.Entry<Interval, Map<SegmentId, Object>> entry : results2.entrySet()) {
@@ -469,7 +485,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testGetSegmentDataSourceSpecificInterval()
+  public void testGetServedSegmentsInIntervalInDataSource()
   {
     server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0));
@@ -538,7 +554,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testDeleteDataSourceSpecificInterval()
+  public void testKillSegmentsInIntervalInDataSource()
   {
     String interval = "2010-01-01_P1D";
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
@@ -563,7 +579,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testDeleteDataSource()
+  public void testMarkAsUnusedAllSegmentsInDataSource()
   {
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     EasyMock.replay(indexingServiceClient, server);
@@ -574,10 +590,17 @@ public class DataSourcesResourceTest
         indexingServiceClient,
         null
     );
-    Response response = DataSourcesResource.markAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertNotNull(response.getEntity());
-    Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
+    try {
+      Response response =
+          DataSourcesResource.markAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
+      // 400 (Bad Request) or an IllegalArgumentException is expected.
+      Assert.assertEquals(400, response.getStatus());
+      Assert.assertNotNull(response.getEntity());
+      Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
+    }
+    catch (IllegalArgumentException ignore) {
+      // expected
+    }
 
     EasyMock.verify(indexingServiceClient, server);
   }

@@ -33,7 +33,6 @@ import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -44,8 +43,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 /**
  * TODO convert benchmarks to JMH
@@ -132,19 +129,10 @@ public class DruidCoordinatorBalancerProfiler
       serverHolderList.add(new ServerHolder(server, peon));
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "normal",
-            serverHolderList.stream().collect(
-                Collectors.toCollection(
-                    () -> new TreeSet<>(
-                        DruidCoordinatorBalancerTester.percentUsedComparator
-                    )
-                )
-            )
-        )
-    );
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
+        .build();
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder(druidCluster)
         .withLoadManagementPeons(peonMap)
@@ -204,17 +192,14 @@ public class DruidCoordinatorBalancerProfiler
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
-            new DruidCluster(
-                null,
-                ImmutableMap.of(
+            DruidClusterBuilder
+                .newBuilder()
+                .addTier(
                     "normal",
-                    CollectionUtils.newTreeSet(
-                        DruidCoordinatorBalancerTester.percentUsedComparator,
-                        new ServerHolder(druidServer1, fromPeon),
-                        new ServerHolder(druidServer2, toPeon)
-                    )
+                    new ServerHolder(druidServer1, fromPeon),
+                    new ServerHolder(druidServer2, toPeon)
                 )
-            )
+                .build()
         )
         .withLoadManagementPeons(ImmutableMap.of("from", fromPeon, "to", toPeon))
         .withUsedSegmentsInTest(segments)

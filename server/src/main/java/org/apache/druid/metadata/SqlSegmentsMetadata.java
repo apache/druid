@@ -24,6 +24,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidDataSource;
@@ -42,6 +44,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -68,7 +71,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -111,12 +116,16 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * lazy-initialized variable: it starts off as null, and may transition between null and non-null multiple times as
    * {@link #stop} and {@link #start} are called.
    */
-  private volatile @Nullable ConcurrentHashMap<String, DruidDataSource> dataSources = null;
+  private @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSources = null;
+
+  private volatile @MonotonicNonNull CompletableFuture<Void> firstPollFutureSinceLastStart = null;
+  /** The latch to be used to read a non-null object from {@link #firstPollFutureSinceLastStart}. */
+  private final CountDownLatch everStartedLatch = new CountDownLatch(1);
 
   /** The number of times this SqlSegmentsMetadata was started. */
   private long startCount = 0;
   /**
-   * Equal to the current {@link #startCount} value, if the SqlSegmentsMetadata is currently started; -1 if
+   * Equal to the current {@link #startCount} value if the SqlSegmentsMetadata is currently started; -1 if
    * currently stopped.
    *
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
@@ -124,7 +133,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * {@link #poll()} concurrently, if the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions
    * occurs quickly.
    *
-   * {@link SQLMetadataRuleManager} also have a similar issue.
+   * {@link SQLMetadataRuleManager} also has a similar issue.
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;
@@ -147,13 +156,19 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @LifecycleStart
   public void start()
   {
+    doStart();
+  }
+
+  public CompletableFuture<Void> doStart()
+  {
     ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
     lock.lock();
     try {
       if (isStarted()) {
-        return;
+        return firstPollFutureSinceLastStart;
       }
 
+      firstPollFutureSinceLastStart = new CompletableFuture<>();
       startCount++;
       currentStartOrder = startCount;
       final long localStartOrder = currentStartOrder;
@@ -167,6 +182,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
+      everStartedLatch.countDown();
+      return firstPollFutureSinceLastStart;
     }
     finally {
       lock.unlock();
@@ -177,7 +194,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   {
     return () -> {
       // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exits, poll()
-      // won't actually run anymore after that (it could only enter the syncrhonized section and exit immediately
+      // won't actually run anymore after that (it could only enter the synchronized section and exit immediately
       // because the localStartedOrder doesn't match the new currentStartOrder). It's needed to avoid flakiness in
       // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
@@ -185,12 +202,20 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       try {
         if (startOrder == currentStartOrder) {
           poll();
+          firstPollFutureSinceLastStart.complete(null);
         } else {
           log.debug("startOrder = currentStartOrder = %d, skipping poll()", startOrder);
         }
       }
-      catch (Exception e) {
-        log.makeAlert(e, "uncaught exception in " + getClass().getName() + "'s polling thread").emit();
+      catch (Throwable t) {
+        log.makeAlert(t, "Uncaught exception in " + getClass().getName() + "'s polling thread").emit();
+        // Swallow the exception, so that scheduled polling goes on. Leave firstPollFutureSinceLastStart uncompleted
+        // for now, so that it may be completed during the next poll.
+        if (!(t instanceof Exception)) {
+          // Don't try to swallow a Throwable which is not an Exception (that is, a Error).
+          firstPollFutureSinceLastStart.completeExceptionally(t);
+          throw t;
+        }
       }
       finally {
         lock.unlock();
@@ -209,7 +234,9 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
         return;
       }
 
-      dataSources = null;
+      // NOT nulling dataSources, allowing to query the latest polled data even when this SegmentsMetadata object is
+      // stopped.
+
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -321,7 +348,10 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
               .execute()
       );
 
-      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
+      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
+      if (dataSourcesSnapshot != null) {
+        dataSourcesSnapshot.remove(dataSource);
+      }
 
       return numUpdatedDatabaseEntries;
     }
@@ -340,21 +370,21 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
       // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
       List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                dataSourceName,
-                (dsName, dataSource) -> {
-                  for (SegmentId possibleSegmentId : possibleSegmentIds) {
-                    if (dataSource.removeSegment(possibleSegmentId) != null) {
-                      break;
-                    }
-                  }
-                  // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                  return dataSource.isEmpty() ? null : dataSource;
+      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
+      if (dataSourcesSnapshot != null) {
+        dataSourcesSnapshot.computeIfPresent(
+            dataSourceName,
+            (dsName, dataSource) -> {
+              for (SegmentId possibleSegmentId : possibleSegmentIds) {
+                if (dataSource.removeSegment(possibleSegmentId) != null) {
+                  break;
                 }
-              )
-      );
+              }
+              // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+              return dataSource.isEmpty() ? null : dataSource;
+            }
+        );
+      }
       return segmentStateChanged;
     }
     catch (RuntimeException e) {
@@ -368,17 +398,17 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   {
     try {
       final boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId.toString());
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                  segmentId.getDataSource(),
-                  (dsName, dataSource) -> {
-                    dataSource.removeSegment(segmentId);
-                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                    return dataSource.isEmpty() ? null : dataSource;
-                  }
-              )
-      );
+      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
+      if (dataSourcesSnapshot != null) {
+        dataSourcesSnapshot.computeIfPresent(
+            segmentId.getDataSource(),
+            (dsName, dataSource) -> {
+              dataSource.removeSegment(segmentId);
+              // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+              return dataSource.isEmpty() ? null : dataSource;
+            }
+        );
+      }
       return segmentStateChanged;
     }
     catch (RuntimeException e) {
@@ -416,19 +446,26 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @Override
   public @Nullable ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSourceName)
   {
-    final DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(dataSourceName)).orElse(null);
+    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
+    Futures.getUnchecked(firstPollFutureSinceLastStart);
+    final DruidDataSource dataSource = dataSources.get(dataSourceName);
     return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
   public @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource)
   {
-    return Optional.ofNullable(dataSources).map(m -> m.get(dataSource)).orElse(null);
+    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
+    Futures.getUnchecked(firstPollFutureSinceLastStart);
+    return dataSources.get(dataSource);
   }
 
   @Override
-  public @Nullable Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments()
+  public Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments()
   {
+    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
+    Futures.getUnchecked(firstPollFutureSinceLastStart);
+
     return Optional.ofNullable(dataSources)
                    .map(m ->
                             m.values()
@@ -477,12 +514,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   {
     // See the comment to the pollLock field, explaining this synchronized block
     synchronized (pollLock) {
-      try {
-        doPoll();
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Problem polling DB.").emit();
-      }
+      doPoll();
     }
   }
 
@@ -518,7 +550,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
                         }
                         catch (IOException e) {
                           log.makeAlert(e, "Failed to read segment from db.").emit();
-                          return null;
+                          throw new RuntimeException(e);
                         }
                       }
                     }

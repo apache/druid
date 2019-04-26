@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.rules;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -28,18 +27,17 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -243,38 +241,31 @@ public class BroadcastDistributionRuleTest
         true
     );
 
-    druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            CollectionUtils.newTreeSet(
-                Collections.reverseOrder(),
-                holdersOfLargeSegments.get(0),
-                holderOfSmallSegment,
-                holdersOfLargeSegments2.get(0)
-            ),
+            holdersOfLargeSegments.get(0),
+            holderOfSmallSegment,
+            holdersOfLargeSegments2.get(0)
+        )
+        .addTier(
             DruidServer.DEFAULT_TIER,
-            CollectionUtils.newTreeSet(
-                Collections.reverseOrder(),
-                holdersOfLargeSegments.get(1),
-                holdersOfLargeSegments.get(2),
-                holdersOfLargeSegments2.get(1)
-            )
+            holdersOfLargeSegments.get(1),
+            holdersOfLargeSegments.get(2),
+            holdersOfLargeSegments2.get(1)
         )
-    );
+        .build();
 
-    secondCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    secondCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "tier1",
-            CollectionUtils.newTreeSet(
-                Collections.reverseOrder(),
-                activeServer,
-                decommissioningServer1,
-                decommissioningServer2
-            )
+            activeServer,
+            decommissioningServer1,
+            decommissioningServer2
         )
-    );
+        .build();
   }
 
   @Test

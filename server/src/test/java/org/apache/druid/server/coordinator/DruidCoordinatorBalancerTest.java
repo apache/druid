@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -519,16 +518,16 @@ public class DruidCoordinatorBalancerTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
-            new DruidCluster(
-                null,
-                ImmutableMap.of(
+            DruidClusterBuilder
+                .newBuilder()
+                .addTier(
                     "normal",
                     IntStream
                         .range(0, druidServers.size())
                         .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i), decommissioning.get(i)))
-                        .collect(Collectors.toSet())
+                        .toArray(ServerHolder[]::new)
                 )
-            )
+                .build()
         )
         .withLoadManagementPeons(
             IntStream

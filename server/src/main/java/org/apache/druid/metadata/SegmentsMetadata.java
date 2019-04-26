@@ -112,7 +112,7 @@ public interface SegmentsMetadata
    * This method's name starts with "prepare" for the same reason as {@link
    * #prepareImmutableDataSourceWithUsedSegments}.
    */
-  @Nullable Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments();
+  Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments();
 
   /**
    * Returns an iterable to go over all segments in all data sources. The order in which segments are iterated is

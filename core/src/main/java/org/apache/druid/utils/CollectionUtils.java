@@ -19,9 +19,10 @@
 
 package org.apache.druid.utils;
 
+import com.google.common.collect.Iterables;
+
 import java.util.AbstractCollection;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
@@ -71,11 +72,10 @@ public final class CollectionUtils
     };
   }
 
-  @SafeVarargs
-  public static <E> TreeSet<E> newTreeSet(Comparator<? super E> comparator, E... elements)
+  public static <E> TreeSet<E> newTreeSet(Comparator<? super E> comparator, Iterable<E> elements)
   {
     TreeSet<E> set = new TreeSet<>(comparator);
-    Collections.addAll(set, elements);
+    Iterables.addAll(set, elements);
     return set;
   }
 

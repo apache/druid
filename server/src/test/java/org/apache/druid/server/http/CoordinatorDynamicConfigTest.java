@@ -247,7 +247,7 @@ public class CoordinatorDynamicConfigTest
 
   private void assertConfig(
       CoordinatorDynamicConfig config,
-      long expectedMillisLagBeforeCanMaskAsUnusedOvershadowedSegments,
+      long expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
       long expectedMergeBytesLimit,
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
@@ -255,15 +255,15 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       boolean expectedEmitingBalancingStats,
-      Set<String> expectedSpecificDataSourcesToKill,
-      boolean expectedKillAllDataSources,
+      Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
+      boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
-      Set<String> decommissioning,
+      Set<String> decommissioningNodes,
       int decommissioningMaxPercentOfMaxSegmentsToMove
   )
   {
     Assert.assertEquals(
-        expectedMillisLagBeforeCanMaskAsUnusedOvershadowedSegments,
+        expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         config.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
     );
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
@@ -273,10 +273,13 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedSpecificDataSourcesToKill, config.getSpecificDataSourcesToKillUnusedSegmentsIn());
-    Assert.assertEquals(expectedKillAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
+    Assert.assertEquals(
+        expectedSpecificDataSourcesToKillUnusedSegmentsIn,
+        config.getSpecificDataSourcesToKillUnusedSegmentsIn()
+    );
+    Assert.assertEquals(expectedKillUnusedSegmentsInAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(decommissioning, config.getDecommissioningNodes());
+    Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
     Assert.assertEquals(
         decommissioningMaxPercentOfMaxSegmentsToMove,
         config.getDecommissioningMaxPercentOfMaxSegmentsToMove()
