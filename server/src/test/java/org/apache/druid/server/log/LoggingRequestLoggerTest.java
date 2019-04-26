@@ -184,14 +184,14 @@ public class LoggingRequestLoggerTest
   @Test
   public void testSimpleLogging() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), false, false);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), false, false, false);
     requestLogger.logNativeQuery(logLine);
   }
 
   @Test
   public void testLoggingMDC() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false, false);
     requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
@@ -207,7 +207,7 @@ public class LoggingRequestLoggerTest
   @Test
   public void testLoggingMDCContext() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true, false);
     requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
@@ -223,7 +223,7 @@ public class LoggingRequestLoggerTest
   @Test
   public void testNestedQueryLoggingMDC() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false, false);
     requestLogger.logNativeQuery(RequestLogLine.forNative(
         nestedQuery,
         timestamp,
@@ -244,7 +244,7 @@ public class LoggingRequestLoggerTest
   @Test
   public void testNestedNestedQueryLoggingMDC() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false, false);
     requestLogger.logNativeQuery(RequestLogLine.forNative(
         nestedNestedQuery,
         timestamp,
@@ -265,7 +265,7 @@ public class LoggingRequestLoggerTest
   @Test
   public void testUnionQueryLoggingMDC() throws Exception
   {
-    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false, false);
     requestLogger.logNativeQuery(RequestLogLine.forNative(
         unionQuery,
         timestamp,

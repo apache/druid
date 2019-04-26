@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -50,18 +51,21 @@ public class FileRequestLogger implements RequestLogger
   private final ScheduledExecutorService exec;
   private final File baseDir;
   private final DateTimeFormatter filePattern;
+  private final boolean logSegmentMetadataQueries;
 
   private final Object lock = new Object();
 
   private DateTime currentDay;
   private OutputStreamWriter fileWriter;
 
-  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir, String filePattern)
+  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir, String filePattern,
+                           boolean logSegmentMetadataQueries)
   {
     this.exec = exec;
     this.objectMapper = objectMapper;
     this.baseDir = baseDir;
     this.filePattern = DateTimeFormat.forPattern(filePattern);
+    this.logSegmentMetadataQueries = logSegmentMetadataQueries;
   }
 
   @LifecycleStart
@@ -131,12 +135,22 @@ public class FileRequestLogger implements RequestLogger
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
+    final Query query = requestLogLine.getQuery();
+    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
+      return;
+    }
+
     logToFile(requestLogLine.getNativeQueryLine(objectMapper));
   }
 
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
   {
+    final Query query = requestLogLine.getQuery();
+    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
+      return;
+    }
+
     logToFile(requestLogLine.getSqlQueryLine(objectMapper));
   }
 
@@ -154,6 +168,7 @@ public class FileRequestLogger implements RequestLogger
   {
     return "FileRequestLogger{" +
            "baseDir=" + baseDir +
+           "logSegmentMetadataQueries=" + logSegmentMetadataQueries +
            '}';
   }
 }

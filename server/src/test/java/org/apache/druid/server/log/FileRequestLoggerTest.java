@@ -20,8 +20,11 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.io.CharStreams;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.LegacyDataSource;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -52,13 +55,15 @@ public class FileRequestLoggerTest
     String nativeQueryLogString = dateTime + "\t" + HOST + "\t" + "native";
     String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
 
-    FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir, "yyyy-MM-dd'.log'");
+    FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir, "yyyy-MM-dd'.log'", false);
     fileRequestLogger.start();
 
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(nativeRequestLogLine.getNativeQueryLine(EasyMock.anyObject())).andReturn(nativeQueryLogString).anyTimes();
+    EasyMock.expect(nativeRequestLogLine.getQuery()).andReturn(null).anyTimes();
     RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(sqlRequestLogLine.getSqlQueryLine(EasyMock.anyObject())).andReturn(sqlQueryLogString).anyTimes();
+    EasyMock.expect(sqlRequestLogLine.getQuery()).andReturn(null).anyTimes();
     EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine);
 
     fileRequestLogger.logNativeQuery(nativeRequestLogLine);
@@ -67,6 +72,39 @@ public class FileRequestLoggerTest
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));
     String logString = CharStreams.toString(Files.newBufferedReader(logFile.toPath(), StandardCharsets.UTF_8));
     Assert.assertTrue(logString.contains(nativeQueryLogString + "\n" + sqlQueryLogString + "\n"));
+    fileRequestLogger.stop();
+  }
+
+  @Test public void testIgnoreMetadataLog() throws Exception
+  {
+    ObjectMapper objectMapper = new ObjectMapper();
+    DateTime dateTime = DateTimes.nowUtc();
+    File logDir = temporaryFolder.newFolder();
+    String nativeQueryLogString = dateTime + "\t" + HOST + "\t" + "native";
+    String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
+
+    FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir, "yyyy-MM-dd'.log'",
+        false);
+    fileRequestLogger.start();
+
+    RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(nativeRequestLogLine.getNativeQueryLine(EasyMock.anyObject())).andReturn(nativeQueryLogString)
+        .anyTimes();
+    EasyMock.expect(nativeRequestLogLine.getQuery()).andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
+        null, null, null, null, null, null, null)).anyTimes();
+    RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(sqlRequestLogLine.getSqlQueryLine(EasyMock.anyObject())).andReturn(sqlQueryLogString).anyTimes();
+    EasyMock.expect(sqlRequestLogLine.getQuery()).andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
+        null, null, null, null, null, null, null)).anyTimes();
+    EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine);
+
+    fileRequestLogger.logNativeQuery(nativeRequestLogLine);
+    fileRequestLogger.logSqlQuery(sqlRequestLogLine);
+
+    File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));
+    String logString = CharStreams.toString(Files.newBufferedReader(logFile.toPath(), StandardCharsets.UTF_8));
+    Assert.assertTrue(Strings.isNullOrEmpty(logString));
+
     fileRequestLogger.stop();
   }
 }

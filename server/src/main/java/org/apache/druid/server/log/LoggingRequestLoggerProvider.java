@@ -41,10 +41,13 @@ public class LoggingRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   public boolean setContextMDC = false;
 
+  @JsonProperty
+  public boolean logSegmentMetadataQueries = true;
+
   @Override
   public RequestLogger get()
   {
-    LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC);
+    LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC, logSegmentMetadataQueries);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
