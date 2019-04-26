@@ -764,12 +764,9 @@ public class DataSourcesResource
   )
   {
     if (payload == null || !payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST).entity(
-          ImmutableMap.of(
-              "error",
-              "Either a valid interval or segmentIds array must be specified"
-          )
-      ).build();
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
