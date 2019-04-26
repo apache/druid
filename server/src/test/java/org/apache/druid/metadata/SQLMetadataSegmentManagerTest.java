@@ -99,7 +99,7 @@ public class SQLMetadataSegmentManagerTest
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
-        segment.getVersion(),
+        segment.getMajorVersion(),
         used,
         jsonMapper.writeValueAsBytes(segment)
     );
