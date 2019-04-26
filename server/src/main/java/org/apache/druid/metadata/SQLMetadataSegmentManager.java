@@ -22,7 +22,6 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidDataSource;
@@ -30,7 +29,9 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -51,7 +52,6 @@ import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -69,8 +69,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  *
@@ -218,102 +216,106 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  private Pair<DataSegment, Boolean> usedPayloadMapper(
+      final int index,
+      final ResultSet resultSet,
+      final StatementContext context
+  ) throws SQLException
+  {
+    try {
+      return new Pair<>(
+          jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class),
+          resultSet.getBoolean("used")
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
-   * Builds a VersionedIntervalTimeline from all segments that are contained in the provided Interval.
-   * Segments are added to the timeline regardless if they are enabled or disabled.
+   * Gets a list of all datasegments that overlap the provided interval along with thier used status.
    */
-  private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
+  private List<Pair<DataSegment, Boolean>> getDataSegmentsOverlappingInterval(
       final String dataSource,
       final Interval interval
   )
   {
     return connector.inReadOnlyTransaction(
-        (handle, status) -> VersionedIntervalTimeline.forSegments(
-            Iterators.transform(
-                handle
-                    .createQuery(
-                        StringUtils.format(
-                            "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start >= :start AND %2$send%2$s <= :end",
-                            getSegmentsTable(), connector.getQuoteString()
-                        )
-                    )
-                    .setFetchSize(connector.getStreamingFetchSize())
-                    .bind("dataSource", dataSource)
-                    .bind("start", interval.getStart().toString())
-                    .bind("end", interval.getEnd().toString())
-                    .map(ByteArrayMapper.FIRST)
-                    .iterator(),
-                payload -> {
-                  try {
-                    return jsonMapper.readValue(payload, DataSegment.class);
-                  }
-                  catch (IOException e) {
-                    throw new RuntimeException(e);
-                  }
-                }
+        (handle, status) -> handle.createQuery(
+            StringUtils.format(
+                "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start",
+                getSegmentsTable(),
+                connector.getQuoteString()
             )
         )
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("dataSource", dataSource)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString())
+        .map(this::usedPayloadMapper)
+        .list()
     );
+  }
+
+  private List<Pair<DataSegment, Boolean>> getDataSegments(
+      final String dataSource,
+      final Collection<String> segmentIds,
+      final Handle handle
+  )
+  {
+    return segmentIds.stream().map(
+        segmentId -> Optional.ofNullable(
+            handle.createQuery(
+                String.format(
+                    "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
+                    getSegmentsTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("id", segmentId)
+            .map(this::usedPayloadMapper)
+            .first()
+        )
+        .orElseThrow(() -> new UnknownSegmentIdException(StringUtils.format("Cannot find segment id [%s]", segmentId)))
+    )
+    .collect(Collectors.toList());
   }
 
   /**
-   * Builds a VersionedIntervalTimeline containing only the segments passed.
-   * Segments are added to the timeline regardless if they are enabled or disabled.
+   * Builds a VersionedIntervalTimeline containing used segments that overlap the intervals passed.
    */
   private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
       final String dataSource,
-      final Collection<String> segmentIds
+      final Collection<Interval> intervals,
+      final Handle handle
   )
   {
-    return connector.inReadOnlyTransaction(
-        (handle, status) -> VersionedIntervalTimeline.forSegments(segmentIds.stream().map(segmentId -> {
-          try {
-            return jsonMapper.readValue(StreamSupport.stream(
-                handle.createQuery(
-                    StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
-                        getSegmentsTable()
-                    )
+    return VersionedIntervalTimeline.forSegments(intervals
+        .stream()
+        .flatMap(interval -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start AND used = true",
+                    getSegmentsTable(),
+                    connector.getQuoteString()
                 )
-                .setFetchSize(connector.getStreamingFetchSize())
-                .bind("dataSource", dataSource)
-                .bind("id", segmentId)
-                .map(ByteArrayMapper.FIRST)
-                .spliterator(), false
-            ).findFirst().orElseThrow(
-                () -> new UnknownSegmentIdException(StringUtils.format("Cannot find segment id [%s]", segmentId))
-            ), DataSegment.class);
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }).collect(Collectors.toList()))
-    );
-  }
-
-  private void addOverlappingEnabledSegmentsToVersionIntervalTimeline(
-      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
-      final String dataSource,
-      final Interval interval
-  )
-  {
-    VersionedIntervalTimeline.addSegments(
-        versionedIntervalTimeline,
-        dataSources.get(dataSource).getSegments().stream().filter(segment -> interval.overlaps(segment.getInterval())).iterator()
-    );
-  }
-
-  private Stream<SegmentId> getSegmentIdsContainedByInterval(
-      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
-      final Interval interval
-  )
-  {
-    return versionedIntervalTimeline.lookup(interval).stream().flatMap(
-        objectHolder -> StreamSupport.stream(objectHolder.getObject().spliterator(), false).map(
-            dataSegmentPartitionChunk -> dataSegmentPartitionChunk.getObject()
+            )
+            .setFetchSize(connector.getStreamingFetchSize())
+            .bind("dataSource", dataSource)
+            .bind("start", interval.getStart().toString())
+            .bind("end", interval.getEnd().toString())
+            .map((i, resultSet, context) -> {
+              try {
+                return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            })
+            .list()
+            .stream()
         )
-        .filter(segment -> interval.contains(segment.getInterval()))
-        .map(segment -> segment.getId())
+        .iterator()
     );
   }
 
@@ -332,11 +334,19 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public int enableSegments(final String dataSource, final Interval interval)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(dataSource, interval);
-    addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval);
+    List<Pair<DataSegment, Boolean>> segments = getDataSegmentsOverlappingInterval(dataSource, interval);
+    List<DataSegment> segmentsToEnable = segments.stream()
+        .filter(segment -> !segment.rhs && interval.contains(segment.lhs.getInterval()))
+        .map(segment -> segment.lhs)
+        .collect(Collectors.toList());
+
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = VersionedIntervalTimeline.forSegments(
+        segments.stream().filter(segment -> segment.rhs).map(segment -> segment.lhs).iterator()
+    );
+    VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segmentsToEnable.iterator());
 
     return enableSegments(
-        getSegmentIdsContainedByInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
+        segmentsToEnable,
         versionedIntervalTimeline
     );
   }
@@ -344,33 +354,49 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public int enableSegments(final String dataSource, final Collection<String> segmentIds)
   {
-    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(dataSource, segmentIds);
-    versionedIntervalTimeline.getAllTimelineEntries().keySet().stream().reduce(
-        (acc, val) -> acc.withStartMillis(Math.min(acc.getStartMillis(), val.getStartMillis())).withEndMillis(Math.max(acc.getEndMillis(), val.getEndMillis()))
-    ).ifPresent(interval -> addOverlappingEnabledSegmentsToVersionIntervalTimeline(versionedIntervalTimeline, dataSource, interval));
+    Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> data = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          List<DataSegment> segments = getDataSegments(dataSource, segmentIds, handle)
+              .stream()
+              .filter(pair -> !pair.rhs)
+              .map(pair -> pair.lhs)
+              .collect(Collectors.toList());
+
+          VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(
+              dataSource,
+              JodaUtils.condenseIntervals(segments.stream().map(segment -> segment.getInterval()).collect(Collectors.toList())),
+              handle
+          );
+          VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segments.iterator());
+
+          return new Pair<>(
+              segments,
+              versionedIntervalTimeline
+          );
+        }
+    );
 
     return enableSegments(
-        getSegmentIdsContainedByInterval(versionedIntervalTimeline, Intervals.ETERNITY)
-            .filter(segmentId -> segmentIds.contains(segmentId.toString()))
-            .collect(Collectors.toSet()),
-        versionedIntervalTimeline
+        data.lhs,
+        data.rhs
     );
   }
 
   private int enableSegments(
-      final Collection<SegmentId> segmentIds,
+      final Collection<DataSegment> segments,
       final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline
   )
   {
-    if (segmentIds.isEmpty()) {
+    if (segments.isEmpty()) {
       log.warn("No segments found to update!");
       return 0;
     }
 
     return connector.getDBI().withHandle(handle -> {
       Batch batch = handle.createBatch();
-      segmentIds
+      segments
           .stream()
+          .map(segment -> segment.getId())
           .filter(segmentId -> !versionedIntervalTimeline.isOvershadowed(
               segmentId.getInterval(),
               segmentId.getVersion()
