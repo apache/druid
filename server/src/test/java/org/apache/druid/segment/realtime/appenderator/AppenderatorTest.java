@@ -769,11 +769,15 @@ public class AppenderatorTest
           QueryPlus.wrap(query4).run(appenderator, new HashMap<>()).toList();
       Assert.assertEquals(2, results4.size()); // 2 segments, 1 row per segment
       Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
-      Assert.assertArrayEquals(new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
-                               ((List<Object>)((List<Object>) results4.get(0).getEvents()).get(0)).toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
+          ((List<Object>) ((List<Object>) results4.get(0).getEvents()).get(0)).toArray()
+      );
       Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
-      Assert.assertArrayEquals(new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
-                               ((List<Object>)((List<Object>) results4.get(1).getEvents()).get(0)).toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
+          ((List<Object>) ((List<Object>) results4.get(1).getEvents()).get(0)).toArray()
+      );
     }
   }
 
