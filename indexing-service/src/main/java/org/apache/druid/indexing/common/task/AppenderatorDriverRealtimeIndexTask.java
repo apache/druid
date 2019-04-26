@@ -62,7 +62,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ListenableFutures;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -87,12 +86,9 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
-import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -418,31 +414,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     log.info("Job done!");
     toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
     return TaskStatus.success(getId());
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return false;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 
   @Override

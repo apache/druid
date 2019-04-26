@@ -39,7 +39,7 @@ import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -93,7 +93,7 @@ import java.util.stream.Collectors;
  *
  * @see ParallelIndexTaskRunner
  */
-public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHandler
+public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implements ChatHandler
 {
   public static final String TYPE = "index_parallel";
 
@@ -242,6 +242,12 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return false;
   }
 
   @Nullable

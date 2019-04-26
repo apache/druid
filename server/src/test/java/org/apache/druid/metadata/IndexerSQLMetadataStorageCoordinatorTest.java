@@ -37,7 +37,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
@@ -992,7 +992,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               null,
               Collections.emptyList(),
               Collections.emptyList(),
-              ((NumberedOverwritingShardSpec) identifier.getShardSpec()).withAtomicUpdateGroupSize(1),
+              ((NumberedOverwriteShardSpec) identifier.getShardSpec()).withAtomicUpdateGroupSize(1),
               0,
               10L
           )
@@ -1021,7 +1021,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             null,
             Collections.emptyList(),
             Collections.emptyList(),
-            new NumberedOverwritingShardSpec(
+            new NumberedOverwriteShardSpec(
                 9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
                 0,
                 1,

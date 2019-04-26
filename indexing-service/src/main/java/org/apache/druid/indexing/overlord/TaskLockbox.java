@@ -64,13 +64,16 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Remembers which activeTasks have locked which intervals. Tasks are permitted to lock an interval if no other task
- * outside their group has locked an overlapping interval for the same datasource. When a task locks an interval,
- * it is assigned a version string that it can use to publish segments.
+ * Remembers which activeTasks have locked which intervals or which segments. Tasks are permitted to lock an interval
+ * or a segment if no other task outside their group has locked an overlapping interval for the same datasource or
+ * the same segments. Note that TaskLockbox is also responsible for allocating segmentIds when a task requests to lock
+ * a new segment. Task lock might involve version assignment.
  *
- * // TODO: how to use this?
- * // with segemnt lock
- * // note it also does segment allocation for segment lock
+ * - When a task locks an interval or a new segment, it is assigned a new version string that it can use to publish
+ *   segments.
+ * - When a task locks a existing segment, it doesn't need to be assigned a new version.
+ *
+ * Note that tasks of higher priorities can revoke locks of tasks of lower priorities.
  */
 public class TaskLockbox
 {
@@ -428,15 +431,19 @@ public class TaskLockbox
             // Any number of shared locks can be acquired for the same dataSource and interval.
             return createNewTaskLockPosse(request);
           } else {
+            // During a rolling update, tasks of mixed versions can be run at the same time. Old tasks would request
+            // timeChunkLocks while new tasks would ask segmentLocks. The below check is to allow for old and new tasks
+            // to get locks of different granularities if they have the same groupId.
             final boolean allDifferentGranularity = conflictPosses
                 .stream()
                 .allMatch(
                     conflictPosse -> conflictPosse.taskLock.getGranularity() != request.getGranularity()
                                      && conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
-                                     && conflictPosse.getTaskLock().getInterval().equals(request.getInterval()) // TODO: contains?
+                                     && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
                 );
             if (allDifferentGranularity) {
-              // We can add a new taskLockPosse
+              // Lock collision was because of the different granularity in the same group.
+              // We can add a new taskLockPosse.
               return createNewTaskLockPosse(request);
             } else {
               if (isAllRevocable(conflictPosses, request.getPriority())) {
@@ -532,6 +539,11 @@ public class TaskLockbox
     }
   }
 
+  /**
+   * Check all locks task acquired are still valid.
+   * It doesn't check other semantics like acquired locks are enough to overwrite existing segments.
+   * This kind of semantic should be checked in each caller of {@link #doInCriticalSection}.
+   */
   private boolean isTaskLocksValid(Task task, List<Interval> intervals)
   {
     giant.lock();

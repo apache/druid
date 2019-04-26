@@ -87,6 +87,12 @@ public class HadoopTaskTest
         return true;
       }
 
+      @Override
+      public boolean isPerfectRollup()
+      {
+        return true;
+      }
+
       @Nullable
       @Override
       public Granularity getSegmentGranularity(Interval interval)

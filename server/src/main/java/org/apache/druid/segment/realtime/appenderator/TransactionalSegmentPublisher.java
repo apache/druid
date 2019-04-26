@@ -22,7 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.OverwritingShardSpec;
+import org.apache.druid.timeline.partition.OverwriteShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -69,10 +69,10 @@ public interface TransactionalSegmentPublisher
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       final Interval interval = entry.getKey();
       final List<DataSegment> segmentsPerInterval = entry.getValue();
-      final boolean isNonFirstGeneration = segmentsPerInterval.get(0).getShardSpec() instanceof OverwritingShardSpec;
+      final boolean isNonFirstGeneration = segmentsPerInterval.get(0).getShardSpec() instanceof OverwriteShardSpec;
 
       final boolean anyMismatch = segmentsPerInterval.stream().anyMatch(
-          segment -> (segment.getShardSpec() instanceof OverwritingShardSpec) != isNonFirstGeneration
+          segment -> (segment.getShardSpec() instanceof OverwriteShardSpec) != isNonFirstGeneration
       );
       if (anyMismatch) {
         throw new ISE(
@@ -80,10 +80,10 @@ public interface TransactionalSegmentPublisher
             + "segments with non-overwritingShardSpec: [%s],"
             + "segments with overwritingShardSpec: [%s]",
             segmentsPerInterval.stream()
-                    .filter(segment -> !(segment.getShardSpec() instanceof OverwritingShardSpec))
+                    .filter(segment -> !(segment.getShardSpec() instanceof OverwriteShardSpec))
                     .collect(Collectors.toList()),
             segmentsPerInterval.stream()
-                    .filter(segment -> segment.getShardSpec() instanceof OverwritingShardSpec)
+                    .filter(segment -> segment.getShardSpec() instanceof OverwriteShardSpec)
                     .collect(Collectors.toList())
         );
       }
@@ -96,7 +96,7 @@ public interface TransactionalSegmentPublisher
             segmentsPerInterval
                 .stream()
                 .map(segment -> {
-                  final OverwritingShardSpec shardSpec = (OverwritingShardSpec) segment.getShardSpec();
+                  final OverwriteShardSpec shardSpec = (OverwriteShardSpec) segment.getShardSpec();
                   return segment.withShardSpec(shardSpec.withAtomicUpdateGroupSize((short) segmentsPerInterval.size()));
                 })
                 .collect(Collectors.toList())

@@ -41,7 +41,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
@@ -55,15 +54,11 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 
@@ -297,30 +292,5 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> getRunner()
   {
     return runner;
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return false;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegment)
-  {
-    return false;
-  }
-
-  @Override
-  @Nullable
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 }

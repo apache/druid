@@ -20,14 +20,18 @@
 package org.apache.druid.timeline.partition;
 
 /**
- * TODO
+ * ShardSpec for non-first-generation segments.
+ * This shardSpec is allocated a partitionId between {@link PartitionIds#NON_ROOT_GEN_START_PARTITION_ID} and
+ * {@link PartitionIds#NON_ROOT_GEN_END_PARTITION_ID}.
+ *
+ * @see org.apache.druid.timeline.Overshadowable
  */
-public interface OverwritingShardSpec extends ShardSpec
+public interface OverwriteShardSpec extends ShardSpec
 {
-  default OverwritingShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)
+  default OverwriteShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)
   {
     return withAtomicUpdateGroupSize((short) atomicUpdateGroupSize);
   }
 
-  OverwritingShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
+  OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
 }

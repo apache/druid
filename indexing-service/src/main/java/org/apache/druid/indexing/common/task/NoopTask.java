@@ -32,14 +32,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -158,31 +152,6 @@ public class NoopTask extends AbstractTask
       log.info("Woke up!");
       return TaskStatus.success(getId());
     }
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return false;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 
   @Override

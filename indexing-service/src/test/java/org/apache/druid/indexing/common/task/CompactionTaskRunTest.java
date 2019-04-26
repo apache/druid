@@ -54,7 +54,7 @@ import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
@@ -169,7 +169,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwritingShardSpec(32768, 0, 2, (short) 1, (short) 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1), segments.get(i).getShardSpec());
     }
   }
 
@@ -251,7 +251,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
           segments.get(i).getShardSpec()
       );
     }
@@ -271,7 +271,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1, 0, 2, (short) 2, (short) 1),
+          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1, 0, 2, (short) 2, (short) 1),
           segments.get(i).getShardSpec()
       );
     }
@@ -359,7 +359,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
           segments.get(i).getShardSpec()
       );
     }
@@ -501,7 +501,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
+          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
           segments.get(i).getShardSpec()
       );
     }
@@ -562,7 +562,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new NumberedOverwritingShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
+          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
           segments.get(i).getShardSpec()
       );
     }

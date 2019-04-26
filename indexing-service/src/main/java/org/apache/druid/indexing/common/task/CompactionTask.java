@@ -102,7 +102,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-public class CompactionTask extends AbstractTask
+public class CompactionTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
@@ -302,6 +302,12 @@ public class CompactionTask extends AbstractTask
   {
     return (keepSegmentGranularity != null && !keepSegmentGranularity)
         || (segmentGranularity != null);
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
   @Override

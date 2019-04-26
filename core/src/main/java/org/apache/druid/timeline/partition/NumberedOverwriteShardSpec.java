@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class NumberedOverwritingShardSpec implements OverwritingShardSpec
+public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
   private final int partitionId;
 
@@ -40,7 +40,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
   private final short atomicUpdateGroupSize; // number of segments in atomicUpdateGroup
 
   @JsonCreator
-  public NumberedOverwritingShardSpec(
+  public NumberedOverwriteShardSpec(
       @JsonProperty("partitionId") int partitionId,
       @JsonProperty("startRootPartitionId") int startRootPartitionId,
       @JsonProperty("endRootPartitionId") int endRootPartitionId,
@@ -90,7 +90,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
 
-  public NumberedOverwritingShardSpec(
+  public NumberedOverwriteShardSpec(
       int partitionId,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -107,9 +107,9 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
   }
 
   @Override
-  public OverwritingShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize)
+  public OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize)
   {
-    return new NumberedOverwritingShardSpec(
+    return new NumberedOverwriteShardSpec(
         this.partitionId,
         this.startRootPartitionId,
         this.endRootPartitionId,
@@ -186,7 +186,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
   @Override
   public boolean isCompatible(Class<? extends ShardSpec> other)
   {
-    return other == NumberedOverwritingShardSpec.class || other == NumberedShardSpec.class;
+    return other == NumberedOverwriteShardSpec.class || other == NumberedShardSpec.class;
   }
 
   @Override
@@ -198,7 +198,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    NumberedOverwritingShardSpec that = (NumberedOverwritingShardSpec) o;
+    NumberedOverwriteShardSpec that = (NumberedOverwriteShardSpec) o;
     return partitionId == that.partitionId &&
            startRootPartitionId == that.startRootPartitionId &&
            endRootPartitionId == that.endRootPartitionId &&
@@ -215,7 +215,7 @@ public class NumberedOverwritingShardSpec implements OverwritingShardSpec
   @Override
   public String toString()
   {
-    return "NumberedOverwritingShardSpec{" +
+    return "NumberedOverwriteShardSpec{" +
            "partitionNum=" + partitionId +
            ", startRootPartitionId=" + startRootPartitionId +
            ", endRootPartitionId=" + endRootPartitionId +

@@ -23,7 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.task.AbstractTask.OverwritingRootGenerationPartitions;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask.OverwritingRootGenerationPartitions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;

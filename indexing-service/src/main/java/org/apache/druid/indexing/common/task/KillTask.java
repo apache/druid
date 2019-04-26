@@ -29,12 +29,10 @@ import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionPreconditions;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -68,36 +66,6 @@ public class KillTask extends AbstractFixedIntervalTask
   public String getType()
   {
     return "kill";
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return true;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-      throws IOException
-  {
-    final List<DataSegment> allSegments = new ArrayList<>();
-    for (Interval interval : intervals) {
-      allSegments.addAll(taskActionClient.submit(new SegmentListUnusedAction(getDataSource(), interval)));
-    }
-    return allSegments;
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 
   @Override

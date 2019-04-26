@@ -28,15 +28,11 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentMetadataUpdateAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -112,31 +108,6 @@ public class MoveTask extends AbstractFixedIntervalTask
     }
 
     return TaskStatus.success(getId());
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return false;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 
   @JsonProperty("target")

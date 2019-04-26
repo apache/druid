@@ -33,13 +33,10 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -61,31 +58,6 @@ public class RealtimeishTask extends AbstractTask
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
-  }
-
-  @Override
-  public boolean requireLockInputSegments()
-  {
-    return false;
-  }
-
-  @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    return null;
   }
 
   @Override

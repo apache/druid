@@ -225,6 +225,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
   }
 
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return true;
+  }
+
   @Nullable
   @Override
   public Granularity getSegmentGranularity(Interval interval)

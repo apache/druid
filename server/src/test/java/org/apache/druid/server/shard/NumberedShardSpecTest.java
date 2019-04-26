@@ -29,7 +29,7 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -215,7 +215,7 @@ public class NumberedShardSpecTest
   {
     final NumberedShardSpec spec = new NumberedShardSpec(0, 0);
     Assert.assertTrue(spec.isCompatible(NumberedShardSpec.class));
-    Assert.assertTrue(spec.isCompatible(NumberedOverwritingShardSpec.class));
+    Assert.assertTrue(spec.isCompatible(NumberedOverwriteShardSpec.class));
   }
 
   private static final class OvershadowableString implements Overshadowable<OvershadowableString>

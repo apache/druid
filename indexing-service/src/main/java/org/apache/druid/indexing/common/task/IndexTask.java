@@ -86,9 +86,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
@@ -121,7 +119,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class IndexTask extends AbstractTask implements ChatHandler
+public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
   private static final Logger log = new Logger(IndexTask.class);
   private static final HashFunction hashFunction = Hashing.murmur3_128();
@@ -278,6 +276,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return ingestionSchema.tuningConfig.isForceGuaranteedRollup();
   }
 
   @Nullable
@@ -709,30 +713,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
   )
   {
     return Pair.of(new HashBasedNumberedShardSpecFactory(partitionDimensions, numShards), numShards);
-  }
-
-  private Pair<ShardSpecFactory, Integer> createShardSpecFactoryForBestEffortRollup(
-      boolean overwrite,
-      Interval interval
-  )
-  {
-    if (overwrite && !isChangeSegmentGranularity()) {
-      final OverwritingRootGenerationPartitions overwritingSegmentMeta = Preconditions.checkNotNull(
-          getOverwritingSegmentMeta(interval),
-          "Can't find overwritingSegmentMeta for interval[%s]",
-          interval
-      );
-      return Pair.of(
-          new NumberedOverwritingShardSpecFactory(
-              overwritingSegmentMeta.getStartRootPartitionId(),
-              overwritingSegmentMeta.getEndRootPartitionId(),
-              overwritingSegmentMeta.getMinorVersionForNewSegments()
-          ),
-          null
-      );
-    } else {
-      return Pair.of(NumberedShardSpecFactory.instance(), null);
-    }
   }
 
   private Map<Interval, Optional<HyperLogLogCollector>> collectIntervalsAndShardSpecs(

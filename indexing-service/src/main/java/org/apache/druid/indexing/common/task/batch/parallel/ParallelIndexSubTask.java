@@ -37,7 +37,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
@@ -88,7 +88,7 @@ import java.util.concurrent.TimeoutException;
  * generates and pushes segments, and reports them to the {@link ParallelIndexSupervisorTask} instead of
  * publishing on its own.
  */
-public class ParallelIndexSubTask extends AbstractTask
+public class ParallelIndexSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "index_sub";
 
@@ -229,6 +229,12 @@ public class ParallelIndexSubTask extends AbstractTask
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return false;
   }
 
   @Nullable

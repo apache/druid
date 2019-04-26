@@ -27,13 +27,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
-
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 public class TestTasks
 {
@@ -76,31 +69,6 @@ public class TestTasks
     }
 
     @Override
-    public boolean requireLockInputSegments()
-    {
-      return false;
-    }
-
-    @Override
-    public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-    {
-      return false;
-    }
-
-    @Nullable
-    @Override
-    public Granularity getSegmentGranularity(Interval interval)
-    {
-      return null;
-    }
-
-    @Override
     public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
@@ -126,31 +94,6 @@ public class TestTasks
     public boolean isReady(TaskActionClient taskActionClient)
     {
       return true;
-    }
-
-    @Override
-    public boolean requireLockInputSegments()
-    {
-      return false;
-    }
-
-    @Override
-    public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-    {
-      return false;
-    }
-
-    @Nullable
-    @Override
-    public Granularity getSegmentGranularity(Interval interval)
-    {
-      return null;
     }
 
     @Override
