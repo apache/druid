@@ -53,6 +53,10 @@ public interface MetadataSegmentManager
 
   boolean removeSegment(SegmentId segmentId);
 
+  long disableSegments(String dataSource, Collection<String> segmentIds);
+
+  int disableSegments(String dataSource, Interval interval);
+
   boolean isStarted();
 
   @Nullable

@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -404,6 +405,61 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     catch (Exception e) {
       log.error(e, e.toString());
       return false;
+    }
+  }
+
+  @Override
+  public long disableSegments(String dataSource, Collection<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      return 0;
+    }
+    final long[] result = new long[1];
+    try {
+      connector.getDBI().withHandle(handle -> {
+        Batch batch = handle.createBatch();
+        segmentIds
+            .forEach(segmentId -> batch.add(
+                StringUtils.format(
+                    "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s' ",
+                    getSegmentsTable(),
+                    dataSource,
+                    segmentId
+                )
+            ));
+        final int[] resultArr = batch.execute();
+        result[0] = Arrays.stream(resultArr).filter(x -> x > 0).count();
+        return result[0];
+      });
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return result[0];
+  }
+
+  @Override
+  public int disableSegments(String dataSource, Interval interval)
+  {
+    try {
+      return connector.getDBI().withHandle(
+          handle -> handle
+              .createStatement(
+                  StringUtils
+                      .format(
+                          "UPDATE %s SET used=false WHERE datasource = :datasource "
+                          + "AND start >= :start AND %2$send%2$s <= :end",
+                          getSegmentsTable(),
+                          connector.getQuoteString()
+                      ))
+              .bind("datasource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
