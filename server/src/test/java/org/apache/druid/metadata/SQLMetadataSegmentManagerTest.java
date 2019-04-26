@@ -307,7 +307,7 @@ public class SQLMetadataSegmentManagerTest
     final String datasource = "wikipedia2";
     final DataSegment newSegment1 = new DataSegment(
         datasource,
-        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-17T00:00:00.000"),
         "2017-10-15T20:19:12.565Z",
         ImmutableMap.of(
             "type", "s3_zip",
@@ -323,8 +323,8 @@ public class SQLMetadataSegmentManagerTest
 
     final DataSegment newSegment2 = new DataSegment(
         datasource,
-        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
-        "2017-10-15T20:19:12.565Z",
+        Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
+        "2017-10-16T20:19:12.565Z",
         ImmutableMap.of(
             "type", "s3_zip",
             "bucket", "test",
@@ -340,7 +340,7 @@ public class SQLMetadataSegmentManagerTest
     // Overshadowed by newSegment2
     final DataSegment newSegment3 = new DataSegment(
         datasource,
-        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
         "2017-10-15T20:19:12.565Z",
         ImmutableMap.of(
             "type", "s3_zip",
@@ -350,7 +350,7 @@ public class SQLMetadataSegmentManagerTest
         ImmutableList.of("dim1", "dim2", "dim3"),
         ImmutableList.of("count", "value"),
         NoneShardSpec.instance(),
-        0,
+        1,
         1234L
     );
 
@@ -368,7 +368,7 @@ public class SQLMetadataSegmentManagerTest
         ImmutableSet.of(segment1, segment2),
         ImmutableSet.copyOf(manager.iterateAllSegments())
     );
-    Assert.assertEquals(segmentIds.size(), manager.enableSegments(datasource, segmentIds));
+    Assert.assertEquals(2, manager.enableSegments(datasource, segmentIds));
     manager.poll();
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
@@ -513,7 +513,7 @@ public class SQLMetadataSegmentManagerTest
     final DataSegment newSegment2 = new DataSegment(
         datasource,
         Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
-        "2017-10-15T20:19:12.565Z",
+        "2017-10-16T20:19:12.565Z",
         ImmutableMap.of(
             "type", "s3_zip",
             "bucket", "test",
@@ -655,7 +655,7 @@ public class SQLMetadataSegmentManagerTest
     final DataSegment newSegment2 = new DataSegment(
         datasource,
         Intervals.of("2017-10-17T00:00:00.000/2017-10-18T00:00:00.000"),
-        "2017-10-15T20:19:12.565Z",
+        "2017-10-16T20:19:12.565Z",
         ImmutableMap.of(
             "type", "s3_zip",
             "bucket", "test",
