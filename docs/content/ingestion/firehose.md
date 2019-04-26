@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Firehoses"
+title: "Apache Druid (incubating) Firehoses"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Druid Firehoses"
   ~ under the License.
   -->
 
-# Druid Firehoses
+# Apache Druid (incubating) Firehoses
 
 Firehoses are used in [native batch ingestion tasks](../ingestion/native_tasks.html), stream push tasks automatically created by [Tranquility](../ingestion/stream-push.html), and the [stream-pull (deprecated)](../ingestion/stream-pull.html) ingestion model.
 

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "My Data isn't being loaded"
+title: "Apache Druid (incubating) FAQ"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "My Data isn't being loaded"
   ~ under the License.
   -->
 
-# My Data isn't being loaded
+# Apache Druid (incubating) FAQ
 
 ### Realtime Ingestion
 

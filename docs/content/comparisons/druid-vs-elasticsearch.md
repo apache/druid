@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs Elasticsearch"
+title: "Apache Druid (incubating) vs Elasticsearch"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Druid vs Elasticsearch"
   ~ under the License.
   -->
 
-# Druid vs Elasticsearch
+# Apache Druid (incubating) vs Elasticsearch
 
 We are not experts on search systems, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.
 

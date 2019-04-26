@@ -24,7 +24,7 @@ title: "Bloom Filter"
 
 # Bloom Filter
 
-This extension adds the ability to both construct bloom filters from query results, and filter query results by testing 
+This Apache Druid (incubating) extension adds the ability to both construct bloom filters from query results, and filter query results by testing 
 against a bloom filter. Make sure to [include](../../operations/including-extensions.html) `druid-bloom-filter` as an 
 extension.
 

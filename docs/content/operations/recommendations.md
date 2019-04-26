@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Recommendations"
+title: "Apache Druid (incubating) Recommendations"
 ---
 
 <!--

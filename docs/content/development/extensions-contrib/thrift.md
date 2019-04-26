@@ -24,7 +24,7 @@ title: "Thrift"
 
 # Thrift
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-thrift-extensions`.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-thrift-extensions`.
 
 This extension enables Druid to ingest thrift compact data online (`ByteBuffer`) and offline (SequenceFile of type `<Writable, BytesWritable>` or LzoThriftBlock File).
 

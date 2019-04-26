@@ -24,7 +24,7 @@ title: "Schema Design"
 
 # Schema Design
 
-This page is meant to assist users in designing a schema for data to be ingested in Druid. Druid offers a unique data
+This page is meant to assist users in designing a schema for data to be ingested in Apache Druid (incubating). Druid offers a unique data
 modeling system that bears similarity to both relational and timeseries models. The key factors are:
 
 * Druid data is stored in [datasources](index.html#datasources), which are similar to tables in a traditional RDBMS.

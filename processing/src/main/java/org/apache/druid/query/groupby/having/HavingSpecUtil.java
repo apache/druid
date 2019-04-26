@@ -17,28 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom;
+package org.apache.druid.query.groupby.having;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
-
-import java.nio.ByteBuffer;
-
-public final class FloatBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<BaseFloatColumnValueSelector>
+public class HavingSpecUtil
 {
-  FloatBloomFilterBufferAggregator(BaseFloatColumnValueSelector selector, int maxNumEntries)
-  {
-    super(selector, maxNumEntries);
-  }
-
-  @Override
-  public void bufferAdd(ByteBuffer buf)
-  {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addFloat(buf, selector.getFloat());
-    } else {
-      BloomKFilter.addBytes(buf, null, 0, 0);
-    }
-  }
+  static final byte CACHE_TYPE_ID_ALWAYS = 0x0;
+  static final byte CACHE_TYPE_ID_AND = 0x1;
+  static final byte CACHE_TYPE_ID_DIM_SELECTOR = 0x2;
+  static final byte CACHE_TYPE_ID_DIM_FILTER = 0x3;
+  static final byte CACHE_TYPE_ID_EQUAL = 0x4;
+  static final byte CACHE_TYPE_ID_GREATER_THAN = 0x5;
+  static final byte CACHE_TYPE_ID_LESS_THAN = 0x6;
+  static final byte CACHE_TYPE_ID_NEVER = 0x7;
+  static final byte CACHE_TYPE_ID_NOT = 0x8;
+  static final byte CACHE_TYPE_ID_OR = 0x9;
+  static final byte CACHE_TYPE_ID_COUNTING = 0xA;
 }

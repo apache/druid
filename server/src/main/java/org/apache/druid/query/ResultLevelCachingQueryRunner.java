@@ -80,7 +80,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeCacheKey(query));
+      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 

@@ -57,10 +57,10 @@ you an e-mail with a link to the ticket. Note that:
 1. Open a structural search dialog: `Edit` -> `Find` -> `Search Structurally...`
 
 2. Enter a pattern that you want to make an inspection, for example:
-![Structural Search dialog](structural_search_dialog.png)
+![Structural Search dialog](teamcity-images/structural_search_dialog.png)
 
 3. Press the `Find` button to test your pattern:
-![Structural Search find results](structural_search_find.png)
+![Structural Search find results](teamcity-images/structural_search_find.png)
 
 Note that even if currently the pattern finds nothing, it might still be a good idea to add it as an inspection to
 prevent bugs creeping in the codebase in the future. However, test that your pattern doesn't contain mistakes by
@@ -68,10 +68,10 @@ deliberately adding code with a mistake that should be spotted by the pattern in
 that your Structural Search pattern finds that newly added dummy mistake.
 
 4. Open `Preferences...` -> `Inspections`, navigate to `General` -> `Structural Search inspection`:
-![Structural Search inspection](structural_search_inspection.png)
+![Structural Search inspection](teamcity-images/structural_search_inspection.png)
 
 5. Click a button with a plus sign (`+`) in the bottom of the Options window, `Add Search Template...`:
-![Structural Search inspection add](structural_search_inspection_add.png)
+![Structural Search inspection add](teamcity-images/structural_search_inspection_add.png)
 
 6. Click `OK`. Then you will see a dialong window with title `Save Template` and a field to enter a "template name".
 Enter in this field something reasonably short that yet would serve as a good message for people who add code that
@@ -80,7 +80,7 @@ is caught by this pattern, e. g. "Use Map.putIfAbsent() instead of containsKey()
 
 7. Move focus anywhere, e. g. by choosing any other inspection. Upon doing this, the `Apply` botton should become
 active:
-![Inspections change apply](inspections_change_apply.png)
+![Inspections change apply](teamcity-images/inspections_change_apply.png)
 
 8. Press the `Apply` button, then `OK` to exit the inspection preferences.
 

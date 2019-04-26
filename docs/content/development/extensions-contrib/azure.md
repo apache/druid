@@ -24,11 +24,11 @@ title: "Microsoft Azure"
 
 # Microsoft Azure
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-azure-extensions` extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-azure-extensions` extension.
 
 ## Deep Storage
 
-[Microsoft Azure Storage](http://azure.microsoft.com/en-us/services/storage/) is another option for deep storage. This requires some additional druid configuration.
+[Microsoft Azure Storage](http://azure.microsoft.com/en-us/services/storage/) is another option for deep storage. This requires some additional Druid configuration.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

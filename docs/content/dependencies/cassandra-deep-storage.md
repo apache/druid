@@ -26,7 +26,7 @@ title: "Cassandra Deep Storage"
 
 ## Introduction
 
-Druid can use Cassandra as a deep storage mechanism. Segments and their metadata are stored in Cassandra in two tables:
+Apache Druid (incubating) can use Apache Cassandra as a deep storage mechanism. Segments and their metadata are stored in Cassandra in two tables:
 `index_storage` and `descriptor_storage`.  Underneath the hood, the Cassandra integration leverages Astyanax.  The
 index storage table is a [Chunked Object](https://github.com/Netflix/astyanax/wiki/Chunked-Object-Store) repository. It contains
 compressed segments for distribution to Historical processes.  Since segments can be large, the Chunked Object storage allows the integration to multi-thread

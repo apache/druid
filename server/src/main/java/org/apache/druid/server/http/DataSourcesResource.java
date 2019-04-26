@@ -690,6 +690,55 @@ public class DataSourcesResource
     }
   }
 
+  @POST
+  @Path("/{dataSourceName}/markUnused")
+  @ResourceFilters(DatasourceResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response markDatasourceUnused(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDatasourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      log.warn("datasource not found [%s]", dataSourceName);
+      return Response.noContent().build();
+    }
+
+    long markedSegmentCount = 0;
+    try {
+      final Interval interval = payload.getInterval();
+      final Set<String> segmentIds = payload.getSegmentIds();
+      if (interval != null) {
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, interval);
+      } else if (segmentIds != null) {
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
+      }
+    }
+    catch (Exception e) {
+      return Response.serverError().entity(
+          ImmutableMap.of(
+              "error",
+              "Exception occurred.",
+              "message",
+              e.toString()
+          )
+      ).build();
+
+    }
+    if (markedSegmentCount == 0) {
+      return Response.noContent().build();
+    }
+    return Response.ok().build();
+  }
+
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
@@ -778,11 +827,13 @@ public class DataSourcesResource
       this.segmentIds = segmentIds;
     }
 
+    @JsonProperty
     public Interval getInterval()
     {
       return interval;
     }
 
+    @JsonProperty
     public Set<String> getSegmentIds()
     {
       return segmentIds;

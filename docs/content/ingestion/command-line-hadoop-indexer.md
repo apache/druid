@@ -32,7 +32,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop
 
 ## Options
 
-- "--coordinate" - provide a version of Hadoop to use. This property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`.
+- "--coordinate" - provide a version of Apache Hadoop to use. This property will override the default Hadoop coordinates. Once specified, Apache Druid (incubating) will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`.
 - "--no-default-hadoop" - don't pull down the default hadoop version
 
 ## Spec file
