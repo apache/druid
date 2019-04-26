@@ -91,7 +91,7 @@ public class RowBucketIterable implements Iterable<RowBucket>
     @Override
     public boolean hasNext()
     {
-      return expectedBucket.compareTo(endTime) < 0;
+      return expectedBucket.compareTo(endTime) < 0 || !this.yielder.isDone();
     }
 
     /* (non-Javadoc)
