@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  * {@link MovingAverageIterable} iterates over days {@link RowBucket}, producing rows for each dimension combination,
  * filling in missing entries with "empty" rows so that the averaging buckets have enough data to operate on.
  * It then computes the moving average on the buckets and returns the row.
- * See {@link MovingAverageIterator#computeMovingAverage(Map, Row, boolean)} for more details.
+ * See computeMovingAverage for more details.
  */
 public class MovingAverageIterable implements Iterable<Row>
 {
