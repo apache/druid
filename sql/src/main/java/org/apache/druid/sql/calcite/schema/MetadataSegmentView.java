@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
@@ -47,7 +48,6 @@ import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;

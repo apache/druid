@@ -25,11 +25,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Ordering;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -113,14 +115,13 @@ public class ImmutableDruidDataSource
   }
 
   /**
-   * This method finds the overshadowed segments in this datasource
+   * This method finds the overshadowed segments from the given segments
    *
-   * @return set of overshadowed segment ids
+   * @return set of overshadowed segments
    */
   public static Set<DataSegment> determineOvershadowedSegments(Iterable<DataSegment> segments)
   {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline
-        .buildTimelines(segments);
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = buildTimelines(segments);
 
     final Set<DataSegment> overshadowedSegments = new HashSet<>();
     for (DataSegment dataSegment : segments) {
@@ -130,6 +131,22 @@ public class ImmutableDruidDataSource
       }
     }
     return overshadowedSegments;
+  }
+
+  /**
+   * Builds a timeline from given segments
+   *
+   * @return map of datasource to VersionedIntervalTimeline of segments
+   */
+  private static Map<String, VersionedIntervalTimeline<String, DataSegment>> buildTimelines(
+      Iterable<DataSegment> segments
+  )
+  {
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    segments.forEach(segment -> timelines
+        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
+        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
+    return timelines;
   }
 
   @Override
