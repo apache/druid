@@ -56,6 +56,11 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
+    if (sketch.isEmpty()) {
+      final double[] histogram = new double[splitPoints.length + 1];
+      Arrays.fill(histogram, Double.NaN);
+      return histogram;
+    }
     final double[] histogram = sketch.getPMF(splitPoints);
     for (int i = 0; i < histogram.length; i++) {
       histogram[i] *= sketch.getN();

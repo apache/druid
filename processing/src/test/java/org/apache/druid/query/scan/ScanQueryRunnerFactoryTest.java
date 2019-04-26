@@ -140,10 +140,10 @@ public class ScanQueryRunnerFactoryTest
         List<ScanResultValue> output = factory.priorityQueueSortAndLimit(
             inputSequence,
             query,
-            ImmutableList.of(new SegmentDescriptor(new Interval(
+            ImmutableList.of(new Interval(
                 DateTimes.of("2010-01-01"),
                 DateTimes.of("2019-01-01").plusHours(1)
-            ), "1", 0))
+            ))
         ).toList();
         if (query.getLimit() > Integer.MAX_VALUE) {
           Assert.fail("Unsupported exception should have been thrown due to high limit");
@@ -275,7 +275,7 @@ public class ScanQueryRunnerFactoryTest
     ), "1", 0);
 
     @Test
-    public void testGetValidSegmentDescriptorsFromSpec()
+    public void testGetValidIntervalsFromSpec()
     {
       QuerySegmentSpec multiSpecificSpec = new MultipleSpecificSegmentSpec(
           Collections.singletonList(
@@ -284,13 +284,13 @@ public class ScanQueryRunnerFactoryTest
       );
       QuerySegmentSpec singleSpecificSpec = new SpecificSegmentSpec(descriptor);
 
-      List<SegmentDescriptor> descriptors = factory.getSegmentDescriptorsFromSpecificQuerySpec(multiSpecificSpec);
-      Assert.assertEquals(1, descriptors.size());
-      Assert.assertEquals(descriptor, descriptors.get(0));
+      List<Interval> intervals = factory.getIntervalsFromSpecificQuerySpec(multiSpecificSpec);
+      Assert.assertEquals(1, intervals.size());
+      Assert.assertEquals(descriptor.getInterval(), intervals.get(0));
 
-      descriptors = factory.getSegmentDescriptorsFromSpecificQuerySpec(singleSpecificSpec);
-      Assert.assertEquals(1, descriptors.size());
-      Assert.assertEquals(descriptor, descriptors.get(0));
+      intervals = factory.getIntervalsFromSpecificQuerySpec(singleSpecificSpec);
+      Assert.assertEquals(1, intervals.size());
+      Assert.assertEquals(descriptor.getInterval(), intervals.get(0));
     }
 
     @Test(expected = UOE.class)
@@ -304,7 +304,7 @@ public class ScanQueryRunnerFactoryTest
               )
           )
       );
-      factory.getSegmentDescriptorsFromSpecificQuerySpec(multiIntervalSpec);
+      factory.getIntervalsFromSpecificQuerySpec(multiIntervalSpec);
     }
 
     @Test(expected = UOE.class)
@@ -316,7 +316,7 @@ public class ScanQueryRunnerFactoryTest
               DateTimes.of("2019-01-01").plusHours(1)
           )
       );
-      factory.getSegmentDescriptorsFromSpecificQuerySpec(legacySpec);
+      factory.getIntervalsFromSpecificQuerySpec(legacySpec);
     }
   }
 }
