@@ -16,28 +16,6 @@
  * limitations under the License.
  */
 
-.data-sources-view {
-  height: 100%;
-  width: 100%;
-  overflow: auto;
-
-  .clickable-cell {
-    cursor: pointer;
-  }
-
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: 50%;
-    bottom: 0;
-    width: 100%;
-
-    &.full-height {
-      top: 50px
-    }
-  }
+.bar-chart-unit {
+  transform: translateX(65px);
 }

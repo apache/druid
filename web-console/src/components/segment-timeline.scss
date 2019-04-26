@@ -16,28 +16,43 @@
  * limitations under the License.
  */
 
-.data-sources-view {
+.segment-timeline {
+  display: grid;
+  grid-template-columns: 85% 15%;
   height: 100%;
-  width: 100%;
-  overflow: auto;
+  margin-top: 10px;
 
-  .clickable-cell {
-    cursor: pointer;
+  .loader {
+    width: 85%;
   }
 
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
-  }
-
-  .ReactTable {
-    position: absolute;
+  .loading-error {
+    position: fixed;
     top: 50%;
-    bottom: 0;
-    width: 100%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+  }
 
-    &.full-height {
-      top: 50px
+  .bar-chart-tooltip {
+    margin-top: 15px;
+    text-align: center;
+
+    div {
+      display: inline-block;
+      width: 200px;
     }
+  }
+
+  .no-data-text {
+    position: absolute;
+    left: 35vw;
+    top: 15vh;
+    font-size: 20px;
+  }
+
+  .side-control {
+    padding-left: 1vw;
+    padding-top: 5vh;
   }
 }

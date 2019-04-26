@@ -19,10 +19,12 @@
 import { Button, Intent, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import classNames from 'classnames';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { RuleEditor } from '../components/rule-editor';
+import { SegmentTimeline } from '../components/segment-timeline';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
@@ -81,6 +83,10 @@ export interface DatasourcesViewState {
   enableDatasource: string | null;
   killDatasource: string | null;
 
+  showChart: boolean;
+  chartWidth: number;
+  chartHeight: number;
+
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -116,13 +122,24 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       compactionDialogOpenOn: null,
       dropDataDatasource: null,
       enableDatasource: null,
-      killDatasource: null
+      killDatasource: null,
+
+      showChart: true,
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4
 
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
+  }
+
+  private handleResize = () => {
+    this.setState({
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4
+    });
   }
 
   componentDidMount(): void {
@@ -167,7 +184,6 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
         });
-
         return {
           datasources: allDatasources,
           tiers,
@@ -193,6 +209,8 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   SUM("num_rows") AS num_rows
 FROM sys.segments
 GROUP BY 1`);
+
+    window.addEventListener('resize', this.handleResize);
 
   }
 
@@ -354,6 +372,16 @@ GROUP BY 1`);
     });
   }
 
+  private rerunQuery = (): void => {
+    this.datasourceQueryManager.rerunLastQuery();
+    // this looks ugly, but it forces the chart to re-render when refresh is clicked
+    this.setState({
+      showChart: !this.state.showChart
+    }, () => this.setState({
+      showChart: !this.state.showChart
+    }));
+  }
+
   renderRetentionDialog() {
     const { retentionDialogOpenOn, tiers } = this.state;
     if (!retentionDialogOpenOn) return null;
@@ -384,7 +412,7 @@ GROUP BY 1`);
 
   renderDatasourceTable() {
     const { goToSegments, noSqlMode } = this.props;
-    const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
+    const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled, showChart } = this.state;
     const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
@@ -547,7 +575,7 @@ GROUP BY 1`);
           }
         ]}
         defaultPageSize={50}
-        className="-striped -highlight"
+        className={classNames(`-striped -highlight`, showChart ? '' : 'full-height')}
       />
       {this.renderDropDataAction()}
       {this.renderEnableAction()}
@@ -559,7 +587,7 @@ GROUP BY 1`);
 
   render() {
     const { goToSql, noSqlMode } = this.props;
-    const { showDisabled } = this.state;
+    const { showDisabled, showChart, chartHeight, chartWidth } = this.state;
     const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
@@ -567,7 +595,7 @@ GROUP BY 1`);
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
-          onClick={() => this.datasourceQueryManager.rerunLastQuery()}
+          onClick={this.rerunQuery}
         />
         {
           !noSqlMode &&
@@ -582,12 +610,26 @@ GROUP BY 1`);
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
+        <Switch
+          checked={showChart}
+          label="Show segment timeline"
+          onChange={() => this.setState({ showChart: !showChart })}
+        />
         <TableColumnSelection
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>
+      {
+        showChart &&
+        <div className={'chart-container'}>
+          <SegmentTimeline
+            chartHeight={chartHeight}
+            chartWidth={chartWidth}
+          />
+        </div>
+      }
       {this.renderDatasourceTable()}
     </div>;
   }
