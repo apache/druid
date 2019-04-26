@@ -237,20 +237,16 @@ Enables a segment of a datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
 
-Enables segments of a datasource by the interval or by an array of segment id's passed in the request payload. 
-It will enable only those segments which are not overshadowed by other segments.
-
-JSON Payload:
-
-|Key|Description|Example|
-|----------|-------------|---------|
-|`interval`|Interval of segments to enable|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
-|`segmentIds`|Array of segment ids to enable|["segment_id_1", "segment_id_2"]|
-
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
 
-Marks segments unused for a datasource by interval or set of segment Ids. The request payload contains the interval or set of segment Ids to be marked unused.
-Either interval or segment ids should be provided, if both or none are provided in the payload , the API would throw an error (400 BAD REQUEST).Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
+Marks segments (un)used for a datasource by interval or set of segment Ids. 
+
+When marking used only segments that are not overshadowed will be updated.
+
+The request payload contains the interval or set of segment Ids to be marked unused.
+Either interval or segment ids should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
+
+Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
 
 JSON Request Payload:
 
