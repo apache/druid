@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) FAQ"
   ~ under the License.
   -->
 
-# My Data isn't being loaded
+# Apache Druid (incubating) FAQ
 
 ### Realtime Ingestion
 

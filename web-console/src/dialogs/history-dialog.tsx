@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { Card, Dialog } from '@blueprintjs/core';
+import {Card, Dialog, Divider, IDialogProps} from '@blueprintjs/core';
 import * as React from 'react';
 
 import { JSONCollapse } from '../components/json-collapse';
 
 import './history-dialog.scss';
 
-interface HistoryDialogProps extends React.Props<any> {
+interface HistoryDialogProps extends IDialogProps {
   historyRecords: any;
 }
 
@@ -46,7 +46,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
       content = <div className="no-record">No history records available</div>;
     } else {
        content = <>
-          <h3>History</h3>
+          <span className={'history-dialog-title'}>History</span>
           <div className="history-record-entries">
             {
               historyRecords.map((record: any) => {
@@ -57,10 +57,10 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
                 return <div key={record.auditTime} className="history-record-entry">
                   <Card>
                     <div className="history-record-title">
-                      <h5>Change</h5>
-                      <p>{formattedTime}</p>
+                      <span className="history-record-title-change">Change</span>
+                      <span>{formattedTime}</span>
                     </div>
-                    <hr/>
+                    <Divider/>
                     <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
                     <JSONCollapse
                       stringValue={record.payload}
@@ -81,7 +81,6 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
 
   render(): React.ReactNode {
     return <Dialog
-      className="history-dialog"
       isOpen
       {...this.props}
     >

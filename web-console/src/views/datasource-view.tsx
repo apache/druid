@@ -44,16 +44,26 @@ import {
 import './datasource-view.scss';
 
 const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Num rows', 'Actions'];
+const tableColumnsNoSql: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Actions'];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
+  noSqlMode: boolean;
 }
 
 interface Datasource {
   datasource: string;
   rules: any[];
   [key: string]: any;
+}
+
+interface DatasourceQueryResultRow {
+  datasource: string;
+  num_available_segments: number;
+  num_rows: number;
+  num_segments: number;
+  size: number;
 }
 
 export interface DatasourcesViewState {
@@ -116,9 +126,28 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
+
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const datasources: any[] = await queryDruidSql({ query });
+        let datasources: DatasourceQueryResultRow[];
+        if (!noSqlMode) {
+          datasources = await queryDruidSql({ query });
+        } else {
+          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
+          const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+          const loadstatus = loadstatusResp.data;
+          datasources = datasourcesResp.data.map((d: any) => {
+            return {
+              datasource: d.name,
+              num_available_segments: d.properties.segments.count,
+              size: d.properties.segments.size,
+              num_segments: d.properties.segments.count + loadstatus[d.name],
+              num_rows: -1
+            };
+          });
+        }
+
         const seen = countBy(datasources, (x: any) => x.datasource);
 
         const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
@@ -133,7 +162,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        const allDatasources = datasources.concat(disabled.map(d => ({ datasource: d, disabled: true })));
+        const allDatasources = (datasources as any).concat(disabled.map(d => ({ datasource: d, disabled: true })));
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
@@ -354,7 +383,7 @@ GROUP BY 1`);
   }
 
   renderDatasourceTable() {
-    const { goToSegments } = this.props;
+    const { goToSegments, noSqlMode } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
     const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
@@ -492,7 +521,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: tableColumnSelectionHandler.showColumn('Num rows')
+            show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
           },
           {
             Header: 'Actions',
@@ -529,7 +558,7 @@ GROUP BY 1`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { showDisabled } = this.state;
     const { tableColumnSelectionHandler } = this;
 
@@ -540,18 +569,21 @@ GROUP BY 1`);
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
-        />
+        {
+          !noSqlMode &&
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
+          />
+        }
         <Switch
           checked={showDisabled}
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
         <TableColumnSelection
-          columns={tableColumns}
+          columns={noSqlMode ? tableColumnsNoSql : tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
