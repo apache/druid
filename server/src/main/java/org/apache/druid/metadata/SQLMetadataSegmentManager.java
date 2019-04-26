@@ -268,7 +268,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     return segmentIds.stream().map(
         segmentId -> Optional.ofNullable(
             handle.createQuery(
-                String.format(
+                StringUtils.format(
                     "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
                     getSegmentsTable()
                 )
