@@ -42,10 +42,9 @@ Select queries return raw Apache Druid (incubating) rows and support pagination.
 ```
 
 <div class="note info">
-Consider using the [Scan query](../querying/scan-query.html) instead of the Select query if you don't need pagination, and you
-don't need the strict time-ascending or time-descending ordering offered by the Select query. The Scan query returns
-results without pagination, and offers "looser" ordering than Select, but is significantly more efficient in terms of
-both processing time and memory requirements. It is also capable of returning a virtually unlimited number of results.
+Consider using the [Scan query](../querying/scan-query.html) instead of the Select query if you don't need pagination. 
+The Scan query returns results without pagination but is significantly more efficient in terms of both processing time
+and memory requirements. It is also capable of returning a virtually unlimited number of results.
 </div>
 
 There are several main parts to a select query:
