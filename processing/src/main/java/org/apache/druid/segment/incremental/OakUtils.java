@@ -20,11 +20,8 @@
 package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakRBuffer;
+import com.oath.oak.UnsafeUtils;
 import org.apache.druid.segment.column.ValueType;
-import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
-
-import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 
 public final class OakUtils
@@ -40,25 +37,6 @@ public final class OakUtils
   static final Integer DATA_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
   static final Integer ARRAY_INDEX_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
   static final Integer ARRAY_LENGTH_OFFSET = ARRAY_INDEX_OFFSET + Integer.BYTES;
-
-  private static Unsafe unsafe;
-
-  private static final long INT_ARRAY_OFFSET;
-  private static final long BYTE_ARRAY_OFFSET;
-
-  // static constructor - access and create a new instance of Unsafe
-  static {
-    try {
-      Constructor<Unsafe> unsafeConstructor = Unsafe.class.getDeclaredConstructor();
-      unsafeConstructor.setAccessible(true);
-      unsafe = unsafeConstructor.newInstance();
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-    INT_ARRAY_OFFSET = unsafe.arrayBaseOffset(int[].class);
-    BYTE_ARRAY_OFFSET = unsafe.arrayBaseOffset(byte[].class);
-  }
 
   private OakUtils()
   {
@@ -117,7 +95,7 @@ public final class OakUtils
       int arrayIndex = arrayIndexOffset;
       int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
       int[] array = new int[arraySize];
-      buff.unsafeBufferToIntArrayCopy(arrayIndex, array, arraySize);
+      buff.unsafeCopyBufferToIntArray(arrayIndex, array, arraySize);
       dimObject = array;
     }
     return dimObject;
@@ -141,30 +119,9 @@ public final class OakUtils
       int arrayIndex = buff.position() + arrayIndexOffset;
       int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
       int[] array = new int[arraySize];
-      unsafeBufferToArrayCopy(buff, arrayIndex, array, arraySize);
+      UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, array, arraySize);
       dimObject = array;
     }
     return dimObject;
   }
-
-  static void unsafeBufferToArrayCopy(ByteBuffer srcByteBuffer, int position, int[] dstArray, int countInts)
-  {
-    if (srcByteBuffer.isDirect()) {
-      long bbAddress = ((DirectBuffer) srcByteBuffer).address();
-      unsafe.copyMemory(null, bbAddress + position, dstArray, INT_ARRAY_OFFSET, countInts * Integer.BYTES);
-    } else {
-      unsafe.copyMemory(srcByteBuffer.array(), BYTE_ARRAY_OFFSET + position, dstArray, INT_ARRAY_OFFSET, countInts * Integer.BYTES);
-    }
-  }
-
-  static void unsafeArrayToBufferCopy(ByteBuffer dstByteBuffer, int position, int[] srcArray, int countInts)
-  {
-    if (dstByteBuffer.isDirect()) {
-      long bbAddress = ((DirectBuffer) dstByteBuffer).address();
-      unsafe.copyMemory(srcArray, INT_ARRAY_OFFSET, null, bbAddress + position, countInts * Integer.BYTES);
-    } else {
-      unsafe.copyMemory(srcArray, INT_ARRAY_OFFSET, dstByteBuffer.array(), BYTE_ARRAY_OFFSET + position, countInts * Integer.BYTES);
-    }
-  }
-
 }

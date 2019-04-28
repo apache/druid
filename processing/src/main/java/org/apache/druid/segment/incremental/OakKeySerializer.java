@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakSerializer;
+import com.oath.oak.UnsafeUtils;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import java.nio.ByteBuffer;
@@ -101,7 +102,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
             int[] arr = (int[]) incrementalIndexRow.getDim(i);
             byteBuffer.putInt(dimsIndex + arrayIndexOffset, dimsArrayOffset);
             byteBuffer.putInt(dimsIndex + arrayLengthOffset, arr.length);
-            OakUtils.unsafeArrayToBufferCopy(byteBuffer, dimsArraysIndex, arr, arr.length);
+            UnsafeUtils.unsafeCopyIntArrayToBuffer(arr, byteBuffer, dimsArraysIndex, arr.length);
             dimsArraysIndex += (arr.length * Integer.BYTES);
             dimsArrayOffset += (arr.length * Integer.BYTES);
             break;
