@@ -134,14 +134,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return false;
     }
   };
-  public static final PlannerConfig PLANNER_CONFIG_FALLBACK = new PlannerConfig()
-  {
-    @Override
-    public boolean isUseFallback()
-    {
-      return true;
-    }
-  };
   public static final PlannerConfig PLANNER_CONFIG_SINGLE_NESTING_ONLY = new PlannerConfig()
   {
     @Override

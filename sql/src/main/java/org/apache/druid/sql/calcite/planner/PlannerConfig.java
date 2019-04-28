@@ -31,7 +31,6 @@ public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
-  public static final String CTX_KEY_USE_FALLBACK = "useFallback";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -50,9 +49,6 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useApproximateTopN = true;
-
-  @JsonProperty
-  private boolean useFallback = false;
 
   @JsonProperty
   private boolean requireTimeCondition = false;
@@ -111,11 +107,6 @@ public class PlannerConfig
     return useApproximateTopN;
   }
 
-  public boolean isUseFallback()
-  {
-    return useFallback;
-  }
-
   public boolean isRequireTimeCondition()
   {
     return requireTimeCondition;
@@ -156,11 +147,6 @@ public class PlannerConfig
         context,
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
-    );
-    newConfig.useFallback = getContextBoolean(
-        context,
-        CTX_KEY_USE_FALLBACK,
-        isUseFallback()
     );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
@@ -204,7 +190,6 @@ public class PlannerConfig
            maxQueryCount == that.maxQueryCount &&
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
-           useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
@@ -225,7 +210,6 @@ public class PlannerConfig
         maxQueryCount,
         useApproximateCountDistinct,
         useApproximateTopN,
-        useFallback,
         requireTimeCondition,
         awaitInitializationOnStart,
         sqlTimeZone,
@@ -245,7 +229,6 @@ public class PlannerConfig
            ", maxQueryCount=" + maxQueryCount +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
-           ", useFallback=" + useFallback +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
