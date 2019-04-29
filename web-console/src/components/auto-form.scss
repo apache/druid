@@ -20,4 +20,22 @@
   .ace_scroller {
     background-color: #212c36;
   }
+
+  // Popover in info label
+  label.bp3-label {
+    position: relative;
+
+    .bp3-text-muted {
+      position: absolute;
+      right: 0;
+
+      .bp3-popover-wrapper {
+        display: inline;
+
+        .bp3-popover-target {
+          display: inline;
+        }
+      }
+    }
+  }
 }

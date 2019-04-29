@@ -16,26 +16,28 @@
  * limitations under the License.
  */
 
-@import "../variables";
+import { Button, InputGroup } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
+import * as React from 'react';
 
-.sql-view {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-
-  .sql-control {
-    textarea {
-      width: 100%;
-      min-height: 180px;
-    }
-
-    .buttons {
-      padding: $standard-padding 0;
-    }
-  }
-
-  .ReactTable {
-    flex: 1;
-  }
+export interface ClearableInputProps extends React.Props<any> {
+  className?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
 }
 
+export class ClearableInput extends React.Component<ClearableInputProps, {}> {
+  render() {
+    const { className, value, onChange, placeholder } = this.props;
+
+    return <InputGroup
+      className={classNames('clearable-input', className)}
+      value={value}
+      onChange={(e: any) => onChange(e.target.value)}
+      rightElement={value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined}
+      placeholder={placeholder}
+    />;
+  }
+}

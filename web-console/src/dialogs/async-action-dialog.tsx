@@ -66,16 +66,16 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
         message: `${failText}: ${e.message}`,
         intent: Intent.DANGER
       });
-      onClose(false);
       this.setState({ working: false });
+      onClose(false);
       return;
     }
     AppToaster.show({
       message: successText,
       intent: Intent.SUCCESS
     });
-    onClose(true);
     this.setState({ working: false });
+    onClose(true);
   }
 
   render() {
