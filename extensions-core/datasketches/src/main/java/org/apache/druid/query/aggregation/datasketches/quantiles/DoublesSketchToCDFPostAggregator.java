@@ -25,8 +25,8 @@ import com.google.common.base.Preconditions;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Arrays;
@@ -136,7 +136,7 @@ public class DoublesSketchToCDFPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_CDF_CACHE_TYPE_ID).appendCacheable(field);
+        PostAggregatorIds.QUANTILES_DOUBLES_SKETCH_TO_CDF_CACHE_TYPE_ID).appendCacheable(field);
     for (final double value : splitPoints) {
       builder.appendDouble(value);
     }
