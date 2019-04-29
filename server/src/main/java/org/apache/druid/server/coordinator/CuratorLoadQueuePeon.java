@@ -26,7 +26,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
@@ -37,6 +36,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -72,11 +71,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService processingExecutor;
-  /**
-   * Threadpool with daemon threads running scheduled tasks that monitor whether
-   * the zk nodes created for segment processing are removed
-   */
-  private final ScheduledExecutorService monitorNodeRemovedExecutor;
 
   /**
    * Threadpool with daemon threads that execute callback actions associated
@@ -90,7 +84,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * loadSegment(), actionCompleted(), getSegmentsToLoad() and stop()
+   * {@link #loadSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
+   * {@link #getSegmentsToLoad()} and {@link #stop()}
    */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
@@ -98,7 +93,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * dropSegment(), actionCompleted(), getSegmentsToDrop() and stop()
+   * {@link #dropSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
+   * {@link #getSegmentsToDrop()} and {@link #stop()}
    */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
@@ -106,7 +102,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
-   * markSegmentToDrop(), unmarkSegmentToDrop() and getSegmentsMarkedToDrop()
+   * {@link #markSegmentToDrop(DataSegment)}}, {@link #unmarkSegmentToDrop(DataSegment)}}
+   * and {@link #getSegmentsToDrop()}
    */
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
@@ -127,11 +124,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
     this.config = config;
-    this.monitorNodeRemovedExecutor =
-        Executors.newScheduledThreadPool(
-            config.getNumZookeeperMonitorThreads(),
-            Execs.makeThreadFactory("LoadQueuePeon-NodeRemovedMonitor--%d")
-        );
   }
 
   @JsonProperty
@@ -174,13 +166,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
+  public void loadSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
     SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
-
     final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
-      if ((callback != null)) {
+      if (callback != null) {
         existingHolder.addCallback(callback);
       }
       return;
@@ -191,10 +182,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
-  public void dropSegment(
-      final DataSegment segment,
-      final LoadPeonCallback callback
-  )
+  public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
     SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
     final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
@@ -242,7 +230,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
             segmentHolder.getType() == LOAD ? "load" : "drop",
             segmentHolder.getSegmentIdentifier()
         );
-        final ScheduledFuture<?> future = monitorNodeRemovedExecutor.schedule(
+        final ScheduledFuture<?> future = processingExecutor.schedule(
             () -> {
               try {
                 if (curator.checkExists().forPath(path) != null) {
@@ -319,10 +307,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       default:
         throw new UnsupportedOperationException();
     }
-
-    callBackExecutor.execute(
-        () -> executeCallbacks(segmentHolder)
-    );
+    executeCallbacks(segmentHolder);
   }
 
 
@@ -347,7 +332,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     failedAssignCount.set(0);
     processingExecutor.shutdown();
     callBackExecutor.shutdown();
-    monitorNodeRemovedExecutor.shutdown();
   }
 
   private void entryRemoved(SegmentHolder segmentHolder, String path)

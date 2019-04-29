@@ -81,12 +81,6 @@ public abstract class DruidCoordinatorConfig
     return 2;
   }
 
-  @Config("druid.coordinator.curator.loadqueuepeon.numMonitorThreads")
-  public int getNumZookeeperMonitorThreads()
-  {
-    return 1;
-  }
-
   @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
   public Duration getHttpLoadQueuePeonRepeatDelay()
   {
