@@ -1596,7 +1596,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                   >
                     <div className="column-name">{columnName}</div>
                     <div className="column-detail">
-                      {dimensionSpec ? getDimensionSpecType(dimensionSpec) : 'string (auto)'}&nbsp;
+                      {timestamp ? 'long (time column)' : (dimensionSpec ? getDimensionSpecType(dimensionSpec) : 'string (auto)')}&nbsp;
                     </div>
                   </div>
                 ),
