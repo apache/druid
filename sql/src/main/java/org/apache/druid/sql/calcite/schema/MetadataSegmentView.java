@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
@@ -45,16 +45,16 @@ import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class polls the coordinator in background to keep the latest published segments.
@@ -72,18 +72,19 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
-  private final Object lock = new Object();
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
-   * sys.segments queries return the segments in sorted order based on segmentId
+   * sys.segments queries return the segments in sorted order based on segmentId.
+   *
+   * Volatile since this reference is reassigned in {@code poll()} and then read in {@code getPublishedSegments()}
+   * from other threads.
    */
-  @Nullable
-  @GuardedBy("lock")
-  private ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
+  @MonotonicNonNull
+  private volatile ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private final AtomicBoolean cachePopulated = new AtomicBoolean(false);
+  private final CountDownLatch cachePopulated = new CountDownLatch(1);
 
   @Inject
   public MetadataSegmentView(
@@ -155,24 +156,15 @@ public class MetadataSegmentView
       );
       builder.add(segmentWithOvershadowedStatus);
     }
-    // build operation can be expensive for high cardinality segments, so calling it outside "lock"
-    final ImmutableSortedSet<SegmentWithOvershadowedStatus> immutableSortedSet = builder.build();
-    synchronized (lock) {
-      publishedSegments = immutableSortedSet;
-    }
-    cachePopulated.set(true);
+    publishedSegments = builder.build();
+    cachePopulated.countDown();
   }
 
   public Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
   {
     if (isCacheEnabled) {
-      Preconditions.checkState(
-          lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS) && cachePopulated.get(),
-          "hold on, still syncing published segments"
-      );
-      synchronized (lock) {
-        return publishedSegments.iterator();
-      }
+      Uninterruptibles.awaitUninterruptibly(cachePopulated);
+      return publishedSegments.iterator();
     } else {
       return getMetadataSegments(
           coordinatorDruidLeaderClient,
