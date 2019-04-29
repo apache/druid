@@ -92,6 +92,9 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
+  private static Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR = segment ->
+      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("segment_id", ValueType.STRING)
@@ -330,13 +333,10 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
       final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
-          raGenerator,
+          SEGMENT_RA_GENERATOR,
           authorizerMapper
       );
       return authorizedSegments.iterator();
@@ -493,11 +493,30 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+          authenticationResult,
+          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
+          authorizerMapper
+      );
+      if (!stateAccess.isAllowed()) {
+        throw new ForbiddenException("Insufficient permission to view servers :" + stateAccess);
+      }
+
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
-        for (DataSegment segment : druidServer.getLazyAllSegments()) {
+        final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
+            authenticationResult,
+            druidServer.getLazyAllSegments(),
+            SEGMENT_RA_GENERATOR,
+            authorizerMapper
+        );
+
+        for (DataSegment segment : authorizedServerSegments) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
           row[1] = segment.getId();
