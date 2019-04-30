@@ -149,6 +149,48 @@ $ ls -l1 var/druid/segments/deletion-tutorial/
 2015-09-12T22:00:00.000Z_2015-09-12T23:00:00.000Z
 2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z
 ```
+## Disable segments by interval
+
+Let's disable segments in a specified interval. This will mark all segments in the interval as "unused", but not remove them from deep storage.
+Let's disable segments in interval `2015-09-12T18:00:00.000Z/2015-09-12T20:00:00.000Z` i.e. between hour 18 and 20.
+
+```bash
+curl -X 'POST' -H 'Content-Type:application/json' -d '{ "interval" : "2015-09-12T18:00:00.000Z/2015-09-12T20:00:00.000Z" }' http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
+```
+
+After that command completes, you should see that the segment for hour 18 and 19 have been disabled:
+
+![Segments 3](../tutorials/img/tutorial-deletion-03.png "Segments 3")
+
+Note that the hour 18 and 19 segments are still present in deep storage:
+
+```bash
+$ ls -l1 var/druid/segments/deletion-tutorial/
+2015-09-12T00:00:00.000Z_2015-09-12T01:00:00.000Z
+2015-09-12T01:00:00.000Z_2015-09-12T02:00:00.000Z
+2015-09-12T02:00:00.000Z_2015-09-12T03:00:00.000Z
+2015-09-12T03:00:00.000Z_2015-09-12T04:00:00.000Z
+2015-09-12T04:00:00.000Z_2015-09-12T05:00:00.000Z
+2015-09-12T05:00:00.000Z_2015-09-12T06:00:00.000Z
+2015-09-12T06:00:00.000Z_2015-09-12T07:00:00.000Z
+2015-09-12T07:00:00.000Z_2015-09-12T08:00:00.000Z
+2015-09-12T08:00:00.000Z_2015-09-12T09:00:00.000Z
+2015-09-12T09:00:00.000Z_2015-09-12T10:00:00.000Z
+2015-09-12T10:00:00.000Z_2015-09-12T11:00:00.000Z
+2015-09-12T11:00:00.000Z_2015-09-12T12:00:00.000Z
+2015-09-12T12:00:00.000Z_2015-09-12T13:00:00.000Z
+2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z
+2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z
+2015-09-12T15:00:00.000Z_2015-09-12T16:00:00.000Z
+2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z
+2015-09-12T17:00:00.000Z_2015-09-12T18:00:00.000Z
+2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z
+2015-09-12T19:00:00.000Z_2015-09-12T20:00:00.000Z
+2015-09-12T20:00:00.000Z_2015-09-12T21:00:00.000Z
+2015-09-12T21:00:00.000Z_2015-09-12T22:00:00.000Z
+2015-09-12T22:00:00.000Z_2015-09-12T23:00:00.000Z
+2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z
+```
 
 ## Run a kill task
 
