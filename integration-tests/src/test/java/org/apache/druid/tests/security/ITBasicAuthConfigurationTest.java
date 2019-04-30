@@ -787,7 +787,7 @@ public class ITBasicAuthConfigurationTest
   }
 
   /**
-   * current_size on historicals changes because cluster state is not isolated across different
+   * curr_size on historicals changes because cluster state is not isolated across different
    * integration tests, zero it out for consistent test results
    */
   private static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
@@ -797,7 +797,7 @@ public class ITBasicAuthConfigurationTest
         (server) -> {
           Map<String, Object> newServer = new HashMap<>();
           newServer.putAll(server);
-          newServer.put("current_size", 0);
+          newServer.put("curr_size", 0);
           return newServer;
         }
     );
