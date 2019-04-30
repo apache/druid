@@ -26,6 +26,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
@@ -109,6 +110,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
+  /**
+   * Threadpool with daemon threads running scheduled tasks that monitor whether
+   * the zk nodes created for segment processing are removed
+   */
+  private final ScheduledExecutorService monitorNodeRemovedExecutor;
+
   CuratorLoadQueuePeon(
       CuratorFramework curator,
       String basePath,
@@ -124,6 +131,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
     this.config = config;
+    this.monitorNodeRemovedExecutor = Execs.scheduledSingleThreaded("LoadQueuePeon-NodeRemovedMonitor--%d");
   }
 
   @JsonProperty
@@ -230,7 +238,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
             segmentHolder.getType() == LOAD ? "load" : "drop",
             segmentHolder.getSegmentIdentifier()
         );
-        final ScheduledFuture<?> future = processingExecutor.schedule(
+        final ScheduledFuture<?> future = monitorNodeRemovedExecutor.schedule(
             () -> {
               try {
                 if (curator.checkExists().forPath(path) != null) {
@@ -240,6 +248,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
                 }
               }
               catch (Exception e) {
+                log.error(e, "Exception caught and ignored when checking whether zk node was deleted");
                 failAssign(segmentHolder, e);
               }
             },
@@ -332,6 +341,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     failedAssignCount.set(0);
     processingExecutor.shutdown();
     callBackExecutor.shutdown();
+    monitorNodeRemovedExecutor.shutdown();
   }
 
   private void entryRemoved(SegmentHolder segmentHolder, String path)
