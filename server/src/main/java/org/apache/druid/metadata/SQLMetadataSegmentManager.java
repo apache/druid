@@ -402,11 +402,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               segment.getMajorVersion(),
               segment
           ))
-          .forEach(segmentId -> batch.add(
+          .forEach(segment -> batch.add(
               StringUtils.format(
                   "UPDATE %s SET used=true WHERE id = '%s'",
                   getSegmentsTable(),
-                  segmentId
+                  segment.getId()
               )
           ));
       return batch.execute().length;
