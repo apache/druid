@@ -80,12 +80,15 @@ export function updateSchemaWithSample(spec: IngestionSpec, headerAndRows: Heade
   }
 
   if (rollup) {
+    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.queryGranularity', 'HOUR');
+
     const metrics = getMetricSecs(headerAndRows);
     if (metrics) {
       newSpec = deepSet(newSpec, 'dataSchema.metricsSpec', metrics);
     }
 
   } else {
+    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.queryGranularity', 'NONE');
     newSpec = deepDelete(newSpec, 'dataSchema.metricsSpec');
 
   }

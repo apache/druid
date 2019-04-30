@@ -137,9 +137,13 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'format',
-    label: 'Parser format',
+    label: 'Parser to use',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex']
+    suggestions: ['json', 'csv', 'tsv', 'regex'],
+    info: <>
+      <p>The parser used to parse the data.</p>
+      <p>For more information see <a href="http://druid.io/docs/latest/ingestion/data-formats.html" target="_blank">the documentation</a>.</p>
+    </>
   },
   {
     name: 'pattern',
@@ -244,7 +248,10 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     name: 'format',
     type: 'string',
     suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
-    isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec)
+    isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
+    info: <p>
+      Please specify your timestamp format by using the suggestions menu or typing in a <a href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html" target="_blank">format string</a>.
+    </p>
   },
   {
     name: 'missingValue',
@@ -556,8 +563,10 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     type: 'string',
     suggestions: ['local', 'http', 'static-s3'],
     info: <>
-      <a href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose" target="_blank">firehose.type</a>
-      <p>The type of the firehose</p>
+      <p>
+        Druid connects to raw data through "<a href="http://druid.io/docs/latest/ingestion/firehose.html" target="_blank">firehoses</a>".
+        You can change your selected firehose here.
+      </p>
     </>
   };
 
@@ -572,8 +581,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder: 'https://example.com/path/to/file.ext',
           info: <>
-            <a href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose" target="_blank">firehose.filter</a>
-            <p>A wildcard filter for files. See <a href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html" target="_blank">here</a> for format information.</p>
+            <p>The full URI of your file. To ingest from multiple URIs, use commas to separate each individual URI.</p>
           </>
         }
       ];
@@ -589,7 +597,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder: 's3://your-bucket/some-file.extension',
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.prefixes'),
           info: <>
-            <p>A list of S3 URIs to read and ingest.</p>
+            <p>The full S3 URI of your file. To ingest from multiple URIs, use commas to separate each individual URI.</p>
             <p>Exactly on of URIs or prefixes must be set.</p>
           </>
         },
@@ -600,7 +608,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder: 's3://your-bucket/some-path',
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.uris'),
           info: <>
-            <p>A list of path prefixes for the locations of s3 files to be ingested.</p>
+            <p>A list of paths (with bucket) where your files are stored.</p>
             <p>Exactly on of URIs or prefixes must be set.</p>
           </>
         }
@@ -1062,7 +1070,8 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
 
 export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  const newFields = (restFilter && restFilter.type) ? dimensionFilters.concat([restFilter]) : dimensionFilters;
+  let newFields = dimensionFilters || [];
+  if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
   if (!newFields.length) return null;
   if (newFields.length === 1) return newFields[0];

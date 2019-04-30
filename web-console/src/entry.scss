@@ -54,6 +54,10 @@ svg {
 .label-info-text {
   max-width: 400px;
   padding: 15px;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
 }
 
 .bp3-form-group {

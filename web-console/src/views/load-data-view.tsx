@@ -117,13 +117,21 @@ const SECTIONS: { name: string, stages: Stage[] }[] = [
   { name: 'Connect and parse raw data', stages: ['connect', 'parser', 'timestamp'] },
   { name: 'Transform and configure schema', stages: ['transform', 'filter', 'schema'] },
   { name: 'Tune parameters', stages: ['partition', 'tuning', 'publish'] },
-  { name: '', stages: ['json-spec'] }
+  { name: 'Verify and submit', stages: ['json-spec'] }
 ];
 
-function formatStage(stage: Stage): string {
-  if (stage === 'json-spec') return 'JSON spec';
-  return stage[0].toUpperCase() + stage.slice(1);
-}
+const VIEW_TITLE: Record<Stage, string> = {
+  'connect': 'Connect',
+  'parser': 'Parse data',
+  'timestamp': 'Parse time',
+  'transform': 'Transform',
+  'filter': 'Filter',
+  'schema': 'Configure schema',
+  'partition': 'Partition',
+  'tuning': 'Tune',
+  'publish': 'Publish',
+  'json-spec': 'View JSON Spec'
+};
 
 export interface LoadDataViewProps extends React.Props<any> {
   seed: LoadDataViewSeed | null;
@@ -312,7 +320,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 active={s === stage}
                 onClick={() => this.updateStage(s)}
                 icon={s === 'json-spec' && IconNames.EYE_OPEN}
-                text={formatStage(s)}
+                text={VIEW_TITLE[s]}
               />
             ))}
           </ButtonGroup>
@@ -337,7 +345,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         />
       }
       <Button
-        text={`Next: ${formatStage(nextStage)}`}
+        text={`Next: ${VIEW_TITLE[nextStage]}`}
         intent={Intent.PRIMARY}
         disabled={disabled}
         onClick={() => {
@@ -520,7 +528,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           if (!inputQueryState.data) return;
           this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
         },
-        prevLabel: 'Restart flow',
+        prevLabel: 'Restart',
         onPrevStage: () => this.setState({ showResetConfirm: true })
       })}
     </>;
@@ -677,13 +685,14 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid requires data to be flat (non-nested, non-hierarchical). Each row should represent a discrete event.
+            Druid requires flat data (non-nested, non-hierarchical).
+            Each row should represent a discrete event.
           </p>
           {
             canFlatten &&
             <p>
               If you have nested data, you can <a href="http://druid.io/docs/latest/ingestion/flatten-json.html" target="_blank">flatten</a> it here.
-              If the provided flattening capabilities are not sufficient, please pre-process your data before ingestion into Druid.
+              If the provided flattening capabilities are not sufficient, please pre-process your data before ingesting it into Druid.
             </p>
           }
           <p>
@@ -936,13 +945,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid partitions data by a primary time column.
-            This column is represented as <Code>__time</Code>. Please indicate which field is the primary time column.
-            If you do not have a time column, you can choose "Constant value" to create a default time column.
-          </p>
-          <p>
-            Druid can understand common timestamp formats out-of-the-box.
-            You can also enter <a href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html" target="_blank">a format string</a> to parse custom time formats.
+            Druid partitions data based on the primary time column of your data.
+            This column is stored internally in Druid as <Code>__time</Code>.
+            Please specify the primary time column.
+            If you do not have any time columns, you can choose "Constant Value" to create a default one.
           </p>
           <p>
             Click "Preview" to check if Druid can properly parse your time values.
@@ -1349,11 +1355,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               fields={[
                 {
                   name: 'dataSchema.granularitySpec.intervals',
-                  label: 'Intervals',
+                  label: 'Time intervals',
                   type: 'string-array',
                   placeholder: 'ex: 2018-01-01/2018-06-01',
                   info: <>
-                    A list of intervals for the raw data being ingested. Ignored for real-time ingestion.
+                    A comma separated list of intervals for the raw data being ingested.
+                    Ignored for real-time ingestion.
                   </>
                 }
               ]}
@@ -1621,12 +1628,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Each column in Druid requires a type (string, long, float, complex, etc) to be assigned.
-            Default primitive types have already been automatically assigned to your columns.
+            Each column in Druid must have an assigned type (string, long, float, complex, etc).
+            Default primitive types have been automatically assigned to your columns.
             If you want to change the type, click on the column header.
           </p>
           <p>
-            Select whether or not you want to <a href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html" target="_blank">roll-up</a> your data (see info box for more details).
+            Select whether or not you want to <a href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html" target="_blank">roll-up</a> your data.
           </p>
         </Callout>
         {
@@ -1678,11 +1685,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 content={
                   <div className="label-info-text">
                     <p>
-                      Select whether or not you want to <a href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html" target="_blank">roll-up</a> your data.
-                      If you enable roll-up, Druid will try to pre-aggregate data before indexing it to conserve storage. The primary timestamp will be truncated to the specified query granularity, and rows containing the same string field values will be aggregated together.
+                      If you enable roll-up, Druid will try to pre-aggregate data before indexing it to conserve storage.
+                      The primary timestamp will be truncated to the specified query granularity, and rows containing the same string field values will be aggregated together.
                     </p>
                     <p>
-                      Enabling roll-up requires that you specify which columns are <a href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec" target="_blank">dimensions</a> (fields you want to group and filter on), and which are <a href="http://druid.io/docs/latest/querying/aggregations.html" target="_blank">metrics</a> (fields you want to aggregate on).
+                      If you enable rollup, you must specify which columns are <a href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="http://druid.io/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
                     </p>
                   </div>
                 }
@@ -1697,9 +1704,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                   name: 'dataSchema.granularitySpec.queryGranularity',
                   label: 'Query granularity',
                   type: 'string',
-                  suggestions: ['NONE', 'HOUR', 'DAY'],
+                  suggestions: ['NONE', 'MINUTE', 'HOUR', 'DAY'],
                   info: <>
-                    Truncate the time column so that more rollup can happen.
+                    This granularity determines how timestamps will be truncated (not at all, to the minute, hour, day, etc).
+                    After data is rolled up, this granularity becomes the minimum granularity you are query data at.
                   </>
                 }
               ]}
@@ -2129,7 +2137,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Decide where the data will be published to in Druid.
+            Configure behavior of indexed data once it reaches Druid.
           </p>
         </Callout>
       </div>
@@ -2183,7 +2191,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            This is the JSON representation of a Druid ingestion spec.
+            Druid begins ingesting data once you submit a JSON ingestion spec.
             If you modify any values in this view, the values entered in previous sections will update accordingly.
             If you modify any values in previous sections, this spec will automatically update.
           </p>
