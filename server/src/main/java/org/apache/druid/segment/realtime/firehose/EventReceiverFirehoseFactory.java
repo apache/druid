@@ -349,7 +349,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("STATE", ResourceType.STATE),
+              Resource.STATE_RESOURCE,
               Action.WRITE
           ),
           authorizerMapper
@@ -538,7 +538,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("STATE", ResourceType.STATE),
+              Resource.STATE_RESOURCE,
               Action.WRITE
           ),
           authorizerMapper

@@ -58,7 +58,7 @@ public class StateResourceFilter extends AbstractResourceFilter
   public ContainerRequest filter(ContainerRequest request)
   {
     final ResourceAction resourceAction = new ResourceAction(
-        new Resource("STATE", ResourceType.STATE),
+        Resource.STATE_RESOURCE,
         getAction(request)
     );
 

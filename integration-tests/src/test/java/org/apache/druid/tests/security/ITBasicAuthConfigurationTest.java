@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.guice.annotations.Client;
@@ -61,6 +62,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -179,6 +181,25 @@ public class ITBasicAuthConfigurationTest
         httpClient
     );
 
+    // create a new user+role with only STATE read access
+    List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
+        new ResourceAction(
+            new Resource(".*", ResourceType.STATE),
+            Action.READ
+        )
+    );
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "stateOnlyUser",
+        "helloworld",
+        "stateOnlyRole",
+        stateOnlyPermissions
+    );
+    HttpClient stateOnlyUserClient = new CredentialedHttpClient(
+        new BasicCredentials("stateOnlyUser", "helloworld"),
+        httpClient
+    );
+
     // check that we can access a datasource-permission restricted resource on the broker
     makeRequest(
         datasourceOnlyUserClient,
@@ -189,7 +210,7 @@ public class ITBasicAuthConfigurationTest
 
     // check that we can access a state-permission restricted resource on the broker
     makeRequest(datasourceWithStateUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
-
+    makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // initial setup is done now, run the system schema response content tests
     final List<Map<String, Object>> adminSegments = jsonMapper.readValue(
@@ -202,9 +223,11 @@ public class ITBasicAuthConfigurationTest
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
-    final List<Map<String, Object>> adminServers = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
+        jsonMapper.readValue(
+            TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
+            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+        )
     );
 
     final List<Map<String, Object>> adminTasks = jsonMapper.readValue(
@@ -221,10 +244,10 @@ public class ITBasicAuthConfigurationTest
     );
 
     LOG.info("Checking sys.servers query as admin...");
-    verifySystemSchemaQuery(
+    verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        adminServers
+        getServersWithoutCurrentSize(adminServers)
     );
 
     LOG.info("Checking sys.server_segments query as admin...");
@@ -258,7 +281,7 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers :Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
     );
 
     LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
@@ -266,7 +289,7 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers :Allowed:false, Message:\"}"
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
     );
 
     LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
@@ -293,7 +316,7 @@ public class ITBasicAuthConfigurationTest
     );
 
     LOG.info("Checking sys.servers query as datasourceWithStateUser...");
-    verifySystemSchemaQuery(
+    verifySystemSchemaServerQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
@@ -319,6 +342,35 @@ public class ITBasicAuthConfigurationTest
                        return "auth_test".equals(taskEntry.get("datasource"));
                      })
                      .collect(Collectors.toList())
+    );
+
+    // as user that can only read STATE
+    LOG.info("Checking sys.segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.servers query as stateOnlyUser...");
+    verifySystemSchemaServerQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.tasks query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        Collections.emptyList()
     );
   }
 
@@ -598,7 +650,6 @@ public class ITBasicAuthConfigurationTest
     }
   }
 
-
   private void createUserAndRoleWithPermissions(
       HttpClient adminClient,
       String user,
@@ -689,16 +740,38 @@ public class ITBasicAuthConfigurationTest
     );
   }
 
+  private void verifySystemSchemaQueryBase(
+      HttpClient client,
+      String query,
+      List<Map<String, Object>> expectedResults,
+      boolean isServerQuery
+  ) throws Exception
+  {
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
+    String content = responseHolder.getContent();
+    List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
+    if (isServerQuery) {
+      responseMap = getServersWithoutCurrentSize(responseMap);
+    }
+    Assert.assertEquals(responseMap, expectedResults);
+  }
+
   private void verifySystemSchemaQuery(
       HttpClient client,
       String query,
       List<Map<String, Object>> expectedResults
   ) throws Exception
   {
-    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
-    String content = responseHolder.getContent();
-    List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
-    Assert.assertEquals(responseMap, expectedResults);
+    verifySystemSchemaQueryBase(client, query, expectedResults, false);
+  }
+
+  private void verifySystemSchemaServerQuery(
+      HttpClient client,
+      String query,
+      List<Map<String, Object>> expectedResults
+  ) throws Exception
+  {
+    verifySystemSchemaQueryBase(client, query, expectedResults, true);
   }
 
   private void verifySystemSchemaQueryFailure(
@@ -711,5 +784,22 @@ public class ITBasicAuthConfigurationTest
     StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
     Assert.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
     Assert.assertEquals(responseHolder.getContent(), expectedErrorMessage);
+  }
+
+  /**
+   * current_size on historicals changes because cluster state is not isolated across different
+   * integration tests, zero it out for consistent test results
+   */
+  private static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
+  {
+    return Lists.transform(
+        servers,
+        (server) -> {
+          Map<String, Object> newServer = new HashMap<>();
+          newServer.putAll(server);
+          newServer.put("current_size", 0);
+          return newServer;
+        }
+    );
   }
 }

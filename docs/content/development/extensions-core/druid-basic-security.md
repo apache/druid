@@ -310,6 +310,18 @@ For information on what HTTP methods are supported on a particular request endpo
 
 GET requires READ permission, while POST and DELETE require WRITE permission.
 
+### SQL Permissions
+
+Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
+
+Queries on the [information schema tables](../../querying/sql.html#information-schema) require DATASOURCE READ access for the specified datasource.
+
+Queries on the [system schema tables](../../querying/sql.html#system-schema) require the following permissions:
+- `segments`: Segments will be filtered based on DATASOURCE READ permissions.
+- `servers`: The user requires STATE READ permissions.
+- `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
+- `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
+
 ## Configuration Propagation
 
 To prevent excessive load on the Coordinator, the Authenticator and Authorizer user/role database state is cached on each Druid process.

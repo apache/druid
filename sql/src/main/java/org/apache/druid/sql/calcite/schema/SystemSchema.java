@@ -440,14 +440,9 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-      final Access access = AuthorizationUtils.authorizeAllResourceActions(
-          authenticationResult,
-          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
-          authorizerMapper
-      );
-      if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access);
-      }
+
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
           .transform(val -> new Object[]{
@@ -496,14 +491,7 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
-          authenticationResult,
-          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
-          authorizerMapper
-      );
-      if (!stateAccess.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + stateAccess);
-      }
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
@@ -769,5 +757,23 @@ public class SystemSchema extends AbstractSchema
     }
 
     return object.toString();
+  }
+
+  /**
+   * Checks if an authenticated user has the STATE READ permissions needed to view server information.
+   */
+  private static void checkStateReadAccessForServers(
+      AuthenticationResult authenticationResult,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        authorizerMapper
+    );
+    if (!stateAccess.isAllowed()) {
+      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+    }
   }
 }
