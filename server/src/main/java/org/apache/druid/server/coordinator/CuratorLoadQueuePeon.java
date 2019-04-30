@@ -383,7 +383,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     private SegmentHolder(
         DataSegment segment,
         int type,
-        Collection<LoadPeonCallback> callbacks
+        Collection<LoadPeonCallback> callbacksParam
     )
     {
       this.segment = segment;
@@ -391,7 +391,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       this.changeRequest = (type == LOAD)
                            ? new SegmentChangeRequestLoad(segment)
                            : new SegmentChangeRequestDrop(segment);
-      Iterator<LoadPeonCallback> itr = callbacks.iterator();
+      Iterator<LoadPeonCallback> itr = callbacksParam.iterator();
       while (itr.hasNext()) {
         LoadPeonCallback c = itr.next();
         if (c != null) {
