@@ -17,27 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ "$#" -gt 2 ]
-then
-  echo "usage: $0 <service> [conf-dir]" >&2
-  exit 1
-fi
-
 PWD="$(pwd)"
 WHEREAMI="$(dirname "$0")"
-WHATAMI="$1"
-
-if [ "$#" -eq 1 ]
-then
-  CONFDIR="$WHEREAMI/../conf"
-else
-  CONFDIR="$2"
-fi
-
-CONFDIR="$(cd "$CONFDIR" && pwd)"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
-cd "$WHEREAMI/.."
-exec java `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-  -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$WHEREAMI/../lib/*" \
-  `cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+exec "$WHEREAMI/supervise" -c "$WHEREAMI/../conf/supervise/single-server/medium.conf"
