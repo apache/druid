@@ -144,8 +144,6 @@
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
-        <module>extensions-contrib/materialized-view-maintenance</module>
-        <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/unique</module>
         <!-- distribution packaging -->
         <module>distribution</module>

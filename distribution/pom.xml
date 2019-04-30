@@ -241,12 +241,6 @@
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-virtual-columns</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:kafka-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:materialized-view-maintenance</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:materialized-view-selection</argument>
-                                        <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-uniq</argument>
                                     </arguments>
                                 </configuration>
