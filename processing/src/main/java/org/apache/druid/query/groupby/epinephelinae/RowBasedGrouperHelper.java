@@ -159,11 +159,9 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
-    final ColumnSelectorFactory columnSelectorFactory = query.getVirtualColumns().wrap(
-        RowBasedColumnSelectorFactory.create(
-            columnSelectorRow,
-            rawInputRowSignature
-        )
+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        columnSelectorRow,
+        rawInputRowSignature
     );
 
     final boolean willApplyLimitPushDown = query.isApplyLimitPushDown();
