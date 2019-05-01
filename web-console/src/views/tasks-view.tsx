@@ -28,6 +28,7 @@ import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
+import { UrlBaser } from '../singletons/url-baser';
 import {
   addFilter,
   booleanCustomTableFilter,
@@ -434,10 +435,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a onClick={() => this.setState({ suspendSupervisorId: id })}>Suspend</a>;
 
               return <div>
-                <a href={`/druid/indexer/v1/supervisor/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/stats`} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/history`} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/stats`)} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/history`)} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
                 {suspendResume}&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ resetSupervisorId: id })}>Reset</a>&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ terminateSupervisorId: id })}>Terminate</a>
@@ -593,11 +594,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const id = row.value;
               const { status } = row.original;
               return <div>
-                <a href={`/druid/indexer/v1/task/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/reports`)} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log`)} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log?offset=-8192`)} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
                 {(status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a>}
               </div>;
             },
