@@ -26,6 +26,7 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import {Loader} from './components/loader';
 import { AppToaster } from './singletons/toaster';
+import { UrlBaser } from './singletons/url-baser';
 import {QueryManager} from './utils';
 import {DRUID_DOCS_API, DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE} from './variables';
 import { DatasourcesView } from './views/datasource-view';
@@ -113,6 +114,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
     if (props.baseURL) {
       axios.defaults.baseURL = props.baseURL;
+      UrlBaser.baseURL = props.baseURL;
     }
     if (props.customHeaderName && props.customHeaderValue) {
       axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
