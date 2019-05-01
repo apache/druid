@@ -314,7 +314,9 @@ GET requires READ permission, while POST and DELETE require WRITE permission.
 
 Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
 
-Queries on the [information schema tables](../../querying/sql.html#information-schema) require DATASOURCE READ access for the specified datasource.
+Queries on the [INFORMATION_SCHEMA tables](../../querying/sql.html#information-schema) will
+return information about datasources that the caller has DATASOURCE READ access to. Other
+datasources will be omitted.
 
 Queries on the [system schema tables](../../querying/sql.html#system-schema) require the following permissions:
 - `segments`: Segments will be filtered based on DATASOURCE READ permissions.
