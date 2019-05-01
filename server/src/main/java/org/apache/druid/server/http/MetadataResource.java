@@ -37,6 +37,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,6 +52,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -147,7 +149,8 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegments(
       @Context final HttpServletRequest req,
-      @QueryParam("datasources") final Set<String> datasources
+      @QueryParam("datasources") final Set<String> datasources,
+      @QueryParam("includeOvershadowedStatus") final String includeOvershadowedStatus
   )
   {
     // If we haven't polled the metadata store yet, use an empty list of datasources.
@@ -159,14 +162,61 @@ public class MetadataResource
     }
     final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
-    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+    if (includeOvershadowedStatus != null) {
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = findAuthorizedSegmentWithOvershadowedStatus(
+          req,
+          druidDataSources,
+          metadataSegments
+      );
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
+    } else {
 
-    final Iterable<DataSegment> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, metadataSegments::iterator, raGenerator, authorizerMapper);
+      final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
-    final Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          req,
+          metadataSegments::iterator,
+          raGenerator,
+          authorizerMapper
+      );
+
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
+    }
+  }
+
+  private Iterable<SegmentWithOvershadowedStatus> findAuthorizedSegmentWithOvershadowedStatus(
+      HttpServletRequest req,
+      Collection<ImmutableDruidDataSource> druidDataSources,
+      Stream<DataSegment> metadataSegments
+  )
+  {
+    // It's fine to add all overshadowed segments to a single collection because only
+    // a small fraction of the segments in the cluster are expected to be overshadowed,
+    // so building this collection shouldn't generate a lot of garbage.
+    final Set<DataSegment> overshadowedSegments = new HashSet<>();
+    for (ImmutableDruidDataSource dataSource : druidDataSources) {
+      overshadowedSegments.addAll(ImmutableDruidDataSource.determineOvershadowedSegments(dataSource.getSegments()));
+    }
+
+    final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
+        .map(segment -> new SegmentWithOvershadowedStatus(
+            segment,
+            overshadowedSegments.contains(segment)
+        ));
+
+    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
+
+    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        segmentsWithOvershadowedStatus::iterator,
+        raGenerator,
+        authorizerMapper
+    );
+    return authorizedSegments;
   }
 
   @GET
