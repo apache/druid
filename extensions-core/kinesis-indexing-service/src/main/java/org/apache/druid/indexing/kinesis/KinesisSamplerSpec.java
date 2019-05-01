@@ -59,7 +59,7 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
 
   protected class KinesisSamplerFirehose extends SeekableStreamSamplerFirehose
   {
-    private KinesisSamplerFirehose(InputRowParser parser)
+    protected KinesisSamplerFirehose(InputRowParser parser)
     {
       super(parser);
     }
