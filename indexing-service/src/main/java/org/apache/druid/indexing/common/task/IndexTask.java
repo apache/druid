@@ -51,6 +51,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -118,6 +120,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -268,7 +271,51 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+    return findInputSegments(
+        getDataSource(),
+        taskActionClient,
+        intervals,
+        ingestionSchema.ioConfig.firehoseFactory
+    );
+  }
+
+  public static List<DataSegment> findInputSegments(
+      String dataSource,
+      TaskActionClient actionClient,
+      List<Interval> intervalsToFind,
+      FirehoseFactory firehoseFactory
+  ) throws IOException
+  {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      final List<WindowedSegmentId> inputSegments = ((IngestSegmentFirehoseFactory) firehoseFactory).getSegments();
+      if (inputSegments == null) {
+        final Interval inputInterval = Preconditions.checkNotNull(
+            ((IngestSegmentFirehoseFactory) firehoseFactory).getInterval(),
+            "input interval"
+        );
+        return actionClient.submit(
+            new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
+        );
+      } else {
+        final List<String> inputSegmentIds = inputSegments.stream()
+                                                          .map(WindowedSegmentId::getSegmentId)
+                                                          .collect(Collectors.toList());
+        final List<DataSegment> dataSegmentsInIntervals = actionClient.submit(
+            new SegmentListUsedAction(
+                dataSource,
+                null,
+                inputSegments.stream()
+                             .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
+                             .collect(Collectors.toSet())
+            )
+        );
+        return dataSegmentsInIntervals.stream()
+                                      .filter(segment -> inputSegmentIds.contains(segment.getId().toString()))
+                                      .collect(Collectors.toList());
+      }
+    } else {
+      return actionClient.submit(new SegmentListUsedAction(dataSource, null, intervalsToFind));
+    }
   }
 
   @Override
@@ -300,7 +347,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       }
     }
 
-    return tryLockWithIntervals(actionClient, new ArrayList<>(intervals));
+    return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), true);
   }
 
   @GET
@@ -463,7 +510,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxRowsPerSegment
       );
 
-      final Set<Interval> allocateIntervals = allocateSpec.keySet();
+      final List<Interval> allocateIntervals = new ArrayList<>(allocateSpec.keySet());
       // get locks for found shardSpec intervals
       if (!tryLockIfNecessary(toolbox.getTaskActionClient(), allocateIntervals)) {
         throw new ISE("Failed to get a lock for segments");
@@ -471,7 +518,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!tryLockWithIntervals(toolbox.getTaskActionClient(), allocateIntervals)) {
+        if (!tryLockWithIntervals(toolbox.getTaskActionClient(), allocateIntervals, true)) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 

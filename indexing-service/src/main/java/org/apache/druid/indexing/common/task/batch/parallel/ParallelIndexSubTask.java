@@ -34,7 +34,6 @@ import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -158,7 +157,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
   {
     try {
-      return tryLockWithIntervals(actionClient, new ArrayList<>(intervals));
+      return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), false);
     }
     catch (Exception e) {
       log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
@@ -221,7 +220,12 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+    return IndexTask.findInputSegments(
+        getDataSource(),
+        taskActionClient,
+        intervals,
+        ingestionSchema.getIOConfig().getFirehoseFactory()
+    );
   }
 
   @Override
@@ -421,7 +425,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
           } else {
             final Granularity segmentGranularity = findSegmentGranularity(granularitySpec);
             final Interval timeChunk = segmentGranularity.bucket(inputRow.getTimestamp());
-            if (!tryLockWithIntervals(toolbox.getTaskActionClient(), Collections.singletonList(timeChunk))) {
+            if (!tryLockWithIntervals(toolbox.getTaskActionClient(), Collections.singletonList(timeChunk), false)) {
               throw new ISE("Failed to get locks for interval[%s]", timeChunk);
             }
           }

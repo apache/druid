@@ -124,13 +124,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Nullable
   public abstract Granularity getSegmentGranularity(Interval interval);
 
-  boolean tryLockWithIntervals(TaskActionClient client, Set<Interval> intervals)
-      throws IOException
-  {
-    return tryLockWithIntervals(client, new ArrayList<>(intervals));
-  }
-
-  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals)
+  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals, boolean isInitialRequest)
       throws IOException
   {
     if (requireLockInputSegments()) {
@@ -141,7 +135,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       // However, tasks wouldn't know about new segments added after findInputSegments() call, it may missing those
       // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
       if (!intervals.isEmpty()) {
-        return tryLockWithSegments(client, findInputSegments(client, intervals));
+        return tryLockWithSegments(client, findInputSegments(client, intervals), isInitialRequest);
       } else {
         return true;
       }
@@ -152,7 +146,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments) throws IOException
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean isInitialRequest) throws IOException
   {
     if (segments.isEmpty()) {
       changeSegmentGranularity = false;
@@ -204,7 +198,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         for (DataSegment segment : segmentsToLock) {
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
         }
-        intervalToSegments.values().forEach(this::verifyAndFindRootPartitionRangeAndMinorVersion);
+        intervalToSegments.values().forEach(
+            segmentsToCheck -> verifyAndFindRootPartitionRangeAndMinorVersion(segmentsToCheck, isInitialRequest)
+        );
         final Closer lockCloserOnError = Closer.create();
         for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
           final Interval interval = entry.getKey();
@@ -227,7 +223,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                          new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
                      )));
 
-          if (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk())) {
+          if (isInitialRequest && (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk()))) {
             lockCloserOnError.close();
             return false;
           }
@@ -250,13 +246,23 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * - Are rootPartition range of inputSegments adjacent? Two rootPartition ranges are adjacent if they are consecutive.
    * - All atomicUpdateGroups of inputSegments must be full. (See {@code AtomicUpdateGroup#isFull()}).
    */
-  private void verifyAndFindRootPartitionRangeAndMinorVersion(List<DataSegment> inputSegments)
+  private void verifyAndFindRootPartitionRangeAndMinorVersion(List<DataSegment> inputSegments, boolean isInitialRequest)
   {
     if (inputSegments.isEmpty()) {
       return;
     }
 
-    final List<DataSegment> sortedSegments = verifyInputSegmentsToOverwritePerInterval(inputSegments);
+    final List<DataSegment> sortedSegments = new ArrayList<>(inputSegments);
+    sortedSegments.sort((s1, s2) -> {
+      if (s1.getStartRootPartitionId() != s2.getStartRootPartitionId()) {
+        return Integer.compare(s1.getStartRootPartitionId(), s2.getStartRootPartitionId());
+      } else {
+        return Integer.compare(s1.getEndRootPartitionId(), s2.getEndRootPartitionId());
+      }
+    });
+    if (isInitialRequest) {
+      verifyInputSegmentsToOverwritePerInterval(sortedSegments);
+    }
     final Interval interval = sortedSegments.get(0).getInterval();
     final short prevMaxMinorVersion = (short) sortedSegments
         .stream()
@@ -301,24 +307,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return !overwritingRootGenPartitions.isEmpty();
   }
 
-  private static List<DataSegment> verifyInputSegmentsToOverwritePerInterval(List<DataSegment> inputSegments)
+  private static void verifyInputSegmentsToOverwritePerInterval(List<DataSegment> sortedSegments)
   {
-    if (inputSegments.isEmpty()) {
-      return inputSegments;
+    if (sortedSegments.isEmpty()) {
+      return;
     }
 
     Preconditions.checkArgument(
-        inputSegments.stream().allMatch(segment -> segment.getInterval().equals(inputSegments.get(0).getInterval()))
+        sortedSegments.stream().allMatch(segment -> segment.getInterval().equals(sortedSegments.get(0).getInterval()))
     );
-
-    final List<DataSegment> sortedSegments = new ArrayList<>(inputSegments);
-    sortedSegments.sort((s1, s2) -> {
-      if (s1.getStartRootPartitionId() != s2.getStartRootPartitionId()) {
-        return Integer.compare(s1.getStartRootPartitionId(), s2.getStartRootPartitionId());
-      } else {
-        return Integer.compare(s1.getEndRootPartitionId(), s2.getEndRootPartitionId());
-      }
-    });
 
     short atomicUpdateGroupSize = 1;
     // sanity check
@@ -347,10 +344,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         atomicUpdateGroupSize = 1;
       }
     }
-    if (atomicUpdateGroupSize == sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
+    if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
       throw new ISE("All atomicUpdateGroup must be compacted together");
     }
 
-    return sortedSegments;
+    return;
   }
 }

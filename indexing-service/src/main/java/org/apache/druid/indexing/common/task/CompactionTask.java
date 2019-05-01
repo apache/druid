@@ -271,17 +271,11 @@ public class CompactionTask extends AbstractBatchIndexTask
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
   }
 
-  @VisibleForTesting
-  SegmentProvider getSegmentProvider()
-  {
-    return segmentProvider;
-  }
-
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.checkAndGetSegments(taskActionClient);
-    return tryLockWithSegments(taskActionClient, segments);
+    return tryLockWithSegments(taskActionClient, segments, true);
   }
 
   @Override

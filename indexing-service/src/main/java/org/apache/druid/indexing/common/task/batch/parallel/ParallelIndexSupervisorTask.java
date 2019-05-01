@@ -35,7 +35,6 @@ import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -221,14 +220,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                                                    .getGranularitySpec()
                                                                    .bucketIntervals();
 
-    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()));
+    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()), true);
   }
 
   @Override
   public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+    return IndexTask.findInputSegments(
+        getDataSource(),
+        taskActionClient,
+        intervals,
+        ingestionSchema.getIOConfig().getFirehoseFactory()
+    );
   }
 
   @Override
