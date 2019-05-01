@@ -92,8 +92,16 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
-  private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR = segment ->
-      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
+      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSegment().getDataSource())
+      );
+
+  private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR =
+      segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSource())
+      );
 
   /**
    * Booleans constants represented as long type,
@@ -340,17 +348,10 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-<<<<<<< HEAD
-      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-=======
-      Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
       final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
->>>>>>> upstream/master
           authenticationResult,
           () -> it,
-          SEGMENT_RA_GENERATOR,
+          SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
           authorizerMapper
       );
       return authorizedSegments.iterator();
