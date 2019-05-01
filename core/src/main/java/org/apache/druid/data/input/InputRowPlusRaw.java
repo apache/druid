@@ -47,6 +47,14 @@ public class InputRowPlusRaw
     return inputRow;
   }
 
+  /**
+   * The raw, unparsed event (as opposed to an {@link InputRow} which is the output of a parser). The interface default
+   * for {@link Firehose#nextRowWithRaw()} sets this to null, so this will only be non-null if nextRowWithRaw() is
+   * overridden by an implementation, such as in
+   * {@link org.apache.druid.data.input.impl.FileIteratingFirehose#nextRowWithRaw()}. Note that returning the raw row
+   * does not make sense for some sources (e.g. non-row based types), so clients should be able to handle this field
+   * being unset.
+   */
   @Nullable
   public byte[] getRaw()
   {

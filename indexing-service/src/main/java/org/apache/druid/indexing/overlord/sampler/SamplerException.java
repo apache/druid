@@ -23,11 +23,6 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public class SamplerException extends RuntimeException
 {
-  public SamplerException(String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
-
   public SamplerException(Throwable cause, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments), cause);
