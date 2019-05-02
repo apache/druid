@@ -522,7 +522,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           deepGet(spec, 'ioConfig.firehose.type') === 'local' &&
           <FormGroup>
             <Callout intent={Intent.WARNING}>
-              This file needs to be accessible by all Druid nodes.
+              This path must be available on the local filesystem of all Druid servers.
             </Callout>
           </FormGroup>
         }
