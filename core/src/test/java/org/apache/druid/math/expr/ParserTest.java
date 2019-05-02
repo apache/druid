@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -180,6 +181,34 @@ public class ParserTest
   }
 
   @Test
+  public void testLiteralArrays()
+  {
+    validateConstantExpression("[1.0, 2.345]", new Double[] {1.0, 2.345});
+    validateConstantExpression("[1.0 2.345]", new Double[] {1.0, 2.345});
+    validateConstantExpression("[1, 3]", new Long[] {1L, 3L});
+    validateConstantExpression("[1 3]", new Long[] {1L, 3L});
+    validateConstantExpression("[\'hello\', \'world\']", new String[] {"hello", "world"});
+    validateConstantExpression("[\'hello\' \'world\']", new String[] {"hello", "world"});
+  }
+
+  @Test
+  public void testApplyFunctions()
+  {
+    final Expr parsed = Parser.parse("map((x) -> x + 1, [1, 2, 3])", ExprMacroTable.nil());
+    Expr.ObjectBinding binding = new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return null;
+      }
+    };
+    ExprEval eval = parsed.eval(binding);
+    Assert.assertArrayEquals(new Long[]{2L, 3L, 4L}, (Long[]) eval.value());
+  }
+
+  @Test
   public void testFunctions()
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
@@ -205,6 +234,15 @@ public class ParserTest
         expression,
         expected,
         Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
+    );
+  }
+
+  private void validateConstantExpression(String expression, Object[] expected)
+  {
+    Assert.assertArrayEquals(
+        expression,
+        expected,
+        (Object[]) Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
     );
   }
 }

@@ -22,17 +22,25 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class FunctionTest
 {
-  private final Expr.ObjectBinding bindings = Parser.withMap(
-      ImmutableMap.of(
-          "x", "foo",
-          "y", 2,
-          "z", 3.1
-      )
-  );
+  private Expr.ObjectBinding bindings;
+
+  @Before
+  public void setup()
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("x", "foo");
+    builder.put("y", 2);
+    builder.put("z", 3.1);
+    builder.put("a", new String[] {"foo", "bar", "baz", "foobar"});
+    builder.put("b", new Long[] {1L, 2L, 3L, 4L, 5L});
+    builder.put("c", new Double[] {3.1, 4.2, 5.3});
+    bindings = Parser.withMap(builder.build());
+  }
 
   @Test
   public void testCaseSimple()
@@ -115,12 +123,6 @@ public class FunctionTest
     assertExpr("upper(x)", "FOO");
   }
 
-  private void assertExpr(final String expression, final Object expectedResult)
-  {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
-  }
-
   @Test
   public void testIsNull()
   {
@@ -155,5 +157,51 @@ public class FunctionTest
     assertExpr("rpad(x, 0, 'ab')", null);
     assertExpr("rpad(x, 5, null)", null);
     assertExpr("rpad(null, 5, x)", null);
+  }
+
+  @Test
+  public void testArrayLength()
+  {
+    assertExpr("array_length([1, 2, 3])", 3L);
+    assertExpr("array_length(a)", 4L);
+  }
+
+  @Test
+  public void testArrayOffset()
+  {
+    assertExpr("array_offset([1, 2, 3], 2)", 3L);
+    assertExpr("array_offset([1, 2, 3], 3)", null);
+    assertExpr("array_offset(a, 2)", "baz");
+  }
+
+  @Test
+  public void testArrayOrdinal()
+  {
+    assertExpr("array_ordinal([1, 2, 3], 3)", 3L);
+    assertExpr("array_ordinal([1, 2, 3], 4)", null);
+    assertExpr("array_ordinal(a, 3)", "baz");
+  }
+
+  @Test
+  public void testArrayContains()
+  {
+    assertExpr("array_contains([1 2 3], 2)", "true");
+    assertExpr("array_contains([1 2 3], 4)", "false");
+    assertExpr("array_contains([1 2 3], [2 3])", "true");
+    assertExpr("array_contains([1 2 3], [3 4])", "false");
+    assertExpr("array_contains(b, [3 4])", "true");
+  }
+
+  @Test
+  public void testArrayOverlap()
+  {
+    assertExpr("array_overlap([1 2 3], [2 4 6])", "true");
+    assertExpr("array_overlap([1 2 3], [4 5 6])", "false");
+  }
+
+  private void assertExpr(final String expression, final Object expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
   }
 }

@@ -19,16 +19,22 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
@@ -39,6 +45,11 @@ interface Function
   String name();
 
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
+
+  default Set<Expr> getScalarInputs(List<Expr> args)
+  {
+    return ImmutableSet.copyOf(args);
+  }
 
   abstract class SingleParam implements Function
   {
@@ -1382,7 +1393,7 @@ interface Function
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
-      
+
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
       String pad = args.get(2).eval(bindings).asString();
@@ -1424,4 +1435,346 @@ interface Function
     }
   }
 
+  abstract class ArrayFunction implements Function
+  {
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+  }
+
+  class ArrayLengthFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_length";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      return ExprEval.ofLong(array.length);
+    }
+  }
+
+  class ArrayOffsetFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_offset";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      final int position = args.get(1).eval(bindings).asInt();
+
+      if (array.length > position) {
+        return ExprEval.bestEffortOf(array[position]);
+      }
+      return ExprEval.of(null);
+    }
+  }
+
+  class ArrayOrdinalFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_ordinal";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      final int position = args.get(1).eval(bindings).asInt() - 1;
+
+      if (array.length > position) {
+        return ExprEval.bestEffortOf(array[position]);
+      }
+      return ExprEval.of(null);
+    }
+  }
+
+  class ArrayContainsFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_contains";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final ExprEval toCheck = args.get(1).eval(bindings);
+
+      final Object[] array1 = expr.asArray();
+      final Object[] array2 = toCheck.asArray();
+
+      if (array1 == null || array2 == null) {
+        return ExprEval.of(null);
+      }
+
+      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+    }
+  }
+
+  class ArrayOverlapFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_overlap";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final ExprEval toCheck = args.get(1).eval(bindings);
+
+      final Object[] array1 = expr.asArray();
+      final Object[] array2 = toCheck.asArray();
+
+      if (array1 == null || array2 == null) {
+        return ExprEval.of(null);
+      }
+
+      List<Object> olst = Arrays.asList(array1);
+      List<Object> o2lst = Arrays.asList(array2);
+      boolean any = false;
+      for (Object check : olst) {
+        any |= o2lst.contains(check);
+      }
+      return ExprEval.bestEffortOf(any);
+    }
+  }
+
+  class ArrayOffsetOfFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_offset_of";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final ExprEval toCheck = args.get(1).eval(bindings);
+
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+      switch (toCheck.type()) {
+        case STRING:
+        case LONG:
+        case DOUBLE:
+          int index = Arrays.asList(array).indexOf(toCheck.value());
+          return ExprEval.bestEffortOf(index < 0 ? null : index);
+        default:
+          throw new IAE("Function[%s] argument must be a a scalar type", name());
+      }
+    }
+  }
+
+  class ArrayOrdinalOfFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_ordinal_of";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final ExprEval toCheck = args.get(1).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      switch (toCheck.type()) {
+        case STRING:
+        case LONG:
+        case DOUBLE:
+          int index = Arrays.asList(array).indexOf(toCheck.value());
+          return ExprEval.bestEffortOf(index < 0 ? null : index + 1);
+        default:
+          throw new IAE("Function[%s] argument must be a a scalar type", name());
+      }
+    }
+  }
+
+  class ArrayAppendFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_append";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+
+      final ExprEval lhs = args.get(0).eval(bindings);
+      final ExprEval rhs = args.get(1).eval(bindings);
+
+      final Object[] array = lhs.asArray();
+
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      switch (lhs.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(this.append(lhs.asStringArray(), rhs.asString()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(this.append(lhs.asLongArray(), rhs.asLong()).toArray(Long[]::new));
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(this.append(lhs.asDoubleArray(), rhs.asDouble()).toArray(Double[]::new));
+      }
+      throw new RuntimeException("impossible");
+    }
+
+    private <T> Stream<T> append(T[] array, T val)
+    {
+      List<T> l = Arrays.asList(array);
+      l.add(val);
+      return l.stream();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
+  class ArrayConcatFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_concat";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+
+      final ExprEval lhs = args.get(0).eval(bindings);
+      final ExprEval rhs = args.get(1).eval(bindings);
+
+      final Object[] array1 = lhs.asArray();
+      final Object[] array2 = rhs.asArray();
+
+      if (array1 == null) {
+        return ExprEval.of(null);
+      }
+      if (array2 == null) {
+        return lhs;
+      }
+
+      switch (lhs.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(this.cat(lhs.asStringArray(), rhs.asStringArray()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(this.cat(lhs.asLongArray(), rhs.asLongArray()).toArray(Long[]::new));
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(this.cat(lhs.asDoubleArray(), rhs.asDoubleArray()).toArray(Double[]::new));
+      }
+      throw new RE("Unable to concatenate unknown type %s", lhs.type());
+    }
+
+    private <T> Stream<T> cat(T[] array1, T[] array2)
+    {
+      List<T> l = Arrays.asList(array1);
+      l.addAll(Arrays.asList(array2));
+      return l.stream();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
 }

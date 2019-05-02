@@ -29,8 +29,8 @@ import javax.annotation.Nonnull;
 
 public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
 {
-  private final Expr.ObjectBinding bindings;
-  private final Expr expression;
+  final Expr.ObjectBinding bindings;
+  final Expr expression;
 
   public ExpressionColumnValueSelector(Expr expression, Expr.ObjectBinding bindings)
   {

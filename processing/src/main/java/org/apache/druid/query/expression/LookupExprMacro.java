@@ -73,6 +73,13 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
 
     class LookupExpr implements Expr
     {
+      private final Expr arg;
+
+      private LookupExpr(Expr arg)
+      {
+        this.arg = arg;
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -86,8 +93,15 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
         visitor.visit(this);
       }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new LookupExpr(newArg));
+      }
     }
 
-    return new LookupExpr();
+    return new LookupExpr(arg);
   }
 }

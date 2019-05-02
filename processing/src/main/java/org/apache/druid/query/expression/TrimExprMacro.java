@@ -155,6 +155,13 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       stringExpr.visit(visitor);
       visitor.visit(this);
     }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newStringExpr = stringExpr.visit(shuttle);
+      return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars));
+    }
   }
 
   private static class TrimDynamicCharsExpr implements Expr
@@ -225,6 +232,14 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       stringExpr.visit(visitor);
       charsExpr.visit(visitor);
       visitor.visit(this);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newStringExpr = stringExpr.visit(shuttle);
+      Expr newCharsExpr = charsExpr.visit(shuttle);
+      return shuttle.visit(new TrimDynamicCharsExpr(mode, newStringExpr, newCharsExpr));
     }
   }
 

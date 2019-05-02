@@ -37,6 +37,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
+import java.util.Arrays;
 import java.util.Set;
 
 public class ExpressionFilter implements Filter
@@ -62,7 +63,23 @@ public class ExpressionFilter implements Filter
         if (NullHandling.sqlCompatible() && selector.isNull()) {
           return false;
         }
-        return Evals.asBoolean(selector.getLong());
+        ExprEval eval = selector.getObject();
+        if (eval == null) {
+          return false;
+        }
+        switch (eval.type()) {
+          case LONG_ARRAY:
+            Long[] lResult = eval.asLongArray();
+            return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+          case STRING_ARRAY:
+            String[] sResult = eval.asStringArray();
+            return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+          case DOUBLE_ARRAY:
+            Double[] dResult = eval.asDoubleArray();
+            return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+          default:
+            return Evals.asBoolean(selector.getLong());
+        }
       }
 
       @Override

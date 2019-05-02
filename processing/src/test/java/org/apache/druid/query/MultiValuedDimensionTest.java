@@ -28,6 +28,7 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,11 +39,13 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -55,14 +58,18 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -98,8 +105,16 @@ public class MultiValuedDimensionTest
 
   private IncrementalIndex incrementalIndex;
   private QueryableIndex queryableIndex;
-
   private File persistedSegmentDir;
+
+  private IncrementalIndex incrementalIndexNullSampler;
+  private QueryableIndex queryableIndexNullSampler;
+  private File persistedSegmentDirNullSampler;
+
+  private final GroupByQueryConfig config;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -108,6 +123,7 @@ public class MultiValuedDimensionTest
         config,
         null
     );
+    this.config = config;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
@@ -122,9 +138,9 @@ public class MultiValuedDimensionTest
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")), null, null),
             "\t",
-            ImmutableList.of("timestamp", "product", "tags"),
+            ImmutableList.of("timestamp", "product", "tags", "othertags"),
             false,
             0
         ),
@@ -132,21 +148,55 @@ public class MultiValuedDimensionTest
     );
 
     String[] rows = new String[]{
-        "2011-01-12T00:00:00.000Z,product_1,t1\tt2\tt3",
-        "2011-01-13T00:00:00.000Z,product_2,t3\tt4\tt5",
-        "2011-01-14T00:00:00.000Z,product_3,t5\tt6\tt7",
-        "2011-01-14T00:00:00.000Z,product_4"
+        "2011-01-12T00:00:00.000Z,product_1,t1\tt2\tt3,u1\tu2",
+        "2011-01-13T00:00:00.000Z,product_2,t3\tt4\tt5,u3\tu4",
+        "2011-01-14T00:00:00.000Z,product_3,t5\tt6\tt7,u1\tu5",
+        "2011-01-14T00:00:00.000Z,product_4,,u2"
     };
 
     for (String row : rows) {
       incrementalIndex.add(parser.parse(row));
     }
 
+
     persistedSegmentDir = Files.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
-
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
+
+
+    StringInputRowParser parserNullSampler = new StringInputRowParser(
+        new JSONParseSpec(
+            new TimestampSpec("time", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")), null, null)
+        ),
+        "UTF-8"
+    );
+
+    incrementalIndexNullSampler = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(5000)
+        .buildOnheap();
+
+    String[] rowsNullSampler = new String[]{
+        "{\"time\":\"2011-01-13T00:00:00.000Z\",\"product\":\"product_1\",\"tags\":[],\"othertags\":[\"u1\", \"u2\"]}",
+        "{\"time\":\"2011-01-12T00:00:00.000Z\",\"product\":\"product_2\",\"othertags\":[\"u3\", \"u4\"]}",
+        "{\"time\":\"2011-01-14T00:00:00.000Z\",\"product\":\"product_3\",\"tags\":[\"\"],\"othertags\":[\"u1\", \"u5\"]}",
+        "{\"time\":\"2011-01-15T00:00:00.000Z\",\"product\":\"product_4\",\"tags\":[\"t1\", \"t2\", \"\"],\"othertags\":[\"u6\", \"u7\"]}",
+        "{\"time\":\"2011-01-16T00:00:00.000Z\",\"product\":\"product_5\",\"tags\":[],\"othertags\":[]}",
+        "{\"time\":\"2011-01-16T00:00:00.000Z\",\"product\":\"product_6\"}",
+        "{\"time\":\"2011-01-16T00:00:00.000Z\",\"product\":\"product_7\",\"othertags\":[]}",
+        "{\"time\":\"2011-01-16T00:00:00.000Z\",\"product\":\"product_8\",\"tags\":[\"\"],\"othertags\":[]}"
+    };
+
+    for (String row : rowsNullSampler) {
+      incrementalIndexNullSampler.add(parserNullSampler.parse(row));
+    }
+    persistedSegmentDirNullSampler = Files.createTempDir();
+    TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
+              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, new IndexSpec(), null);
+
+    queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }
 
   @After
@@ -250,6 +300,231 @@ public class MultiValuedDimensionTest
   }
 
   @Test
+  public void testGroupByExpression()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "map(x -> concat(x, 'foo'), tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t4foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t5foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t6foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t7foo", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+  }
+
+  @Test
+  public void testGroupByExpressionMultiMulti()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "cartesian_map((x,y) -> concat(x, y), tags, othertags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(5)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+  }
+
+  @Test
+  public void testGroupByExpressionMultiMultiAuto()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "map((x) -> concat(x, othertags), tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(5)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+  }
+
+  @Test
+  public void testGroupByExpressionMultiMultiAutoAuto()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "concat(tags, othertags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(5)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+  }
+
+  @Test
+  public void testGroupByExpressionAuto()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tt", "tt"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "tt",
+                "concat(tags, 'foo')",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t1foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t2foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t3foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t4foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t5foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t6foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t7foo", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+  }
+
+
+  @Test
   public void testTopNWithDimFilterAndWithFilteredDimSpec()
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -292,6 +567,129 @@ public class MultiValuedDimensionTest
                           "count", 2L
                       )
                   )
+              )
+          )
+      );
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
+    }
+  }
+
+  @Test
+  public void testTopNExpression()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource("xx")
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("texpr", "texpr"))
+        .virtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "map(x -> concat(x, 'foo'), tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .metric("count")
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .threshold(15)
+        .build();
+
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+          pool,
+          new TopNQueryQueryToolChest(
+              new TopNQueryConfig(),
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
+          ),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+      QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+          factory,
+          new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+          null
+      );
+      Map<String, Object> context = new HashMap<>();
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      List<Map<String, Object>> expected =
+          ImmutableList.<Map<String, Object>>builder()
+                       .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
+                       .add(ImmutableMap.of("texpr", "t5foo", "count", 2L))
+                       .add(ImmutableMap.of("texpr", "foo", "count", 1L))
+                       .add(ImmutableMap.of("texpr", "t1foo", "count", 1L))
+                       .add(ImmutableMap.of("texpr", "t2foo", "count", 1L))
+                       .add(ImmutableMap.of("texpr", "t4foo", "count", 1L))
+                       .add(ImmutableMap.of("texpr", "t6foo", "count", 1L))
+                       .add(ImmutableMap.of("texpr", "t7foo", "count", 1L))
+                       .build();
+
+      List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+          new Result<TopNResultValue>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new TopNResultValue(
+                  expected
+              )
+          )
+      );
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
+    }
+  }
+
+  @Test
+  public void testTopNExpressionAutoTransform()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource("xx")
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("texpr", "texpr"))
+        .virtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "concat(tags, 'foo')",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .metric("count")
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .threshold(15)
+        .build();
+
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+          pool,
+          new TopNQueryQueryToolChest(
+              new TopNQueryConfig(),
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
+          ),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+      QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+          factory,
+          new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+          null
+      );
+      Map<String, Object> context = new HashMap<>();
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+
+      List<Map<String, Object>> expected =
+          ImmutableList.<Map<String, Object>>builder()
+              .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
+              .add(ImmutableMap.of("texpr", "t5foo", "count", 2L))
+              .add(ImmutableMap.of("texpr", "foo", "count", 1L))
+              .add(ImmutableMap.of("texpr", "t1foo", "count", 1L))
+              .add(ImmutableMap.of("texpr", "t2foo", "count", 1L))
+              .add(ImmutableMap.of("texpr", "t4foo", "count", 1L))
+              .add(ImmutableMap.of("texpr", "t6foo", "count", 1L))
+              .add(ImmutableMap.of("texpr", "t7foo", "count", 1L))
+              .build();
+
+      List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+          new Result<TopNResultValue>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new TopNResultValue(
+                  expected
               )
           )
       );

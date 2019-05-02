@@ -38,7 +38,8 @@ public class ExpressionColumnValueSelectorTest
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
-        dimensionSelectorFromSupplier(settableSupplier)
+        dimensionSelectorFromSupplier(settableSupplier),
+        false
     );
 
     Assert.assertNotNull(supplier);

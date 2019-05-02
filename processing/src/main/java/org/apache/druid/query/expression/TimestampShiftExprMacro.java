@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
@@ -30,6 +31,7 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -99,6 +101,14 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
       arg.visit(visitor);
       visitor.visit(this);
     }
+
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newArg = arg.visit(shuttle);
+      return shuttle.visit(new TimestampShiftExpr(ImmutableList.of(newArg)));
+    }
   }
 
   private static class TimestampShiftDynamicExpr implements Expr
@@ -128,6 +138,13 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
       }
       visitor.visit(this);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampShiftDynamicExpr(newArgs));
     }
   }
 }

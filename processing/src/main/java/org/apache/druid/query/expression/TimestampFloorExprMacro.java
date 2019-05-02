@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -28,6 +29,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -106,6 +108,14 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
       arg.visit(visitor);
       visitor.visit(this);
     }
+
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newArg = arg.visit(shuttle);
+      return shuttle.visit(new TimestampFloorExpr(ImmutableList.of(newArg)));
+    }
   }
 
   public static class TimestampFloorDynamicExpr implements Expr
@@ -132,6 +142,13 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
       }
       visitor.visit(this);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
     }
   }
 }

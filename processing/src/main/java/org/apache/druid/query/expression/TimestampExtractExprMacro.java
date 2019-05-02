@@ -84,6 +84,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     class TimestampExtractExpr implements Expr
     {
+      private final Expr arg;
+
+      private TimestampExtractExpr(Expr arg)
+      {
+        this.arg = arg;
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -128,8 +135,15 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
         visitor.visit(this);
       }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new TimestampExtractExpr(newArg));
+      }
     }
 
-    return new TimestampExtractExpr();
+    return new TimestampExtractExpr(arg);
   }
 }

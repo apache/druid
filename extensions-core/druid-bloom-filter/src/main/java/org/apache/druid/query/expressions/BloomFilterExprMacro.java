@@ -69,6 +69,13 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
 
     class BloomExpr implements Expr
     {
+      private final Expr arg;
+
+      private BloomExpr(Expr arg)
+      {
+        this.arg = arg;
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -117,8 +124,15 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
         visitor.visit(this);
       }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new BloomExpr(newArg));
+      }
     }
 
-    return new BloomExpr();
+    return new BloomExpr(arg);
   }
 }

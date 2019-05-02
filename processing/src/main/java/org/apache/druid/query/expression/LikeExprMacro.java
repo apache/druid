@@ -69,6 +69,13 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
 
     class LikeExtractExpr implements Expr
     {
+      private final Expr arg;
+
+      private LikeExtractExpr(Expr arg)
+      {
+        this.arg = arg;
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -82,8 +89,15 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
         visitor.visit(this);
       }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new LikeExtractExpr(newArg));
+      }
     }
-    return new LikeExtractExpr();
+    return new LikeExtractExpr(arg);
   }
 }
 

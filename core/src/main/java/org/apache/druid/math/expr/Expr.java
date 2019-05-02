@@ -29,16 +29,25 @@ import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
+ * Base interface of Druid expression language abstract syntax tree
  */
 public interface Expr
 {
   default boolean isLiteral()
   {
     // Overridden by things that are literals.
+    return false;
+  }
+
+  default boolean isArray()
+  {
+    // Overridden by things that are arrays.
     return false;
   }
 
@@ -56,20 +65,60 @@ public interface Expr
     throw new ISE("Not a literal");
   }
 
+  /**
+   * Evaluate the {@link Expr} with the bindings which supply {@link IdentifierExpr} with their values, producing an
+   * {@link ExprEval} with the result.
+   */
   @Nonnull
   ExprEval eval(ObjectBinding bindings);
 
+  /**
+   * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
+   */
   interface ObjectBinding
   {
+    /**
+     * Get value binding for string identifier of {@link IdentifierExpr}
+     */
     @Nullable
     Object get(String name);
   }
 
+  /**
+   * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
+   * ensuring the {@link Visitor} can reach all of it's {@link Expr} children.
+   */
   void visit(Visitor visitor);
 
+  /**
+   * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}.Each {@link Expr} is responsible for
+   * ensuring the {@link Shuttle} can reach all of it's {@link Expr} children, as well as updating it's children
+   * {@link Expr} with the results from the {@link Shuttle}.
+   */
+  Expr visit(Shuttle shuttle);
+
+  /**
+   * Mechanism to inspect an {@link Expr}, implementing a {@link Visitor} allows visiting all children of an
+   * {@link Expr}
+   */
   interface Visitor
   {
+    /**
+     * Provide the {@link Visitor} with an {@link Expr} to inspect
+     */
     void visit(Expr expr);
+  }
+
+  /**
+   * Mechanism to rewrite an {@link Expr}, implementing a {@link Shuttle} allows visiting all children of an
+   * {@link Expr}, and replacing them as desired.
+   */
+  interface Shuttle
+  {
+    /**
+     * Provide the {@link Shuttle} with an {@link Expr} to inspect and potentially rewrite.
+     */
+    Expr visit(Expr expr);
   }
 }
 
@@ -85,6 +134,21 @@ abstract class ConstantExpr implements Expr
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
+  }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    return shuttle.visit(this);
+  }
+}
+
+abstract class ConstantArrayExpr extends ConstantExpr
+{
+  @Override
+  public boolean isArray()
+  {
+    return true;
   }
 }
 
@@ -118,6 +182,36 @@ class LongExpr extends ConstantExpr
   }
 }
 
+class LongArrayExpr extends ConstantArrayExpr
+{
+  private final Long[] value;
+
+  public LongArrayExpr(Long[] value)
+  {
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Nonnull
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
+  @Override
+  public String toString()
+  {
+    return Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", "));
+  }
+
+  @Nonnull
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofLongArray(value);
+  }
+}
+
 class StringExpr extends ConstantExpr
 {
   private final String value;
@@ -145,6 +239,36 @@ class StringExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.of(value);
+  }
+}
+
+class StringArrayExpr extends ConstantArrayExpr
+{
+  private final String[] value;
+
+  public StringArrayExpr(String[] value)
+  {
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Nonnull
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.join(", ", value);
+  }
+
+  @Nonnull
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofStringArray(value);
   }
 }
 
@@ -178,6 +302,36 @@ class DoubleExpr extends ConstantExpr
   }
 }
 
+class DoubleArrayExpr extends ConstantArrayExpr
+{
+  private final Double[] value;
+
+  public DoubleArrayExpr(Double[] value)
+  {
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Nonnull
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
+  @Override
+  public String toString()
+  {
+    return Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", "));
+  }
+
+  @Nonnull
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofDoubleArray(value);
+  }
+}
+
 class IdentifierExpr implements Expr
 {
   private final String value;
@@ -204,6 +358,83 @@ class IdentifierExpr implements Expr
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
+  }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    return shuttle.visit(this);
+  }
+}
+
+class LambdaExpr implements Expr
+{
+  private final List<IdentifierExpr> args;
+  private final Expr expr;
+
+  public LambdaExpr(List<IdentifierExpr> args, Expr expr)
+  {
+    this.args = args;
+    this.expr = expr;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "(" + args + " " + expr + ")";
+  }
+
+  public String getIdentifier()
+  {
+    Preconditions.checkState(args.size() == 1, "LambdaExpr has no or multiple arguments");
+    return args.get(0).toString();
+  }
+
+  public List<String> getIdentifiers()
+  {
+    return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
+  }
+
+  public List<IdentifierExpr> getIdentifierExprs()
+  {
+    return args;
+  }
+
+  public Expr getExpr()
+  {
+    return expr;
+  }
+
+  @Nonnull
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return expr.eval(bindings);
+  }
+
+  @Override
+  public void visit(Visitor visitor)
+  {
+    // return free variables only
+    expr.visit(
+        _expr -> {
+          if (_expr instanceof IdentifierExpr) {
+            if (args.stream().noneMatch(x -> _expr.toString().equals(x.toString()))) {
+              visitor.visit(_expr);
+            }
+          }
+        }
+    );
+    visitor.visit(this);
+  }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    List<IdentifierExpr> newArgs =
+        args.stream().map(arg -> (IdentifierExpr) shuttle.visit(arg)).collect(Collectors.toList());
+    Expr newBody = expr.visit(shuttle);
+    return shuttle.visit(new LambdaExpr(newArgs, newBody));
   }
 }
 
@@ -241,6 +472,60 @@ class FunctionExpr implements Expr
     }
     visitor.visit(this);
   }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    List<Expr> newArgs = args.stream().map(shuttle::visit).collect(Collectors.toList());
+    return shuttle.visit(new FunctionExpr(function, name, newArgs));
+  }
+}
+
+class ApplyFunctionExpr implements Expr
+{
+  final ApplyFunction function;
+  final String name;
+  final LambdaExpr lambdaExpr;
+  final List<Expr> argsExpr;
+
+  public ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
+  {
+    this.function = function;
+    this.name = name;
+    this.argsExpr = args;
+    this.lambdaExpr = expr;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "(" + name + " " + lambdaExpr + " " + argsExpr + ")";
+  }
+
+  @Nonnull
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return function.apply(lambdaExpr, argsExpr, bindings);
+  }
+
+  @Override
+  public void visit(Visitor visitor)
+  {
+    lambdaExpr.visit(visitor);
+    for (Expr arg : argsExpr) {
+      arg.visit(visitor);
+    }
+    visitor.visit(this);
+  }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    LambdaExpr newLambda = (LambdaExpr) lambdaExpr.visit(shuttle);
+    List<Expr> newArgs = argsExpr.stream().map(shuttle::visit).collect(Collectors.toList());
+    return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, newArgs));
+  }
 }
 
 abstract class UnaryExpr implements Expr
@@ -252,11 +537,23 @@ abstract class UnaryExpr implements Expr
     this.expr = expr;
   }
 
+  abstract UnaryExpr copy(Expr expr);
+
   @Override
   public void visit(Visitor visitor)
   {
     expr.visit(visitor);
     visitor.visit(this);
+  }
+
+  @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    Expr newExpr = expr.visit(shuttle);
+    if (newExpr != expr) {
+      return shuttle.visit(copy(newExpr));
+    }
+    return shuttle.visit(this);
   }
 }
 
@@ -265,6 +562,12 @@ class UnaryMinusExpr extends UnaryExpr
   UnaryMinusExpr(Expr expr)
   {
     super(expr);
+  }
+
+  @Override
+  UnaryExpr copy(Expr expr)
+  {
+    return new UnaryMinusExpr(expr);
   }
 
   @Nonnull
@@ -285,13 +588,6 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public void visit(Visitor visitor)
-  {
-    expr.visit(visitor);
-    visitor.visit(this);
-  }
-
-  @Override
   public String toString()
   {
     return "-" + expr;
@@ -303,6 +599,12 @@ class UnaryNotExpr extends UnaryExpr
   UnaryNotExpr(Expr expr)
   {
     super(expr);
+  }
+
+  @Override
+  UnaryExpr copy(Expr expr)
+  {
+    return new UnaryNotExpr(expr);
   }
 
   @Nonnull
@@ -330,8 +632,8 @@ class UnaryNotExpr extends UnaryExpr
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;
-  protected final Expr left;
-  protected final Expr right;
+  protected Expr left;
+  protected Expr right;
 
   public BinaryOpExprBase(String op, Expr left, Expr right)
   {
@@ -349,10 +651,24 @@ abstract class BinaryOpExprBase implements Expr
   }
 
   @Override
+  public Expr visit(Shuttle shuttle)
+  {
+    Expr newLeft = left.visit(shuttle);
+    Expr newRight = right.visit(shuttle);
+    if (left != newLeft || right != newRight) {
+      return shuttle.visit(copy(newLeft, newRight));
+    }
+    return shuttle.visit(this);
+  }
+
+  @Override
   public String toString()
   {
     return "(" + op + " " + left + " " + right + ")";
   }
+
+  protected abstract BinaryOpExprBase copy(Expr left, Expr right);
+
 }
 
 abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
@@ -374,6 +690,7 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
       return ExprEval.of(null);
     }
+
 
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
@@ -408,6 +725,12 @@ class BinMinusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinMinusExpr(op, left, right);
+  }
+
+  @Override
   protected final long evalLong(long left, long right)
   {
     return left - right;
@@ -425,6 +748,12 @@ class BinPowExpr extends BinaryEvalOpExprBase
   BinPowExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinPowExpr(op, left, right);
   }
 
   @Override
@@ -448,6 +777,12 @@ class BinMulExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinMulExpr(op, left, right);
+  }
+
+  @Override
   protected final long evalLong(long left, long right)
   {
     return left * right;
@@ -465,6 +800,12 @@ class BinDivExpr extends BinaryEvalOpExprBase
   BinDivExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinDivExpr(op, left, right);
   }
 
   @Override
@@ -488,6 +829,12 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinModuloExpr(op, left, right);
+  }
+
+  @Override
   protected final long evalLong(long left, long right)
   {
     return left % right;
@@ -505,6 +852,12 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   BinPlusExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinPlusExpr(op, left, right);
   }
 
   @Override
@@ -535,6 +888,12 @@ class BinLtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinLtExpr(op, left, right);
+  }
+
+  @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
     return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) < 0, ExprType.LONG);
@@ -559,6 +918,12 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   BinLeqExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinLeqExpr(op, left, right);
   }
 
   @Override
@@ -589,6 +954,12 @@ class BinGtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinGtExpr(op, left, right);
+  }
+
+  @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
     return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) > 0, ExprType.LONG);
@@ -613,6 +984,12 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   BinGeqExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinGeqExpr(op, left, right);
   }
 
   @Override
@@ -643,6 +1020,12 @@ class BinEqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinEqExpr(op, left, right);
+  }
+
+  @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
     return ExprEval.of(Objects.equals(left, right), ExprType.LONG);
@@ -666,6 +1049,12 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   BinNeqExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinNeqExpr(op, left, right);
   }
 
   @Override
@@ -694,6 +1083,12 @@ class BinAndExpr extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinAndExpr(op, left, right);
+  }
+
   @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
@@ -708,6 +1103,12 @@ class BinOrExpr extends BinaryOpExprBase
   BinOrExpr(String op, Expr left, Expr right)
   {
     super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinOrExpr(op, left, right);
   }
 
   @Nonnull

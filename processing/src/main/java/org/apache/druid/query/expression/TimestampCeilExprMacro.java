@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -29,6 +30,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -81,6 +83,13 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
       arg.visit(visitor);
       visitor.visit(this);
     }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newArg = arg.visit(shuttle);
+      return shuttle.visit(new TimestampCeilExpr(ImmutableList.of(newArg)));
+    }
   }
 
   private static PeriodGranularity getGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
@@ -117,6 +126,13 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
       }
       visitor.visit(this);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
     }
   }
 }

@@ -45,9 +45,13 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ExpressionSelectors
 {
@@ -132,6 +136,9 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = Parser.findRequiredBindings(expression);
+    final Set<String> expectedArrays = Parser.findArrayFnBindings(expression);
+    final Set<String> actualArrays = Parser.findArrayFnBindings(expression);
+    final Set<String> unknownIfArrays = new HashSet<>();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -146,7 +153,10 @@ public class ExpressionSelectors
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded()) {
+                 && capabilities.isDictionaryEncoded()
+                 && capabilities.isComplete()
+                 && !capabilities.hasMultipleValues()
+                 && !expectedArrays.contains(column)) {
         // Optimization for expressions that hit one string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -155,15 +165,40 @@ public class ExpressionSelectors
       }
     }
 
-    final Expr.ObjectBinding bindings = createBindings(expression, columnSelectorFactory);
+    for (String column : columns) {
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
+      if (capabilities != null) {
+        if (capabilities.hasMultipleValues()) {
+          actualArrays.add(column);
+        } else if (!capabilities.isComplete() && capabilities.getType().equals(ValueType.STRING) && (actualArrays.contains(column) || !expectedArrays.contains(column))) {
+          unknownIfArrays.add(column);
+        }
+      } else {
+        unknownIfArrays.add(column);
+      }
+    }
+
+    final List<String> needsApplied = columns.stream().filter(c -> actualArrays.contains(c) && !expectedArrays.contains(c)).collect(Collectors.toList());
+    final Expr finalExpr;
+    if (needsApplied.size() > 0) {
+      finalExpr = Parser.applyUnappliedIdentifiers(expression, needsApplied);
+    } else {
+      finalExpr = expression;
+    }
+
+
+    final Expr.ObjectBinding bindings = createBindings(expression, columnSelectorFactory, unknownIfArrays);
 
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
       return new ConstantExprEvalSelector(expression.eval(bindings));
     }
 
+    if (unknownIfArrays.size() > 0) {
+      return new OpportunisticMultiValueStringExpressionColumnValueSelector(finalExpr, bindings, unknownIfArrays);
+    }
     // No special optimization.
-    return new ExpressionColumnValueSelector(expression, bindings);
+    return new ExpressionColumnValueSelector(finalExpr, bindings);
   }
 
   public static DimensionSelector makeDimensionSelector(
@@ -173,6 +208,9 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = Parser.findRequiredBindings(expression);
+    final Set<String> expectedArrays = Parser.findArrayFnBindings(expression);
+    final Set<String> actualArrays = Parser.findArrayFnBindings(expression);
+    final Set<String> unknownIfArrays = new HashSet<>();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -180,7 +218,11 @@ public class ExpressionSelectors
 
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded()) {
+          && capabilities.isDictionaryEncoded()
+          && capabilities.isComplete()
+          && !capabilities.hasMultipleValues()
+          && !expectedArrays.contains(column)
+      ) {
         // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -189,7 +231,21 @@ public class ExpressionSelectors
       }
     }
 
+    for (String column : columns) {
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
+      if (capabilities != null) {
+        if (capabilities.hasMultipleValues()) {
+          actualArrays.add(column);
+        } else if (!capabilities.isComplete() && capabilities.getType().equals(ValueType.STRING) && (actualArrays.contains(column) || !expectedArrays.contains(column))) {
+          unknownIfArrays.add(column);
+        }
+      } else {
+        unknownIfArrays.add(column);
+      }
+    }
+
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
+    final boolean multiVal = actualArrays.size() > 0 || expectedArrays.size() > 0 || unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
@@ -198,42 +254,124 @@ public class ExpressionSelectors
       // Optimization for null dimension selector.
       return DimensionSelector.constant(null);
     } else if (extractionFn == null) {
-      class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-      {
-        @Override
-        protected String getValue()
-        {
-          return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
-        }
 
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      if (multiVal) {
+        class MultiValueDimensionSelector extends BaseMultiValueExpressionDimensionSelector
         {
-          inspector.visit("baseSelector", baseSelector);
+          private MultiValueDimensionSelector()
+          {
+            super(baseSelector);
+          }
+
+          @Override
+          String getValue(ExprEval evaluated)
+          {
+            assert !evaluated.isArray();
+            return NullHandling.emptyToNullIfNeeded(evaluated.asString());
+          }
+
+          @Override
+          List<String> getArray(ExprEval evaluated)
+          {
+            assert evaluated.isArray();
+            return Arrays.stream(evaluated.asStringArray())
+                         .map(NullHandling::emptyToNullIfNeeded)
+                         .collect(Collectors.toList());
+          }
+
+          @Override
+          String getArrayValue(ExprEval evaluated, int i)
+          {
+            assert evaluated.isArray();
+            String[] stringArray = evaluated.asStringArray();
+            assert i < stringArray.length;
+            return NullHandling.emptyToNullIfNeeded(stringArray[i]);
+          }
         }
+        return new MultiValueDimensionSelector();
+      } else {
+        class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
+        {
+          @Override
+          protected String getValue()
+          {
+
+            return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("baseSelector", baseSelector);
+          }
+        }
+        return new DefaultExpressionDimensionSelector();
       }
-      return new DefaultExpressionDimensionSelector();
     } else {
-      class ExtractionExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-      {
-        @Override
-        protected String getValue()
+      if (multiVal) {
+        class ExtractionMultiValueDimensionSelector extends BaseMultiValueExpressionDimensionSelector
         {
-          return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
-        }
+          ExtractionMultiValueDimensionSelector()
+          {
+            super(baseSelector);
+          }
 
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("baseSelector", baseSelector);
-          inspector.visit("extractionFn", extractionFn);
+          @Override
+          String getValue(ExprEval evaluated)
+          {
+            assert !evaluated.isArray();
+            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
+          }
+
+          @Override
+          List<String> getArray(ExprEval evaluated)
+          {
+            assert evaluated.isArray();
+            return Arrays.stream(evaluated.asStringArray())
+                         .map(x -> extractionFn.apply(NullHandling.emptyToNullIfNeeded(x)))
+                         .collect(Collectors.toList());
+          }
+
+          @Override
+          String getArrayValue(ExprEval evaluated, int i)
+          {
+            assert evaluated.isArray();
+            String[] stringArray = evaluated.asStringArray();
+            assert i < stringArray.length;
+            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(stringArray[i]));
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("baseSelector", baseSelector);
+            inspector.visit("extractionFn", extractionFn);
+          }
         }
+        return new ExtractionMultiValueDimensionSelector();
+
+      } else {
+        class ExtractionExpressionDimensionSelector extends BaseSingleValueDimensionSelector
+        {
+          @Override
+          protected String getValue()
+          {
+            return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("baseSelector", baseSelector);
+            inspector.visit("extractionFn", extractionFn);
+          }
+        }
+        return new ExtractionExpressionDimensionSelector();
       }
-      return new ExtractionExpressionDimensionSelector();
     }
   }
 
-  private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
+  private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory, Set<String> unknownMultiValue)
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     final List<String> columns = Parser.findRequiredBindings(expression);
@@ -241,6 +379,9 @@ public class ExpressionSelectors
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
+      //      final boolean multiVal = unknownMultiValue.contains(columnName) ||
+      //                               (columnCapabilities != null && columnCapabilities.hasMultipleValues());
+      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues();
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
@@ -257,8 +398,8 @@ public class ExpressionSelectors
         supplier = makeNullableSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
-            columnSelectorFactory
-                .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
+            multiVal
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
@@ -310,18 +451,24 @@ public class ExpressionSelectors
 
   @VisibleForTesting
   @Nonnull
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean multiValue)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
       final IndexedInts row = selector.getRow();
 
-      if (row.size() == 1) {
+      if (row.size() == 1 && !multiValue) {
         return selector.lookupName(row.get(0));
       } else {
-        // Can't handle non-singly-valued rows in expressions.
-        // Treat them as nulls until we think of something better to do.
-        return null;
+        // column selector factories hate you and use [] and [null] interchangeably for nullish data
+        if (row.size() == 0) {
+          return new String[]{null};
+        }
+        final String[] strings = new String[row.size()];
+        for (int i = 0; i < row.size(); i++) {
+          strings[i] = selector.lookupName(row.get(i));
+        }
+        return strings;
       }
     };
   }
@@ -343,6 +490,15 @@ public class ExpressionSelectors
         final Object val = selector.getObject();
         if (val instanceof Number || val instanceof String) {
           return val;
+        } else if (val instanceof List) {
+          // strings can be lists of strings!!
+          // this can happen from an "unknown" capabilites multi-value string dimension row, and we fallback to the
+          // object selector
+          Object[] arrayVal = ((List) val).stream().map(Object::toString).toArray(String[]::new);
+          if (arrayVal.length > 0) {
+            return arrayVal;
+          }
+          return new String[]{null};
         } else {
           return null;
         }

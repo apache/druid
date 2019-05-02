@@ -59,6 +59,13 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
     class RegexpExtractExpr implements Expr
     {
+      private final Expr arg;
+
+      private RegexpExtractExpr(Expr arg)
+      {
+        this.arg = arg;
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -75,7 +82,14 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
         arg.visit(visitor);
         visitor.visit(this);
       }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new RegexpExtractExpr(newArg));
+      }
     }
-    return new RegexpExtractExpr();
+    return new RegexpExtractExpr(arg);
   }
 }

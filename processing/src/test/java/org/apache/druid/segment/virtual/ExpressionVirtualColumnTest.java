@@ -70,6 +70,18 @@ public class ExpressionVirtualColumnTest
       ImmutableMap.of("x", 2L, "y", 3L, "z", "foobar")
   );
 
+  private static final InputRow ROWMULTI = new MapBasedInputRow(
+      DateTimes.of("2000-01-02T01:00:00").getMillis(),
+      ImmutableList.of(),
+      ImmutableMap.of(
+          "x", 2L,
+          "y", 3L,
+          "a", ImmutableList.of("a", "b", "c"),
+          "b", ImmutableList.of("1", "2", "3"),
+          "c", ImmutableList.of("4", "5", "6")
+      )
+  );
+
   private static final ExpressionVirtualColumn X_PLUS_Y = new ExpressionVirtualColumn(
       "expr",
       "x + y",
@@ -125,6 +137,13 @@ public class ExpressionVirtualColumnTest
       TestExprMacroTable.INSTANCE
   );
 
+  private static final ExpressionVirtualColumn SCALE_LIST = new ExpressionVirtualColumn(
+      "expr",
+      "map(b -> b * 2, b)",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
+
   private static final ThreadLocal<Row> CURRENT_ROW = new ThreadLocal<>();
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
       CURRENT_ROW,
@@ -152,6 +171,16 @@ public class ExpressionVirtualColumnTest
 
     CURRENT_ROW.set(ROW3);
     Assert.assertEquals(5L, selector.getObject());
+  }
+
+  @Test
+  public void testMultiObjectSelector()
+  {
+    CURRENT_ROW.set(ROWMULTI);
+
+    final BaseObjectColumnValueSelector selector = SCALE_LIST.makeDimensionSelector(new DefaultDimensionSpec("expr", "expr"), COLUMN_SELECTOR_FACTORY);
+
+    Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selector.getObject());
   }
 
   @Test
@@ -289,6 +318,22 @@ public class ExpressionVirtualColumnTest
   }
 
   @Test
+  public void testNullDimensionSelector()
+  {
+    final DimensionSelector selector = X_PLUS_Y.makeDimensionSelector(
+        new DefaultDimensionSpec("expr", "expr"),
+        COLUMN_SELECTOR_FACTORY
+    );
+
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
+
+    CURRENT_ROW.set(ROW0);
+    Assert.assertEquals(false, nonNullMatcher.matches());
+
+
+  }
+
+  @Test
   public void testDimensionSelectorUsingStringFunction()
   {
     final DimensionSelector selector = Z_CONCAT_X.makeDimensionSelector(
@@ -374,7 +419,7 @@ public class ExpressionVirtualColumnTest
       Assert.assertEquals(false, nullMatcher.matches());
       Assert.assertEquals(false, fiveMatcher.matches());
       Assert.assertEquals(true, nonNullMatcher.matches());
-      Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
+      Assert.assertEquals("4.0", selector.lookupName(selector.getRow().get(0)));
     } else {
       // y is null in row1
       Assert.assertEquals(true, nullMatcher.matches());
@@ -387,7 +432,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(false, nullMatcher.matches());
     Assert.assertEquals(true, fiveMatcher.matches());
     Assert.assertEquals(true, nonNullMatcher.matches());
-    Assert.assertEquals("5", selector.lookupName(selector.getRow().get(0)));
+    Assert.assertEquals("5.1", selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW3);
     Assert.assertEquals(false, nullMatcher.matches());

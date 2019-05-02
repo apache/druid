@@ -23,5 +23,5 @@ package org.apache.druid.math.expr;
  */
 public enum ExprType
 {
-  DOUBLE, LONG, STRING
+  DOUBLE, LONG, STRING, DOUBLE_ARRAY, LONG_ARRAY, STRING_ARRAY
 }

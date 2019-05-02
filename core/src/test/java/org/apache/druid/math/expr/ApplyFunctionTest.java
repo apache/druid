@@ -1,0 +1,146 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.math.expr;
+
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+public class ApplyFunctionTest
+{
+  private Expr.ObjectBinding bindings;
+
+  @Before
+  public void setup()
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("x", "foo");
+    builder.put("y", 2);
+    builder.put("z", 3.1);
+    builder.put("a", new String[] {"foo", "bar", "baz", "foobar"});
+    builder.put("b", new Long[] {1L, 2L, 3L, 4L, 5L});
+    builder.put("c", new Double[] {3.1, 4.2, 5.3});
+    builder.put("d", new String[] {null});
+    builder.put("e", new String[] {null, "foo", "bar"});
+    builder.put("f", new String[0]);
+    bindings = Parser.withMap(builder.build());
+  }
+
+  @Test
+  public void testMap()
+  {
+    assertExpr("map((x) -> concat(x, 'foo'), ['foo', 'bar', 'baz', 'foobar'])", new String[] {"foofoo", "barfoo", "bazfoo", "foobarfoo"});
+    assertExpr("map((x) -> concat(x, 'foo'), a)", new String[] {"foofoo", "barfoo", "bazfoo", "foobarfoo"});
+
+    assertExpr("map((x) -> x + 1, [1, 2, 3, 4, 5])", new Long[] {2L, 3L, 4L, 5L, 6L});
+    assertExpr("map((x) -> x + 1, b)", new Long[] {2L, 3L, 4L, 5L, 6L});
+
+    assertExpr("map((c) -> c + z, [3.1, 4.2, 5.3])", new Double[]{6.2, 7.3, 8.4});
+    assertExpr("map((c) -> c + z, c)", new Double[]{6.2, 7.3, 8.4});
+
+    assertExpr("map((x) -> x + 1, map((x) -> x + 1, [1, 2, 3, 4, 5]))", new Long[] {3L, 4L, 5L, 6L, 7L});
+    assertExpr("map((x) -> x + 1, map((x) -> x + 1, b))", new Long[] {3L, 4L, 5L, 6L, 7L});
+  }
+
+  @Test
+  public void testCartesianMap()
+  {
+    assertExpr("cartesian_map((x, y) -> concat(x, y), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'])", new String[] {"foobar", "foobaz", "barbar", "barbaz", "bazbar", "bazbaz", "foobarbar", "foobarbaz"});
+    assertExpr("cartesian_map((x, y, z) -> concat(concat(x, y), z), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'], ['omg'])", new String[] {"foobaromg", "foobazomg", "barbaromg", "barbazomg", "bazbaromg", "bazbazomg", "foobarbaromg", "foobarbazomg"});
+
+    assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
+    assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
+    if (NullHandling.replaceWithDefault()) {
+      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, "foo", "bar"});
+      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, "foo", "bar", "foo", "foofoo", "foobar", "bar", "barfoo", "barbar"});
+    } else {
+      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, null, null});
+      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, null, null, null, "foofoo", "foobar", null, "barfoo", "barbar"});
+    }
+  }
+
+  @Test
+  public void testFilter()
+  {
+    assertExpr("filter((x) -> strlen(x) > 3, ['foo', 'bar', 'baz', 'foobar'])", new String[] {"foobar"});
+    assertExpr("filter((x) -> strlen(x) > 3, a)", new String[] {"foobar"});
+
+    assertExpr("filter((x) -> x > 2, [1, 2, 3, 4, 5])", new Long[] {3L, 4L, 5L});
+    assertExpr("filter((x) -> x > 2, b)", new Long[] {3L, 4L, 5L});
+  }
+
+  @Test
+  public void testFoldr()
+  {
+    assertExpr("foldr((x, y) -> x + y, [1, 1, 1, 1, 1], 0)", 5L);
+    assertExpr("foldr((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
+  }
+
+  @Test
+  public void testCartesianFoldr()
+  {
+    assertExpr("cartesian_foldr((x, y, acc) -> x + y + acc, [1, 1, 1, 1, 1], [1, 1], 0)", 20L);
+  }
+
+  @Test
+  public void testAnyMatch()
+  {
+    assertExpr("any(x -> x > 3, [1, 2, 3, 4])", "true");
+    assertExpr("any(x -> x > 3, [1, 2, 3])", "false");
+    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3, 4]))", "true");
+    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3]))", "false");
+  }
+
+  @Test
+  public void testAllMatch()
+  {
+    assertExpr("all(x -> x > 0, [1 2 3 4])", "true");
+    assertExpr("all(x -> x > 1, [1 2 3 4])", "false");
+    assertExpr("all(x -> x, map(x -> x > 0, [1 2 3 4]))", "true");
+    assertExpr("all(x -> x, map(x -> x > 1, [1 2 3 4]))", "false");
+  }
+
+  private void assertExpr(final String expression, final Object expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
+  }
+
+  private void assertExpr(final String expression, final Object[] expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    final Object[] result = expr.eval(bindings).asArray();
+    if (expectedResult.length != 0 || result == null || result.length != 0) {
+      Assert.assertArrayEquals(expression, expectedResult, result);
+    }
+  }
+
+  private void assertExpr(final String expression, final Double[] expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Double[] result = (Double[]) expr.eval(bindings).value();
+    Assert.assertEquals(expectedResult.length, result.length);
+    for (int i = 0; i < result.length; i++) {
+      Assert.assertEquals(expression, expectedResult[i], result[i], 0.00001); // something is lame somewhere..
+    }
+  }
+}
