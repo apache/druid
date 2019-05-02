@@ -24,7 +24,7 @@ title: "Segments"
 
 # Segments
 
-Druid stores its index in *segment files*, which are partitioned by
+Apache Druid (incubating) stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time
 interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the `granularitySpec`, which is

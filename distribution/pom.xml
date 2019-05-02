@@ -333,7 +333,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
-                                    </arguments>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>                                    </arguments>
                                 </configuration>
                             </execution>
                         </executions>

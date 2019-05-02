@@ -24,7 +24,7 @@ title: "RabbitMQ"
 
 # RabbitMQ
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-rabbitmq` extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-rabbitmq` extension.
 
 ## Firehose
 

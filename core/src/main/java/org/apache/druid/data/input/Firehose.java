@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -67,6 +68,24 @@ public interface Firehose extends Closeable
   InputRow nextRow();
 
   /**
+   * Returns an InputRowPlusRaw object containing the InputRow plus the raw, unparsed data corresponding to the next row
+   * available. Used in the sampler to provide the caller with information to assist in configuring a parse spec. If a
+   * ParseException is thrown by the parser, it should be caught and returned in the InputRowPlusRaw so we will be able
+   * to provide information on the raw row which failed to be parsed. Should only be called if hasMore returns true.
+   *
+   * @return an InputRowPlusRaw which may contain any of: an InputRow, the raw data, or a ParseException
+   */
+  default InputRowPlusRaw nextRowWithRaw()
+  {
+    try {
+      return InputRowPlusRaw.of(nextRow(), null);
+    }
+    catch (ParseException e) {
+      return InputRowPlusRaw.of(null, e);
+    }
+  }
+
+  /**
    * Returns a runnable that will "commit" everything read up to the point at which commit() is called.  This is
    * often equivalent to everything that has been read since the last commit() call (or instantiation of the object),
    * but doesn't necessarily have to be.
@@ -79,9 +98,9 @@ public interface Firehose extends Closeable
    * The Runnable is essentially just a lambda/closure that is run() after data supplied by this instance has
    * been committed on the writer side of this interface protocol.
    * <p>
-   * A simple implementation of this interface might do nothing when run() is called 
-   * (in which case the same do-nothing instance can be returned every time), or 
-   * a more complex implementation might clean up temporary resources that are no longer needed 
+   * A simple implementation of this interface might do nothing when run() is called
+   * (in which case the same do-nothing instance can be returned every time), or
+   * a more complex implementation might clean up temporary resources that are no longer needed
    * because of InputRows delivered by prior calls to {@link #nextRow()}.
    * </p>
    */

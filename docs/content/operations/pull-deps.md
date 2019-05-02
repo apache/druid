@@ -24,7 +24,7 @@ title: "pull-deps Tool"
 
 # pull-deps Tool
 
-`pull-deps` is a tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
+`pull-deps` is an Apache Druid (incubating) tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
 
 `pull-deps` has several command line options, they are as follows:
 
@@ -34,7 +34,7 @@ Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apac
 
 `-h` or `--hadoop-coordinate` (Can be specified multiply times)
 
-Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0
+Apache Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0
 
 `--no-default-hadoop`
 

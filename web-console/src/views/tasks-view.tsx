@@ -19,7 +19,6 @@
 import { Alert, Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
@@ -29,8 +28,10 @@ import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
+import { UrlBaser } from '../singletons/url-baser';
 import {
   addFilter,
+  booleanCustomTableFilter,
   countBy,
   formatDuration,
   getDruidErrorMessage, LocalStorageKeys,
@@ -47,6 +48,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
+  noSqlMode: boolean;
 }
 
 export interface TasksViewState {
@@ -72,6 +74,23 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 }
 
+interface TaskQueryResultRow {
+  created_time: string;
+  datasource: string;
+  duration: number;
+  error_msg: string | null;
+  location: string | null;
+  rank: number;
+  status: string;
+  task_id: string;
+  type: string;
+}
+
+interface SupervisorQueryResultRow {
+  id: string;
+  spec: any;
+}
+
 function statusToColor(status: string): string {
   switch (status) {
     case 'RUNNING': return '#2167d5';
@@ -84,11 +103,11 @@ function statusToColor(status: string): string {
 }
 
 export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<string, any[]>;
-  private taskQueryManager: QueryManager<string, any[]>;
+  private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
+  private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
-  private statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+  static statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -125,7 +144,24 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     );
   }
 
+  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
+    return data.map((d: any) => {
+      return {
+        created_time: d.createdTime,
+        datasource: d.dataSource,
+        duration: d.duration ? d.duration : 0,
+        error_msg: d.errorMsg,
+        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        rank: (TasksView.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
+        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+        task_id: d.id,
+        type: d.typTasksView
+      };
+    });
+  }
+
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -144,7 +180,16 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        return await queryDruidSql({ query });
+        if (!noSqlMode) {
+          return await queryDruidSql({ query });
+        } else {
+          const taskEndpoints: string[] = ['completeTasks', 'runningTasks', 'waitingTasks', 'pendingTasks'];
+          const result: TaskQueryResultRow[][] = await Promise.all(taskEndpoints.map(async (endpoint: string) => {
+            const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
+            return TasksView.parseTasks(resp.data);
+          }));
+          return [].concat.apply([], result);
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -390,10 +435,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a onClick={() => this.setState({ suspendSupervisorId: id })}>Suspend</a>;
 
               return <div>
-                <a href={`/druid/indexer/v1/supervisor/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/stats`} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/supervisor/${id}/history`} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/stats`)} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/history`)} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
                 {suspendResume}&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ resetSupervisorId: id })}>Reset</a>&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ terminateSupervisorId: id })}>Terminate</a>
@@ -493,7 +538,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: 'status',
+            accessor: (row) => { return {status: row.status, created_time: row.created_time}; },
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
@@ -521,9 +566,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
-            sortMethod: (status1: string, status2: string) => {
-              const statusRanking: any = this.statusRanking;
-              return statusRanking[status1] - statusRanking[status2];
+            sortMethod: (d1, d2) => {
+              const statusRanking: any = TasksView.statusRanking;
+              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
+            },
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.status.status);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
@@ -546,11 +594,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const id = row.value;
               const { status } = row.original;
               return <div>
-                <a href={`/druid/indexer/v1/task/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
-                <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/reports`)} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log`)} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
+                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log?offset=-8192`)} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
                 {(status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a>}
               </div>;
             },
@@ -566,7 +614,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
@@ -605,11 +653,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Refresh"
           onClick={() => this.taskQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
-        />
+        {
+          !noSqlMode &&
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+          />
+        }
         <Button
           icon={IconNames.PLUS}
           text="Submit task"

@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -180,47 +182,40 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 FunctionalIterable
                     .create(specs)
                     .transform(
-                        new Function<SegmentDescriptor, QueryRunner<T>>()
-                        {
-                          @Override
-                          public QueryRunner<T> apply(final SegmentDescriptor descriptor)
-                          {
-                            final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
-                                descriptor.getInterval(),
-                                descriptor.getVersion()
-                            );
-                            if (holder == null) {
-                              return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-                            }
+                        descriptor -> {
+                          final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
+                              descriptor.getInterval(),
+                              descriptor.getVersion()
+                          );
+                          if (holder == null) {
+                            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+                          }
 
-                            final PartitionChunk<Sink> chunk = holder.getChunk(descriptor.getPartitionNumber());
-                            if (chunk == null) {
-                              return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-                            }
+                          final PartitionChunk<Sink> chunk = holder.getChunk(descriptor.getPartitionNumber());
+                          if (chunk == null) {
+                            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+                          }
 
-                            final Sink theSink = chunk.getObject();
-                            final SegmentId sinkSegmentId = theSink.getSegment().getId();
+                          final Sink theSink = chunk.getObject();
+                          final SegmentId sinkSegmentId = theSink.getSegment().getId();
 
-                            return new SpecificSegmentQueryRunner<>(
-                                withPerSinkMetrics(
-                                    new BySegmentQueryRunner<>(
-                                        sinkSegmentId,
-                                        descriptor.getInterval().getStart(),
-                                        factory.mergeRunners(
-                                            Execs.directExecutor(),
-                                            Iterables.transform(
-                                                theSink,
-                                                new Function<FireHydrant, QueryRunner<T>>()
-                                                {
-                                                  @Override
-                                                  public QueryRunner<T> apply(final FireHydrant hydrant)
-                                                  {
+                          return new SpecificSegmentQueryRunner<>(
+                              withPerSinkMetrics(
+                                  new BySegmentQueryRunner<>(
+                                      sinkSegmentId,
+                                      descriptor.getInterval().getStart(),
+                                      factory.mergeRunners(
+                                          Execs.directExecutor(),
+                                          new SinkQueryRunners<>(
+                                              Iterables.transform(
+                                                  theSink,
+                                                  hydrant -> {
                                                     // Hydrant might swap at any point, but if it's swapped at the start
                                                     // then we know it's *definitely* swapped.
                                                     final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
 
                                                     if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-                                                      return new NoopQueryRunner<>();
+                                                      return new Pair<>(Intervals.ETERNITY, new NoopQueryRunner<>());
                                                     }
 
                                                     // Prevent the underlying segment from swapping when its being iterated
@@ -234,7 +229,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                       // 1) Only use caching if data is immutable
                                                       // 2) Hydrants are not the same between replicas, make sure cache is local
                                                       if (hydrantDefinitelySwapped && cache.isLocal()) {
-                                                        return new CachingQueryRunner<>(
+                                                        QueryRunner<T> cachingRunner = new CachingQueryRunner<>(
                                                             makeHydrantCacheIdentifier(hydrant),
                                                             descriptor,
                                                             objectMapper,
@@ -249,8 +244,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                             ),
                                                             cacheConfig
                                                         );
+                                                        return new Pair<>(segment.lhs.getDataInterval(), cachingRunner);
                                                       } else {
-                                                        return baseRunner;
+                                                        return new Pair<>(segment.lhs.getDataInterval(), baseRunner);
                                                       }
                                                     }
                                                     catch (RuntimeException e) {
@@ -258,17 +254,16 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                       throw e;
                                                     }
                                                   }
-                                                }
-                                            )
-                                        )
-                                    ),
-                                    toolChest,
-                                    sinkSegmentId,
-                                    cpuTimeAccumulator
-                                ),
-                                new SpecificSegmentSpec(descriptor)
-                            );
-                          }
+                                              )
+                                          )
+                                      )
+                                  ),
+                                  toolChest,
+                                  sinkSegmentId,
+                                  cpuTimeAccumulator
+                              ),
+                              new SpecificSegmentSpec(descriptor)
+                          );
                         }
                     )
             )

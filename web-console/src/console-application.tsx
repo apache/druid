@@ -24,8 +24,11 @@ import * as React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
+import {Loader} from './components/loader';
 import { AppToaster } from './singletons/toaster';
-import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
+import { UrlBaser } from './singletons/url-baser';
+import {QueryManager} from './utils';
+import {DRUID_DOCS_API, DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE} from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
 import { LookupsView } from './views/lookups-view';
@@ -45,45 +48,54 @@ export interface ConsoleApplicationProps extends React.Props<any> {
 
 export interface ConsoleApplicationState {
   aboutDialogOpen: boolean;
+  noSqlMode: boolean;
+  capabilitiesLoading: boolean;
 }
 
 export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
+  private capabilitiesQueryManager: QueryManager<string, string>;
 
-  static async ensureSql() {
+  static async discoverCapabilities(): Promise<'working-with-sql' | 'working-without-sql' | 'broken'> {
     try {
       await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return true; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return 'working-with-sql'; // other failure
       try {
         await axios.get('/status');
       } catch (e) {
-        return true; // total failure
+        return 'broken'; // total failure
       }
-
       // Status works but SQL 405s => the SQL endpoint is disabled
-      AppToaster.show({
-        icon: IconNames.ERROR,
-        intent: Intent.DANGER,
-        timeout: 120000,
-        /* tslint:disable:jsx-alignment */
-        message: <>
-          It appears that the SQL endpoint is disabled. Either <a
-          href={DRUID_DOCS_SQL}>enable the SQL endpoint</a> or use the old <a
-          href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
-          href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
-        </>
-        /* tslint:enable:jsx-alignment */
-      });
-      return false;
+      return 'working-without-sql';
     }
-    return true;
+    return 'working-with-sql';
   }
 
-  static async shownNotifications() {
-    await ConsoleApplication.ensureSql();
+  static shownNotifications(capabilities: string) {
+    let message: JSX.Element = <></>;
+    /* tslint:disable:jsx-alignment */
+    if (capabilities === 'working-without-sql') {
+      message = <>
+        It appears that the SQL endpoint is disabled. The console will fall back
+        to <a href={DRUID_DOCS_API} target="_blank">native Druid APIs</a> and will be
+        limited in functionality. Look at <a href={DRUID_DOCS_SQL} target="_blank">the SQL docs</a> to
+        enable the SQL endpoint.
+      </>;
+    } else if (capabilities === 'broken') {
+      message = <>
+        It appears that the Druid is not responding. Data cannot be retrieved right now
+      </>;
+    }
+    /* tslint:enable:jsx-alignment */
+    AppToaster.show({
+      icon: IconNames.ERROR,
+      intent: Intent.DANGER,
+      timeout: 120000,
+      message: message
+    });
   }
 
   private taskId: string | null;
@@ -95,19 +107,42 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      aboutDialogOpen: false
+      aboutDialogOpen: false,
+      noSqlMode: false,
+      capabilitiesLoading: true
     };
 
     if (props.baseURL) {
       axios.defaults.baseURL = props.baseURL;
+      UrlBaser.baseURL = props.baseURL;
     }
     if (props.customHeaderName && props.customHeaderValue) {
       axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
     }
+
+    this.capabilitiesQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        const capabilities = await ConsoleApplication.discoverCapabilities();
+        if (capabilities !== 'working-with-sql') {
+          ConsoleApplication.shownNotifications(capabilities);
+        }
+        return capabilities;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          noSqlMode: result === 'working-with-sql' ? false : true,
+          capabilitiesLoading: loading
+        });
+      }
+    });
   }
 
   componentDidMount(): void {
-    ConsoleApplication.shownNotifications();
+    this.capabilitiesQueryManager.runQuery('dummy');
+  }
+
+  componentWillUnmount(): void {
+    this.capabilitiesQueryManager.terminate();
   }
 
   private resetInitialsDelay() {
@@ -127,7 +162,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = datasource;
+    this.datasource = `"${datasource}"`;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
     this.resetInitialsDelay();
@@ -147,6 +182,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   render() {
     const { hideLegacy } = this.props;
+    const { noSqlMode, capabilitiesLoading } = this.state;
 
     const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
@@ -155,31 +191,40 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       </>;
     };
 
+    if (capabilitiesLoading) {
+      return <div className={'loading-capabilities'}>
+        <Loader
+          loadingText={''}
+          loading={capabilitiesLoading}
+        />
+      </div>;
+    }
+
     return <HashRouter hashType="noslash">
       <div className="console-application">
         <Switch>
           <Route
             path="/datasources"
             component={() => {
-              return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments}/>);
+              return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
             }}
           />
           <Route
             path="/segments"
             component={() => {
-              return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql}/>);
+              return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql} noSqlMode={noSqlMode}/>);
             }}
           />
           <Route
             path="/tasks"
             component={() => {
-              return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>, true);
+              return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} noSqlMode={noSqlMode}/>, true);
             }}
           />
           <Route
             path="/servers"
             component={() => {
-              return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>, true);
+              return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, true);
             }}
           />
           <Route
@@ -196,7 +241,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           />
           <Route
             component={() => {
-              return wrapInViewContainer(null, <HomeView/>);
+              return wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode}/>);
             }}
           />
         </Switch>

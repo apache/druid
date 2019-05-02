@@ -64,11 +64,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -92,6 +92,28 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
+  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
+      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSegment().getDataSource())
+      );
+
+  private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR =
+      segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSource())
+      );
+
+  /**
+   * Booleans constants represented as long type,
+   * where 1 = true and 0 = false to make it easy to count number of segments
+   * which are published, available etc.
+   */
+  private static final long IS_PUBLISHED_FALSE = 0L;
+  private static final long IS_PUBLISHED_TRUE = 1L;
+  private static final long IS_AVAILABLE_TRUE = 1L;
+  private static final long IS_OVERSHADOWED_FALSE = 0L;
+  private static final long IS_OVERSHADOWED_TRUE = 1L;
+
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("segment_id", ValueType.STRING)
@@ -106,6 +128,7 @@ public class SystemSchema extends AbstractSchema
       .add("is_published", ValueType.LONG)
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
+      .add("is_overshadowed", ValueType.LONG)
       .add("payload", ValueType.STRING)
       .build();
 
@@ -189,14 +212,6 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
-    /**
-     * Booleans constants used for available segments represented as long type,
-     * where 1 = true and 0 = false to make it easy to count number of segments
-     * which are published, available
-     */
-    private static final long DEFAULT_IS_PUBLISHED = 0;
-    private static final long DEFAULT_IS_AVAILABLE = 1;
-
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
@@ -235,12 +250,12 @@ public class SystemSchema extends AbstractSchema
           Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
-            new PartialSegmentData(DEFAULT_IS_AVAILABLE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
+            new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<DataSegment> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
@@ -251,8 +266,9 @@ public class SystemSchema extends AbstractSchema
           ))
           .transform(val -> {
             try {
-              segmentsAlreadySeen.add(val.getId());
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
+              final DataSegment segment = val.getDataSegment();
+              segmentsAlreadySeen.add(segment.getId());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
               long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
@@ -261,23 +277,24 @@ public class SystemSchema extends AbstractSchema
                 isRealtime = partialSegmentData.isRealtime();
               }
               return new Object[]{
-                  val.getId(),
-                  val.getDataSource(),
-                  val.getInterval().getStart().toString(),
-                  val.getInterval().getEnd().toString(),
-                  val.getSize(),
-                  val.getVersion(),
-                  Long.valueOf(val.getShardSpec().getPartitionNum()),
+                  segment.getId(),
+                  segment.getDataSource(),
+                  segment.getInterval().getStart().toString(),
+                  segment.getInterval().getEnd().toString(),
+                  segment.getSize(),
+                  segment.getVersion(),
+                  Long.valueOf(segment.getShardSpec().getPartitionNum()),
                   numReplicas,
                   numRows,
-                  1L, //is_published is true for published segments
+                  IS_PUBLISHED_TRUE, //is_published is true for published segments
                   isAvailable,
                   isRealtime,
+                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                   jsonMapper.writeValueAsString(val)
               };
             }
             catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getId());
+              throw new RE(e, "Error getting segment payload for segment %s", val.getDataSegment().getId());
             }
           });
 
@@ -303,9 +320,10 @@ public class SystemSchema extends AbstractSchema
                   Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  DEFAULT_IS_PUBLISHED,
-                  DEFAULT_IS_AVAILABLE,
+                  IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
+                  IS_AVAILABLE_TRUE, // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   val.getValue().isRealtime(),
+                  IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                   jsonMapper.writeValueAsString(val.getKey())
               };
             }
@@ -322,21 +340,18 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<DataSegment> getAuthorizedPublishedSegments(
-        Iterator<DataSegment> it,
+    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
+        Iterator<SegmentWithOvershadowedStatus> it,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
-          raGenerator,
+          SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
           authorizerMapper
       );
       return authorizedSegments.iterator();
@@ -440,14 +455,9 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-      final Access access = AuthorizationUtils.authorizeAllResourceActions(
-          authenticationResult,
-          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
-          authorizerMapper
-      );
-      if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access);
-      }
+
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
           .transform(val -> new Object[]{
@@ -493,11 +503,23 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
-        for (DataSegment segment : druidServer.getLazyAllSegments()) {
+        final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
+            authenticationResult,
+            druidServer.getLazyAllSegments(),
+            SEGMENT_RA_GENERATOR,
+            authorizerMapper
+        );
+
+        for (DataSegment segment : authorizedServerSegments) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
           row[1] = segment.getId();
@@ -750,5 +772,23 @@ public class SystemSchema extends AbstractSchema
     }
 
     return object.toString();
+  }
+
+  /**
+   * Checks if an authenticated user has the STATE READ permissions needed to view server information.
+   */
+  private static void checkStateReadAccessForServers(
+      AuthenticationResult authenticationResult,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        authorizerMapper
+    );
+    if (!stateAccess.isAllowed()) {
+      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+    }
   }
 }

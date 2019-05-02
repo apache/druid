@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.having;
 
 import org.apache.druid.data.input.Row;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
 /**
  * A "having" spec that always evaluates to true
@@ -30,5 +31,11 @@ public class AlwaysHavingSpec extends BaseHavingSpec
   public boolean eval(Row row)
   {
     return true;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_ALWAYS).build();
   }
 }

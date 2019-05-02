@@ -32,7 +32,9 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
@@ -155,6 +157,166 @@ public class TimeseriesQueryQueryToolChestTest
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
+        )
+    );
+  }
+
+  @Test
+  public void testResultLevelCacheKey()
+  {
+    final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource("dummy")
+                                         .intervals("2015-01-01/2015-01-02")
+                                         .descending(descending)
+                                         .granularity(Granularities.ALL)
+                                         .aggregators(
+                                             ImmutableList.of(
+                                                 new LongSumAggregatorFactory("metric0", "metric0"),
+                                                 new CountAggregatorFactory("metric1")
+                                             )
+                                         )
+                                         .postAggregators(
+                                             ImmutableList.of(
+                                                 new ArithmeticPostAggregator(
+                                                     "post",
+                                                     "+",
+                                                     ImmutableList.of(
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric1"
+                                                         ),
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric0"
+                                                         )
+                                                     )
+                                                 )
+                                             )
+                                         )
+                                         .build();
+
+    final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource("dummy")
+                                         .intervals("2015-01-01/2015-01-02")
+                                         .descending(descending)
+                                         .granularity(Granularities.ALL)
+                                         .aggregators(
+                                             ImmutableList.of(
+                                                 new LongSumAggregatorFactory("metric0", "metric0"),
+                                                 new CountAggregatorFactory("metric1")
+                                             )
+                                         )
+                                         .postAggregators(
+                                             ImmutableList.of(
+                                                 new ArithmeticPostAggregator(
+                                                     "post",
+                                                     "/",
+                                                     ImmutableList.of(
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric1"
+                                                         ),
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric0"
+                                                         )
+                                                     )
+                                                 )
+                                             )
+                                         )
+                                         .build();
+
+    Assert.assertTrue(
+        Arrays.equals(
+            TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
+            TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
+        )
+    );
+    Assert.assertFalse(
+        Arrays.equals(
+            TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
+            TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
+        )
+    );
+  }
+
+  @Test
+  public void testResultLevelCacheKeyWithGrandTotal()
+  {
+    final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource("dummy")
+                                         .intervals("2015-01-01/2015-01-02")
+                                         .descending(descending)
+                                         .granularity(Granularities.ALL)
+                                         .aggregators(
+                                             ImmutableList.of(
+                                                 new LongSumAggregatorFactory("metric0", "metric0"),
+                                                 new CountAggregatorFactory("metric1")
+                                             )
+                                         )
+                                         .postAggregators(
+                                             ImmutableList.of(
+                                                 new ArithmeticPostAggregator(
+                                                     "post",
+                                                     "+",
+                                                     ImmutableList.of(
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric1"
+                                                         ),
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric0"
+                                                         )
+                                                     )
+                                                 )
+                                             )
+                                         )
+                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .build();
+
+    final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource("dummy")
+                                         .intervals("2015-01-01/2015-01-02")
+                                         .descending(descending)
+                                         .granularity(Granularities.ALL)
+                                         .aggregators(
+                                             ImmutableList.of(
+                                                 new LongSumAggregatorFactory("metric0", "metric0"),
+                                                 new CountAggregatorFactory("metric1")
+                                             )
+                                         )
+                                         .postAggregators(
+                                             ImmutableList.of(
+                                                 new ArithmeticPostAggregator(
+                                                     "post",
+                                                     "/",
+                                                     ImmutableList.of(
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric1"
+                                                         ),
+                                                         new FieldAccessPostAggregator(
+                                                             null,
+                                                             "metric0"
+                                                         )
+                                                     )
+                                                 )
+                                             )
+                                         )
+                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .build();
+
+    Assert.assertTrue(
+        Arrays.equals(
+            TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
+            TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
+        )
+    );
+    Assert.assertFalse(
+        Arrays.equals(
+            TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
+            TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
         )
     );
   }

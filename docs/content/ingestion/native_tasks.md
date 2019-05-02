@@ -24,7 +24,7 @@ title: "Native Index Tasks"
 
 # Native Index Tasks
 
-Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
+Apache Druid (incubating) currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
 in parallel on multiple MiddleManager processes, and `index` which will run a single indexing task locally on a single
 MiddleManager.
 

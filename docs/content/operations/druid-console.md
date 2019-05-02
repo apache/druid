@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid console"
+title: "Apache Druid (incubating) console"
 ---
 
 <!--
