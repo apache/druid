@@ -50,7 +50,7 @@ public class TDigestMergeSketchAggregatorFactory extends TDigestBuildSketchAggre
   {
     final ColumnValueSelector<MergingDigest> selector = metricFactory.makeColumnValueSelector(
         getFieldName());
-    return new TDigestMergeSketchAggregator(selector, compression);
+    return new TDigestMergeSketchAggregator(selector, getCompression());
   }
 
   @Override
@@ -59,6 +59,6 @@ public class TDigestMergeSketchAggregatorFactory extends TDigestBuildSketchAggre
     final ColumnValueSelector<MergingDigest> selector = metricFactory.makeColumnValueSelector(
         getFieldName()
     );
-    return new TDigestMergeSketchBufferAggregator(selector, compression);
+    return new TDigestMergeSketchBufferAggregator(selector, getCompression());
   }
 }

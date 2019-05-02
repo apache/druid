@@ -41,8 +41,9 @@ public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest
     if (numBytes == 0) {
       return null;
     }
-    buffer.limit(buffer.position() + numBytes);
-    return MergingDigest.fromBytes(buffer);
+    ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+    readOnlyBuffer.limit(buffer.position() + numBytes);
+    return MergingDigest.fromBytes(readOnlyBuffer);
   }
 
   @Override

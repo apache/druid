@@ -59,14 +59,15 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
 {
 
   // Default compression
-  public static final int DEFAULT_COMRESSION = 100;
+  public static final int DEFAULT_COMPRESSION = 100;
 
   @Nonnull
   private final String name;
   @Nonnull
   private final String fieldName;
-  @Nonnull
-  final Integer compression;
+
+  private final int compression;
+
   @Nonnull
   private final byte cacheTypeId;
 
@@ -89,11 +90,9 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
       final byte cacheTypeId
   )
   {
-    Objects.requireNonNull(name, "Must have a valid, non-null aggregator name");
-    this.name = name;
-    Objects.requireNonNull(fieldName, "Parameter fieldName must be specified");
-    this.fieldName = fieldName;
-    this.compression = compression == null ? DEFAULT_COMRESSION : compression;
+    this.name = Objects.requireNonNull(name, "Must have a valid, non-null aggregator name");
+    this.fieldName = Objects.requireNonNull(fieldName, "Parameter fieldName must be specified");
+    this.compression = compression == null ? DEFAULT_COMPRESSION : compression;
     this.cacheTypeId = cacheTypeId;
   }
 
@@ -231,7 +230,8 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    //TODO: samarth need to come up with a good value here
+    //TODO: need support in tdigest to return appropriate value here.
+    //For now returning a sensible value
     return 100000;
   }
 
@@ -248,7 +248,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
 
     return Objects.equals(name, that.name) &&
            Objects.equals(fieldName, that.fieldName) &&
-           compression.equals(that.compression);
+           compression == that.compression;
   }
 
   @Override
@@ -266,4 +266,5 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
            + ", compression=" + compression
            + "}";
   }
+
 }

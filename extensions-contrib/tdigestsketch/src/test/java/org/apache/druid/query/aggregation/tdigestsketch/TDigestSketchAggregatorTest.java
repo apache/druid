@@ -45,7 +45,6 @@ public class TDigestSketchAggregatorTest
 {
 
   private final AggregationTestHelper helper;
-  private final AggregationTestHelper timeSeriesHelper;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -56,10 +55,6 @@ public class TDigestSketchAggregatorTest
     TDigestSketchModule module = new TDigestSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
-    timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-        module.getJacksonModules(),
-        tempFolder
-    );
   }
 
   @Parameterized.Parameters(name = "{0}")

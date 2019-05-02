@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -35,20 +36,17 @@ public class TDigestBuildSketchAggregator implements Aggregator
 
   private final ColumnValueSelector selector;
 
-  // Default compression
-  static final int DEFAULT_COMPRESSION = 50;
-
   @GuardedBy("this")
   private MergingDigest histogram;
 
 
-  public TDigestBuildSketchAggregator(ColumnValueSelector selector, Integer compression)
+  public TDigestBuildSketchAggregator(ColumnValueSelector selector, @Nullable Integer compression)
   {
     this.selector = selector;
     if (compression != null) {
       this.histogram = new MergingDigest(compression);
     } else {
-      this.histogram = new MergingDigest(DEFAULT_COMPRESSION);
+      this.histogram = new MergingDigest(TDigestBuildSketchAggregatorFactory.DEFAULT_COMPRESSION);
     }
   }
 
@@ -58,10 +56,14 @@ public class TDigestBuildSketchAggregator implements Aggregator
     if (selector.getObject() instanceof Number) {
       histogram.add(((Number) selector.getObject()).doubleValue());
     } else {
-      throw new IAE("Expected a number, received "
-                    + selector.getObject()
-                    + " of type "
-                    + selector.getObject());
+      final String msg = selector.getObject() == null
+                         ? StringUtils.format("Expected a number, but received null")
+                         : StringUtils.format(
+                             "Expected a number, but received [%s] of type [%s]",
+                             selector.getObject(),
+                             selector.getObject().getClass()
+                         );
+      throw new IAE(msg);
     }
   }
 
@@ -75,13 +77,13 @@ public class TDigestBuildSketchAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("not implemented");
+    throw new UnsupportedOperationException("Casting to float type is not supported");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("not implemented");
+    throw new UnsupportedOperationException("Casting to long type is not supported");
   }
 
   @Override

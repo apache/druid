@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.nio.ByteBuffer;
 import java.util.IdentityHashMap;
@@ -41,15 +42,14 @@ public class TDigestBuildSketchBufferAggregator implements BufferAggregator
 
   @Nonnull
   private final ColumnValueSelector selector;
-  @Nonnull
   private final int compression;
 
   @GuardedBy("this")
-  private Map<ByteBuffer, Int2ObjectMap<MergingDigest>> sketches = new IdentityHashMap<>();
+  private final Map<ByteBuffer, Int2ObjectMap<MergingDigest>> sketches = new IdentityHashMap<>();
 
   public TDigestBuildSketchBufferAggregator(
       final ColumnValueSelector valueSelector,
-      final Integer compression
+      @Nullable final Integer compression
   )
   {
     Preconditions.checkNotNull(valueSelector);
@@ -57,7 +57,7 @@ public class TDigestBuildSketchBufferAggregator implements BufferAggregator
     if (compression != null) {
       this.compression = compression;
     } else {
-      this.compression = TDigestBuildSketchAggregator.DEFAULT_COMPRESSION;
+      this.compression = TDigestBuildSketchAggregatorFactory.DEFAULT_COMPRESSION;
     }
   }
 
