@@ -52,11 +52,13 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -353,6 +355,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       super(null, null, null, null, callerId, 0);
       this.supervisorTask = supervisorTask;
+    }
+
+    @Override
+    public SegmentIdWithShardSpec allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
+    {
+      return supervisorTask.allocateNewSegment(timestamp);
     }
 
     @Override

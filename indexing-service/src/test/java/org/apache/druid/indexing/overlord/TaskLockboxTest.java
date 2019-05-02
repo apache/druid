@@ -981,7 +981,6 @@ public class TaskLockboxTest
       ShardSpecFactory shardSpecFactory
   )
   {
-    // TODO: test overshadowingSegments
     for (int i = 0; i < numSegmentsToAllocate; i++) {
       final LockRequestForNewSegment request = new LockRequestForNewSegment(
           TaskLockType.EXCLUSIVE,
@@ -1014,7 +1013,6 @@ public class TaskLockboxTest
     Assert.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
     Assert.assertEquals(lockRequest.getShardSpecFactory().getShardSpecClass(), segmentId.getShardSpec().getClass());
     Assert.assertEquals(lockRequest.getPriority(), lockRequest.getPriority());
-    // TODO: fix this to check overwriting shardSpec
   }
 
   @Test

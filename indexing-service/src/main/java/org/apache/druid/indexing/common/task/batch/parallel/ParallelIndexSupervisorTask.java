@@ -410,10 +410,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
-        granularitySpec.bucketIntervals().orNull(),
-        "bucketIntervals"
-    );
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
     final Map<Interval, String> versions = toolbox
         .getTaskActionClient()
@@ -421,15 +417,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         .stream()
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
-    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
-    if (!maybeInterval.isPresent()) {
-      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
-    }
-
-    final Interval interval = maybeInterval.get();
-    if (!bucketIntervals.contains(interval)) {
-      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
-    }
+    final Interval interval = granularitySpec
+        .bucketInterval(timestamp)
+        .or(granularitySpec.getSegmentGranularity().bucket(timestamp));
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
     return new SegmentIdWithShardSpec(

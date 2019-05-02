@@ -676,7 +676,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           0,
           1L
       );
-      // TODO: maybe check shardSpec??
 
       taskClient.report(getId(), Collections.singletonList(segment));
       return TaskStatus.fromCode(getId(), state);

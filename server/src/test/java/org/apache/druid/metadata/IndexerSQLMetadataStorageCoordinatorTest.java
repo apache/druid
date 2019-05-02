@@ -958,7 +958,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(10, numDeleted);
   }
 
-  // TODO: fix this test to use overwriting shardSpec
   @Test
   public void testAllocatePendingSegmentsWithOvershadowingSegments() throws IOException
   {

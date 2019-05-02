@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -57,7 +58,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -76,7 +76,9 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -98,7 +100,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// TODO: change segmentGranularity
 public class IndexTaskTest extends IngestionTestBase
 {
   @Rule
@@ -128,16 +129,13 @@ public class IndexTaskTest extends IngestionTestBase
 
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
-  private IndexMergerV9 indexMergerV9;
-  private IndexIO indexIO;
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final IndexIO indexIO;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private TestTaskRunner taskRunner;
 
   public IndexTaskTest()
   {
     jsonMapper = getObjectMapper();
-
-    indexMergerV9 = getIndexMerger();
     indexIO = getIndexIO();
     rowIngestionMetersFactory = getRowIngestionMetersFactory();
   }
@@ -941,11 +939,15 @@ public class IndexTaskTest extends IngestionTestBase
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       writer.write("{\"time\":\"unparseable\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // valid row
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
       writer.write("{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // invalid JSON
-      writer.write("{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
+      writer.write(
+          "{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
       writer.write("{\"time\":\"99999999999-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("this is not JSON\n"); // invalid JSON
     }
@@ -1435,6 +1437,115 @@ public class IndexTaskTest extends IngestionTestBase
             "Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+  }
+
+  @Test
+  public void testOverwriteWithSameSegmentGranularity() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    populateRollupTestData(tmpFile);
+
+    for (int i = 0; i < 2; i++) {
+      final IndexTask indexTask = new IndexTask(
+          null,
+          null,
+          createIngestionSpec(
+              jsonMapper,
+              tmpDir,
+              null,
+              new UniformGranularitySpec(
+                  Granularities.DAY,
+                  Granularities.DAY,
+                  true,
+                  null
+              ),
+              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              false
+          ),
+          null,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          null,
+          rowIngestionMetersFactory
+      );
+
+      final List<DataSegment> segments = runTask(indexTask).rhs;
+
+      Assert.assertEquals(5, segments.size());
+
+      final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+      for (int j = 0; j < 5; j++) {
+        final DataSegment segment = segments.get(j);
+        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(expectedInterval, segment.getInterval());
+        if (i == 0) {
+          Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+          Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+        } else {
+          Assert.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
+          final NumberedOverwriteShardSpec numberedOverwriteShardSpec =
+              (NumberedOverwriteShardSpec) segment.getShardSpec();
+          Assert.assertEquals(
+              j + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+              numberedOverwriteShardSpec.getPartitionNum()
+          );
+          Assert.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
+          Assert.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
+          Assert.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
+          Assert.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testOverwriteWithDifferentSegmentGranularity() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    populateRollupTestData(tmpFile);
+
+    for (int i = 0; i < 2; i++) {
+      final Granularity segmentGranularity = i == 0 ? Granularities.DAY : Granularities.MONTH;
+      final IndexTask indexTask = new IndexTask(
+          null,
+          null,
+          createIngestionSpec(
+              jsonMapper,
+              tmpDir,
+              null,
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.DAY,
+                  true,
+                  null
+              ),
+              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              false
+          ),
+          null,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          null,
+          rowIngestionMetersFactory
+      );
+
+      final List<DataSegment> segments = runTask(indexTask).rhs;
+
+      Assert.assertEquals(5, segments.size());
+
+      final Interval expectedInterval = i == 0
+                                        ? Intervals.of("2014-01-01/2014-01-02")
+                                        : Intervals.of("2014-01-01/2014-02-01");
+      for (int j = 0; j < 5; j++) {
+        final DataSegment segment = segments.get(j);
+        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(expectedInterval, segment.getInterval());
+        Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+        Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+      }
+    }
   }
 
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
