@@ -163,7 +163,7 @@ public class FunctionTest
   public void testArrayLength()
   {
     assertExpr("array_length([1, 2, 3])", 3L);
-    assertExpr("array_length(a)", 4L);
+    assertExpr("array_length(a)", 4);
   }
 
   @Test

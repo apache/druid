@@ -181,9 +181,9 @@ public abstract class ExprEval<T>
 
   public abstract Expr toExpr();
 
-  private abstract static class NumericExprEval<T extends Number> extends ExprEval<T>
+  private abstract static class NumericExprEval extends ExprEval<Number>
   {
-    private NumericExprEval(@Nullable T value)
+    private NumericExprEval(@Nullable Number value)
     {
       super(value);
     }
@@ -234,11 +234,11 @@ public abstract class ExprEval<T>
     }
   }
 
-  private static class DoubleExprEval extends NumericExprEval<Double>
+  private static class DoubleExprEval extends NumericExprEval
   {
     private DoubleExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultDoubleValue() : value.doubleValue());
+      super(value == null ? NullHandling.defaultDoubleValue() : value);
     }
 
     @Override
@@ -257,13 +257,6 @@ public abstract class ExprEval<T>
     public Object[] asArray()
     {
       return asDoubleArray();
-    }
-
-    @Nullable
-    @Override
-    public Double[] asDoubleArray()
-    {
-      return isNumericNull() ? null : new Double[]{value};
     }
 
     @Override
@@ -297,11 +290,11 @@ public abstract class ExprEval<T>
     }
   }
 
-  private static class LongExprEval extends NumericExprEval<Long>
+  private static class LongExprEval extends NumericExprEval
   {
     private LongExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultLongValue() : value.longValue());
+      super(value == null ? NullHandling.defaultLongValue() : value);
     }
 
     @Override
@@ -326,7 +319,7 @@ public abstract class ExprEval<T>
     @Override
     public Long[] asLongArray()
     {
-      return isNumericNull() ? null : new Long[]{value};
+      return isNumericNull() ? null : new Long[]{value.longValue()};
     }
 
     @Override
