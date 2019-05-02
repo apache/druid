@@ -26,6 +26,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * Modified from the SelfDefineSortableKey in https://github.com/apache/kylin
+ */
 public class SelfDefineSortableKey implements WritableComparable<SelfDefineSortableKey>
 {
 

@@ -20,6 +20,8 @@
 package io.druid.indexer.lock;
 
 /**
+ * Modified from the DistributedLock in https://github.com/apache/kylin
+ *
  * A distributed lock. Every instance is owned by a client, on whose behalf locks are acquired and/or released.
  *
  * Implementation must ensure all <code>lockPath</code> will be prefix-ed with "/kylin/metadata-prefix" automatically.

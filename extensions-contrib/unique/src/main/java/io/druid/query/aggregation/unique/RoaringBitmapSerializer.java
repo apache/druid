@@ -34,7 +34,6 @@ public class RoaringBitmapSerializer extends JsonSerializer<ImmutableRoaringBitm
   public void serialize(ImmutableRoaringBitmap value, JsonGenerator jgen, SerializerProvider provider)
       throws IOException
   {
-    // http gzip压缩导致慢，更改druid.broker.http.compressionCodec=identity
     try (final ByteArrayOutputStream out = new ByteArrayOutputStream();
          final DataOutputStream data = new DataOutputStream(out)) {
       value.serialize(data);

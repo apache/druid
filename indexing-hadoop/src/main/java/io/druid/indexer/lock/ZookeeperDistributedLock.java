@@ -36,7 +36,9 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-
+/**
+ * Modified from the ZookeeperDistributedLock in https://github.com/apache/kylin
+ */
 public class ZookeeperDistributedLock implements DistributedLock
 {
   private static final Logger log = new Logger(ZookeeperDistributedLock.class);

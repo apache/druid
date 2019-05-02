@@ -28,6 +28,10 @@ import org.apache.kylin.dict.global.AppendTrieDictionaryBuilder;
 
 import java.io.IOException;
 
+
+/**
+ * Modified from the GlobalDictionaryBuilder in https://github.com/apache/kylin
+ */
 public class GlobalDictionaryBuilder
 {
   private AppendTrieDictionaryBuilder builder;
