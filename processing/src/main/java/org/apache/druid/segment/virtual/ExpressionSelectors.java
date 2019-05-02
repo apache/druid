@@ -371,7 +371,7 @@ public class ExpressionSelectors
     }
   }
 
-  private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory, Set<String> unknownMultiValue)
+  private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     final List<String> columns = Parser.findRequiredBindings(expression);
@@ -379,8 +379,6 @@ public class ExpressionSelectors
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      //      final boolean multiVal = unknownMultiValue.contains(columnName) ||
-      //                               (columnCapabilities != null && columnCapabilities.hasMultipleValues());
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues();
       final Supplier<Object> supplier;
 

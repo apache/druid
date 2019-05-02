@@ -183,6 +183,22 @@ public class FunctionTest
   }
 
   @Test
+  public void testArrayOffsetOf()
+  {
+    assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
+    assertExpr("array_offset_of([1, 2, 3], 4)", null);
+    assertExpr("array_offset_of(a, 'baz')", 2);
+  }
+
+  @Test
+  public void testArrayOrdinalOf()
+  {
+    assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
+    assertExpr("array_ordinal_of([1, 2, 3], 4)", null);
+    assertExpr("array_ordinal_of(a, 'baz')", 3);
+  }
+
+  @Test
   public void testArrayContains()
   {
     assertExpr("array_contains([1 2 3], 2)", "true");
@@ -199,9 +215,31 @@ public class FunctionTest
     assertExpr("array_overlap([1 2 3], [4 5 6])", "false");
   }
 
+  @Test
+  public void testArrayAppend()
+  {
+    assertExpr("array_append([1 2 3], 4)", new Long[]{1L,2L,3L,4L});
+    assertExpr("array_append([1 2 3], 'bar')", new Long[]{1L,2L,3L,0L});
+  }
+
+  @Test
+  public void testArrayConcat()
+  {
+    assertExpr("array_concat([1 2 3], [2 4 6])", new Long[]{1L,2L,3L,2L,4L,6L});
+    assertExpr("array_concat([1 2 3], 4)", new Long[]{1L,2L,3L,4L});
+    assertExpr("array_concat(0, [1 2 3])", new Long[]{0L,1L,2L,3L});
+    assertExpr("array_concat(0, 1)", new Long[]{0L,1L});
+  }
+
   private void assertExpr(final String expression, final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
+  }
+
+  private void assertExpr(final String expression, final Object[] expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertArrayEquals(expression, expectedResult, expr.eval(bindings).asArray());
   }
 }

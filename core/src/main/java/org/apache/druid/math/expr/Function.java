@@ -30,9 +30,11 @@ import org.joda.time.format.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -1628,8 +1630,14 @@ interface Function
         case STRING:
         case LONG:
         case DOUBLE:
-          int index = Arrays.asList(array).indexOf(toCheck.value());
-          return ExprEval.bestEffortOf(index < 0 ? null : index);
+          int index = -1;
+          for (int i = 0; i < array.length; i++) {
+            if (Objects.equals(array[i], toCheck.value())) {
+              index = i;
+              break;
+            }
+          }
+          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
         default:
           throw new IAE("Function[%s] argument must be a a scalar type", name());
       }
@@ -1662,8 +1670,14 @@ interface Function
         case STRING:
         case LONG:
         case DOUBLE:
-          int index = Arrays.asList(array).indexOf(toCheck.value());
-          return ExprEval.bestEffortOf(index < 0 ? null : index + 1);
+          int index = -1;
+          for (int i = 0; i < array.length; i++) {
+            if (Objects.equals(array[i], toCheck.value())) {
+              index = i;
+              break;
+            }
+          }
+          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] argument must be a a scalar type", name());
       }
@@ -1710,7 +1724,7 @@ interface Function
 
     private <T> Stream<T> append(T[] array, T val)
     {
-      List<T> l = Arrays.asList(array);
+      List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(val);
       return l.stream();
     }
@@ -1766,7 +1780,7 @@ interface Function
 
     private <T> Stream<T> cat(T[] array1, T[] array2)
     {
-      List<T> l = Arrays.asList(array1);
+      List<T> l = new ArrayList<>(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }
