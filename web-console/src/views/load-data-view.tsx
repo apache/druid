@@ -22,9 +22,8 @@ import {
   Button,
   ButtonGroup, Callout, Card,
   Classes, Code,
-  Dialog,
   FormGroup, H5,
-  HTMLSelect, Icon, InputGroup, Intent, Menu, MenuItem, Popover, Switch, TextArea
+  Icon, Intent, Popover, Switch, TextArea
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
@@ -34,9 +33,10 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { AutoForm, Field } from '../components/auto-form';
+import { AutoForm } from '../components/auto-form';
 import { CenterMessage } from '../components/center-message';
 import { ClearableInput } from '../components/clearable-input';
+import { ExternalLink } from '../components/external-link';
 import { JSONInput } from '../components/json-input';
 import { Loader } from '../components/loader';
 import { NullTableCell } from '../components/null-table-cell';
@@ -175,6 +175,7 @@ export interface LoadDataViewState {
   filterQueryState: QueryState<HeaderAndRows>;
   selectedFilterIndex: number;
   selectedFilter: DruidFilter | null;
+  showGlobalFilter: boolean;
 
   // for schema
   schemaQueryState: QueryState<HeaderAndRows>;
@@ -234,6 +235,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       filterQueryState: QueryState.INIT,
       selectedFilterIndex: -1,
       selectedFilter: null,
+      showGlobalFilter: false,
 
       // for dimensions
       schemaQueryState: QueryState.INIT,
@@ -492,13 +494,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid ingests raw data and converts it into a custom, <a href="http://druid.io/docs/latest/design/segments.html" target="_blank">indexed</a> format that is optimized for analytic queries.
+            Druid ingests raw data and converts it into a custom, <ExternalLink href="http://druid.io/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
           </p>
           <p>
             To get started, please specify where your raw data is stored and what data you want to ingest.
           </p>
           <p>
-            Click "Preview" to look at the raw data.
+            Click "Preview" to look at the sampled raw data.
           </p>
         </Callout>
         {
@@ -691,7 +693,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           {
             canFlatten &&
             <p>
-              If you have nested data, you can <a href="http://druid.io/docs/latest/ingestion/flatten-json.html" target="_blank">flatten</a> it here.
+              If you have nested data, you can <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
               If the provided flattening capabilities are not sufficient, please pre-process your data before ingesting it into Druid.
             </p>
           }
@@ -829,7 +831,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       sampleResponse = await sampleForTimestamp(spec, cacheKey);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message })
+        timestampQueryState: new QueryState({ error: e.message })
       });
       return;
     }
@@ -1031,7 +1033,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       sampleResponse = await sampleForTransform(spec, cacheKey);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message })
+        transformQueryState: new QueryState({ error: e.message })
       });
       return;
     }
@@ -1093,12 +1095,19 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             return {
               Header: (
                 <div
-                  className={classNames({ clickable: transform })}
+                  className={classNames('clickable')}
                   onClick={() => {
-                    this.setState({
-                      selectedTransformIndex: transformIndex,
-                      selectedTransform: transform
-                    });
+                    if (transform) {
+                      this.setState({
+                        selectedTransformIndex: transformIndex,
+                        selectedTransform: transform
+                      });
+                    } else {
+                      this.setState({
+                        selectedTransformIndex: -1,
+                        selectedTransform: { type: 'expression', name: columnName, expression: columnName }
+                      });
+                    }
                   }}
                 >
                   <div className="column-name">{columnName}</div>
@@ -1130,7 +1139,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Optional
           </p>
           <p>
-            Druid can perform simple <a href="http://druid.io/docs/latest/ingestion/transform-spec.html#transforms" target="_blank">transforms</a> of column values.
+            Druid can perform simple <ExternalLink href="http://druid.io/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
           </p>
           <p>
             Click "Preview" to see the result of any specified transforms.
@@ -1246,7 +1255,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       sampleResponse = await sampleForFilter(spec, cacheKey);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message })
+        filterQueryState: new QueryState({ error: e.message })
       });
       return;
     }
@@ -1260,9 +1269,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderFilterStage() {
-    const { spec, columnFilter, filterQueryState, selectedFilter, selectedFilterIndex } = this.state;
+    const { spec, columnFilter, filterQueryState, selectedFilter, selectedFilterIndex, showGlobalFilter } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-    const { dimensionFilters, restFilter } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
+    const { dimensionFilters } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
 
     const isBlank = !parseSpec.format;
 
@@ -1304,12 +1313,23 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             return {
               Header: (
                 <div
-                  className={classNames({ clickable: filter })}
+                  className={classNames('clickable')}
                   onClick={() => {
-                    this.setState({
-                      selectedFilterIndex: filterIndex,
-                      selectedFilter: filter
-                    });
+                    if (timestamp) {
+                      this.setState({
+                        showGlobalFilter: true
+                      });
+                    } else if (filter) {
+                      this.setState({
+                        selectedFilterIndex: filterIndex,
+                        selectedFilter: filter
+                      });
+                    } else {
+                      this.setState({
+                        selectedFilterIndex: -1,
+                        selectedFilter: { type: 'selector', dimension: columnName, value: '' }
+                      });
+                    }
                   }}
                 >
                   <div className="column-name">{columnName}</div>
@@ -1341,56 +1361,28 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Optional
           </p>
           <p>
-            Druid can <a href="http://druid.io/docs/latest/querying/filters.html" target="_blank">filter</a> out unwanted data.
+            Druid can <ExternalLink href="http://druid.io/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
           </p>
           <p>
             Click "Preview" to see the impact of any specified filters.
           </p>
         </Callout>
-        {this.renderFilterControls()}
+        {!showGlobalFilter && this.renderColumnFilterControls()}
+        {!selectedFilter && this.renderGlobalFilterControls()}
         {
-          !selectedFilter &&
-          <>
-            <AutoForm
-              fields={[
-                {
-                  name: 'dataSchema.granularitySpec.intervals',
-                  label: 'Time intervals',
-                  type: 'string-array',
-                  placeholder: 'ex: 2018-01-01/2018-06-01',
-                  info: <>
-                    A comma separated list of intervals for the raw data being ingested.
-                    Ignored for real-time ingestion.
-                  </>
-                }
-              ]}
-              model={spec}
-              onChange={s => this.updateSpec(s)}
-            />
-            <FormGroup label="Global filter">
-              <JSONInput
-                value={restFilter}
-                onChange={f => {
-                  const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
-                  const newFilter = joinFilter(deepSet(curFilter, `restFilter`, f));
-                  this.updateSpec(deepSet(spec, 'dataSchema.transformSpec.filter', newFilter));
-                }}
-                height="200px"
-              />
-            </FormGroup>
-            <Button
-              text="Preview"
-              disabled={isBlank}
-              onClick={() => this.queryForFilter()}
-            />
-          </>
+          (!selectedFilter && !showGlobalFilter) &&
+          <Button
+            text="Preview"
+            disabled={isBlank}
+            onClick={() => this.queryForFilter()}
+          />
         }
       </div>
       {this.renderNextBar({})}
     </>;
   }
 
-  renderFilterControls() {
+  renderColumnFilterControls() {
     const { spec, selectedFilter, selectedFilterIndex } = this.state;
 
     const close = () => {
@@ -1457,6 +1449,65 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     }
   }
 
+  renderGlobalFilterControls() {
+    const { spec, showGlobalFilter } = this.state;
+    const intervals: string[] = deepGet(spec, 'dataSchema.granularitySpec.intervals');
+    const { restFilter } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
+    const hasGlobalFilter = Boolean(intervals || restFilter);
+
+    if (showGlobalFilter) {
+      return <div className="edit-controls">
+        <AutoForm
+          fields={[
+            {
+              name: 'dataSchema.granularitySpec.intervals',
+              label: 'Time intervals',
+              type: 'string-array',
+              placeholder: 'ex: 2018-01-01/2018-06-01',
+              info: <>
+                A comma separated list of intervals for the raw data being ingested.
+                Ignored for real-time ingestion.
+              </>
+            }
+          ]}
+          model={spec}
+          onChange={s => this.updateSpec(s)}
+        />
+        <FormGroup label="Extra filter">
+          <JSONInput
+            value={restFilter}
+            onChange={f => {
+              const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
+              const newFilter = joinFilter(deepSet(curFilter, `restFilter`, f));
+              this.updateSpec(deepSet(spec, 'dataSchema.transformSpec.filter', newFilter));
+            }}
+            height="200px"
+          />
+        </FormGroup>
+        <div className="controls-buttons">
+          <Button
+            className="add-update"
+            text="Preview"
+            intent={Intent.PRIMARY}
+            onClick={() => this.queryForFilter()}
+          />
+          <Button
+            className="cancel"
+            text="Close"
+            onClick={() => this.setState({ showGlobalFilter: false })}
+          />
+        </div>
+      </div>;
+    } else {
+      return <FormGroup>
+        <Button
+          text={`${hasGlobalFilter ? 'Edit' : 'Add'} global filter`}
+          onClick={() => this.setState({ showGlobalFilter: true })}
+        />
+      </FormGroup>;
+    }
+  }
+
   // ==================================================================
 
   async queryForSchema(initRun = false) {
@@ -1487,7 +1538,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       sampleResponse = await sampleForSchema(spec, cacheKey);
     } catch (e) {
       this.setState({
-        parserQueryState: new QueryState({ error: e.message })
+        schemaQueryState: new QueryState({ error: e.message })
       });
       return;
     }
@@ -1573,8 +1624,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               const timestamp = columnName === '__time';
               const dimensionSpecIndex = dimensionsSpec.dimensions ? dimensionsSpec.dimensions.findIndex(d => getDimensionSpecName(d) === columnName) : -1;
               const dimensionSpec = dimensionsSpec.dimensions ? dimensionsSpec.dimensions[dimensionSpecIndex] : null;
+              const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : null;
 
-              const columnClassName = classNames(timestamp ? 'timestamp' : 'dimension', {
+              const columnClassName = classNames(timestamp ? 'timestamp' : 'dimension', dimensionSpecType || 'string', {
                 selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex
               });
               return {
@@ -1603,7 +1655,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                   >
                     <div className="column-name">{columnName}</div>
                     <div className="column-detail">
-                      {timestamp ? 'long (time column)' : (dimensionSpec ? getDimensionSpecType(dimensionSpec) : 'string (auto)')}&nbsp;
+                      {timestamp ? 'long (time column)' : (dimensionSpecType || 'string (auto)')}&nbsp;
                     </div>
                   </div>
                 ),
@@ -1633,7 +1685,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             If you want to change the type, click on the column header.
           </p>
           <p>
-            Select whether or not you want to <a href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html" target="_blank">roll-up</a> your data.
+            Select whether or not you want to <ExternalLink href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
           </p>
         </Callout>
         {
@@ -1707,7 +1759,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                   suggestions: ['NONE', 'MINUTE', 'HOUR', 'DAY'],
                   info: <>
                     This granularity determines how timestamps will be truncated (not at all, to the minute, hour, day, etc).
-                    After data is rolled up, this granularity becomes the minimum granularity you are query data at.
+                    After data is rolled up, this granularity becomes the minimum granularity you can query data at.
                   </>
                 }
               ]}

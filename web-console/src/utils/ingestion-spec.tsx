@@ -598,7 +598,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.prefixes'),
           info: <>
             <p>The full S3 URI of your file. To ingest from multiple URIs, use commas to separate each individual URI.</p>
-            <p>Exactly on of URIs or prefixes must be set.</p>
+            <p>Either S3 URIs or S3 prefixes must be set.</p>
           </>
         },
         {
@@ -609,7 +609,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.uris'),
           info: <>
             <p>A list of paths (with bucket) where your files are stored.</p>
-            <p>Exactly on of URIs or prefixes must be set.</p>
+            <p>Either S3 URIs or S3 prefixes must be set.</p>
           </>
         }
       ];
@@ -1090,7 +1090,13 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   },
   {
     name: 'value',
-    type: 'string'
+    type: 'string',
+    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'selector'
+  },
+  {
+    name: 'values',
+    type: 'string-array',
+    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'in'
   }
 ];
 

@@ -23,6 +23,7 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
+import { ExternalLink } from './components/external-link';
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import { Loader } from './components/loader';
 import { AppToaster } from './singletons/toaster';
@@ -81,8 +82,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     if (capabilities === 'working-without-sql') {
       message = <>
         It appears that the SQL endpoint is disabled. The console will fall back
-        to <a href={DRUID_DOCS_API} target="_blank">native Druid APIs</a> and will be
-        limited in functionality. Look at <a href={DRUID_DOCS_SQL} target="_blank">the SQL docs</a> to
+        to <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be
+        limited in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to
         enable the SQL endpoint.
       </>;
     } else if (capabilities === 'broken') {

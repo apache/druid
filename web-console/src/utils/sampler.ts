@@ -223,7 +223,7 @@ export async function sampleForTransform(spec: IngestionSpec, cacheKey: string |
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'transform-pre');
 
-    specialDimensionSpec.dimensions = headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name));
+    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
   }
 
   const sampleSpec: SampleSpec = {
@@ -283,7 +283,7 @@ export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | un
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'filter-pre');
 
-    specialDimensionSpec.dimensions = headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name));
+    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
   }
 
   const sampleSpec: SampleSpec = {

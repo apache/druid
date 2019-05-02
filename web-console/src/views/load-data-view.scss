@@ -86,6 +86,8 @@
 
     .stage-nav-l1 {
       height: 25px;
+      font-weight: bold;
+      color: #eeeeee;
     }
 
     .stage-nav-l2 {
@@ -161,9 +163,8 @@
           &.dimension {
             background: rgba(38, 170, 201, 0.5);
 
-            // &.string { background: rgba(50, 201, 166, 0.5); }
-            // &.long { background: rgba(41, 201, 39, 0.5); }
-            // &.float { background: rgba(134, 201, 47, 0.5); }
+            &.long { background: rgba(19, 129, 201, 0.5); }
+            &.float { background: rgba(25, 145, 201, 0.5); }
           }
 
           &.metric {
@@ -183,6 +184,9 @@
 
           &.dimension {
             background: rgba(38, 170, 201, 0.1);
+
+            &.long { background: rgba(19, 129, 201, 0.1); }
+            &.float { background: rgba(25, 145, 201, 0.1); }
           }
 
           &.metric {
