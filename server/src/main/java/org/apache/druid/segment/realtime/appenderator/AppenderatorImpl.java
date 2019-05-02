@@ -272,7 +272,7 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList();
+    List<String> persistReasons = new ArrayList<>();
 
     if (!sink.canAppendRow()) {
       persist = true;

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -40,7 +41,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -141,14 +141,15 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
+    // Non-overwriting tasks should release locks as early as possible, so that other tasks can lock same segments.
     final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
-    if (locks.get(0).getGranularity() == LockGranularity.SEGMENT) {
-      for (Entry<Interval, Set<Integer>> entry : intervalToPartitionIds.entrySet()) {
-        final Interval interval = entry.getKey();
-        final Set<Integer> partitionIds = entry.getValue();
-        partitionIds.forEach(partitionId -> toolbox.getTaskLockbox().unlock(task, interval, partitionId));
+    for (TaskLock lock : locks) {
+      if (lock.getGranularity() == LockGranularity.SEGMENT) {
+        final SegmentLock segmentLock = (SegmentLock) lock;
+        toolbox.getTaskLockbox().unlock(task, segmentLock.getInterval(), segmentLock.getPartitionId());
       }
     }
+
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();

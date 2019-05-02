@@ -56,6 +56,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   @Nullable
   private Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions;
+  @Nullable
+  private Set<DataSegment> allInputSegments;
 
   @Nullable
   private Boolean changeSegmentGranularity;
@@ -194,6 +196,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                  .map(PartitionChunk::getObject)
                                  .collect(Collectors.toList());
 
+        if (allInputSegments == null) {
+          allInputSegments = new HashSet<>(segmentsToLock);
+        } else {
+
+        }
+
         final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
         for (DataSegment segment : segmentsToLock) {
           intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
@@ -261,7 +269,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     });
     if (isInitialRequest) {
-      verifyInputSegmentsToOverwritePerInterval(sortedSegments);
+      verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(sortedSegments);
     }
     final Interval interval = sortedSegments.get(0).getInterval();
     final short prevMaxMinorVersion = (short) sortedSegments
@@ -307,7 +315,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return !overwritingRootGenPartitions.isEmpty();
   }
 
-  private static void verifyInputSegmentsToOverwritePerInterval(List<DataSegment> sortedSegments)
+  public static void verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(List<DataSegment> sortedSegments)
   {
     if (sortedSegments.isEmpty()) {
       return;

@@ -47,6 +47,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalOverwriteAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -499,8 +500,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       // Initialize maxRowsPerSegment and maxTotalRows lazily
       final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
-      @Nullable final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
-      @Nullable final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
+      @Nullable
+      final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
+      @Nullable
+      final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
       // Spec for segment allocation. This is used only for perfect rollup mode.
       // See createSegmentAllocator().
       final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = determineShardSpecs(
@@ -625,7 +628,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    * shardSpecs by itself.  Intervals must be determined if they are not specified in {@link GranularitySpec}.
    * ShardSpecs must be determined if the perfect rollup must be guaranteed even though the number of shards is not
    * specified in {@link IndexTuningConfig}.
-   * <P/>
+   * <p/>
    * If both intervals and shardSpecs don't have to be determined, this method simply returns {@link ShardSpecs} for the
    * given intervals.  Here, if {@link IndexTuningConfig#numShards} is not specified, {@link NumberedShardSpec} is used.
    * <p/>
@@ -688,7 +691,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
       final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
       for (Interval interval : intervals) {
-        allocateSpec.put(interval, createShardSpecFactoryForGuaranteedRollup(numShards, tuningConfig.partitionDimensions));
+        allocateSpec.put(
+            interval,
+            createShardSpecFactoryForGuaranteedRollup(numShards, tuningConfig.partitionDimensions)
+        );
       }
     } else {
       for (Interval interval : intervals) {
@@ -744,7 +750,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
         // Overwrite mode, guaranteed rollup: # of shards must be known in advance.
-        allocateSpecs.put(interval, createShardSpecFactoryForGuaranteedRollup(numShards, tuningConfig.partitionDimensions));
+        allocateSpecs.put(
+            interval,
+            createShardSpecFactoryForGuaranteedRollup(numShards, tuningConfig.partitionDimensions)
+        );
       } else {
         allocateSpecs.put(interval, null);
       }
@@ -903,7 +912,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link IndexTuningConfig#maxTotalRows}
    * </li>
    * </ul>
-   *
+   * <p>
    * At the end of this method, all the remaining segments are published.
    *
    * @return true if generated segments are successfully published, otherwise false
@@ -943,10 +952,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         allocateSpec
     );
 
-    final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
-      return toolbox.getTaskActionClient().submit(action);
-    };
+    final TransactionalSegmentPublisher publisher;
+    if (!isGuaranteedRollup && isOverwriteMode() && !isChangeSegmentGranularity()) {
+      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient()
+                                                       .submit(new SegmentTransactionalInsertAction(segments));
+    } else {
+
+      publisher = (segments, commitMetadata) -> {
+
+        return toolbox.getTaskActionClient().submit(new SegmentTransactionalOverwriteAction());
+      };
+    }
 
     try (
         final Appenderator appenderator = newAppenderator(
@@ -1063,8 +1079,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    */
   public static Integer getValidMaxRowsPerSegment(IndexTuningConfig tuningConfig)
   {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Integer maxRowsPerSegment = tuningConfig.maxRowsPerSegment;
+    @Nullable
+    final Integer numShards = tuningConfig.numShards;
+    @Nullable
+    final Integer maxRowsPerSegment = tuningConfig.maxRowsPerSegment;
     if (numShards == null || numShards == -1) {
       return maxRowsPerSegment == null || maxRowsPerSegment.equals(-1)
              ? IndexTuningConfig.DEFAULT_MAX_ROWS_PER_SEGMENT
@@ -1081,8 +1099,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    */
   public static Long getValidMaxTotalRows(IndexTuningConfig tuningConfig)
   {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Long maxTotalRows = tuningConfig.maxTotalRows;
+    @Nullable
+    final Integer numShards = tuningConfig.numShards;
+    @Nullable
+    final Long maxTotalRows = tuningConfig.maxTotalRows;
     if (numShards == null || numShards == -1) {
       return maxTotalRows == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
     } else {
@@ -1401,8 +1421,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
 
       this.maxRowsPerSegment = (maxRowsPerSegment != null && maxRowsPerSegment == -1)
-                                 ? null
-                                 : maxRowsPerSegment;
+                               ? null
+                               : maxRowsPerSegment;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
