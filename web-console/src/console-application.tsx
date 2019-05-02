@@ -159,8 +159,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     }, 50);
   }
 
-  private goToLoadDataView = (loadDataViewSeed: LoadDataViewSeed) => {
-    this.loadDataViewSeed = loadDataViewSeed;
+  private goToLoadDataView = (loadDataViewSeed?: LoadDataViewSeed) => {
+    if (loadDataViewSeed) this.loadDataViewSeed = loadDataViewSeed;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }

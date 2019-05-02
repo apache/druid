@@ -518,6 +518,14 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             />
           </FormGroup>
         }
+        {
+          deepGet(spec, 'ioConfig.firehose.type') === 'local' &&
+          <FormGroup>
+            <Callout intent={Intent.WARNING}>
+              This file needs to be accessible by all Druid nodes.
+            </Callout>
+          </FormGroup>
+        }
         <Button
           text="Preview"
           disabled={isBlank}

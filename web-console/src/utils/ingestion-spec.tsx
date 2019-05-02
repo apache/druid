@@ -21,6 +21,7 @@ import { number } from 'prop-types';
 import * as React from 'react';
 
 import { Field } from '../components/auto-form';
+import { ExternalLink } from '../components/external-link';
 
 import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
@@ -142,7 +143,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
     suggestions: ['json', 'csv', 'tsv', 'regex'],
     info: <>
       <p>The parser used to parse the data.</p>
-      <p>For more information see <a href="http://druid.io/docs/latest/ingestion/data-formats.html" target="_blank">the documentation</a>.</p>
+      <p>For more information see <ExternalLink href="http://druid.io/docs/latest/ingestion/data-formats.html">the documentation</ExternalLink>.</p>
     </>
   },
   {
@@ -250,7 +251,7 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: <p>
-      Please specify your timestamp format by using the suggestions menu or typing in a <a href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html" target="_blank">format string</a>.
+      Please specify your timestamp format by using the suggestions menu or typing in a <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">format string</ExternalLink>.
     </p>
   },
   {
@@ -564,7 +565,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     suggestions: ['local', 'http', 'static-s3'],
     info: <>
       <p>
-        Druid connects to raw data through "<a href="http://druid.io/docs/latest/ingestion/firehose.html" target="_blank">firehoses</a>".
+        Druid connects to raw data through <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
         You can change your selected firehose here.
       </p>
     </>
@@ -622,8 +623,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.baseDir',
           label: 'Base directory',
           type: 'string',
+          placeholder: '/path/to/files/',
           info: <>
-            <a href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose" target="_blank">firehose.baseDir</a>
+            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
             <p>Specifies the directory to search recursively for files to be ingested.</p>
           </>
         },
@@ -633,8 +635,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           defaultValue: '*.*',
           info: <>
-            <a href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose" target="_blank">firehose.filter</a>
-            <p>A wildcard filter for files. See <a href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html" target="_blank">here</a> for format information.</p>
+            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
+            <p>A wildcard filter for files. See <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">here</ExternalLink> for format information.</p>
           </>
         }
       ];
@@ -646,7 +648,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Bootstrap servers',
           type: 'string',
           info: <>
-            <a href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig" target="_blank">consumerProperties</a>
+            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A list of Kafka brokers in the form: <Code>{`<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`}</Code></p>
           </>
         },
@@ -660,7 +662,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'json',
           defaultValue: {},
           info: <>
-            <a href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig" target="_blank">consumerProperties</a>
+            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A map of properties to be passed to the Kafka consumer.</p>
           </>
         }

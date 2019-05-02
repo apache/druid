@@ -51,7 +51,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: (loadDataViewSeed: LoadDataViewSeed) => void;
+  goToLoadDataView: () => void;
   noSqlMode: boolean;
 }
 
@@ -632,39 +632,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, initSpec, alertErrorMsg } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
-    const submitSupervisorMenu = <Menu>
-      <MenuItem
-        text="Raw JSON supervisor"
-        onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-      />
-      <MenuDivider title="From sample"/>
-      <MenuItem
-        text="Apache Kafka"
-        onClick={() => goToLoadDataView({ type: 'kafka' })}
-      />
-      <MenuItem
-        text="AWS Kinesis"
-        onClick={() => goToLoadDataView({ type: 'kinesis' })}
-      />
-    </Menu>;
-
     const submitTaskMenu = <Menu>
       <MenuItem
         text="Raw JSON task"
         onClick={() => this.setState({ taskSpecDialogOpen: true })}
       />
-      <MenuDivider title="From sample"/>
       <MenuItem
-        text="AWS S3"
-        onClick={() => goToLoadDataView({ type: 'index_parallel', firehoseType: 'static-s3' })}
-      />
-      <MenuItem
-        text="HTTP(s)"
-        onClick={() => goToLoadDataView({ type: 'index_parallel', firehoseType: 'http' })}
-      />
-      <MenuItem
-        text="Local disk"
-        onClick={() => goToLoadDataView({ type: 'index_parallel', firehoseType: 'local' })}
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
       />
     </Menu>;
 
@@ -675,9 +650,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Refresh"
           onClick={() => this.supervisorQueryManager.rerunLastQuery()}
         />
-        <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.PLUS} text="Submit supervisor"/>
-        </Popover>
+        <Button
+          icon={IconNames.PLUS}
+          text="Submit supervisor"
+          onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+        />
         <TableColumnSelection
           columns={supervisorTableColumns}
           onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}

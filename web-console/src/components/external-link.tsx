@@ -24,11 +24,13 @@ export interface ExternalLinkProps extends React.Props<any> {
 
 export class ExternalLink extends React.Component<ExternalLinkProps, {}> {
   render() {
-    const { href } = this.props;
+    const { href, children } = this.props;
 
     return <a
       href={href}
       target="_blank"
-    />;
+    >
+      {children}
+    </a>;
   }
 }
