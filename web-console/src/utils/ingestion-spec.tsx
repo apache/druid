@@ -331,7 +331,8 @@ export interface FlattenField {
 const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
   {
     name: 'name',
-    type: 'string'
+    type: 'string',
+    placeholder: 'column_name'
   },
   {
     name: 'type',
@@ -341,7 +342,11 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
   {
     name: 'expr',
     type: 'string',
-    isDefined: (flattenField: FlattenField) => flattenField.type === 'path' || flattenField.type === 'jq'
+    placeholder: '$.thing',
+    isDefined: (flattenField: FlattenField) => flattenField.type === 'path' || flattenField.type === 'jq',
+    info: <>
+      Specify a flatten <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json">expression</ExternalLink>.
+    </>
   }
 ];
 

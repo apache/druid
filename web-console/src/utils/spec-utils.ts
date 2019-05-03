@@ -16,10 +16,22 @@
  * limitations under the License.
  */
 
+import { FlattenField } from './ingestion-spec';
+
 export type ExprType = 'path' | 'jq';
 export type ArrayHandling = 'ignore-arrays' | 'include-arrays';
 
-export function computeFlattenPathsForData(data: any[], exprType: ExprType, arrayHandling: ArrayHandling): string[] {
+export function computeFlattenPathsForData(data: Record<string, any>[], exprType: ExprType, arrayHandling: ArrayHandling): FlattenField[] {
+  return computeFlattenExprsForData(data, exprType, arrayHandling).map((expr, i) => {
+    return {
+      type: exprType,
+      name: `expr_${i}`,
+      expr
+    };
+  });
+}
+
+export function computeFlattenExprsForData(data: Record<string, any>[], exprType: ExprType, arrayHandling: ArrayHandling): string[] {
   const seenPaths: Record<string, boolean> = {};
   for (const datum of data) {
     const datumKeys = Object.keys(datum);

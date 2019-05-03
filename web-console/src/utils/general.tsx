@@ -171,6 +171,14 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
+export function parseJson(json: string): any {
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    return undefined;
+  }
+}
+
 export function validJson(json: string): boolean {
   try {
     JSON.parse(json);

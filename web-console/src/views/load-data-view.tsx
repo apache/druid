@@ -47,7 +47,7 @@ import {
   getDruidErrorMessage,
   localStorageGet,
   LocalStorageKeys,
-  localStorageSet,
+  localStorageSet, parseJson,
   QueryState, sortWithPrefixSuffix
 } from '../utils';
 import { escapeColumnName } from '../utils/druid-expression';
@@ -82,6 +82,7 @@ import {
   sampleForTransform,
   SampleResponse
 } from '../utils/sampler';
+import { computeFlattenPathsForData } from '../utils/spec-utils';
 
 import './load-data-view.scss';
 
@@ -189,15 +190,9 @@ export interface LoadDataViewState {
 export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
   constructor(props: LoadDataViewProps) {
     super(props);
-    const { seed } = props;
 
-    let spec: any;
-    try {
-      spec = JSON.parse(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
-      if (!spec || typeof spec !== 'object') spec = {};
-    } catch {
-      spec = {};
-    }
+    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    if (!spec || typeof spec !== 'object') spec = {};
 
     this.state = {
       stage: 'connect',
@@ -591,6 +586,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   renderParserStage() {
     const { spec, columnFilter, specialColumnsOnly, parserQueryState, selectedFlattenField } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+    const flattenFields: FlattenField[] = deepGet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields') || [];
 
     const isBlank = !parseSpec.format;
     const canFlatten = parseSpec.format === 'json';
@@ -610,7 +606,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </CenterMessage>;
 
     } else if (parserQueryState.data) {
-      const flattenFields: FlattenField[] = (parseSpec.flattenSpec || {}).fields || [];
       mainFill = <div className="table-with-control">
         <div className="table-control">
           <ClearableInput
@@ -667,10 +662,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           })}
           SubComponent={rowInfo => {
             const { raw, error } = rowInfo.original;
-            let parsedJson: any = null;
-            try {
-              parsedJson = JSON.parse(raw);
-            } catch {} // Nothing to do here
+            const parsedJson: any = parseJson(raw);
 
             if (!error && parsedJson && canFlatten) {
               return <pre className="parse-detail">
@@ -689,6 +681,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           className="-striped -highlight"
         />
       </div>;
+    }
+
+    let sugestedFlattenFields: FlattenField[] | null = null;
+    if (canFlatten && !flattenFields.length && parserQueryState.data) {
+      sugestedFlattenFields = computeFlattenPathsForData(filterMap(parserQueryState.data.rows, r => parseJson(r.raw)), 'path', 'ignore-arrays');
+      console.log('su', sugestedFlattenFields);
     }
 
     return <>
@@ -716,6 +714,21 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           onChange={p => this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec', p))}
         />
         {this.renderFlattenControls()}
+        {
+          (sugestedFlattenFields && sugestedFlattenFields.length) &&
+          <FormGroup>
+            <Button
+              icon={IconNames.LIGHTBULB}
+              text="Auto add flatten specs"
+              onClick={() => {
+                this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields', sugestedFlattenFields));
+                setTimeout(() => {
+                  this.queryForParser();
+                }, 10);
+              }}
+            />
+          </FormGroup>
+        }
         {
           !selectedFlattenField &&
           <Button
@@ -795,7 +808,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           text="Add column flattening"
           onClick={() => {
             this.setState({
-              selectedFlattenField: { type: 'path', name: 'new_field', expr: '$.thing' },
+              selectedFlattenField: { type: 'path', name: '', expr: '' },
               selectedFlattenFieldIndex: -1
             });
           }}
