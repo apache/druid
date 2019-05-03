@@ -955,13 +955,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final TransactionalSegmentPublisher publisher;
     if (!isGuaranteedRollup && isOverwriteMode() && !isChangeSegmentGranularity()) {
       publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient()
-                                                       .submit(new SegmentTransactionalInsertAction(segments));
+                                                       .submit(
+                                                           new SegmentTransactionalOverwriteAction(
+                                                               getAllInputSegments(),
+                                                               segments
+                                                           )
+                                                       );
     } else {
-
-      publisher = (segments, commitMetadata) -> {
-
-        return toolbox.getTaskActionClient().submit(new SegmentTransactionalOverwriteAction());
-      };
+      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient()
+                                                       .submit(new SegmentTransactionalInsertAction(segments));
     }
 
     try (

@@ -33,7 +33,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 public class ParallelIndexTaskClient extends IndexTaskClient
 {
@@ -84,7 +84,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
     }
   }
 
-  public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
+  public void report(String supervisorTaskId, Set<DataSegment> oldSegments, Set<DataSegment> pushedSegments)
   {
     try {
       final FullResponseHolder response = submitSmileRequest(
@@ -92,7 +92,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
           HttpMethod.POST,
           "report",
           null,
-          serialize(new PushedSegmentsReport(subtaskId, pushedSegments)),
+          serialize(new PushedSegmentsReport(subtaskId, oldSegments, pushedSegments)),
           true
       );
       if (!isSuccess(response)) {

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * This class is used in native parallel batch indexing, currently only in {@link SinglePhaseParallelIndexTaskRunner}.
@@ -34,16 +34,19 @@ import java.util.List;
 public class PushedSegmentsReport
 {
   private final String taskId;
-  private final List<DataSegment> segments;
+  private final Set<DataSegment> oldSegments;
+  private final Set<DataSegment> newSegments;
 
   @JsonCreator
   public PushedSegmentsReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("segments") List<DataSegment> segments
+      @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
+      @JsonProperty("segments") Set<DataSegment> newSegments
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
-    this.segments = Preconditions.checkNotNull(segments, "segments");
+    this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
+    this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
   }
 
   @JsonProperty
@@ -53,8 +56,14 @@ public class PushedSegmentsReport
   }
 
   @JsonProperty
-  public List<DataSegment> getSegments()
+  public Set<DataSegment> getOldSegments()
   {
-    return segments;
+    return oldSegments;
+  }
+
+  @JsonProperty("segments")
+  public Set<DataSegment> getNewSegments()
+  {
+    return newSegments;
   }
 }

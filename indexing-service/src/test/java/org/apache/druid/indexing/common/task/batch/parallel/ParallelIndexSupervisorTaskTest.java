@@ -51,13 +51,11 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
@@ -350,7 +348,6 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
                 new LongSumAggregatorFactory("val", "val")
             },
             new UniformGranularitySpec(
-//                Granularities.DAY,
                 segmentGranularity,
                 Granularities.MINUTE,
                 interval == null ? null : Collections.singletonList(interval)

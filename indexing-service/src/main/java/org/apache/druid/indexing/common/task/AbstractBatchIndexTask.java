@@ -143,6 +143,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     } else {
       changeSegmentGranularity = false;
+      allInputSegments = Collections.emptySet();
       overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
@@ -152,6 +153,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   {
     if (segments.isEmpty()) {
       changeSegmentGranularity = false;
+      allInputSegments = Collections.emptySet();
       overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
@@ -162,6 +164,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
       changeSegmentGranularity = changeSegmentGranularity(intervals);
       if (changeSegmentGranularity || isPerfectRollup()) {
+        allInputSegments = Collections.emptySet();
         overwritingRootGenPartitions = Collections.emptyMap();
         // In this case, the intervals to lock must be alighed with segmentGranularity if it's defined
         final Set<Interval> uniqueIntervals = new HashSet<>();
@@ -198,8 +201,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
         if (allInputSegments == null) {
           allInputSegments = new HashSet<>(segmentsToLock);
-        } else {
-
+          overwritingRootGenPartitions = new HashMap<>();
         }
 
         final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
@@ -240,6 +242,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     } else {
       changeSegmentGranularity = false;
+      allInputSegments = Collections.emptySet();
       overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
@@ -278,9 +281,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         .max()
         .orElseThrow(() -> new ISE("Empty inputSegments"));
 
-    if (overwritingRootGenPartitions == null) {
-      overwritingRootGenPartitions = new HashMap<>();
-    }
     overwritingRootGenPartitions.put(
         interval,
         new OverwritingRootGenerationPartitions(
@@ -291,9 +291,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
+  // TODO: perhaps merge the below methods
   protected boolean isChangeSegmentGranularity()
   {
     return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
+  }
+
+  public Set<DataSegment> getAllInputSegments()
+  {
+    return Preconditions.checkNotNull(allInputSegments, "allInputSegments is not initialized");
   }
 
   Map<Interval, OverwritingRootGenerationPartitions> getAllOverwritingSegmentMeta()
@@ -355,7 +361,5 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
       throw new ISE("All atomicUpdateGroup must be compacted together");
     }
-
-    return;
   }
 }

@@ -677,7 +677,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           1L
       );
 
-      taskClient.report(getId(), Collections.singletonList(segment));
+      taskClient.report(getId(), Collections.emptySet(), Collections.singleton(segment));
       return TaskStatus.fromCode(getId(), state);
     }
 

@@ -33,6 +33,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalOverwriteAction;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
@@ -47,6 +48,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +63,7 @@ import java.util.stream.Stream;
 /**
  * An implementation of {@link ParallelIndexTaskRunner} to support best-effort roll-up. This runner can submit and
  * monitor multiple {@link ParallelIndexSubTask}s.
- *
+ * <p>
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
@@ -81,7 +83,9 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSubTask>> taskCompleteEvents =
       new LinkedBlockingDeque<>();
 
-  /** subTaskId -> report */
+  /**
+   * subTaskId -> report
+   */
   private final ConcurrentHashMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
   private volatile boolean subTaskScheduleAndMonitorStopped;
@@ -115,7 +119,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
       log.warn("There's no input split to process");
       return TaskState.SUCCESS;
     }
-    
+
     final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
 
@@ -269,7 +273,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     segmentsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
       if (prevReport != null) {
         Preconditions.checkState(
-            prevReport.getSegments().equals(report.getSegments()),
+            prevReport.getNewSegments().equals(report.getNewSegments()),
             "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
             taskId,
             prevReport,
@@ -400,16 +404,25 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
 
   private void publish(TaskToolbox toolbox) throws IOException
   {
-    final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
-      return toolbox.getTaskActionClient().submit(action);
-    };
     final UsedSegmentChecker usedSegmentChecker = new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient());
-    final Set<DataSegment> segmentsToPublish = segmentsMap
+    final Set<DataSegment> segmentsToBeOverwritten = new HashSet<>();
+    final Set<DataSegment> segmentsToPublish = new HashSet<>();
+    segmentsMap
         .values()
-        .stream()
-        .flatMap(report -> report.getSegments().stream())
-        .collect(Collectors.toSet());
+        .forEach(report -> {
+          segmentsToBeOverwritten.addAll(report.getOldSegments());
+          segmentsToPublish.addAll(report.getNewSegments());
+        });
+    final TransactionalSegmentPublisher publisher;
+    if (segmentsToBeOverwritten.isEmpty()) {
+      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient().submit(
+          new SegmentTransactionalInsertAction(segments)
+      );
+    } else {
+      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient().submit(
+          new SegmentTransactionalOverwriteAction(segmentsToBeOverwritten, segments)
+      );
+    }
     final boolean published = segmentsToPublish.isEmpty()
                               || publisher.publishSegments(segmentsToPublish, null).isSuccess();
 
@@ -420,7 +433,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
       final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsMap
           .values()
           .stream()
-          .flatMap(report -> report.getSegments().stream())
+          .flatMap(report -> report.getNewSegments().stream())
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
       if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)

@@ -66,8 +66,10 @@ import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
@@ -76,11 +78,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
@@ -199,13 +204,23 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
-    final List<DataSegment> pushedSegments = generateAndPushSegments(
+    final Set<DataSegment> pushedSegments = generateAndPushSegments(
         toolbox,
         taskClient,
         firehoseFactory,
         firehoseTempDir
     );
-    taskClient.report(supervisorTaskId, pushedSegments);
+
+    // Find inputSegments overshadowed by pushedSegments
+    final Set<DataSegment> allSegments = new HashSet<>(getAllInputSegments());
+    allSegments.addAll(pushedSegments);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+    final Set<DataSegment> oldSegments = timeline.findFullyOvershadowed()
+                                                 .stream()
+                                                 .flatMap(holder -> holder.getObject().stream())
+                                                 .map(PartitionChunk::getObject)
+                                                 .collect(Collectors.toSet());
+    taskClient.report(supervisorTaskId, oldSegments, pushedSegments);
 
     return TaskStatus.success(getId());
   }
@@ -249,10 +264,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @VisibleForTesting
-  SegmentAllocator createSegmentAllocator(
-      TaskToolbox toolbox,
-      ParallelIndexTaskClient taskClient
-  )
+  SegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexTaskClient taskClient)
   {
     return new WrappingSegmentAllocator(toolbox, taskClient);
   }
@@ -269,10 +281,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
      */
     private SegmentAllocator internalAllocator;
 
-    private WrappingSegmentAllocator(
-        TaskToolbox toolbox,
-        ParallelIndexTaskClient taskClient
-    )
+    private WrappingSegmentAllocator(TaskToolbox toolbox, ParallelIndexTaskClient taskClient)
     {
       this.toolbox = toolbox;
       this.taskClient = taskClient;
@@ -360,7 +369,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private List<DataSegment> generateAndPushSegments(
+  private Set<DataSegment> generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexTaskClient taskClient,
       final FirehoseFactory firehoseFactory,
@@ -397,7 +406,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     ) {
       driver.startJob(null);
 
-      final List<DataSegment> pushedSegments = new ArrayList<>();
+      final Set<DataSegment> pushedSegments = new HashSet<>();
 
       while (firehose.hasMore()) {
         try {

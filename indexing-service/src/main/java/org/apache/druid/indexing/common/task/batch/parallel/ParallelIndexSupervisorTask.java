@@ -382,12 +382,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   public Response allocateSegment(DateTime timestamp, @Context final HttpServletRequest req)
   {
-    ChatHandlers.authorizationCheck(
-        req,
-        Action.READ,
-        getDataSource(),
-        authorizerMapper
-    );
+    ChatHandlers.authorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
     if (toolbox == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();

@@ -68,8 +68,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -364,9 +364,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
+    public void report(String supervisorTaskId, Set<DataSegment> oldSegments, Set<DataSegment> pushedSegments)
     {
-      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), pushedSegments));
+      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), oldSegments, pushedSegments));
     }
   }
 }

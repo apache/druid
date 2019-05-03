@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+// TODO: merging with SegmentTransactionalInsertAction?
 public class SegmentTransactionalOverwriteAction implements TaskAction<SegmentPublishResult>
 {
   private final Set<DataSegment> oldSegments;
