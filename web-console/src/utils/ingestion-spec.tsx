@@ -36,7 +36,13 @@ export interface IngestionSpec {
 export type IngestionType = 'kafka' | 'kinesis' | 'index_hadoop' | 'index' | 'index_parallel';
 
 // A combination of IngestionType and firehose
-export type IngestionComboType = 'kafka' | 'kinesis' | 'index:http' | 'index:static-s3' | 'index:local' | 'index_parallel:http' | 'index_parallel:static-s3' | 'index_parallel:local';
+export type IngestionComboType =
+  'kafka' |
+  'kinesis' |
+  'index:http' |
+  'index:local' |
+  'index:static-s3' |
+  'index:static-google-blobstore';
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
@@ -69,6 +75,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'local':
         case 'http':
         case 'static-s3':
+        case 'static-google-blobstore':
           return `index:${firehose.type}` as any;
       }
   }
@@ -564,6 +571,7 @@ export interface Firehose {
   filter?: string;
   uris?: string[];
   prefixes?: string[];
+  blobs?: { bucket: string, path: string }[];
   fetchTimeout?: number;
 }
 
@@ -572,7 +580,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'static-s3'],
+    suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
     info: <>
       <p>
         Druid connects to raw data through <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
@@ -583,7 +591,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
 
   switch (ingestionComboType) {
     case 'index:http':
-    case 'index_parallel:http':
       return [
         firehoseType,
         {
@@ -597,8 +604,32 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         }
       ];
 
+    case 'index:local':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.baseDir',
+          label: 'Base directory',
+          type: 'string',
+          placeholder: '/path/to/files/',
+          info: <>
+            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
+            <p>Specifies the directory to search recursively for files to be ingested.</p>
+          </>
+        },
+        {
+          name: 'firehose.filter',
+          label: 'File filter',
+          type: 'string',
+          defaultValue: '*.*',
+          info: <>
+            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
+            <p>A wildcard filter for files. See <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">here</ExternalLink> for format information.</p>
+          </>
+        }
+      ];
+
     case 'index:static-s3':
-    case 'index_parallel:static-s3':
       return [
         firehoseType,
         {
@@ -625,28 +656,15 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         }
       ];
 
-    case 'index:local':
-    case 'index_parallel:local':
+    case 'index:static-google-blobstore':
       return [
         firehoseType,
         {
-          name: 'firehose.baseDir',
-          label: 'Base directory',
-          type: 'string',
-          placeholder: '/path/to/files/',
+          name: 'firehose.blobs',
+          label: 'Google blobs',
+          type: 'json',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
-            <p>Specifies the directory to search recursively for files to be ingested.</p>
-          </>
-        },
-        {
-          name: 'firehose.filter',
-          label: 'File filter',
-          type: 'string',
-          defaultValue: '*.*',
-          info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
-            <p>A wildcard filter for files. See <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">here</ExternalLink> for format information.</p>
+            <p>JSON array of <ExternalLink href="http://druid.io/docs/latest/development/extensions-contrib/google.html">Google Blobs</ExternalLink>.</p>
           </>
         }
       ];
@@ -719,8 +737,15 @@ function issueWithFirehose(firehose: Firehose | undefined): string | null {
       break;
 
     case 'http':
+      if (!nonEmptyArray(firehose.uris)) return 'must have at least one uri';
+      break;
+
     case 'static-s3':
       if (!nonEmptyArray(firehose.uris) && !nonEmptyArray(firehose.prefixes)) return 'must have at least one uri or prefix';
+      break;
+
+    case 'static-google-blobstore':
+      if (!nonEmptyArray(firehose.blobs)) return 'must have at least one blob';
       break;
   }
   return null;
@@ -751,6 +776,7 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
   switch (ingestionComboType) {
     case 'index:http':
     case 'index:static-s3':
+    case 'index:static-google-blobstore':
       const objectType = ingestionComboType === 'index:http' ? 'http' : 'S3';
       return [
         {
