@@ -370,20 +370,28 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderInitStage() {
-    /*
-      <div className="section">
-        <div className="section-title">Stream hub</div>
-        <div className="cards">
-          <Card interactive onClick={() => this.initWith({ type: 'kafka' })}>Apache Kafka</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'kinesis' })}>AWS Kinesis</Card>
-        </div>
-      </div>
-     */
+    const showStreaming = false;
 
     return <>
       <div className="intro">
-        To begin loading data, please first select your ingestion method
+        Please specify where your raw data is located
       </div>
+
+      <Callout intent={Intent.SUCCESS} icon={IconNames.INFO_SIGN}>
+        Welcome to the Druid data loader.
+        This project is under active development and we plan to support many other sources of raw data, including stream hubs such as Apache Kafka and AWS Kinesis, in the next few releases.
+      </Callout>
+
+      {
+        showStreaming &&
+        <div className="section">
+          <div className="section-title">Stream hub</div>
+          <div className="cards">
+            <Card interactive onClick={() => this.initWith({ type: 'kafka' })}>Apache Kafka</Card>
+            <Card interactive onClick={() => this.initWith({ type: 'kinesis' })}>AWS Kinesis</Card>
+          </div>
+        </div>
+      }
 
       <div className="section">
         <div className="section-title">Batch load</div>
@@ -2028,7 +2036,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             {
               name: 'segmentGranularity',
               type: 'string',
-              suggestions: ['HOUR', 'DAY'],
+              suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
               isDefined: (g: GranularitySpec) => g.type === 'uniform',
               info: <>
                 The granularity to create time chunks at.
