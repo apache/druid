@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { computeFlattenPathsForData } from './spec-utils';
+import { computeFlattenExprsForData } from './spec-utils';
 
 describe('spec-utils', () => {
-  describe('computeFlattenPathsForData', () => {
+  describe('computeFlattenExprsForData', () => {
     const data = [
       {
         context: {'host': 'clarity', 'topic': 'moon', 'bonus': {'foo': 'bar'}},
@@ -52,7 +52,7 @@ describe('spec-utils', () => {
     ];
 
     it('works for path, ignore-arrays', () => {
-      expect(computeFlattenPathsForData(data, 'path', 'ignore-arrays')).toEqual([
+      expect(computeFlattenExprsForData(data, 'path', 'ignore-arrays')).toEqual([
         '$.context.bonus.foo',
         '$.context.dopik',
         '$.context.host',
@@ -62,7 +62,7 @@ describe('spec-utils', () => {
     });
 
     it('works for jq, ignore-arrays', () => {
-      expect(computeFlattenPathsForData(data, 'jq', 'ignore-arrays')).toEqual([
+      expect(computeFlattenExprsForData(data, 'jq', 'ignore-arrays')).toEqual([
         '.context.bonus.foo',
         '.context.dopik',
         '.context.host',
