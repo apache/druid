@@ -29,7 +29,7 @@ This can mean any of the following things:
 
 1. The feature's API may change even in minor releases or patch releases.
 2. The feature may have known "missing" pieces that will be added later.
-3. The feature may not have received full battle-testing in production environments.
+3. The feature may or may not have received full battle-testing in production environments.
 
 All experimental features are optional.
 
