@@ -21,9 +21,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
@@ -34,61 +32,56 @@ import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 
 public class SeekableStreamSupervisorStateManager
 {
   public enum State
   {
-    // Error states are ordered from high to low priority
-    UNHEALTHY_SUPERVISOR(1),
-    UNHEALTHY_TASKS(2),
-    UNABLE_TO_CONNECT_TO_STREAM(3),
-    LOST_CONTACT_WITH_STREAM(4),
-    // Non-error states are equal priority
-    WAITING_TO_RUN(5),
-    CONNECTING_TO_STREAM(5),
-    DISCOVERING_INITIAL_TASKS(5),
-    CREATING_TASKS(5),
-    RUNNING(5),
-    SUSPENDED(5),
-    SHUTTING_DOWN(5);
+    // Error states - ordered from high to low priority
+    UNHEALTHY_SUPERVISOR(1, false, false),
+    UNHEALTHY_TASKS(2, false, false),
+    UNABLE_TO_CONNECT_TO_STREAM(3, false, false),
+    LOST_CONTACT_WITH_STREAM(4, false, false),
+
+    // Non-error states - equal priority
+    WAITING_TO_RUN(5, true, true),
+    CONNECTING_TO_STREAM(5, true, true),
+    DISCOVERING_INITIAL_TASKS(5, true, true),
+    CREATING_TASKS(5, true, true),
+    RUNNING(5, true, false),
+    SUSPENDED(5, true, false),
+    SHUTTING_DOWN(5, true, false);
 
     // Lower priority number means higher priority and vice versa
     private final int priority;
+    private final boolean healthy;
+    private final boolean firstRunOnly;
 
-    State(int priority)
+    State(int priority, boolean healthy, boolean firstRunOnly)
     {
       this.priority = priority;
+      this.healthy = healthy;
+      this.firstRunOnly = firstRunOnly;
     }
 
-    // We only want to set these if the supervisor hasn't had a successful iteration yet
-    public boolean isOnlySetWhenNoSuccessfulRunYet()
+    // We only want to set these only if the supervisor hasn't had a successful iteration yet
+    public boolean isFirstRunOnly()
     {
-      Set<State> firstRunStates = ImmutableSet.of(
-          WAITING_TO_RUN,
-          CONNECTING_TO_STREAM,
-          DISCOVERING_INITIAL_TASKS,
-          CREATING_TASKS,
-          RUNNING
-      );
-      return firstRunStates.contains(this);
+      return firstRunOnly;
     }
 
     public boolean isHealthy()
     {
-      Set<State> unhealthyStates = ImmutableSet.of(
-          UNHEALTHY_SUPERVISOR,
-          UNHEALTHY_TASKS,
-          UNABLE_TO_CONNECT_TO_STREAM,
-          LOST_CONTACT_WITH_STREAM
-      );
-      return !unhealthyStates.contains(this);
+      return healthy;
     }
   }
 
@@ -122,12 +115,12 @@ public class SeekableStreamSupervisorStateManager
     this.unhealthinessThreshold = supervisorConfig.getUnhealthinessThreshold();
     this.healthinessTaskThreshold = supervisorConfig.getTaskHealthinessThreshold();
     this.unhealthinessTaskThreshold = supervisorConfig.getTaskUnhealthinessThreshold();
-    Preconditions.checkArgument(
-        supervisorConfig.getMaxStoredExceptionEvents() >=
-        Math.max(healthinessThreshold, unhealthinessThreshold),
-        "numExceptionEventsToStore must be greater than or equal to both "
-        + "healthinessThreshold and unhealthinessThreshold"
-    );
+
+    Preconditions.checkArgument(supervisorConfig.getMaxStoredExceptionEvents() >= Math.max(
+        healthinessThreshold,
+        unhealthinessThreshold
+    ), "maxStoredExceptionEvents must be >= to max(healthinessThreshold, unhealthinessThreshold)");
+
     this.eventStore = new ExceptionEventStore(
         supervisorConfig.getMaxStoredExceptionEvents(),
         supervisorConfig.isStoringStackTraces()
@@ -137,33 +130,27 @@ public class SeekableStreamSupervisorStateManager
   }
 
   /**
-   * Certain supervisor states can only be set if the supervisor hasn't had a successful iteration yet.  This function
-   * checks if there's been at least one successful iteration if needed and sets supervisor state to an appropriate
+   * Certain supervisor states are only valid if the supervisor hasn't had a successful iteration yet.  This function
+   * checks if there's been at least one successful iteration, and if applicable sets supervisor state to an appropriate
    * new state.
    */
-  public Optional<State> setState(State newState)
+  public void maybeSetState(State newState)
   {
-    if (newState.isOnlySetWhenNoSuccessfulRunYet()) {
-      if (!atLeastOneSuccessfulRun) {
-        supervisorState = newState;
-        return Optional.of(newState);
-      } else {
-        return Optional.absent();
-      }
-    } else if (newState.equals(State.SUSPENDED)) {
+    if (!newState.isFirstRunOnly() || !atLeastOneSuccessfulRun) {
+      supervisorState = newState;
+    }
+
+    if (State.SUSPENDED.equals(newState)) {
       atLeastOneSuccessfulRun = false; // We want the startup states again after being suspended
     }
-    this.supervisorState = newState;
-    return Optional.of(newState);
   }
 
   public void storeThrowableEvent(Throwable t)
   {
-    if (t instanceof PossiblyTransientStreamException && atLeastOneSuccessfulRun) {
-      t = new TransientStreamException(t);
-    }
+    eventStore.storeThrowable(t instanceof PossiblyTransientStreamException && atLeastOneSuccessfulRun
+                              ? new TransientStreamException(t.getCause())
+                              : t);
 
-    eventStore.storeThrowable(t);
     currentRunSuccessful = false;
   }
 
@@ -174,22 +161,19 @@ public class SeekableStreamSupervisorStateManager
 
   public void markRunFinishedAndEvaluateHealth()
   {
-    if (currentRunSuccessful) {
-      atLeastOneSuccessfulRun = true;
-    }
+    atLeastOneSuccessfulRun |= currentRunSuccessful;
 
     State currentRunState = State.RUNNING;
 
-    for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStore.getNonTransientRecentEvents().entrySet()) {
+    for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStore.getRecentEventsMatchingExceptionsThrownOnCurrentRun().entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class) ||
             events.getKey().equals(TransientStreamException.class) ||
             events.getKey().equals(PossiblyTransientStreamException.class)) {
-          if (atLeastOneSuccessfulRun) {
-            currentRunState = getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM);
-          } else {
-            currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
-          }
+
+          currentRunState = atLeastOneSuccessfulRun
+                            ? getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM)
+                            : getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
         } else {
           currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_SUPERVISOR);
         }
@@ -227,15 +211,13 @@ public class SeekableStreamSupervisorStateManager
     supervisorStateHistory.add(currentRunState);
 
     if (currentRunState.isHealthy() && supervisorState == State.UNHEALTHY_SUPERVISOR) {
-      currentRunState = State.UNHEALTHY_SUPERVISOR;
       boolean supervisorHealthy = supervisorStateHistory.size() >= healthinessThreshold;
       for (int i = 0; i < Math.min(healthinessThreshold, supervisorStateHistory.size()); i++) {
-        if (!supervisorStateHistory.getLatest(i).isHealthy()) {
-          supervisorHealthy = false;
-        }
+        supervisorHealthy &= supervisorStateHistory.getLatest(i).isHealthy();
       }
-      if (supervisorHealthy) {
-        currentRunState = State.RUNNING;
+
+      if (!supervisorHealthy) {
+        currentRunState = State.UNHEALTHY_SUPERVISOR;
       }
     }
 
@@ -246,7 +228,7 @@ public class SeekableStreamSupervisorStateManager
     eventStore.resetErrorsEncounteredOnRun();
   }
 
-  public Queue<ExceptionEvent> getExceptionEvents()
+  public List<ExceptionEvent> getExceptionEvents()
   {
     return eventStore.getRecentEvents();
   }
@@ -269,10 +251,6 @@ public class SeekableStreamSupervisorStateManager
     private String errorMessage;
     private DateTime timestamp;
     private StreamErrorTransience streamErrorTransience;
-
-    public ExceptionEvent()
-    {
-    }
 
     public ExceptionEvent(
         Throwable t,
@@ -319,7 +297,7 @@ public class SeekableStreamSupervisorStateManager
     private final boolean storeStackTraces;
     private final Set<Class> errorsEncounteredOnRun;
 
-    public ExceptionEventStore(int numEventsToStore, boolean storeStackTraces)
+    private ExceptionEventStore(int numEventsToStore, boolean storeStackTraces)
     {
       this.recentEventsQueue = new ConcurrentLinkedQueue<>();
       this.recentEventsMap = new ConcurrentHashMap<>(numEventsToStore);
@@ -328,7 +306,7 @@ public class SeekableStreamSupervisorStateManager
       this.errorsEncounteredOnRun = new HashSet<>();
     }
 
-    public void storeThrowable(Throwable t)
+    private void storeThrowable(Throwable t)
     {
       Queue<ExceptionEvent> exceptionEventsForClassT = recentEventsMap.getOrDefault(
           t.getClass(),
@@ -359,28 +337,22 @@ public class SeekableStreamSupervisorStateManager
       recentEventsMap.put(t.getClass(), exceptionEventsForClassT);
     }
 
-    public void resetErrorsEncounteredOnRun()
+    private void resetErrorsEncounteredOnRun()
     {
       errorsEncounteredOnRun.clear();
     }
 
-    public Queue<ExceptionEvent> getRecentEvents()
+    private List<ExceptionEvent> getRecentEvents()
     {
-      return recentEventsQueue;
+      return new ArrayList<>(recentEventsQueue);
     }
 
-    public ConcurrentHashMap<Class, Queue<ExceptionEvent>> getNonTransientRecentEvents()
+    private Map<Class, Queue<ExceptionEvent>> getRecentEventsMatchingExceptionsThrownOnCurrentRun()
     {
-      ConcurrentHashMap<Class, Queue<ExceptionEvent>> nonTransientRecentEventsMap =
-          new ConcurrentHashMap<>(recentEventsMap);
-
-      for (Class throwableClass : recentEventsMap.keySet()) {
-        if (!errorsEncounteredOnRun.contains(throwableClass)) {
-          nonTransientRecentEventsMap.remove(throwableClass);
-        }
-      }
-
-      return nonTransientRecentEventsMap;
+      return recentEventsMap.entrySet()
+                            .stream()
+                            .filter(x -> errorsEncounteredOnRun.contains(x.getKey()))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
   }
 }

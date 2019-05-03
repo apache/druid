@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.curator.shaded.com.google.common.base.Throwables;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
@@ -70,44 +72,46 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public void assign(Set<StreamPartition<Integer>> streamPartitions)
   {
-    consumer.assign(streamPartitions
-                        .stream()
-                        .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
-                        .collect(Collectors.toSet()));
+    wrapExceptions(() -> consumer.assign(streamPartitions
+                                             .stream()
+                                             .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
+                                             .collect(Collectors.toSet())));
   }
 
   @Override
   public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
   {
-    consumer.seek(new TopicPartition(partition.getStream(), partition.getPartitionId()), sequenceNumber);
+    wrapExceptions(() -> consumer.seek(
+        new TopicPartition(partition.getStream(), partition.getPartitionId()),
+        sequenceNumber
+    ));
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<Integer>> partitions)
   {
-    consumer.seekToBeginning(partitions
-                                 .stream()
-                                 .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                                 .collect(Collectors.toList()));
+    wrapExceptions(() -> consumer.seekToBeginning(partitions
+                                                      .stream()
+                                                      .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
+                                                      .collect(Collectors.toList())));
   }
 
   @Override
   public void seekToLatest(Set<StreamPartition<Integer>> partitions)
   {
-    consumer.seekToEnd(partitions
-                           .stream()
-                           .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                           .collect(Collectors.toList()));
+    wrapExceptions(() -> consumer.seekToEnd(partitions
+                                                .stream()
+                                                .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
+                                                .collect(Collectors.toList())));
   }
 
   @Override
   public Set<StreamPartition<Integer>> getAssignment()
   {
-    Set<TopicPartition> topicPartitions = consumer.assignment();
-    return topicPartitions
-        .stream()
-        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
-        .collect(Collectors.toSet());
+    return wrapExceptions(() -> consumer.assignment()
+                                        .stream()
+                                        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
+                                        .collect(Collectors.toSet()));
   }
 
   @Nonnull
@@ -149,39 +153,22 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Long getPosition(StreamPartition<Integer> partition)
   {
-    try {
-      return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
-    }
-    catch (TimeoutException e) {
-      throw new PossiblyTransientStreamException(e);
-    }
-    catch (WakeupException | InterruptException e) {
-      throw new TransientStreamException(e);
-    }
-    catch (KafkaException e) {
-      throw new NonTransientStreamException(e);
-    }
+    return wrapExceptions(() -> consumer.position(new TopicPartition(
+        partition.getStream(),
+        partition.getPartitionId()
+    )));
   }
 
   @Override
   public Set<Integer> getPartitionIds(String stream)
   {
-    try {
+    return wrapExceptions(() -> {
       List<PartitionInfo> partitions = consumer.partitionsFor(stream);
       if (partitions == null) {
         throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
       }
       return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
-    }
-    catch (TimeoutException e) {
-      throw new PossiblyTransientStreamException(e);
-    }
-    catch (WakeupException | InterruptException e) {
-      throw new TransientStreamException(e);
-    }
-    catch (KafkaException e) {
-      throw new NonTransientStreamException(e);
-    }
+    });
   }
 
   @Override
@@ -234,4 +221,31 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     }
   }
 
+  private static <T> T wrapExceptions(Callable<T> callable)
+  {
+    try {
+      return callable.call();
+    }
+    catch (TimeoutException e) {
+      throw new PossiblyTransientStreamException(e);
+    }
+    catch (WakeupException | InterruptException e) {
+      throw new TransientStreamException(e);
+    }
+    catch (KafkaException e) {
+      throw new NonTransientStreamException(e);
+    }
+    catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static void wrapExceptions(Runnable runnable)
+  {
+    wrapExceptions(() -> {
+      runnable.run();
+      return null;
+    });
+  }
 }

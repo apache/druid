@@ -22,8 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 
-import javax.validation.constraints.Min;
-
 public class SeekableStreamSupervisorConfig
 {
   @JsonProperty
@@ -31,22 +29,18 @@ public class SeekableStreamSupervisorConfig
 
   // The number of runs failed before the supervisor flips from a RUNNING to an UNHEALTHY state
   @JsonProperty
-  @Min(3)
   private int unhealthinessThreshold = 3;
 
-  // The number of successful before the supervisor flips from an UNHEALTHY to a RUNNING state
+  // The number of successful runs before the supervisor flips from an UNHEALTHY to a RUNNING state
   @JsonProperty
-  @Min(3)
   private int healthinessThreshold = 3;
 
   // The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state
   @JsonProperty
-  @Min(3)
   private int taskUnhealthinessThreshold = 3;
 
   // The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state
   @JsonProperty
-  @Min(3)
   private int taskHealthinessThreshold = 3;
 
   // The maximum number of exception events that can be returned through the supervisor status endpoint

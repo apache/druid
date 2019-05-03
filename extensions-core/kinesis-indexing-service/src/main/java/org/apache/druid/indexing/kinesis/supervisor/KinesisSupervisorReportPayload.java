@@ -23,7 +23,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 
 import java.util.Collections;
-import java.util.Queue;
+import java.util.List;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -35,7 +35,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Long durationSeconds,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
+      List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
@@ -66,6 +66,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", active=" + getActiveTasks() +
            ", publishing=" + getPublishingTasks() +
            ", suspended=" + getSuspended() +
+           ", recentErrors=" + getRecentErrors() +
            '}';
   }
 

@@ -28,7 +28,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>
@@ -46,7 +45,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
   private final SeekableStreamSupervisorStateManager.State state;
-  private final Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors;
+  private final List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -60,7 +59,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
+      List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     this.dataSource = dataSource;
@@ -169,7 +168,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   }
 
   @JsonProperty
-  public Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> getRecentErrors()
+  public List<SeekableStreamSupervisorStateManager.ExceptionEvent> getRecentErrors()
   {
     return recentErrors;
   }
