@@ -25,7 +25,7 @@ title: "Select Queries"
 # Select Queries
 
 <div class="note caution">
-We encourage you to use the [Scan query](../querying/scan-query.html) query type rather than Select whenever possible.
+We encourage you to use the [Scan query](../querying/scan-query.html) type rather than Select whenever possible.
 In situations involving larger numbers of segments, the Select query can have very high memory and performance overhead.
 The Scan query does not have this issue.
 The major difference between the two is that the Scan query does not support pagination.
