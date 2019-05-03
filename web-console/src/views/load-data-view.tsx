@@ -686,7 +686,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     let sugestedFlattenFields: FlattenField[] | null = null;
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
       sugestedFlattenFields = computeFlattenPathsForData(filterMap(parserQueryState.data.rows, r => parseJson(r.raw)), 'path', 'ignore-arrays');
-      console.log('su', sugestedFlattenFields);
     }
 
     return <>
@@ -715,7 +714,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         />
         {this.renderFlattenControls()}
         {
-          (sugestedFlattenFields && sugestedFlattenFields.length) &&
+          Boolean(sugestedFlattenFields && sugestedFlattenFields.length) &&
           <FormGroup>
             <Button
               icon={IconNames.LIGHTBULB}
