@@ -231,6 +231,22 @@ public class FunctionTest
     assertExpr("array_concat(0, 1)", new Long[]{0L,1L});
   }
 
+  @Test
+  public void testArrayToString()
+  {
+    assertExpr("array_to_string([1, 2, 3], ',')", "1,2,3");
+    assertExpr("array_to_string([1], '|')", "1");
+    assertExpr("array_to_string(a, '|')", "foo|bar|baz|foobar");
+  }
+
+  @Test
+  public void testStringToArray()
+  {
+    assertExpr("string_to_array('1,2,3', ',')", new String[]{"1", "2", "3"});
+    assertExpr("string_to_array('1', ',')", new String[]{"1"});
+    assertExpr("string_to_array(array_to_string(a, ','), ',')", new String[]{"foo", "bar", "baz", "foobar"});
+  }
+
   private void assertExpr(final String expression, final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());

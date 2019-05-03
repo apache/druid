@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
+import net.thisptr.jackson.jq.internal.misc.Strings;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -36,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -1789,6 +1791,58 @@ interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       return ImmutableSet.copyOf(args);
+    }
+  }
+
+  class ArrayToStringFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_to_string";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      final String join = args.get(1).eval(bindings).asString();
+      return ExprEval.of(Arrays.stream(array).map(String::valueOf).collect(Collectors.joining(join != null ? join : "")));
+    }
+  }
+
+  class StringToArrayFunction extends ArrayFunction
+  {
+    @Override
+    public String name()
+    {
+      return "string_to_array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final String arrayString = expr.asString();
+      if (arrayString == null) {
+        return ExprEval.of(null);
+      }
+
+      final String split = args.get(1).eval(bindings).asString();
+      return ExprEval.ofStringArray(Strings.splitToArray(arrayString, split != null ? split : ""));
     }
   }
 }
