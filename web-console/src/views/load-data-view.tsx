@@ -50,6 +50,7 @@ import {
   localStorageSet,
   QueryState, sortWithPrefixSuffix
 } from '../utils';
+import { escapeColumnName } from '../utils/druid-expression';
 import { possibleDruidFormatForValues } from '../utils/druid-time';
 import { updateSchemaWithSample } from '../utils/druid-type';
 import {
@@ -130,7 +131,7 @@ const VIEW_TITLE: Record<Stage, string> = {
   'partition': 'Partition',
   'tuning': 'Tune',
   'publish': 'Publish',
-  'json-spec': 'View JSON Spec'
+  'json-spec': 'Edit JSON spec'
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
@@ -1113,7 +1114,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                     } else {
                       this.setState({
                         selectedTransformIndex: -1,
-                        selectedTransform: { type: 'expression', name: columnName, expression: columnName }
+                        selectedTransform: {
+                          type: 'expression',
+                          name: columnName,
+                          expression: escapeColumnName(columnName)
+                        }
                       });
                     }
                   }}
@@ -1225,7 +1230,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           onClick={() => {
             this.setState({
               selectedTransformIndex: -1,
-              selectedTransform: { type: 'expression', name: 'new_transform_field', expression: 'some_expression' }
+              selectedTransform: { type: 'expression', name: '', expression: '' }
             });
           }}
         />
@@ -1703,13 +1708,15 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               <Switch
                 checked={dimensionMode === 'specific'}
                 onChange={() => this.setState({ newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific' })}
-                label="Explicit dimensions and metrics"
+                label="Set dimensions and metrics"
               />
               <Popover
                 content={
                   <div className="label-info-text">
                     <p>
-                      Select whether or not you want to provide an explicit list of dimensions
+                      Select whether or not you want to set an explicit list of <ExternalLink href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="http://druid.io/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
+                      Explicitly setting dimensions and metrics can lead to better compression and performance.
+                      If you disable this option, Druid will try to auto-detect fields in your data and treat them as individual columns.
                     </p>
                   </div>
                 }
@@ -1724,10 +1731,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 fields={[
                   {
                     name: 'dataSchema.parser.parseSpec.dimensionsSpec.dimensionExclusions',
-                    label: 'Dimension exclusions',
+                    label: 'Exclusions',
                     type: 'string-array',
                     info: <>
-                      A list of dimensions to exclude from the dimensions auto detection.
+                      Provide a comma separated list of columns (use the column name from the raw data) you do not want Druid to ingest.
                     </>
                   }
                 ]}
@@ -1799,7 +1806,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           this.queryForSchema();
         }, 10);
       }}
-      confirmButtonText={`${newRollup ? 'Enable' : 'Disable'} rollup`}
+      confirmButtonText={`Yes - ${newRollup ? 'enable' : 'disable'} rollup`}
       successText={`Rollup was ${newRollup ? 'enabled' : 'disabled'}. Schema has been updated.`}
       failText="Could change rollup"
       intent={Intent.WARNING}
@@ -1809,7 +1816,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         {`Are you sure you want to ${newRollup ? 'enable' : 'disable'} rollup?`}
       </p>
       <p>
-        Doing so will destroy of any work you have done so far on configuring the schema.
+        Making this change will reset any work you have done in this section.
       </p>
     </AsyncActionDialog>;
   }
@@ -1827,17 +1834,21 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           this.queryForSchema();
         }, 10);
       }}
-      confirmButtonText={`Change to ${autoDetect ? 'auto detect' : 'specific list'} of dimensions`}
+      confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly set'} columns`}
       successText={`Dimension mode changes to ${autoDetect ? 'auto detect' : 'specific list'}. Schema has been updated.`}
       failText="Could change dimension mode"
       intent={Intent.WARNING}
       onClose={() => this.setState({ newDimensionMode: null })}
     >
       <p>
-        {`Are you sure you want to change the dimension mode to ${autoDetect ? 'auto detect' : 'specific list'}?`}
+        {
+          autoDetect ?
+          'Are you sure you don’t want to set the dimensions and metrics explicitly?' :
+          'Are you sure you want to set dimensions and metrics explicitly?'
+        }
       </p>
       <p>
-        Doing so will destroy of any work you have done so far on configuring the schema.
+        Making this change will reset any work you have done in this section.
       </p>
     </AsyncActionDialog>;
   }
@@ -2161,6 +2172,32 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     </>;
   }
 
+  renderParallelPickerIfNeeded() {
+    const { spec } = this.state;
+    if (!hasParallelAbility(spec)) return null;
+
+    return <FormGroup>
+      <Switch
+        large
+        checked={isParallel(spec)}
+        onChange={() => this.updateSpec(changeParallel(spec, !isParallel(spec)))}
+        labelElement={<>
+          {'Parallel indexing '}
+          <Popover
+            content={
+              <div className="label-info-text">
+                Druid currently has two types of native batch indexing tasks, <Code>index_parallel</Code> which runs tasks in parallel on multiple MiddleManager processes, and <Code>index</Code> which will run a single indexing task locally on a single MiddleManager.
+              </div>
+            }
+            position="left-bottom"
+          >
+            <Icon icon={IconNames.INFO_SIGN} iconSize={16}/>
+          </Popover>
+        </>}
+      />
+    </FormGroup>;
+  }
+
   // ==================================================================
 
   renderPublishStage() {
@@ -2190,7 +2227,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           ]}
           model={spec}
           onChange={s => this.updateSpec(s)}
-          large
         />
       </div>
       <div className="other"/>
@@ -2203,32 +2239,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       {this.renderNextBar({})}
     </>;
-  }
-
-  renderParallelPickerIfNeeded() {
-    const { spec } = this.state;
-    if (!hasParallelAbility(spec)) return null;
-
-    return <FormGroup>
-      <Switch
-        large
-        checked={isParallel(spec)}
-        onChange={() => this.updateSpec(changeParallel(spec, !isParallel(spec)))}
-        labelElement={<>
-          {'Parallel indexing '}
-          <Popover
-            content={
-              <div className="label-info-text">
-                Druid currently has two types of native batch indexing tasks, <Code>index_parallel</Code> which runs tasks in parallel on multiple MiddleManager processes, and <Code>index</Code> which will run a single indexing task locally on a single MiddleManager.
-              </div>
-            }
-            position="left-bottom"
-          >
-            <Icon icon={IconNames.INFO_SIGN} iconSize={16}/>
-          </Popover>
-        </>}
-      />
-    </FormGroup>;
   }
 
   // ==================================================================
@@ -2250,6 +2260,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       <div className="control">
         <Callout className="intro">
+          <p className="optional">
+            Optional
+          </p>
           <p>
             Druid begins ingesting data once you submit a JSON ingestion spec.
             If you modify any values in this view, the values entered in previous sections will update accordingly.

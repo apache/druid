@@ -363,7 +363,8 @@ export interface Transform {
 const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
   {
     name: 'name',
-    type: 'string'
+    type: 'string',
+    placeholder: 'output_name'
   },
   {
     name: 'type',
@@ -372,7 +373,11 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
   },
   {
     name: 'expression',
-    type: 'string'
+    type: 'string',
+    placeholder: '"foo" + "bar"',
+    info: <>
+      A valid Druid <ExternalLink href="http://druid.io/docs/latest/misc/math-expr.html">expression</ExternalLink>.
+    </>
   }
 ];
 
