@@ -79,8 +79,8 @@ layout: toc
     * [Segment Metadata](/docs/VERSION/querying/segmentmetadataquery.html)
     * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
     * [Search](/docs/VERSION/querying/searchquery.html)
-    * [Select](/docs/VERSION/querying/select-query.html)
     * [Scan](/docs/VERSION/querying/scan-query.html)
+    * [Select](/docs/VERSION/querying/select-query.html)
     * Components
       * [Datasources](/docs/VERSION/querying/datasource.html)
       * [Filters](/docs/VERSION/querying/filters.html)
@@ -97,6 +97,7 @@ layout: toc
     * [Joins](/docs/VERSION/querying/joins.html)
     * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
     * [Caching](/docs/VERSION/querying/caching.html)
+    * [Geographic Queries](/docs/VERSION/development/geo.html) (experimental)
 
 ## Design
   * [Overview](/docs/VERSION/design/index.html)
@@ -109,7 +110,8 @@ layout: toc
     * [Historical](/docs/VERSION/design/historical.html)
     * [MiddleManager](/docs/VERSION/design/middlemanager.html)
       * [Peons](/docs/VERSION/design/peons.html)
-    * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
+    * [Router](/docs/VERSION/development/router.html) (optional; experimental)
+    * [Realtime Node](/docs/VERSION/design/realtime.html) (deprecated)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
@@ -162,11 +164,7 @@ layout: toc
   * [Build From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
   * [Integration](/docs/VERSION/development/integrating-druid-with-other-technologies.html)
-  * Experimental Features
-    * [Overview](/docs/VERSION/development/experimental.html)
-    * [Approximate Histograms and Quantiles](/docs/VERSION/development/extensions-core/approximate-histograms.html)
-    * [Geographic Queries](/docs/VERSION/development/geo.html)
-    * [Router](/docs/VERSION/development/router.html)
+  * [Experimental Features](/docs/VERSION/development/experimental.html)
 
 ## Misc
   * [Druid Expressions Language](/docs/VERSION/misc/math-expr.html)
