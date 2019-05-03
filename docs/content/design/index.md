@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Design"
+title: "Apache Druid (incubating) Design"
 ---
 
 <!--
@@ -24,7 +24,7 @@ title: "Design"
 
 # What is Druid?<a id="what-is-druid"></a>
 
-Druid is a data store designed for high-performance slice-and-dice analytics
+Apache Druid (incubating) is a data store designed for high-performance slice-and-dice analytics
 ("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)"-style) on large data sets. Druid is most often
 used as a data store for powering GUI analytical applications, or as a backend for highly-concurrent APIs that need
 fast aggregations. Common application areas for Druid include:

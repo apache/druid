@@ -534,7 +534,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)
   {
-    EasyMock.expect(segmentsMetadata.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadata.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock
         .expect(segmentsMetadata.iterateAllUsedSegments())
         .andReturn(dataSource.getSegments())

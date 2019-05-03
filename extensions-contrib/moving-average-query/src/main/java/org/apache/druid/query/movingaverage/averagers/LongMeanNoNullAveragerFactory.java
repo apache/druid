@@ -17,36 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.rule;
+package org.apache.druid.query.movingaverage.averagers;
 
-import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.plan.Convention;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.druid.sql.calcite.rel.DruidRel;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DruidRelToBindableRule extends ConverterRule
+public class LongMeanNoNullAveragerFactory extends ComparableAveragerFactory<Double, Double>
 {
-  private static DruidRelToBindableRule INSTANCE = new DruidRelToBindableRule();
 
-  private DruidRelToBindableRule()
+  @JsonCreator
+  public LongMeanNoNullAveragerFactory(
+      @JsonProperty("name") String name,
+      @JsonProperty("buckets") int numBuckets,
+      @JsonProperty("cycleSize") Integer cycleSize,
+      @JsonProperty("fieldName") String fieldName
+  )
   {
-    super(
-        DruidRel.class,
-        Convention.NONE,
-        BindableConvention.INSTANCE,
-        DruidRelToBindableRule.class.getSimpleName()
-    );
-  }
-
-  public static DruidRelToBindableRule instance()
-  {
-    return INSTANCE;
+    super(name, numBuckets, fieldName, cycleSize);
   }
 
   @Override
-  public RelNode convert(RelNode rel)
+  public Averager<Double> createAverager()
   {
-    return ((DruidRel) rel).asBindable();
+    return new LongMeanNoNullAverager(numBuckets, name, fieldName, cycleSize);
   }
 }

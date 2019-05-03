@@ -24,7 +24,7 @@ title: "PostgreSQL Metadata Store"
 
 # PostgreSQL Metadata Store
 
-Make sure to [include](../../operations/including-extensions.html) `postgresql-metadata-storage` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `postgresql-metadata-storage` as an extension.
 
 ## Setting up PostgreSQL
 

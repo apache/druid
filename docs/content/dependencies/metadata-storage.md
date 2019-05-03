@@ -24,7 +24,7 @@ title: "Metadata Storage"
 
 # Metadata Storage
 
-The Metadata Storage is an external dependency of Druid. Druid uses it to store
+The Metadata Storage is an external dependency of Apache Druid (incubating). Druid uses it to store
 various metadata about the system, but not to store the actual data. There are
 a number of tables used for various purposes described below.
 

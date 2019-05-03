@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Papers"
+title: "Apache Druid (incubating) Papers"
 ---
 
 <!--

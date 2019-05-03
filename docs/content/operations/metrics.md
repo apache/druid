@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Metrics"
+title: "Apache Druid (incubating) Metrics"
 ---
 
 <!--

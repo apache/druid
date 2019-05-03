@@ -24,7 +24,7 @@ title: "Deleting Data"
 
 # Deleting Data
 
-Permanent deletion of a Druid segment has two steps:
+Permanent deletion of a segment in Apache Druid (incubating) has two steps:
 
 1. The segment must first be marked as "unused". This occurs when a segment is dropped by retention rules, and when a user manually disables a segment through the Coordinator API.
 2. After segments have been marked as "unused", a Kill Task will delete any "unused" segments from Druid's metadata store as well as deep storage.

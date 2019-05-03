@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Configuration Reference"
+title: "Apache Druid (incubating) Configuration Reference"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Configuration Reference"
   ~ under the License.
   -->
 
-# Configuration Reference
+# Apache Druid (incubating) Configuration Reference
 
 This page documents all of the configuration properties for each Druid service type.
 
@@ -32,7 +32,7 @@ This page documents all of the configuration properties for each Druid service t
     * [JVM Configuration Best Practices](#jvm-configuration-best-practices)
     * [Extensions](#extensions)
     * [Modules](#modules)
-    * [Zookeeper](#zookeper)
+    * [Zookeeper](#zookeeper)
     * [Exhibitor](#exhibitor)
     * [TLS](#tls)
     * [Authentication & Authorization](#authentication-and-authorization)
@@ -1424,7 +1424,6 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
-|`druid.sql.planner.useFallback`|Whether to evaluate operations on the Broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`druid.sql.planner.serializeComplexValues`|Whether to serialize "complex" output values, false will return the class name instead of the serialized value.|true|

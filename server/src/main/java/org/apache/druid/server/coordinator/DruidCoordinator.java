@@ -77,7 +77,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -322,10 +321,6 @@ public class DruidCoordinator
     final Collection<ImmutableDruidDataSource> dataSources =
         segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
 
-    if (dataSources == null) {
-      return loadStatus;
-    }
-
     for (ImmutableDruidDataSource dataSource : dataSources) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int numUsedSegments = segments.size();
@@ -482,11 +477,8 @@ public class DruidCoordinator
    * Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try (to some
    * reasonable extent) to organize the code so that it iterates the returned iterable only once rather than several
    * times.
-   *
-   * Will return null if we do not have a valid snapshot of segments yet (perhaps the underlying metadata store has
-   * not yet been polled.)
    */
-  public @Nullable Iterable<DataSegment> iterateAllUsedSegments()
+  public Iterable<DataSegment> iterateAllUsedSegments()
   {
     return segmentsMetadata.iterateAllUsedSegments();
   }
@@ -545,7 +537,7 @@ public class DruidCoordinator
       log.info("I am the leader of the coordinators, all must bow!");
       log.info("Starting coordination in [%s]", config.getCoordinatorStartDelay());
 
-      segmentsMetadata.start();
+      segmentsMetadata.startPollingDatabasePeriodically();
       metadataRuleManager.start();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
@@ -613,7 +605,7 @@ public class DruidCoordinator
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
-      segmentsMetadata.stop();
+      segmentsMetadata.stopPollingDatabasePeriodically();
     }
   }
 
@@ -657,7 +649,7 @@ public class DruidCoordinator
         }
 
         List<Boolean> allStarted = Arrays.asList(
-            segmentsMetadata.isStarted(),
+            segmentsMetadata.isPollingDatabasePeriodically(),
             serverInventoryView.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
@@ -677,10 +669,6 @@ public class DruidCoordinator
         // Do coordinator stuff.
         final Collection<ImmutableDruidDataSource> dataSources =
             segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
-        if (dataSources == null) {
-          log.info("Metadata store not polled yet, skipping this run.");
-          return;
-        }
 
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams

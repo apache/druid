@@ -20,20 +20,22 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -41,9 +43,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -52,32 +52,31 @@ import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  *
@@ -88,9 +87,39 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadata.class);
 
   /**
-   * Use to synchronize {@link #start()}, {@link #stop()}, {@link #poll()}, and {@link #isStarted()}. These methods
-   * should be synchronized to prevent from being called at the same time if two different threads are calling them.
-   * This might be possible if a druid coordinator gets and drops leadership repeatedly in quick succession.
+   * Marker interface for objects stored in {@link #latestDataSourcesUpdate}. See the comment for that field for
+   * details.
+   */
+  private interface Update
+  {}
+
+  /** Periodically updates {@link #dataSources} via {@link #poll()}. */
+  private static class PeriodicPollUpdate implements Update
+  {
+    /**
+     * This future allows to wait until {@link #dataSources} is initialized in the first {@link #poll()} happening since
+     * {@link #startPollingDatabasePeriodically()} is called for the first time, or since the last happens-before
+     * visible {@link #startPollingDatabasePeriodically()} in case of Coordinator's leadership changes.
+     */
+    final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
+  }
+
+  private static class OnDemandUpdate implements Update
+  {
+    final long initiationTimeNanos = System.nanoTime();
+    final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+
+    long nanosElapsedFromInitiation()
+    {
+      return System.nanoTime() - initiationTimeNanos;
+    }
+  }
+
+  /**
+   * Use to synchronize {@link #startPollingDatabasePeriodically}, {@link #stopPollingDatabasePeriodically}, {@link
+   * #poll}, and {@link #isPollingDatabasePeriodically}. These methods should be synchronized to prevent from being
+   * called at the same time if two different threads are calling them. This might be possible if Coordinator gets and
+   * drops leadership repeatedly in quick succession.
    */
   private final ReentrantReadWriteLock startStopLock = new ReentrantReadWriteLock();
 
@@ -101,41 +130,56 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * the code, and for tests, where {@link #poll()} is called from the outside code.
    *
    * Not using {@link #startStopLock}.writeLock() in order to still be able to run {@link #poll()} concurrently with
-   * {@link #isStarted()}.
+   * {@link #isPollingDatabasePeriodically()}.
    */
   private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<SegmentsMetadataConfig> config;
+  private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
   /**
-   * Volatile since this reference is reassigned in {@link #poll} and then read from in other threads. Starts null so we
-   * can differentiate "never polled" (null) from "polled, but empty" (empty map). Note that this is not simply a
-   * lazy-initialized variable: it starts off as null, and may transition between null and non-null multiple times as
-   * {@link #stop} and {@link #start} are called.
+   * This field is made volatile to avoid "ghost secondary reads" that may result in NPE, see
+   * https://github.com/code-review-checklists/java-concurrency#safe-local-dcl (note that mechanically dataSources
+   * resembles a lazily initialized field). Alternative is to always read the field in a snapshot local variable, but
+   * it's too easy to forget to do.
+   *
+   * This field may be updated from {@link #exec}, or from whatever thread calling {@link #doOnDemandPoll} via {@link
+   * #awaitOrPerformDataSourcesUpdate()} via one of the public methods of SqlSegmentsMetadata.
    */
-  private @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSources = null;
+  private volatile @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSources = null;
 
-  private volatile @MonotonicNonNull CompletableFuture<Void> firstPollFutureSinceLastStart = null;
-  /** The latch to be used to read a non-null object from {@link #firstPollFutureSinceLastStart}. */
-  private final CountDownLatch everStartedLatch = new CountDownLatch(1);
-
-  /** The number of times this SqlSegmentsMetadata was started. */
-  private long startCount = 0;
   /**
-   * Equal to the current {@link #startCount} value if the SqlSegmentsMetadata is currently started; -1 if
+   * The latest updates manages {@link #poll()} calls which update {@link #dataSources}, either periodically (see
+   * {@link #startPollingDatabasePeriodically}, {@link #stopPollingDatabasePeriodically}) or "on demand", when one of
+   * the methods that accesses {@link #dataSources} state, such as {@link #prepareImmutableDataSourceWithUsedSegments},
+   * is called when the Coordinator is not the leader and therefore periodic polling of database is off.
+   *
+   * The notion and the complexity of "on demand" updates was introduced to simplify the interface of {@link
+   * SegmentsMetadata} and guarantee that it always returns consistent and relatively up-to-date data from methods like
+   * {@link #prepareImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive updates. The last part is
+   * achieved via "hooking on" other updates by awaiting on {@link PeriodicPollUpdate#firstPollCompletionFuture} or
+   * {@link OnDemandUpdate#completionFuture}, see {@link #awaitOrPerformDataSourcesUpdate()} method implementation for
+   * details.
+   */
+  private final AtomicReference<Update> latestDataSourcesUpdate = new AtomicReference<>();
+
+  /** The number of times {@link #startPollingDatabasePeriodically} was called. */
+  private long startPollingCount = 0;
+  /**
+   * Equal to the current {@link #startPollingCount} value if the SqlSegmentsMetadata is currently started; -1 if
    * currently stopped.
    *
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
-   * the theoretical situation of two or more tasks scheduled in {@link #start()} calling {@link #isStarted()} and
-   * {@link #poll()} concurrently, if the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions
-   * occurs quickly.
+   * the theoretical situation of two or more tasks scheduled in {@link #startPollingDatabasePeriodically()} calling
+   * {@link #isPollingDatabasePeriodically()} and {@link #poll()} concurrently, if the sequence of {@link
+   * #startPollingDatabasePeriodically()} - {@link #stopPollingDatabasePeriodically()} - {@link
+   * #startPollingDatabasePeriodically()} actions occurs quickly.
    *
    * {@link SQLMetadataRuleManager} also has a similar issue.
    */
-  private long currentStartOrder = -1;
+  private long currentStartPollingOrder = -1;
   private ScheduledExecutorService exec = null;
 
   @Inject
@@ -147,64 +191,94 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   )
   {
     this.jsonMapper = jsonMapper;
-    this.config = config;
+    this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
     this.dbTables = dbTables;
     this.connector = connector;
   }
 
-  @Override
+  /**
+   * Don't confuse this method with {@link #startPollingDatabasePeriodically}. This is a lifecycle starting method to
+   * be executed just once for an instance of SqlSegmentsMetadata.
+   */
   @LifecycleStart
   public void start()
-  {
-    doStart();
-  }
-
-  public CompletableFuture<Void> doStart()
   {
     ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
     lock.lock();
     try {
-      if (isStarted()) {
-        return firstPollFutureSinceLastStart;
-      }
-
-      firstPollFutureSinceLastStart = new CompletableFuture<>();
-      startCount++;
-      currentStartOrder = startCount;
-      final long localStartOrder = currentStartOrder;
-
       exec = Execs.scheduledSingleThreaded(getClass().getName() + "-Exec--%d");
-
-      final Duration delay = config.get().getPollDuration().toStandardDuration();
-      exec.scheduleWithFixedDelay(
-          createPollTaskForStartOrder(localStartOrder),
-          0,
-          delay.getMillis(),
-          TimeUnit.MILLISECONDS
-      );
-      everStartedLatch.countDown();
-      return firstPollFutureSinceLastStart;
     }
     finally {
       lock.unlock();
     }
   }
 
-  private Runnable createPollTaskForStartOrder(long startOrder)
+  /**
+   * Don't confuse this method with {@link #stopPollingDatabasePeriodically}. This is a lifecycle stopping method to
+   * be executed just once for an instance of SqlSegmentsMetadata.
+   */
+  @LifecycleStop
+  public void stop()
+  {
+    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    lock.lock();
+    try {
+      exec.shutdownNow();
+      exec = null;
+    }
+    finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
+  public void startPollingDatabasePeriodically()
+  {
+    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    lock.lock();
+    try {
+      if (exec == null) {
+        throw new IllegalStateException(getClass().getName() + " is not started");
+      }
+      if (isPollingDatabasePeriodically()) {
+        return;
+      }
+
+      PeriodicPollUpdate periodicPollUpdate = new PeriodicPollUpdate();
+      latestDataSourcesUpdate.set(periodicPollUpdate);
+
+      startPollingCount++;
+      currentStartPollingOrder = startPollingCount;
+      final long localStartOrder = currentStartPollingOrder;
+
+      exec.scheduleWithFixedDelay(
+          createPollTaskForStartOrder(localStartOrder, periodicPollUpdate),
+          0,
+          periodicPollDelay.getMillis(),
+          TimeUnit.MILLISECONDS
+      );
+    }
+    finally {
+      lock.unlock();
+    }
+  }
+
+  private Runnable createPollTaskForStartOrder(long startOrder, PeriodicPollUpdate periodicPollUpdate)
   {
     return () -> {
-      // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exits, poll()
-      // won't actually run anymore after that (it could only enter the synchronized section and exit immediately
-      // because the localStartedOrder doesn't match the new currentStartOrder). It's needed to avoid flakiness in
+      // poll() is synchronized together with startPollingDatabasePeriodically(), stopPollingDatabasePeriodically() and
+      // isPollingDatabasePeriodically() to ensure that when stopPollingDatabasePeriodically() exits, poll() won't
+      // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
+      // localStartedOrder doesn't match the new currentStartPollingOrder). It's needed to avoid flakiness in
       // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
       lock.lock();
       try {
-        if (startOrder == currentStartOrder) {
+        if (startOrder == currentStartPollingOrder) {
           poll();
-          firstPollFutureSinceLastStart.complete(null);
+          periodicPollUpdate.firstPollCompletionFuture.complete(null);
         } else {
-          log.debug("startOrder = currentStartOrder = %d, skipping poll()", startOrder);
+          log.debug("startOrder = currentStartPollingOrder = %d, skipping poll()", startOrder);
         }
       }
       catch (Throwable t) {
@@ -213,7 +287,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
         // for now, so that it may be completed during the next poll.
         if (!(t instanceof Exception)) {
           // Don't try to swallow a Throwable which is not an Exception (that is, a Error).
-          firstPollFutureSinceLastStart.completeExceptionally(t);
+          periodicPollUpdate.firstPollCompletionFuture.completeExceptionally(t);
           throw t;
         }
       }
@@ -224,96 +298,64 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   }
 
   @Override
-  @LifecycleStop
-  public void stop()
+  public void stopPollingDatabasePeriodically()
   {
     ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
     lock.lock();
     try {
-      if (!isStarted()) {
+      if (!isPollingDatabasePeriodically()) {
         return;
       }
 
       // NOT nulling dataSources, allowing to query the latest polled data even when this SegmentsMetadata object is
       // stopped.
 
-      currentStartOrder = -1;
-      exec.shutdownNow();
-      exec = null;
+      currentStartPollingOrder = -1;
     }
     finally {
       lock.unlock();
     }
   }
 
-  @Override
-  public int markAsUsedAllSegmentsInDataSource(final String dataSource)
+  private void awaitOrPerformDataSourcesUpdate()
+  {
+    // CAS loop on latestDataSourcesUpdate.
+    while (true) {
+      Update latestUpdate = latestDataSourcesUpdate.get();
+      if (latestUpdate instanceof PeriodicPollUpdate) {
+        Futures.getUnchecked(((PeriodicPollUpdate) latestUpdate).firstPollCompletionFuture);
+        return;
+      }
+      if (latestUpdate instanceof OnDemandUpdate) {
+        long periodicPollDelayNanos = TimeUnit.MILLISECONDS.toNanos(periodicPollDelay.getMillis());
+        OnDemandUpdate latestNnDemandUpdate = (OnDemandUpdate) latestUpdate;
+        boolean latestUpdateIsFresh = latestNnDemandUpdate.nanosElapsedFromInitiation() < periodicPollDelayNanos;
+        if (latestUpdateIsFresh) {
+          Futures.getUnchecked(latestNnDemandUpdate.completionFuture);
+          return;
+        }
+        // Latest update is not fresh. Fall through to CAS update to a new OnDemandUpdate.
+      } else {
+        assert latestUpdate == null;
+      }
+      OnDemandUpdate newOnDemandUpdate = new OnDemandUpdate();
+      if (latestDataSourcesUpdate.compareAndSet(latestUpdate, newOnDemandUpdate)) {
+        doOnDemandPoll(newOnDemandUpdate);
+        return;
+      }
+      // Continue CAS loop.
+    }
+  }
+
+  private void doOnDemandPoll(OnDemandUpdate onDemandUpdate)
   {
     try {
-      final IDBI dbi = connector.getDBI();
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          (handle, status) -> VersionedIntervalTimeline.forSegments(
-              Iterators.transform(
-                  handle
-                      .createQuery(
-                          StringUtils.format(
-                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                              getSegmentsTable()
-                          )
-                      )
-                      .setFetchSize(connector.getStreamingFetchSize())
-                      .bind("dataSource", dataSource)
-                      .map(ByteArrayMapper.FIRST)
-                      .iterator(),
-                  payload -> {
-                    try {
-                      return jsonMapper.readValue(payload, DataSegment.class);
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-              )
-
-          )
-      );
-
-      final List<DataSegment> segments = new ArrayList<>();
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders =
-          segmentTimeline.lookup(Intervals.ETERNITY);
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
-        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
-          segments.add(partitionChunk.getObject());
-        }
-      }
-
-      if (segments.isEmpty()) {
-        log.info("No segments found in the database for data source [%s]", dataSource);
-        return 0;
-      }
-
-      int numChangedSegments = dbi.withHandle(
-          (Handle handle) -> {
-            Batch batch = handle.createBatch();
-
-            for (DataSegment segment : segments) {
-              batch.add(
-                  StringUtils.format(
-                      "UPDATE %s SET used=true WHERE id = '%s'",
-                      getSegmentsTable(),
-                      segment.getId()
-                  )
-              );
-            }
-            int[] segmentChanges = batch.execute();
-            return Arrays.stream(segmentChanges).sum();
-          }
-      );
-      return numChangedSegments;
+      poll();
+      onDemandUpdate.completionFuture.complete(null);
     }
-    catch (RuntimeException e) {
-      log.error(e, "Exception marking all segments as used in data source [%s]", dataSource);
-      throw e;
+    catch (Throwable t) {
+      onDemandUpdate.completionFuture.completeExceptionally(t);
+      throw t;
     }
   }
 
@@ -327,12 +369,268 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
               .bind("id", segmentId)
               .execute()
       );
+      // Unlike bulk markAsUsed methods: markAsUsedAllNonOvershadowedSegmentsInDataSource(),
+      // markAsUsedNonOvershadowedSegmentsInInterval(), and markAsUsedNonOvershadowedSegments() we don't put the marked
+      // segment into the respective data source, because we don't have it fetched from the database. It's probably not
+      // worth complicating the implementation and making two database queries just to add the segment because it will
+      // be anyway fetched during the next poll(). Segment putting that is done in the bulk markAsUsed methods is a nice
+      // to have thing, but doesn't formally affects the external guarantees of SegmentsMetadata class.
       return numUpdatedDatabaseEntries > 0;
     }
     catch (RuntimeException e) {
       log.error(e, "Exception marking segment %s as used", segmentId);
       throw e;
     }
+  }
+
+  @Override
+  public int markAsUsedAllNonOvershadowedSegmentsInDataSource(final String dataSource)
+  {
+    return doMarkAsUsedNonOvershadowedSegments(dataSource, null);
+  }
+
+  @Override
+  public int markAsUsedNonOvershadowedSegmentsInInterval(final String dataSource, final Interval interval)
+  {
+    Preconditions.checkNotNull(interval);
+    return doMarkAsUsedNonOvershadowedSegments(dataSource, interval);
+  }
+
+  /**
+   * Implementation for both {@link #markAsUsedAllNonOvershadowedSegmentsInDataSource} (if the given interval is null)
+   * and {@link #markAsUsedNonOvershadowedSegmentsInInterval}.
+   */
+  private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
+  {
+    List<DataSegment> usedSegmentsOverlappingInterval = new ArrayList<>();
+    List<DataSegment> unusedSegmentsInInterval = new ArrayList<>();
+    connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          String queryString =
+              StringUtils.format("SELECT used, payload FROM %1$s WHERE dataSource = :dataSource", getSegmentsTable());
+          if (interval != null) {
+            queryString += StringUtils.format(" AND start < :end AND %1$send%1$s > :start", connector.getQuoteString());
+          }
+          Query<?> query = handle
+              .createQuery(queryString)
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("dataSource", dataSourceName);
+          if (interval != null) {
+            query = query
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString());
+          }
+          query = query
+              .map((int index, ResultSet resultSet, StatementContext context) -> {
+                try {
+                  DataSegment segment = jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+                  if (resultSet.getBoolean("used")) {
+                    usedSegmentsOverlappingInterval.add(segment);
+                  } else {
+                    if (interval == null || interval.contains(segment.getInterval())) {
+                      unusedSegmentsInInterval.add(segment);
+                    }
+                  }
+                  return null;
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              });
+          // Consume the query results to ensure usedSegmentsOverlappingInterval and unusedSegmentsInInterval are
+          // populated.
+          consume(query.iterator());
+          return null;
+        }
+    );
+
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = VersionedIntervalTimeline.forSegments(
+        Iterators.concat(usedSegmentsOverlappingInterval.iterator(), unusedSegmentsInInterval.iterator())
+    );
+
+    return markNonOvershadowedSegmentsAsUsed(dataSourceName, unusedSegmentsInInterval, versionedIntervalTimeline);
+  }
+
+  private static void consume(Iterator<?> iterator) {
+    while (iterator.hasNext()) {
+      iterator.next();
+    }
+  }
+
+  /** Also puts non-overshadowed segments into {@link #dataSources}. */
+  private int markNonOvershadowedSegmentsAsUsed(
+      String dataSourceName,
+      List<DataSegment> unusedSegments,
+      VersionedIntervalTimeline<String, DataSegment> timeline
+  )
+  {
+    @Nullable
+    DruidDataSource dataSource = null;
+    if (dataSources != null) {
+      dataSource = dataSources.computeIfAbsent(
+          dataSourceName,
+          dsName -> new DruidDataSource(dsName, createDefaultDataSourceProperties())
+      );
+    }
+    List<String> segmentIdsToMarkAsUsed = new ArrayList<>();
+    for (DataSegment segment : unusedSegments) {
+      if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion())) {
+        continue;
+      }
+      if (dataSource != null) {
+        dataSource.addSegment(segment);
+      }
+      String s = segment.getId().toString();
+      segmentIdsToMarkAsUsed.add(s);
+    }
+
+    return markSegmentsAsUsed(segmentIdsToMarkAsUsed);
+  }
+
+  @Override
+  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<String> segmentIds)
+      throws UnknownSegmentIdsException
+  {
+    try {
+      Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> unusedSegmentsAndTimeline = connector
+          .inReadOnlyTransaction(
+              (handle, status) -> {
+                List<DataSegment> unusedSegments = retreiveUnusedSegments(dataSource, segmentIds, handle);
+                List<Interval> unusedSegmentsIntervals = JodaUtils.condenseIntervals(
+                    unusedSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+                );
+                Iterator<DataSegment> usedSegmentsOverlappingUnusedSegmentsIntervals =
+                    retreiveUsedSegmentsOverlappingIntervals(dataSource, unusedSegmentsIntervals, handle);
+                VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+                    Iterators.concat(usedSegmentsOverlappingUnusedSegmentsIntervals, unusedSegments.iterator())
+                );
+                return new Pair<>(unusedSegments, timeline);
+              }
+          );
+
+      List<DataSegment> unusedSegments = unusedSegmentsAndTimeline.lhs;
+      VersionedIntervalTimeline<String, DataSegment> timeline = unusedSegmentsAndTimeline.rhs;
+      return markNonOvershadowedSegmentsAsUsed(dataSource, unusedSegments, timeline);
+    }
+    catch (Exception e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof UnknownSegmentIdsException) {
+        throw (UnknownSegmentIdsException) rootCause;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  private List<DataSegment> retreiveUnusedSegments(
+      final String dataSource,
+      final Set<String> segmentIds,
+      final Handle handle
+  ) throws UnknownSegmentIdsException
+  {
+    List<String> unknownSegmentIds = new ArrayList<>();
+    List<DataSegment> segments = segmentIds
+        .stream()
+        .map(
+            segmentId -> {
+              Iterator<DataSegment> segmentResultIterator = handle
+                  .createQuery(
+                      StringUtils.format(
+                          "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
+                          getSegmentsTable()
+                      )
+                  )
+                  .bind("dataSource", dataSource)
+                  .bind("id", segmentId)
+                  .map((int index, ResultSet resultSet, StatementContext context) -> {
+                    try {
+                      if (!resultSet.getBoolean("used")) {
+                        return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+                      } else {
+                        // We emit nulls for used segments. They are filtered out below in this method.
+                        return null;
+                      }
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                  })
+                  .iterator();
+              if (!segmentResultIterator.hasNext()) {
+                unknownSegmentIds.add(segmentId);
+                return null;
+              } else {
+                @Nullable DataSegment segment = segmentResultIterator.next();
+                if (segmentResultIterator.hasNext()) {
+                  log.error(
+                      "There is more than one row corresponding to segment id [%s] in data source [%s] in the database",
+                      segmentId,
+                      dataSource
+                  );
+                }
+                return segment;
+              }
+            }
+        )
+        .filter(Objects::nonNull) // Filter nulls corresponding to used segments.
+        .collect(Collectors.toList());
+    if (!unknownSegmentIds.isEmpty()) {
+      throw new UnknownSegmentIdsException(unknownSegmentIds);
+    }
+    return segments;
+  }
+
+  private Iterator<DataSegment> retreiveUsedSegmentsOverlappingIntervals(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final Handle handle
+  )
+  {
+    return intervals
+        .stream()
+        .flatMap(interval -> {
+          Iterable<DataSegment> segmentResultIterable = () -> handle
+              .createQuery(
+                  StringUtils.format(
+                      "SELECT payload FROM %1$s "
+                      + "WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start AND used = true",
+                      getSegmentsTable(),
+                      connector.getQuoteString()
+                  )
+              )
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .map((int index, ResultSet resultSet, StatementContext context) -> {
+                try {
+                  return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              })
+              .iterator();
+          return StreamSupport.stream(segmentResultIterable.spliterator(), false);
+        })
+        .iterator();
+  }
+
+  private int markSegmentsAsUsed(final List<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      log.info("No segments found to update!");
+      return 0;
+    }
+
+    return connector.getDBI().withHandle(handle -> {
+      Batch batch = handle.createBatch();
+      segmentIds.forEach(segmentId -> batch.add(
+          StringUtils.format("UPDATE %s SET used=true WHERE id = '%s'", getSegmentsTable(), segmentId)
+      ));
+      int[] segmentChanges = batch.execute();
+      return computeNumChangedSegments(segmentIds, segmentChanges);
+    });
   }
 
   @Override
@@ -348,9 +646,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
               .execute()
       );
 
-      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
-      if (dataSourcesSnapshot != null) {
-        dataSourcesSnapshot.remove(dataSource);
+      if (dataSources != null) {
+        dataSources.remove(dataSource);
       }
 
       return numUpdatedDatabaseEntries;
@@ -366,24 +663,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   {
     try {
       boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId);
-
-      // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
-      // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
-      List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
-      if (dataSourcesSnapshot != null) {
-        dataSourcesSnapshot.computeIfPresent(
-            dataSourceName,
-            (dsName, dataSource) -> {
-              for (SegmentId possibleSegmentId : possibleSegmentIds) {
-                if (dataSource.removeSegment(possibleSegmentId) != null) {
-                  break;
-                }
-              }
-              // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-              return dataSource.isEmpty() ? null : dataSource;
-            }
-        );
+      if (dataSources != null) {
+        removeSegmentFromPolledDataSources(dataSourceName, segmentId, dataSources);
       }
       return segmentStateChanged;
     }
@@ -393,14 +674,37 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     }
   }
 
+  private static void removeSegmentFromPolledDataSources(
+      String dataSourceName,
+      String segmentId,
+      ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot
+  )
+  {
+    // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is
+    // a potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run
+    // fast.
+    List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
+    dataSourcesSnapshot.computeIfPresent(
+        dataSourceName,
+        (dsName, dataSource) -> {
+          for (SegmentId possibleSegmentId : possibleSegmentIds) {
+            if (dataSource.removeSegment(possibleSegmentId) != null) {
+              break;
+            }
+          }
+          // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+          return dataSource.isEmpty() ? null : dataSource;
+        }
+    );
+  }
+
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
     try {
       final boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId.toString());
-      @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
-      if (dataSourcesSnapshot != null) {
-        dataSourcesSnapshot.computeIfPresent(
+      if (dataSources != null) {
+        dataSources.computeIfPresent(
             segmentId.getDataSource(),
             (dsName, dataSource) -> {
               dataSource.removeSegment(segmentId);
@@ -417,26 +721,138 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     }
   }
 
+  @Override
+  public int markSegmentsAsUnused(String dataSourceName, Set<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      return 0;
+    }
+    final List<String> segmentIdList = new ArrayList<>(segmentIds);
+    try {
+      return connector.getDBI().withHandle(handle -> {
+        Batch batch = handle.createBatch();
+        segmentIdList.forEach(segmentId -> batch.add(
+            StringUtils.format(
+                "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s'",
+                getSegmentsTable(),
+                dataSourceName,
+                segmentId
+            )
+        ));
+        final int[] segmentChanges = batch.execute();
+        int numChangedSegments = computeNumChangedSegments(segmentIdList, segmentChanges);
+
+        // Also remove segments from polled dataSources.
+        // Cache dataSourcesSnapshot locally to make sure that we do all updates to a single map, not to two different
+        // maps if poll() happens concurrently.
+        @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
+        if (dataSourcesSnapshot != null) {
+          for (String segmentId : segmentIdList) {
+            removeSegmentFromPolledDataSources(dataSourceName, segmentId, dataSourcesSnapshot);
+          }
+        }
+        return numChangedSegments;
+      });
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public int markAsUnusedSegmentsInInterval(String dataSourceName, Interval interval)
+  {
+    try {
+      Integer numUpdatedDatabaseEntries = connector.getDBI().withHandle(
+          handle -> handle
+              .createStatement(
+                  StringUtils
+                      .format(
+                          "UPDATE %s SET used=false WHERE datasource = :datasource "
+                          + "AND start >= :start AND %2$send%2$s <= :end",
+                          getSegmentsTable(),
+                          connector.getQuoteString()
+                      ))
+              .bind("datasource", dataSourceName)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute()
+      );
+      if (dataSources != null) {
+        dataSources.computeIfPresent(dataSourceName, (dsName, dataSource) -> {
+          dataSource.removeSegmentsIf(segment -> interval.contains(segment.getInterval()));
+          // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+          return dataSource.isEmpty() ? null : dataSource;
+        });
+      }
+      return numUpdatedDatabaseEntries;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private boolean markSegmentAsUnusedInDatabase(String segmentId)
   {
-    final int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
+    final int numUpdatedRows = connector.getDBI().withHandle(
         handle -> handle
             .createStatement(StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable()))
             .bind("segmentID", segmentId)
             .execute()
     );
-    return numUpdatedDatabaseEntries > 0;
+    if (numUpdatedRows < 0) {
+      log.assertionError(
+          "Negative number of rows updated for segment id [%s]: %d",
+          segmentId,
+          numUpdatedRows
+      );
+    } else if (numUpdatedRows > 1) {
+      log.error(
+          "More than one row updated for segment id [%s]: %d, "
+          + "there may be more than one row for the segment id in the database",
+          segmentId,
+          numUpdatedRows
+      );
+    }
+    return numUpdatedRows > 0;
+  }
+
+  private static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)
+  {
+    int numChangedSegments = 0;
+    for (int i = 0; i < segmentChanges.length; i++) {
+      int numUpdatedRows = segmentChanges[i];
+      if (numUpdatedRows < 0) {
+        log.assertionError(
+            "Negative number of rows updated for segment id [%s]: %d",
+            segmentIds.get(i),
+            numUpdatedRows
+        );
+      } else if (numUpdatedRows > 1) {
+        log.error(
+            "More than one row updated for segment id [%s]: %d, "
+            + "there may be more than one row for the segment id in the database",
+            segmentIds.get(i),
+            numUpdatedRows
+        );
+      }
+      if (numUpdatedRows > 0) {
+        numChangedSegments += 1;
+      }
+    }
+    return numChangedSegments;
   }
 
   @Override
-  public boolean isStarted()
+  public boolean isPollingDatabasePeriodically()
   {
-    // isStarted() is synchronized together with start(), stop() and poll() to ensure that the latest currentStartOrder
-    // is always visible. readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
+    // isPollingDatabasePeriodically() is synchronized together with startPollingDatabasePeriodically(),
+    // stopPollingDatabasePeriodically() and poll() to ensure that the latest currentStartPollingOrder is always visible.
+    // readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
     ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
     lock.lock();
     try {
-      return currentStartOrder >= 0;
+      return currentStartPollingOrder >= 0;
     }
     finally {
       lock.unlock();
@@ -446,48 +862,38 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @Override
   public @Nullable ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSourceName)
   {
-    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
-    Futures.getUnchecked(firstPollFutureSinceLastStart);
+    awaitOrPerformDataSourcesUpdate();
     final DruidDataSource dataSource = dataSources.get(dataSourceName);
-    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
+    return dataSource == null || dataSource.isEmpty() ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
   public @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource)
   {
-    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
-    Futures.getUnchecked(firstPollFutureSinceLastStart);
+    awaitOrPerformDataSourcesUpdate();
     return dataSources.get(dataSource);
   }
 
   @Override
   public Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments()
   {
-    Uninterruptibles.awaitUninterruptibly(everStartedLatch);
-    Futures.getUnchecked(firstPollFutureSinceLastStart);
-
-    return Optional.ofNullable(dataSources)
-                   .map(m ->
-                            m.values()
-                             .stream()
-                             .map(DruidDataSource::toImmutableDruidDataSource)
-                             .collect(Collectors.toList())
-                   )
-                   .orElse(null);
+    awaitOrPerformDataSourcesUpdate();
+    return dataSources
+        .values()
+        .stream()
+        .map(DruidDataSource::toImmutableDruidDataSource)
+        .collect(Collectors.toList());
   }
 
   @Override
-  public @Nullable Iterable<DataSegment> iterateAllUsedSegments()
+  public Iterable<DataSegment> iterateAllUsedSegments()
   {
-    final ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = dataSources;
-    if (dataSourcesSnapshot == null) {
-      return null;
-    }
-
-    return () -> dataSourcesSnapshot.values()
-                                    .stream()
-                                    .flatMap(dataSource -> dataSource.getSegments().stream())
-                                    .iterator();
+    awaitOrPerformDataSourcesUpdate();
+    return () -> dataSources
+        .values()
+        .stream()
+        .flatMap(dataSource -> dataSource.getSegments().stream())
+        .iterator();
   }
 
   @Override
@@ -550,7 +956,9 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
                         }
                         catch (IOException e) {
                           log.makeAlert(e, "Failed to read segment from db.").emit();
-                          throw new RuntimeException(e);
+                          // If one entry is database is corrupted, doPoll() should continue to work overall. See
+                          // .filter(Objects::nonNull) below in this method.
+                          return null;
                         }
                       }
                     }
@@ -569,10 +977,10 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
 
     ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
 
-    ImmutableMap<String, String> dataSourceProperties = ImmutableMap.of("created", DateTimes.nowUtc().toString());
+    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
     segments
         .stream()
-        .filter(Objects::nonNull)
+        .filter(Objects::nonNull) // Filter corrupted entries (see above in this method).
         .forEach(segment -> {
           newDataSources
               .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
@@ -581,6 +989,11 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
 
     // Replace dataSources atomically.
     dataSources = newDataSources;
+  }
+
+  private static ImmutableMap<String, String> createDefaultDataSourceProperties()
+  {
+    return ImmutableMap.of("created", DateTimes.nowUtc().toString());
   }
 
   /**
@@ -594,7 +1007,10 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(segment.getDataSource())).orElse(null);
+    if (dataSources == null) {
+      return segment;
+    }
+    @Nullable DruidDataSource dataSource = dataSources.get(segment.getDataSource());
     if (dataSource == null) {
       return segment;
     }

@@ -30,6 +30,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The difference between this class and {@link org.apache.druid.sql.calcite.schema.MetadataSegmentView} is that this
@@ -38,15 +39,22 @@ import java.util.List;
  */
 public interface SegmentsMetadata
 {
-  void start();
+  void startPollingDatabasePeriodically();
 
-  void stop();
+  void stopPollingDatabasePeriodically();
+
+  boolean isPollingDatabasePeriodically();
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,
    * the segments were marked as used). If the call results in a database error, an exception is relayed to the caller.
    */
-  int markAsUsedAllSegmentsInDataSource(String dataSource);
+  int markAsUsedAllNonOvershadowedSegmentsInDataSource(String dataSource);
+
+  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
+
+  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
+      throws UnknownSegmentIdsException;
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
@@ -61,6 +69,10 @@ public interface SegmentsMetadata
    * caller.
    */
   int markAsUnusedAllSegmentsInDataSource(String dataSource);
+
+  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
+
+  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds) throws UnknownSegmentIdsException;
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
@@ -80,8 +92,6 @@ public interface SegmentsMetadata
    * the caller.
    */
   boolean markSegmentAsUnused(SegmentId segmentId);
-
-  boolean isStarted();
 
   /**
    * If there are used segments belonging to the given data source, this method converts this set of segments to an
@@ -120,7 +130,7 @@ public interface SegmentsMetadata
    * (to some reasonable extent) to organize the code so that it iterates the returned iterable only once rather than
    * several times.
    */
-  @Nullable Iterable<DataSegment> iterateAllUsedSegments();
+  Iterable<DataSegment> iterateAllUsedSegments();
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments

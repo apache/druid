@@ -24,7 +24,7 @@ title: "Basic Security"
 
 # Druid Basic Security
 
-This extension adds:
+This Apache Druid (incubating) extension adds:
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
 - an Authorizer which implements basic role-based access control
 

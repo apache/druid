@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Quickstart"
+title: "Apache Druid (incubating) Quickstart"
 ---
 
 <!--
@@ -185,11 +185,11 @@ The following tutorials demonstrate various methods of loading data into Druid, 
 
 This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 
-### [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html)
+### [Tutorial: Loading stream data from Apache Kafka](./tutorial-kafka.html)
 
 This tutorial demonstrates how to load streaming data from a Kafka topic.
 
-### [Tutorial: Loading a file using Hadoop](./tutorial-batch-hadoop.html)
+### [Tutorial: Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html)
 
 This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
 

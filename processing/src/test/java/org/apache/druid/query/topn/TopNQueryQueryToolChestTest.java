@@ -134,7 +134,7 @@ public class TopNQueryQueryToolChestTest
   }
 
   @Test
-  public void testComputeResultLevelCacheKeyWithDifferentPostAgg() throws IOException
+  public void testComputeResultLevelCacheKeyWithDifferentPostAgg()
   {
     final TopNQuery query1 = new TopNQuery(
         new TableDataSource("dummy"),

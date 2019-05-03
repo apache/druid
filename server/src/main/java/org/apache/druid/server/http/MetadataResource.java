@@ -39,7 +39,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -97,9 +96,6 @@ public class MetadataResource
       dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadata.retrieveAllDataSourceNames());
     } else {
       druidDataSources = segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
-      if (druidDataSources == null) {
-        druidDataSources = Collections.emptyList();
-      }
       dataSourceNamesPreAuth = druidDataSources
           .stream()
           .map(ImmutableDruidDataSource::getName)
@@ -139,11 +135,8 @@ public class MetadataResource
       @QueryParam("datasources") final Set<String> dataSources
   )
   {
-    @Nullable Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
         segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
-    if (dataSourcesWithUsedSegments == null) {
-      dataSourcesWithUsedSegments = Collections.emptyList();
-    }
     if (dataSources != null && !dataSources.isEmpty()) {
       dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
           .stream()

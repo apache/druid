@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,6 +34,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,6 +47,31 @@ import java.util.stream.Collectors;
 
 public class SqlSegmentsMetadataTest
 {
+  private static DataSegment createSegment(
+      String dataSource,
+      String interval,
+      String version,
+      String bucketKey,
+      int binaryVersion
+  )
+  {
+    return new DataSegment(
+        dataSource,
+        Intervals.of(interval),
+        version,
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", dataSource + "/" + bucketKey
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        binaryVersion,
+        1234L
+    );
+  }
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -52,37 +79,37 @@ public class SqlSegmentsMetadataTest
   private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-  private final DataSegment segment1 = new DataSegment(
+  private final DataSegment segment1 = createSegment(
       "wikipedia",
-      Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
+      "2012-03-15T00:00:00.000/2012-03-16T00:00:00.000",
       "2012-03-16T00:36:30.848Z",
-      ImmutableMap.of(
-          "type", "s3_zip",
-          "bucket", "test",
-          "key", "wikipedia/index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index.zip"
-      ),
-      ImmutableList.of("dim1", "dim2", "dim3"),
-      ImmutableList.of("count", "value"),
-      NoneShardSpec.instance(),
-      0,
-      1234L
+      "index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index.zip",
+      0
   );
 
-  private final DataSegment segment2 = new DataSegment(
+  private final DataSegment segment2 = createSegment(
       "wikipedia",
-      Intervals.of("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
+      "2012-01-05T00:00:00.000/2012-01-06T00:00:00.000",
       "2012-01-06T22:19:12.565Z",
-      ImmutableMap.of(
-          "type", "s3_zip",
-          "bucket", "test",
-          "key", "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip"
-      ),
-      ImmutableList.of("dim1", "dim2", "dim3"),
-      ImmutableList.of("count", "value"),
-      NoneShardSpec.instance(),
-      0,
-      1234L
+      "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip",
+      0
   );
+
+  private void publish(DataSegment segment, boolean used) throws IOException
+  {
+    boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
+    publisher.publishSegment(
+        segment.getId().toString(),
+        segment.getDataSource(),
+        DateTimes.nowUtc().toString(),
+        segment.getInterval().getStart().toString(),
+        segment.getInterval().getEnd().toString(),
+        partitioned,
+        segment.getVersion(),
+        used,
+        jsonMapper.writeValueAsBytes(segment)
+    );
+  }
 
   @Before
   public void setUp() throws Exception
@@ -94,6 +121,7 @@ public class SqlSegmentsMetadataTest
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
+    sqlSegmentsMetadata.start();
 
     publisher = new SQLMetadataSegmentPublisher(
         jsonMapper,
@@ -110,17 +138,18 @@ public class SqlSegmentsMetadataTest
   @After
   public void teardown()
   {
-    if (sqlSegmentsMetadata.isStarted()) {
-      sqlSegmentsMetadata.stop();
+    if (sqlSegmentsMetadata.isPollingDatabasePeriodically()) {
+      sqlSegmentsMetadata.stopPollingDatabasePeriodically();
     }
+    sqlSegmentsMetadata.stop();
   }
 
   @Test
   public void testPoll()
   {
-    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         sqlSegmentsMetadata.retrieveAllDataSourceNames()
@@ -130,7 +159,7 @@ public class SqlSegmentsMetadataTest
         sqlSegmentsMetadata
             .prepareImmutableDataSourcesWithAllUsedSegments()
             .stream()
-            .map(d -> d.getName())
+            .map(ImmutableDruidDataSource::getName)
             .collect(Collectors.toList())
     );
     Assert.assertEquals(
@@ -144,33 +173,65 @@ public class SqlSegmentsMetadataTest
   }
 
   @Test
-  public void testNoPoll()
+  public void testPrepareImmutableDataSourceWithUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
-    sqlSegmentsMetadata.start();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    DataSegment newSegment = pollThenStopThenStartIntro();
     Assert.assertEquals(
-        ImmutableList.of("wikipedia"),
-        sqlSegmentsMetadata.retrieveAllDataSourceNames()
+        ImmutableSet.of(newSegment),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
     );
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments());
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia"));
-    Assert.assertNull(sqlSegmentsMetadata.iterateAllUsedSegments());
   }
 
   @Test
-  public void testPollThenStop()
+  public void testGetDataSourceWithUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
-    sqlSegmentsMetadata.start();
+    DataSegment newSegment = pollThenStopThenStartIntro();
+    Assert.assertEquals(
+        ImmutableSet.of(newSegment),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getDataSourceWithUsedSegments("wikipedia2").getSegments())
+    );
+  }
+
+  @Test
+  public void testPrepareImmutableDataSourcesWithAllUsedSegmentsAwaitsPollOnRestart() throws IOException
+  {
+    DataSegment newSegment = pollThenStopThenStartIntro();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment),
+        ImmutableSet.copyOf(
+            sqlSegmentsMetadata
+                .prepareImmutableDataSourcesWithAllUsedSegments()
+                .stream()
+                .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream())
+                .iterator()
+        )
+    );
+  }
+
+  @Test
+  public void testIterateAllUsedSegmentsAwaitsPollOnRestart() throws IOException
+  {
+    DataSegment newSegment = pollThenStopThenStartIntro();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  private DataSegment pollThenStopThenStartIntro() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
-    sqlSegmentsMetadata.stop();
-    Assert.assertFalse(sqlSegmentsMetadata.isStarted());
+    sqlSegmentsMetadata.stopPollingDatabasePeriodically();
+    Assert.assertFalse(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments());
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia"));
-    Assert.assertNull(sqlSegmentsMetadata.iterateAllUsedSegments());
+    DataSegment newSegment = createNewSegment1("wikipedia2");
+    publisher.publishSegment(newSegment);
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    return newSegment;
   }
 
   @Test
@@ -192,21 +253,21 @@ public class SqlSegmentsMetadataTest
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    sqlSegmentsMetadata.start();
-    sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
 
     Assert.assertEquals(
-        "wikipedia", Iterables.getOnlyElement(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
+        "wikipedia",
+        Iterables.getOnlyElement(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
     );
   }
 
   @Test
-  public void testGetUnusedSegmentsForInterval()
+  public void testGetUnusedSegmentIntervals()
   {
-    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource("wikipedia");
     Assert.assertEquals(2, numChangedSegments);
 
@@ -224,26 +285,12 @@ public class SqlSegmentsMetadataTest
   @Test
   public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException
   {
-    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
 
     final String newDataSource = "wikipedia2";
-    final DataSegment newSegment = new DataSegment(
-        newDataSource,
-        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
-        "2017-10-15T20:19:12.565Z",
-        ImmutableMap.of(
-            "type", "s3_zip",
-            "bucket", "test",
-            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
-        ),
-        ImmutableList.of("dim1", "dim2", "dim3"),
-        ImmutableList.of("count", "value"),
-        NoneShardSpec.instance(),
-        0,
-        1234L
-    );
+    final DataSegment newSegment = createNewSegment1(newDataSource);
 
     publisher.publishSegment(newSegment);
 
@@ -252,28 +299,42 @@ public class SqlSegmentsMetadataTest
     Assert.assertEquals(1, numChangedSegments);
   }
 
+  private static DataSegment createNewSegment1(String newDataSource)
+  {
+    return createSegment(
+        newDataSource,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+  }
+
+  private static DataSegment createNewSegment2(String newDataSource)
+  {
+    return createSegment(
+        newDataSource,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+  }
+
   @Test
   public void testMarkSegmentAsUnused() throws IOException
   {
-    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
 
     final String newDataSource = "wikipedia2";
-    final DataSegment newSegment = new DataSegment(
+    final DataSegment newSegment = createSegment(
         newDataSource,
-        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
         "2017-10-15T20:19:12.565Z",
-        ImmutableMap.of(
-            "type", "s3_zip",
-            "bucket", "test",
-            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
-        ),
-        ImmutableList.of("dim1", "dim2", "dim3"),
-        ImmutableList.of("count", "value"),
-        NoneShardSpec.instance(),
-        0,
-        1234L
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
     );
 
     publisher.publishSegment(newSegment);
@@ -283,12 +344,387 @@ public class SqlSegmentsMetadataTest
   }
 
   @Test
+  public void testMarkAsUsedNonOvershadowedSegments() throws Exception
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createSegment(
+        newDataSource,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    final DataSegment newSegment2 = createSegment(
+        newDataSource,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        1
+    );
+
+    // Overshadowed by newSegment2
+    final DataSegment newSegment3 = createSegment(
+        newDataSource,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        1
+    );
+
+    publish(newSegment1, false);
+    publish(newSegment2, false);
+    publish(newSegment3, false);
+    final ImmutableSet<String> segmentIds = ImmutableSet.of(
+        newSegment1.getId().toString(),
+        newSegment2.getId().toString(),
+        newSegment3.getId().toString()
+    );
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+    Assert.assertEquals(2, sqlSegmentsMetadata.markAsUsedNonOvershadowedSegments(newDataSource, segmentIds));
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test(expected = UnknownSegmentIdsException.class)
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidDataSource() throws Exception
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment1(newDataSource);
+
+    publish(newSegment1, false);
+    publish(newSegment2, false);
+    final ImmutableSet<String> segmentIds =
+        ImmutableSet.of(newSegment1.getId().toString(), newSegment2.getId().toString());
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+    // none of the segments are in data source
+    Assert.assertEquals(0, sqlSegmentsMetadata.markAsUsedNonOvershadowedSegments("wrongDataSource", segmentIds));
+  }
+
+  @Test(expected = UnknownSegmentIdsException.class)
+  public void testMarkAsUsedNonOvershadowedSegmentsWithInvalidSegmentIds() throws UnknownSegmentIdsException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment1(newDataSource);
+
+    final ImmutableSet<String> segmentIds =
+        ImmutableSet.of(newSegment1.getId().toString(), newSegment2.getId().toString());
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+    // none of the segments are in data source
+    Assert.assertEquals(0, sqlSegmentsMetadata.markAsUsedNonOvershadowedSegments(newDataSource, segmentIds));
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createSegment(
+        newDataSource,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        1
+    );
+
+    final DataSegment newSegment3 = createSegment(
+        newDataSource,
+        "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    // Overshadowed by newSegment2
+    final DataSegment newSegment4 = createNewSegment2(newDataSource);
+
+    publish(newSegment1, false);
+    publish(newSegment2, false);
+    publish(newSegment3, false);
+    publish(newSegment4, false);
+    final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+
+    // 2 out of 3 segments match the interval
+    Assert.assertEquals(2, sqlSegmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(newDataSource, theInterval));
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testMarkAsUsedNonOvershadowedSegmentsInIntervalWithInvalidInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment2(newDataSource);
+
+    publish(newSegment1, false);
+    publish(newSegment2, false);
+    // invalid interval start > end
+    final Interval theInterval = Intervals.of("2017-10-22T00:00:00.000/2017-10-02T00:00:00.000");
+    sqlSegmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(newDataSource, theInterval);
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInIntervalWithOverlappingInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createSegment(
+        newDataSource,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    final DataSegment newSegment2 = createSegment(
+        newDataSource,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        1
+    );
+
+    final DataSegment newSegment3 = createSegment(
+        newDataSource,
+        "2017-10-19T00:00:00.000/2017-10-22T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    // Overshadowed by newSegment2
+    final DataSegment newSegment4 = createNewSegment2(newDataSource);
+
+    publish(newSegment1, false);
+    publish(newSegment2, false);
+    publish(newSegment3, false);
+    publish(newSegment4, false);
+    final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+
+    // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
+    Assert.assertEquals(1, sqlSegmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(newDataSource, theInterval));
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkSegmentsAsUnused() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment1(newDataSource);
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    final ImmutableSet<String> segmentIds =
+        ImmutableSet.of(newSegment1.getId().toString(), newSegment1.getId().toString());
+
+    Assert.assertEquals(segmentIds.size(), sqlSegmentsMetadata.markSegmentsAsUnused(newDataSource, segmentIds));
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkSegmentsAsUnusedInvalidDataSource() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment1(newDataSource);
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    final ImmutableSet<String> segmentIds =
+        ImmutableSet.of(newSegment1.getId().toString(), newSegment2.getId().toString());
+    // none of the segments are in data source
+    Assert.assertEquals(0, sqlSegmentsMetadata.markSegmentsAsUnused("wrongDataSource", segmentIds));
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUnusedSegmentsInInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment2(newDataSource);
+
+    final DataSegment newSegment3 = createSegment(
+        newDataSource,
+        "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    publisher.publishSegment(newSegment3);
+    final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
+
+    // 2 out of 3 segments match the interval
+    Assert.assertEquals(2, sqlSegmentsMetadata.markAsUnusedSegmentsInInterval(newDataSource, theInterval));
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment3),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testMarkAsUnusedSegmentsInIntervalWithInvalidInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createNewSegment1(newDataSource);
+
+    final DataSegment newSegment2 = createNewSegment2(newDataSource);
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    // invalid interval start > end
+    final Interval theInterval = Intervals.of("2017-10-22T00:00:00.000/2017-10-02T00:00:00.000");
+    sqlSegmentsMetadata.markAsUnusedSegmentsInInterval(newDataSource, theInterval);
+  }
+
+  @Test
+  public void testMarkAsUnusedSegmentsInIntervalWithOverlappingInterval() throws IOException
+  {
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment1 = createSegment(
+        newDataSource,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    final DataSegment newSegment2 = createNewSegment2(newDataSource);
+
+    final DataSegment newSegment3 = createSegment(
+        newDataSource,
+        "2017-10-19T00:00:00.000/2017-10-22T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+
+    publisher.publishSegment(newSegment1);
+    publisher.publishSegment(newSegment2);
+    publisher.publishSegment(newSegment3);
+    final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
+
+    // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
+    Assert.assertEquals(1, sqlSegmentsMetadata.markAsUnusedSegmentsInInterval(newDataSource, theInterval));
+
+    sqlSegmentsMetadata.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2, newSegment1, newSegment3),
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
   public void testStopAndStart()
   {
     // Simulate successive losing and getting the coordinator leadership
-    sqlSegmentsMetadata.start();
-    sqlSegmentsMetadata.stop();
-    sqlSegmentsMetadata.start();
-    sqlSegmentsMetadata.stop();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.stopPollingDatabasePeriodically();
+    sqlSegmentsMetadata.startPollingDatabasePeriodically();
+    sqlSegmentsMetadata.stopPollingDatabasePeriodically();
   }
 }

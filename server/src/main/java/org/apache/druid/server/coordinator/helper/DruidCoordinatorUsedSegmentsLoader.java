@@ -25,7 +25,6 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.TreeSet;
 
 public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelper
@@ -40,15 +39,11 @@ public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelpe
   }
 
   @Override
-  public @Nullable DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     log.info("Starting coordination. Getting used segments.");
 
     final Iterable<DataSegment> usedSegments = coordinator.iterateAllUsedSegments();
-    if (usedSegments == null) {
-      log.info("Metadata store not polled yet, canceling this run.");
-      return null;
-    }
 
     // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
     // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to

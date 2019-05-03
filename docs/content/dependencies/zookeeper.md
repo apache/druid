@@ -24,7 +24,7 @@ title: "ZooKeeper"
 
 # ZooKeeper
 
-Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state. The operations that happen over ZK are
+Apache Druid (incubating) uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state. The operations that happen over ZK are
 
 1.  [Coordinator](../design/coordinator.html) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.html) and [Realtime](../design/realtime.html)

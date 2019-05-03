@@ -90,7 +90,7 @@ data segments loaded in it (or if the interval you specify is empty).
 
 The output segment can have different metadata from the input segments unless all input segments have the same metadata.
 
-- Dimensions: since Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
+- Dimensions: since Apache Druid (incubating) supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
 If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
 However, even if the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be
 changed from `string` to primitive types, or the order of dimensions can be changed for better locality.

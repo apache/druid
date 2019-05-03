@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -41,6 +44,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -123,24 +127,17 @@ public class DataSourcesResource
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
-        req,
-        serverInventoryView,
-        authorizerMapper
-    );
+    final Set<ImmutableDruidDataSource> datasources =
+        InventoryViewUtils.getSecuredDataSources(req, serverInventoryView, authorizerMapper);
 
     final Object entity;
 
     if (full != null) {
       entity = datasources;
     } else if (simple != null) {
-      entity = datasources.stream()
-                          .map(this::makeSimpleDatasource)
-                          .collect(Collectors.toList());
+      entity = datasources.stream().map(this::makeSimpleDatasource).collect(Collectors.toList());
     } else {
-      entity = datasources.stream()
-                          .map(ImmutableDruidDataSource::getName)
-                          .collect(Collectors.toList());
+      entity = datasources.stream().map(ImmutableDruidDataSource::getName).collect(Collectors.toList());
     }
 
     return builder.entity(entity).build();
@@ -172,9 +169,50 @@ public class DataSourcesResource
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response markAsUsedAllSegments(@PathParam("dataSourceName") final String dataSourceName)
+  public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    int numChangedSegments = segmentsMetadata.markAsUsedAllSegmentsInDataSource(dataSourceName);
+    int numChangedSegments = segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+  }
+
+  @POST
+  @Path("/{dataSourceName}/markUnused")
+  @ResourceFilters(DatasourceResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response markSegmentsUnused(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDataSourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      log.warn("datasource not found [%s]", dataSourceName);
+      return Response.noContent().build();
+    }
+
+    int numChangedSegments;
+    try {
+      final Interval interval = payload.getInterval();
+      final Set<String> segmentIds = payload.getSegmentIds();
+      if (interval != null) {
+        numChangedSegments = segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+      } else {
+        numChangedSegments = segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
+      }
+    }
+    catch (Exception e) {
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", e.toString()))
+          .build();
+    }
     return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
   }
 
@@ -324,10 +362,13 @@ public class DataSourcesResource
         if (intervalFilter.test(dataSegment.getInterval())) {
           Map<SegmentId, Object> segments = retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
 
-          Pair<DataSegment, Set<String>> val = getServersWhereSegmentIsServed(dataSegment.getId());
+          Pair<DataSegment, Set<String>> segmentAndServers = getServersWhereSegmentIsServed(dataSegment.getId());
 
-          if (val != null) {
-            segments.put(dataSegment.getId(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
+          if (segmentAndServers != null) {
+            segments.put(
+                dataSegment.getId(),
+                ImmutableMap.of("metadata", segmentAndServers.lhs, "servers", segmentAndServers.rhs)
+            );
           }
         }
       }
@@ -573,18 +614,25 @@ public class DataSourcesResource
       return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
     }
 
+    return Response.ok(prepareServedSegmentsInInterval(timeline, theInterval)).build();
+  }
+
+  private Iterable<ImmutableSegmentLoadInfo> prepareServedSegmentsInInterval(
+      TimelineLookup<String, SegmentLoadInfo> dataSourceServingTimeline,
+      Interval interval
+  )
+  {
     Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup =
-        timeline.lookupWithIncompletePartitions(theInterval);
-    FunctionalIterable<ImmutableSegmentLoadInfo> retval = FunctionalIterable
-        .create(lookup).transformCat(
+        dataSourceServingTimeline.lookupWithIncompletePartitions(interval);
+    return FunctionalIterable
+        .create(lookup)
+        .transformCat(
             (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
                 Iterables.transform(
                     input.getObject(),
-                    (PartitionChunk<SegmentLoadInfo> chunk) ->
-                        chunk.getObject().toImmutableSegmentLoadInfo()
+                    (PartitionChunk<SegmentLoadInfo> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
-    return Response.ok(retval).build();
   }
 
   /**
@@ -630,18 +678,9 @@ public class DataSourcesResource
         return Response.ok(false).build();
       }
 
-      Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(
-          theInterval);
-      FunctionalIterable<ImmutableSegmentLoadInfo> loadInfoIterable = FunctionalIterable
-          .create(lookup).transformCat(
-              (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
-                  Iterables.transform(
-                      input.getObject(),
-                      (PartitionChunk<SegmentLoadInfo> chunk) ->
-                          chunk.getObject().toImmutableSegmentLoadInfo()
-                  )
-          );
-      if (isSegmentLoaded(loadInfoIterable, descriptor)) {
+      Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
+          prepareServedSegmentsInInterval(timeline, theInterval);
+      if (isSegmentLoaded(servedSegmentsInInterval, descriptor)) {
         return Response.ok(true).build();
       }
 
@@ -653,9 +692,9 @@ public class DataSourcesResource
     }
   }
 
-  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> servedSegments, SegmentDescriptor descriptor)
   {
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
@@ -666,5 +705,88 @@ public class DataSourcesResource
       }
     }
     return false;
+  }
+
+  @POST
+  @Path("/{dataSourceName}/markUsed")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response markAsUsedNonOvershadowedSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      MarkDataSourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      return Response.noContent().build();
+    }
+
+    int modified;
+    try {
+      Interval interval = payload.getInterval();
+      if (interval != null) {
+        modified = segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSource.getName(), interval);
+      } else {
+        modified = segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSource.getName(), payload.getSegmentIds());
+      }
+    }
+    catch (Exception e) {
+      if (e.getCause() instanceof UnknownSegmentIdsException) {
+        return Response
+            .status(Response.Status.NOT_FOUND)
+            .entity(ImmutableMap.of("message", e.getCause().getMessage()))
+            .build();
+      }
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", e.getMessage()))
+          .build();
+    }
+
+    if (modified == 0) {
+      return Response.noContent().build();
+    }
+
+    return Response.ok().build();
+  }
+
+  @VisibleForTesting
+  protected static class MarkDataSourceSegmentsPayload
+  {
+    private final Interval interval;
+    private final Set<String> segmentIds;
+
+    @JsonCreator
+    public MarkDataSourceSegmentsPayload(
+        @JsonProperty("interval") Interval interval,
+        @JsonProperty("segmentIds") Set<String> segmentIds
+    )
+    {
+      this.interval = interval;
+      this.segmentIds = segmentIds;
+    }
+
+    @JsonProperty
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @JsonProperty
+    public Set<String> getSegmentIds()
+    {
+      return segmentIds;
+    }
+
+    public boolean isValid()
+    {
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+    }
   }
 }

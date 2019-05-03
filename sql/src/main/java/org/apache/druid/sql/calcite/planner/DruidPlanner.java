@@ -32,11 +32,9 @@ import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -57,7 +55,6 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -92,7 +89,7 @@ public class DruidPlanner implements Closeable
       return planWithDruidConvention(explain, root);
     }
     catch (RelOptPlanner.CannotPlanException e) {
-      // Try again with BINDABLE convention. Used for querying Values, metadata tables, and fallback.
+      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
       try {
         return planWithBindableConvention(explain, root);
       }
@@ -193,29 +190,8 @@ public class DruidPlanner implements Closeable
       );
     }
 
-    final Set<String> datasourceNames = new HashSet<>();
-    bindableRel.childrenAccept(
-        new RelVisitor()
-        {
-          @Override
-          public void visit(RelNode node, int ordinal, RelNode parent)
-          {
-            if (node instanceof DruidRel) {
-              datasourceNames.addAll(((DruidRel) node).getDataSourceNames());
-            }
-            if (node instanceof Bindables.BindableTableScan) {
-              Bindables.BindableTableScan bts = (Bindables.BindableTableScan) node;
-              RelOptTable table = bts.getTable();
-              String tableName = table.getQualifiedName().get(0);
-              datasourceNames.add(tableName);
-            }
-            node.childrenAccept(this);
-          }
-        }
-    );
-
     if (explain != null) {
-      return planExplanation(bindableRel, explain, datasourceNames);
+      return planExplanation(bindableRel, explain, ImmutableSet.of());
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext((JavaTypeFactory) planner.getTypeFactory());
@@ -252,7 +228,7 @@ public class DruidPlanner implements Closeable
             }
         ), () -> enumerator.close());
       };
-      return new PlannerResult(resultsSupplier, root.validatedRowType, datasourceNames);
+      return new PlannerResult(resultsSupplier, root.validatedRowType, ImmutableSet.of());
     }
   }
 

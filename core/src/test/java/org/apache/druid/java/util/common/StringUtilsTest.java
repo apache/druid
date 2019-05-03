@@ -181,4 +181,43 @@ public class StringUtilsTest
     expectedException.expectMessage("count is negative, -1");
     Assert.assertEquals("", StringUtils.repeat("foo", -1));
   }
+  
+  @Test
+  public void testLpad()
+  {
+    String s1 = StringUtils.lpad("abc", 7, "de");
+    Assert.assertEquals(s1, "dedeabc");
+
+    String s2 = StringUtils.lpad("abc", 6, "de");
+    Assert.assertEquals(s2, "dedabc");
+
+    String s3 = StringUtils.lpad("abc", 2, "de");
+    Assert.assertEquals(s3, "ab");
+
+    String s4 = StringUtils.lpad("abc", 0, "de");
+    Assert.assertEquals(s4, "");
+
+    String s5 = StringUtils.lpad("abc", -1, "de");
+    Assert.assertEquals(s5, null);
+  }
+
+  @Test
+  public void testRpad()
+  {
+    String s1 = StringUtils.rpad("abc", 7, "de");
+    Assert.assertEquals(s1, "abcdede");
+
+    String s2 = StringUtils.rpad("abc", 6, "de");
+    Assert.assertEquals(s2, "abcded");
+
+    String s3 = StringUtils.rpad("abc", 2, "de");
+    Assert.assertEquals(s3, "ab");
+
+    String s4 = StringUtils.rpad("abc", 0, "de");
+    Assert.assertEquals(s4, "");
+
+    String s5 = StringUtils.rpad("abc", -1, "de");
+    Assert.assertEquals(s5, null);
+  }
+
 }

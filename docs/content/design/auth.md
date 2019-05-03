@@ -24,6 +24,8 @@ title: "Authentication and Authorization"
 
 # Authentication and Authorization
 
+This document describes non-extension specific Apache Druid (incubating) authentication and authorization configurations.
+
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticatorChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
