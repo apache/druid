@@ -19,14 +19,35 @@
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
 
+export function parseHtmlError(htmlStr: string): string | null {
+  const startIndex = htmlStr.indexOf('</h3><pre>');
+  const endIndex = htmlStr.indexOf('\n\tat');
+  if (startIndex === -1 || endIndex === -1) return null;
+
+  return htmlStr
+    .substring(startIndex + 10, endIndex)
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, '>');
+}
+
 export function getDruidErrorMessage(e: any) {
   const data: any = ((e.response || {}).data || {});
-  return [
-    data.error,
-    data.errorMessage,
-    data.errorClass,
-    data.host ? `on host ${data.host}` : null
-  ].filter(Boolean).join(' / ') || e.message;
+  switch (typeof data) {
+    case 'object':
+      return [
+        data.error,
+        data.errorMessage,
+        data.errorClass,
+        data.host ? `on host ${data.host}` : null
+      ].filter(Boolean).join(' / ') || e.message;
+
+    case 'string':
+      const htmlResp = parseHtmlError(data);
+      return htmlResp ? `HTML Error: ${htmlResp}` : e.message;
+
+    default:
+      return e.message;
+  }
 }
 
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {

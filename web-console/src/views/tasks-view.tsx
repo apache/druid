@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Alert, Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import { Alert, Button, ButtonGroup, Intent, Label, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
@@ -34,10 +34,13 @@ import {
   booleanCustomTableFilter,
   countBy,
   formatDuration,
-  getDruidErrorMessage, LocalStorageKeys,
+  getDruidErrorMessage, localStorageGet, LocalStorageKeys,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
+import { IngestionType } from '../utils/ingestion-spec';
+
+import { LoadDataViewSeed } from './load-data-view';
 
 import './tasks-view.scss';
 
@@ -48,6 +51,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
+  goToLoadDataView: () => void;
   noSqlMode: boolean;
 }
 
@@ -71,6 +75,7 @@ export interface TasksViewState {
 
   supervisorSpecDialogOpen: boolean;
   taskSpecDialogOpen: boolean;
+  initSpec: any;
   alertErrorMsg: string | null;
 }
 
@@ -131,6 +136,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
+      initSpec: null,
       alertErrorMsg: null
 
     };
@@ -222,6 +228,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   componentWillUnmount(): void {
     this.supervisorQueryManager.terminate();
     this.taskQueryManager.terminate();
+  }
+
+  private closeSpecDialogs = () => {
+    this.setState({
+      supervisorSpecDialogOpen: false,
+      taskSpecDialogOpen: false,
+      initSpec: null
+    });
   }
 
   private submitSupervisor = async (spec: JSON) => {
@@ -447,7 +461,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: supervisorTableColumnSelectionHandler.showColumn('Actions')
           }
         ]}
-        defaultPageSize={10}
+        defaultPageSize={5}
         className="-striped -highlight"
       />
       {this.renderResumeSupervisorAction()}
@@ -614,9 +628,20 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
-    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg } = this.state;
+    const { goToSql, goToLoadDataView, noSqlMode } = this.props;
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, initSpec, alertErrorMsg } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
+
+    const submitTaskMenu = <Menu>
+      <MenuItem
+        text="Raw JSON task"
+        onClick={() => this.setState({ taskSpecDialogOpen: true })}
+      />
+      <MenuItem
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+    </Menu>;
 
     return <div className="tasks-view app-view">
       <ViewControlBar label="Supervisors">
@@ -661,11 +686,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
           />
         }
-        <Button
-          icon={IconNames.PLUS}
-          text="Submit task"
-          onClick={() => this.setState({ taskSpecDialogOpen: true })}
-        />
+        <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.PLUS} text="Submit task"/>
+        </Popover>
         <TableColumnSelection
           columns={taskTableColumns}
           onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
@@ -673,16 +696,24 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         />
       </ViewControlBar>
       {this.renderTaskTable()}
-      { supervisorSpecDialogOpen ? <SpecDialog
-        onClose={() => this.setState({ supervisorSpecDialogOpen: false })}
-        onSubmit={this.submitSupervisor}
-        title="Submit supervisor"
-      /> : null }
-      { taskSpecDialogOpen ? <SpecDialog
-        onClose={() => this.setState({ taskSpecDialogOpen: false })}
-        onSubmit={this.submitTask}
-        title="Submit task"
-      /> : null }
+      {
+        supervisorSpecDialogOpen &&
+        <SpecDialog
+          onClose={this.closeSpecDialogs}
+          onSubmit={this.submitSupervisor}
+          title="Submit supervisor"
+          initSpec={initSpec}
+        />
+      }
+      {
+        taskSpecDialogOpen &&
+        <SpecDialog
+          onClose={this.closeSpecDialogs}
+          onSubmit={this.submitTask}
+          title="Submit task"
+          initSpec={initSpec}
+        />
+      }
       <Alert
         icon={IconNames.ERROR}
         intent={Intent.PRIMARY}

@@ -211,7 +211,7 @@ GROUP BY 1`);
         } : null
       }
       confirmButtonText="Drop data"
-      successText="Data has been dropped"
+      successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
       failText="Could not drop data"
       intent={Intent.DANGER}
       onClose={(success) => {

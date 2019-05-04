@@ -171,6 +171,14 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
+export function parseJson(json: string): any {
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    return undefined;
+  }
+}
+
 export function validJson(json: string): boolean {
   try {
     JSON.parse(json);
@@ -196,4 +204,15 @@ export function parseStringToJSON(s: string): JSON | null {
   } else {
     return JSON.parse(s);
   }
+}
+
+export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
+  return (xs.map(f) as any).filter(Boolean);
+}
+
+export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[]): string[] {
+  const pre = things.filter((x) => prefix.includes(x)).sort();
+  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x)).sort();
+  const post = things.filter((x) => suffix.includes(x)).sort();
+  return pre.concat(mid, post);
 }

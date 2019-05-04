@@ -16,15 +16,29 @@
  * limitations under the License.
  */
 
-export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
-export const LEGACY_OVERLORD_CONSOLE = '/console.html';
+import * as React from 'react';
 
-export const DRUID_WEBSITE = 'http://druid.io';
-export const DRUID_GITHUB = 'https://github.com/apache/druid';
-export const DRUID_DOCS = 'http://druid.io/docs/latest';
-export const DRUID_DOCS_SQL = 'http://druid.io/docs/latest/querying/sql.html';
-export const DRUID_DOCS_RUNE = 'http://druid.io/docs/latest/querying/querying.html';
-export const DRUID_COMMUNITY = 'http://druid.io/community/';
-export const DRUID_USER_GROUP = 'https://groups.google.com/forum/#!forum/druid-user';
-export const DRUID_DEVELOPER_GROUP = 'https://lists.apache.org/list.html?dev@druid.apache.org';
-export const DRUID_DOCS_API = 'http://druid.io/docs/latest/operations/api-reference.html';
+import './null-table-cell.scss';
+
+export interface NullTableCellProps extends React.Props<any> {
+  value?: any;
+  timestamp?: boolean;
+  unparseable?: boolean;
+}
+
+export class NullTableCell extends React.Component<NullTableCellProps, {}> {
+  render() {
+    const { value, timestamp, unparseable } = this.props;
+    if (unparseable) {
+      return <span className="null-table-cell unparseable">{`error`}</span>;
+    } else if (value !== '' && value != null) {
+      if (timestamp) {
+        return <span className="null-table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
+      } else {
+        return value;
+      }
+    } else {
+      return <span className="null-table-cell null">null</span>;
+    }
+  }
+}

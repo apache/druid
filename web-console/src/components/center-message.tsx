@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 
-export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
-export const LEGACY_OVERLORD_CONSOLE = '/console.html';
+import * as React from 'react';
 
-export const DRUID_WEBSITE = 'http://druid.io';
-export const DRUID_GITHUB = 'https://github.com/apache/druid';
-export const DRUID_DOCS = 'http://druid.io/docs/latest';
-export const DRUID_DOCS_SQL = 'http://druid.io/docs/latest/querying/sql.html';
-export const DRUID_DOCS_RUNE = 'http://druid.io/docs/latest/querying/querying.html';
-export const DRUID_COMMUNITY = 'http://druid.io/community/';
-export const DRUID_USER_GROUP = 'https://groups.google.com/forum/#!forum/druid-user';
-export const DRUID_DEVELOPER_GROUP = 'https://lists.apache.org/list.html?dev@druid.apache.org';
-export const DRUID_DOCS_API = 'http://druid.io/docs/latest/operations/api-reference.html';
+import './center-message.scss';
+
+export interface CenterMessageProps extends React.Props<any> {
+}
+
+export class CenterMessage extends React.Component<CenterMessageProps, {}> {
+  render() {
+    return <div className="center-message bp3-input">
+      <div className="center-message-inner">
+        {this.props.children}
+      </div>
+    </div>;
+  }
+}

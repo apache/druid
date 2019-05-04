@@ -16,26 +16,38 @@
  * limitations under the License.
  */
 
-@import "../variables";
+export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 
-.sql-view {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+export class QueryState<T> {
+  static INIT: QueryState<any> = new QueryState({});
 
-  .sql-control {
-    textarea {
-      width: 100%;
-      min-height: 180px;
-    }
+  public state: QueryStateState = 'init';
+  public error?: string | null;
+  public data?: T | null;
 
-    .buttons {
-      padding: $standard-padding 0;
+  constructor(opts: { loading?: boolean, error?: string, data?: T }) {
+    if (opts.error) {
+      if (opts.data) {
+        throw new Error('can not have both error and data');
+      } else {
+        this.state = 'error';
+        this.error = opts.error;
+      }
+    } else {
+      if (opts.data) {
+        this.state = 'data';
+        this.data = opts.data;
+      } else {
+        this.state = opts.loading ? 'loading' : 'init';
+      }
     }
   }
 
-  .ReactTable {
-    flex: 1;
+  isInit(): boolean {
+    return this.state === 'init';
+  }
+
+  isLoading(): boolean {
+    return this.state === 'loading';
   }
 }
-
