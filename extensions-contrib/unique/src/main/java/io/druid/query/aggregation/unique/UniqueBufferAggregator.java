@@ -48,7 +48,6 @@ public class UniqueBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    // TODO MutableRoaringBitmap 不支持offheap, 先用heap的
     bitmapCache.computeIfAbsent(buf, k -> new Int2ObjectOpenHashMap<>())
                .computeIfAbsent(position, k -> new ArrayList<>());
   }
