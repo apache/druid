@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream;
+package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -78,7 +78,7 @@ public class SeekableStreamSupervisorConfig
   }
 
   @VisibleForTesting
-  public void setMaxStoredExceptionEvents(int maxStoredExceptionEvents)
+  void setMaxStoredExceptionEvents(int maxStoredExceptionEvents)
   {
     this.maxStoredExceptionEvents = maxStoredExceptionEvents;
   }

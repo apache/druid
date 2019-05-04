@@ -35,6 +35,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Long durationSeconds,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
+      List<SeekableStreamSupervisorStateManager.State> stateHistory,
       List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
@@ -50,6 +51,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         null,
         suspended,
         state,
+        stateHistory,
         recentErrors
     );
   }
@@ -66,6 +68,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", active=" + getActiveTasks() +
            ", publishing=" + getPublishingTasks() +
            ", suspended=" + getSuspended() +
+           ", state=" + getState() +
+           ", stateHistory=" + getStateHistory() +
            ", recentErrors=" + getRecentErrors() +
            '}';
   }

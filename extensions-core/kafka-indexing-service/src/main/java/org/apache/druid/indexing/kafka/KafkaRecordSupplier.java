@@ -21,24 +21,17 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.curator.shaded.com.google.common.base.Throwables;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
-import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
-import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.errors.InterruptException;
-import org.apache.kafka.common.errors.TimeoutException;
-import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import javax.annotation.Nonnull;
@@ -226,18 +219,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     try {
       return callable.call();
     }
-    catch (TimeoutException e) {
-      throw new PossiblyTransientStreamException(e);
-    }
-    catch (WakeupException | InterruptException e) {
-      throw new TransientStreamException(e);
-    }
-    catch (KafkaException e) {
-      throw new NonTransientStreamException(e);
-    }
     catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
-      throw new RuntimeException(e);
+      throw new StreamException(e);
     }
   }
 

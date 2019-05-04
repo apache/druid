@@ -288,7 +288,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       lastRunTime = nowTime;
 
-      runInternal();
+      try {
+        runInternal();
+      }
+      finally {
+        stateManager.markRunFinished();
+      }
     }
   }
 
@@ -538,6 +543,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
+        spec.isSuspended() ? SeekableStreamSupervisorStateManager.State.SUSPENDED
+                           : SeekableStreamSupervisorStateManager.State.RUNNING,
         spec.getSupervisorConfig()
     );
 
@@ -659,6 +666,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Preconditions.checkState(lifecycleStarted, "lifecycle not started");
 
       log.info("Beginning shutdown of [%s]", supervisorId);
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.SHUTTING_DOWN);
 
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
@@ -886,13 +894,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       taskReports.forEach(payload::addTask);
     }
     catch (Exception e) {
-      stateManager.storeThrowableEvent(e);
       log.warn(e, "Failed to generate status report");
     }
 
     return report;
   }
-
 
   @Override
   public Map<String, Map<String, Object>> getStats()
@@ -901,13 +907,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return getCurrentTotalStats();
     }
     catch (InterruptedException ie) {
-      stateManager.storeThrowableEvent(ie);
       Thread.currentThread().interrupt();
       log.error(ie, "getStats() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {
-      stateManager.storeThrowableEvent(eete);
       throw new RuntimeException(eete);
     }
   }
@@ -1030,29 +1034,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+  public void runInternal() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
     possiblyRegisterListener();
+
     stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     updatePartitionDataFromStream();
+
     stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
     discoverTasks();
+
     updateTaskStatus();
+
     checkTaskDuration();
+
     checkPendingCompletionTasks();
+
     checkCurrentTaskState();
+
     // if supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
     if (!spec.isSuspended()) {
       log.info("[%s] supervisor is running.", dataSource);
+
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
       createNewTasks();
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.RUNNING);
     } else {
       log.info("[%s] supervisor is suspended.", dataSource);
       gracefulShutdownInternal();
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.SUSPENDED);
     }
 
     if (log.isDebugEnabled()) {
@@ -1060,7 +1069,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.info(generateReport(false).toString());
     }
-    stateManager.markRunFinishedAndEvaluateHealth();
   }
 
   private void possiblyRegisterListener()
@@ -1448,7 +1456,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // make sure the checkpoints are consistent with each other and with the metadata store
 
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
-
   }
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
@@ -2009,6 +2016,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // This will cause us to create a new set of tasks next cycle that will start from the sequences in
             // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
             // publishing failed and we need to re-ingest)
+            stateManager.storeCompletedTaskState(TaskState.SUCCESS);
             return Futures.transform(
                 stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
                 new Function<Object, Map<PartitionIdType, SequenceOffsetType>>()
@@ -2220,6 +2228,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
 
           if (taskData.status.isFailure()) {
+            stateManager.storeCompletedTaskState(TaskState.FAILED);
             iTask.remove(); // remove failed task
             if (group.tasks.isEmpty()) {
               // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
@@ -2232,6 +2241,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
             log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
+            stateManager.storeCompletedTaskState(TaskState.SUCCESS);
             futures.add(
                 stopTasksInGroup(group, "Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds())
             );
@@ -2636,7 +2646,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         sequenceLastUpdated = DateTimes.nowUtc();
       }
       catch (Exception e) {
-        stateManager.storeThrowableEvent(e);
         log.warn(e, "Exception while getting current/latest sequences");
       }
     };
@@ -2675,7 +2684,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
       }
       catch (Exception e) {
-        stateManager.storeThrowableEvent(e);
         log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
         throw new RuntimeException(e);
       }

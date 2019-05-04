@@ -45,6 +45,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
   private final SeekableStreamSupervisorStateManager.State state;
+  private final List<SeekableStreamSupervisorStateManager.State> stateHistory;
   private final List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
@@ -59,6 +60,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
+      List<SeekableStreamSupervisorStateManager.State> stateHistory,
       List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
@@ -75,6 +77,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     this.offsetsLastUpdated = offsetsLastUpdated;
     this.suspended = suspended;
     this.state = state;
+    this.stateHistory = stateHistory;
     this.recentErrors = recentErrors;
   }
 
@@ -165,6 +168,12 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   public SeekableStreamSupervisorStateManager.State getState()
   {
     return state;
+  }
+
+  @JsonProperty
+  public List<SeekableStreamSupervisorStateManager.State> getStateHistory()
+  {
+    return stateHistory;
   }
 
   @JsonProperty

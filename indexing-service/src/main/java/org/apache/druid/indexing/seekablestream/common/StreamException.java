@@ -17,16 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.exceptions;
+package org.apache.druid.indexing.seekablestream.common;
 
-/**
- * An exception wrapper for stream (Kafka/Kinesis) exceptions that are not expected to resolve over time.  An example
- * of such is some sort of auth exception.
- */
-
-public class NonTransientStreamException extends RuntimeException
+public class StreamException extends RuntimeException
 {
-  public NonTransientStreamException(Throwable t)
+  public StreamException(Throwable t)
   {
     super(t);
   }

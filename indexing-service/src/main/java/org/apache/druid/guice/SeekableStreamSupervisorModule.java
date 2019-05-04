@@ -22,7 +22,7 @@ package org.apache.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorConfig;
 
 public class SeekableStreamSupervisorModule implements Module
 {
