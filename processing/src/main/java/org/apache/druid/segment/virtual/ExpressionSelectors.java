@@ -187,7 +187,7 @@ public class ExpressionSelectors
     }
 
 
-    final Expr.ObjectBinding bindings = createBindings(expression, columnSelectorFactory, unknownIfArrays);
+    final Expr.ObjectBinding bindings = createBindings(expression, columnSelectorFactory);
 
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.

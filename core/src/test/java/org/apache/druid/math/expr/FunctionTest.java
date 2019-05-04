@@ -218,17 +218,17 @@ public class FunctionTest
   @Test
   public void testArrayAppend()
   {
-    assertExpr("array_append([1 2 3], 4)", new Long[]{1L,2L,3L,4L});
-    assertExpr("array_append([1 2 3], 'bar')", new Long[]{1L,2L,3L,0L});
+    assertExpr("array_append([1 2 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_append([1 2 3], 'bar')", new Long[]{1L, 2L, 3L, null});
   }
 
   @Test
   public void testArrayConcat()
   {
-    assertExpr("array_concat([1 2 3], [2 4 6])", new Long[]{1L,2L,3L,2L,4L,6L});
-    assertExpr("array_concat([1 2 3], 4)", new Long[]{1L,2L,3L,4L});
-    assertExpr("array_concat(0, [1 2 3])", new Long[]{0L,1L,2L,3L});
-    assertExpr("array_concat(0, 1)", new Long[]{0L,1L});
+    assertExpr("array_concat([1 2 3], [2 4 6])", new Long[]{1L, 2L, 3L, 2L, 4L, 6L});
+    assertExpr("array_concat([1 2 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_concat(0, [1 2 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertExpr("array_concat(0, 1)", new Long[]{0L, 1L});
   }
 
   @Test

@@ -1716,10 +1716,20 @@ interface Function
           return ExprEval.ofStringArray(this.append(lhs.asStringArray(), rhs.asString()).toArray(String[]::new));
         case LONG:
         case LONG_ARRAY:
-          return ExprEval.ofLongArray(this.append(lhs.asLongArray(), rhs.asLong()).toArray(Long[]::new));
+          return ExprEval.ofLongArray(
+              this.append(
+                  lhs.asLongArray(),
+                  rhs.isNumericNull() ? null : rhs.asLong()).toArray(Long[]::new
+              )
+          );
         case DOUBLE:
         case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(this.append(lhs.asDoubleArray(), rhs.asDouble()).toArray(Double[]::new));
+          return ExprEval.ofDoubleArray(
+              this.append(
+                  lhs.asDoubleArray(),
+                  rhs.isNumericNull() ? null : rhs.asDouble()).toArray(Double[]::new
+              )
+          );
       }
       throw new RuntimeException("impossible");
     }
@@ -1816,7 +1826,9 @@ interface Function
       }
 
       final String join = args.get(1).eval(bindings).asString();
-      return ExprEval.of(Arrays.stream(array).map(String::valueOf).collect(Collectors.joining(join != null ? join : "")));
+      return ExprEval.of(
+          Arrays.stream(array).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+      );
     }
   }
 
