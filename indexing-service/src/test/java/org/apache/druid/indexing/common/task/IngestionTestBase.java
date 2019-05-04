@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalOverwriteAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
@@ -210,8 +209,6 @@ public abstract class IngestionTestBase
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
       } else if (taskAction instanceof SegmentInsertAction) {
         publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
-      } else if (taskAction instanceof SegmentTransactionalOverwriteAction) {
-        publishedSegments.addAll(((SegmentTransactionalOverwriteAction) taskAction).getNewSegments());
       }
       return result;
     }

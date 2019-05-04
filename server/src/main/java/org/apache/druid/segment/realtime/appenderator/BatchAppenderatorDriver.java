@@ -186,11 +186,15 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   /**
    * Publish all segments.
    *
-   * @param publisher segment publisher
+   * @param segmentsToBeOverwritten segments which can be overwritten by new segments published by the given publisher
+   * @param publisher               segment publisher
    *
    * @return a {@link ListenableFuture} for the publish task
    */
-  public ListenableFuture<SegmentsAndMetadata> publishAll(final TransactionalSegmentPublisher publisher)
+  public ListenableFuture<SegmentsAndMetadata> publishAll(
+      @Nullable final Set<DataSegment> segmentsToBeOverwritten,
+      final TransactionalSegmentPublisher publisher
+  )
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
@@ -198,6 +202,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     }
 
     return publishInBackground(
+        segmentsToBeOverwritten,
         new SegmentsAndMetadata(
             snapshot
                 .values()

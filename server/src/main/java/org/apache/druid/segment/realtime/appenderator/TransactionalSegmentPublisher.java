@@ -48,14 +48,24 @@ public interface TransactionalSegmentPublisher
    * @throws IOException if there was an I/O error when publishing
    * @throws RuntimeException if we cannot tell if the segments were published or not, for some other reason
    */
-  // TODO: add oldSegments here??
-  SegmentPublishResult publishAnnotatedSegments(Set<DataSegment> segments, @Nullable Object commitMetadata)
-      throws IOException;
+  SegmentPublishResult publishAnnotatedSegments(
+      @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      Set<DataSegment> segmentsToPublish,
+      @Nullable Object commitMetadata
+  ) throws IOException;
 
-  default SegmentPublishResult publishSegments(Set<DataSegment> segments, @Nullable Object commitMetadata)
+  default SegmentPublishResult publishSegments(
+      @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      Set<DataSegment> segmentsToPublish,
+      @Nullable Object commitMetadata
+  )
       throws IOException
   {
-    return publishAnnotatedSegments(annotateAtomicUpdateGroupSize(segments), commitMetadata);
+    return publishAnnotatedSegments(
+        segmentsToBeOverwritten,
+        annotateAtomicUpdateGroupSize(segmentsToPublish),
+        commitMetadata
+    );
   }
 
   static Set<DataSegment> annotateAtomicUpdateGroupSize(Set<DataSegment> segments)

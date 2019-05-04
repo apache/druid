@@ -310,8 +310,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+          throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+        }
+        final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
+            segments,
+            null,
+            null
+        );
         return toolbox.getTaskActionClient().submit(action);
       };
 

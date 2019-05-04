@@ -147,8 +147,8 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
-      DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
 
   /**

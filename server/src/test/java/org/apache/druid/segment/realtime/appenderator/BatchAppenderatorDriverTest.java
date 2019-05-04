@@ -115,7 +115,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndMetadata published = driver.publishAll(null, makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );
@@ -151,7 +151,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
       checkSegmentStates(++i, SegmentState.PUSHED_AND_DROPPED);
     }
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndMetadata published = driver.publishAll(null, makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );
@@ -195,6 +195,6 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
   }
 }

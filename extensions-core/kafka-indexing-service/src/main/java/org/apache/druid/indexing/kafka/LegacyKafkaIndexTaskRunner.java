@@ -522,7 +522,10 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         status = Status.PUBLISHING;
       }
 
-      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+          throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+        }
         final SeekableStreamEndSequenceNumbers<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
             toolbox.getObjectMapper()
@@ -543,13 +546,13 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         final SegmentTransactionalInsertAction action;
 
         if (ioConfig.isUseTransaction()) {
-          action = new SegmentTransactionalInsertAction(
+          action = SegmentTransactionalInsertAction.appendAction(
               segments,
               new KafkaDataSourceMetadata(ioConfig.getStartSequenceNumbers()),
               new KafkaDataSourceMetadata(finalPartitions)
           );
         } else {
-          action = new SegmentTransactionalInsertAction(segments, null, null);
+          action = SegmentTransactionalInsertAction.appendAction(segments, null, null);
         }
 
         log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());

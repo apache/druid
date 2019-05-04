@@ -47,7 +47,6 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalOverwriteAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -952,19 +951,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         allocateSpec
     );
 
-    final TransactionalSegmentPublisher publisher;
-    if (!isGuaranteedRollup && isOverwriteMode() && !isChangeSegmentGranularity()) {
-      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient()
-                                                       .submit(
-                                                           new SegmentTransactionalOverwriteAction(
-                                                               getAllInputSegments(),
-                                                               segments
-                                                           )
-                                                       );
-    } else {
-      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient()
-                                                       .submit(new SegmentTransactionalInsertAction(segments));
-    }
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+        toolbox.getTaskActionClient()
+               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
 
     try (
         final Appenderator appenderator = newAppenderator(
@@ -1042,10 +1031,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       log.info("Pushed segments[%s]", pushed.getSegments());
 
       // Probably we can publish atomicUpdateGroup along with segments.
-      final SegmentsAndMetadata published = awaitPublish(
-          driver.publishAll(publisher),
-          pushTimeout
-      );
+      final Set<DataSegment> inputSegments = !isGuaranteedRollup && isOverwriteMode() && !isChangeSegmentGranularity()
+                                             ? getAllInputSegments()
+                                             : null;
+      final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
 
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {

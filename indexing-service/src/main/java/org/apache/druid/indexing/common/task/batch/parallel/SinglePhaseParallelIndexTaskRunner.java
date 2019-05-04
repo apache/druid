@@ -33,7 +33,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalOverwriteAction;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
@@ -405,29 +404,23 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   private void publish(TaskToolbox toolbox) throws IOException
   {
     final UsedSegmentChecker usedSegmentChecker = new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient());
-    final Set<DataSegment> segmentsToBeOverwritten = new HashSet<>();
-    final Set<DataSegment> segmentsToPublish = new HashSet<>();
+    final Set<DataSegment> oldSegments = new HashSet<>();
+    final Set<DataSegment> newSegments = new HashSet<>();
     segmentsMap
         .values()
         .forEach(report -> {
-          segmentsToBeOverwritten.addAll(report.getOldSegments());
-          segmentsToPublish.addAll(report.getNewSegments());
+          oldSegments.addAll(report.getOldSegments());
+          newSegments.addAll(report.getNewSegments());
         });
-    final TransactionalSegmentPublisher publisher;
-    if (segmentsToBeOverwritten.isEmpty()) {
-      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient().submit(
-          new SegmentTransactionalInsertAction(segments)
-      );
-    } else {
-      publisher = (segments, commitMetadata) -> toolbox.getTaskActionClient().submit(
-          new SegmentTransactionalOverwriteAction(segmentsToBeOverwritten, segments)
-      );
-    }
-    final boolean published = segmentsToPublish.isEmpty()
-                              || publisher.publishSegments(segmentsToPublish, null).isSuccess();
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+        toolbox.getTaskActionClient().submit(
+            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
+        );
+    final boolean published = newSegments.isEmpty()
+                              || publisher.publishSegments(oldSegments, newSegments, null).isSuccess();
 
     if (published) {
-      log.info("Published [%d] segments", segmentsToPublish.size());
+      log.info("Published [%d] segments", newSegments.size());
     } else {
       log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
       final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsMap
@@ -437,10 +430,10 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
       if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
-                            .equals(segmentsToPublish)) {
+                            .equals(newSegments)) {
         log.info("Our segments really do exist, awaiting handoff.");
       } else {
-        throw new ISE("Failed to publish segments[%s]", segmentsToPublish);
+        throw new ISE("Failed to publish segments[%s]", newSegments);
       }
     }
   }

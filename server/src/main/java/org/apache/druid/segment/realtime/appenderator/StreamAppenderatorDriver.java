@@ -281,6 +281,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
         sam -> publishInBackground(
+            null,
             sam,
             publisher
         )

@@ -538,6 +538,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @return a future for publishing segments
    */
   ListenableFuture<SegmentsAndMetadata> publishInBackground(
+      @Nullable Set<DataSegment> segmentsToBeOverwritten,
       SegmentsAndMetadata segmentsAndMetadata,
       TransactionalSegmentPublisher publisher
   )
@@ -557,6 +558,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               final Object metadata = segmentsAndMetadata.getCommitMetadata();
               final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndMetadata.getSegments());
               final SegmentPublishResult publishResult = publisher.publishSegments(
+                  segmentsToBeOverwritten,
                   ourSegments,
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
               );

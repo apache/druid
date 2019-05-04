@@ -301,7 +301,10 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       boolean useTransaction
   )
   {
-    return (segments, commitMetadata) -> {
+    return (mustBeNullOrEmptySegments, segmentsToPush, commitMetadata) -> {
+      if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+        throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+      }
       final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> finalPartitions =
           runner.deserializePartitionsFromMetadata(
@@ -321,8 +324,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       final SegmentTransactionalInsertAction action;
 
       if (useTransaction) {
-        action = new SegmentTransactionalInsertAction(
-            segments,
+        action = SegmentTransactionalInsertAction.appendAction(
+            segmentsToPush,
             runner.createDataSourceMetadata(
                 new SeekableStreamStartSequenceNumbers<>(
                     finalPartitions.getStream(),
@@ -333,7 +336,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
             runner.createDataSourceMetadata(finalPartitions)
         );
       } else {
-        action = new SegmentTransactionalInsertAction(segments, null, null);
+        action = SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
       }
 
       return toolbox.getTaskActionClient().submit(action);
