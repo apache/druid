@@ -288,12 +288,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       lastRunTime = nowTime;
 
-      try {
-        runInternal();
-      }
-      finally {
-        stateManager.markRunFinished();
-      }
+      runInternal();
     }
   }
 
@@ -1036,32 +1031,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void runInternal() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
-    possiblyRegisterListener();
+    try {
+      possiblyRegisterListener();
 
-    stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
-    updatePartitionDataFromStream();
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
+      updatePartitionDataFromStream();
 
-    stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
-    discoverTasks();
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
+      discoverTasks();
 
-    updateTaskStatus();
+      updateTaskStatus();
 
-    checkTaskDuration();
+      checkTaskDuration();
 
-    checkPendingCompletionTasks();
+      checkPendingCompletionTasks();
 
-    checkCurrentTaskState();
+      checkCurrentTaskState();
 
-    // if supervisor is not suspended, ensure required tasks are running
-    // if suspended, ensure tasks have been requested to gracefully stop
-    if (!spec.isSuspended()) {
-      log.info("[%s] supervisor is running.", dataSource);
+      // if supervisor is not suspended, ensure required tasks are running
+      // if suspended, ensure tasks have been requested to gracefully stop
+      if (!spec.isSuspended()) {
+        log.info("[%s] supervisor is running.", dataSource);
 
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
-      createNewTasks();
-    } else {
-      log.info("[%s] supervisor is suspended.", dataSource);
-      gracefulShutdownInternal();
+        stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+        createNewTasks();
+      } else {
+        log.info("[%s] supervisor is suspended.", dataSource);
+        gracefulShutdownInternal();
+      }
+    }
+    finally {
+      stateManager.markRunFinished();
     }
 
     if (log.isDebugEnabled()) {
