@@ -99,6 +99,10 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-core-dictionary</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
