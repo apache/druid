@@ -43,6 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.kylin.common.util.Dictionary;
 
 import javax.annotation.Nullable;
 import java.io.DataInput;
@@ -295,6 +296,16 @@ public class InputRowSerde
       AggregatorFactory[] aggs
   )
   {
+    return toBytes(typeHelperMap, row, aggs, null);
+  }
+
+  public static final SerializeResult toBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      final InputRow row,
+      AggregatorFactory[] aggs,
+      Map<String, Dictionary<String>> dictMap
+  )
+  {
     try {
       List<String> parseExceptionMessages = new ArrayList<>();
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -326,10 +337,14 @@ public class InputRowSerde
       WritableUtils.writeVInt(out, aggs.length);
       for (AggregatorFactory aggFactory : aggs) {
         String k = aggFactory.getName();
+        Dictionary<String> dict = null;
+        if (dictMap != null) {
+          dict = dictMap.get(k);
+        }
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true, dict)
         )) {
           try {
             agg.aggregate();
