@@ -36,7 +36,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class)
+    @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class),
+    @JsonSubTypes.Type(name = "list", value = ListTransform.class)
 })
 public interface Transform
 {
