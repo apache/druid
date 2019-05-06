@@ -25,16 +25,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * DataSegment object plus the overshadowed status for the segment. An immutable object.
  *
- * SegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
+ * DataSegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
  */
-public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
+public class DataSegmentWithOvershadowedStatus implements Comparable<DataSegmentWithOvershadowedStatus>
 {
   private final boolean overshadowed;
   private final DataSegment dataSegment;
 
   @JsonCreator
-  public SegmentWithOvershadowedStatus(
+  public DataSegmentWithOvershadowedStatus(
       @JsonProperty("dataSegment") DataSegment dataSegment,
       @JsonProperty("overshadowed") boolean overshadowed
   )
@@ -61,10 +61,10 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SegmentWithOvershadowedStatus)) {
+    if (!(o instanceof DataSegmentWithOvershadowedStatus)) {
       return false;
     }
-    final SegmentWithOvershadowedStatus that = (SegmentWithOvershadowedStatus) o;
+    final DataSegmentWithOvershadowedStatus that = (DataSegmentWithOvershadowedStatus) o;
     if (!dataSegment.equals(that.dataSegment)) {
       return false;
     }
@@ -83,7 +83,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   }
 
   @Override
-  public int compareTo(SegmentWithOvershadowedStatus o)
+  public int compareTo(DataSegmentWithOvershadowedStatus o)
   {
     return dataSegment.getId().compareTo(o.dataSegment.getId());
   }

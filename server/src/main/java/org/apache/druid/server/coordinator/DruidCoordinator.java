@@ -245,6 +245,11 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
+  public MetadataSegmentManager getMetadataSegmentManager()
+  {
+    return metadataSegmentManager;
+  }
+
   /**
    * @return tier -> { dataSource -> underReplicationCount } map
    */

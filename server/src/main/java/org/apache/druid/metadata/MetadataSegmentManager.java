@@ -99,6 +99,15 @@ public interface MetadataSegmentManager
   Collection<String> getAllDataSourceNames();
 
   /**
+   * Returns a collection of overshadowed segments
+   *
+   * Will return null if we do not have a valid snapshot of segments yet (perhaps the underlying metadata store has
+   * not yet been polled.)
+   */
+  @Nullable
+  Collection<DataSegment> getOvershadowedSegments();
+
+  /**
    * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.
    */
   List<Interval> getUnusedSegmentIntervals(String dataSource, Interval interval, int limit);
