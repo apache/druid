@@ -2026,8 +2026,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("All tasks in group [%s] failed to transition to publishing state"),
-        EasyMock.eq(0)
+        EasyMock.eq("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task"),
+        EasyMock.contains("sequenceName-0")
     );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
@@ -3062,7 +3062,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .anyTimes();
     expect(taskClient.setEndOffsetsAsync(
         EasyMock.anyString(),
-        EasyMock.eq(ImmutableMap.of("0", "10")),
+        EasyMock.eq(ImmutableMap.of(shardId1, "10")),
         EasyMock.anyBoolean()
     ))
         .andReturn(Futures.immediateFuture(true))
