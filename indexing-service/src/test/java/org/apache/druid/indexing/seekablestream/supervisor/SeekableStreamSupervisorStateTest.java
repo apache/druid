@@ -55,6 +55,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.State;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -207,7 +208,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertTrue(exceptionEvents.get(0).isStreamException());
     Assert.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
     Assert.assertEquals(
-        String.format("%s: %s", IllegalStateException.class.getName(), EXCEPTION_MSG),
+        StringUtils.format("%s: %s", IllegalStateException.class.getName(), EXCEPTION_MSG),
         exceptionEvents.get(0).getMessage()
     );
     Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());

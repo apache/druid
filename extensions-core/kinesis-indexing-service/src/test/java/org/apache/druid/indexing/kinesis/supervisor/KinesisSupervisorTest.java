@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -104,9 +103,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeoutException;
 
 import static org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import static org.easymock.EasyMock.anyObject;
@@ -132,7 +129,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private KinesisRecordSupplier supervisorRecordSupplier;
 
   private final int numThreads;
-  private KinesisSupervisor supervisor;
+  private TestableKinesisSupervisor supervisor;
   private KinesisSupervisorTuningConfig tuningConfig;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
@@ -561,7 +558,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testBadMetadataOffsets() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -594,6 +591,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+
+    Assert.assertEquals(
+        "org.apache.druid.java.util.common.ISE",
+        supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
+    );
   }
 
   @Test
@@ -2257,7 +2259,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetNoTasks() throws Exception
+  public void testResetNoTasks()
   {
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
 
@@ -2362,7 +2364,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetNoDataSourceMetadata() throws Exception
+  public void testResetNoDataSourceMetadata()
   {
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -2698,8 +2700,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
   @Test(timeout = 60_000L)
-  public void testCheckpointForInactiveTaskGroup()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+  public void testCheckpointForInactiveTaskGroup() throws InterruptedException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -2997,10 +2998,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test(timeout = 60_000L)
-  public void testCheckpointWithNullTaskGroupId()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+  public void testCheckpointWithNullTaskGroupId() throws InterruptedException
   {
     supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null, false);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     final Task id1 = createKinesisIndexTask(
         "id1",
@@ -3304,7 +3306,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetSuspended() throws Exception
+  public void testResetSuspended()
   {
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3373,8 +3375,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testDoNotKillCompatibleTasks()
-      throws InterruptedException, EntryExistsException, ExecutionException, TimeoutException, JsonProcessingException
+  public void testDoNotKillCompatibleTasks() throws InterruptedException, EntryExistsException
   {
     // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
     int numReplicas = 2;
@@ -3471,8 +3472,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasks()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, EntryExistsException
+  public void testKillIncompatibleTasks() throws InterruptedException, EntryExistsException
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
     int numReplicas = 2;
@@ -3709,7 +3709,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
-  private KinesisSupervisor getTestableSupervisor(
+  private TestableKinesisSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3787,7 +3787,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  private KinesisSupervisor getTestableSupervisor(
+  private TestableKinesisSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3809,7 +3809,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  private KinesisSupervisor getTestableSupervisor(
+  private TestableKinesisSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3892,7 +3892,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   /**
    * Use when you want to mock the return value of SeekableStreamSupervisor#isTaskCurrent()
    */
-  private KinesisSupervisor getTestableSupervisorCustomIsTaskCurrent(
+  private TestableKinesisSupervisor getTestableSupervisorCustomIsTaskCurrent(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -4256,6 +4256,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     protected RecordSupplier<String, String> setupRecordSupplier()
     {
       return supervisorRecordSupplier;
+    }
+
+    private SeekableStreamSupervisorStateManager getStateManager()
+    {
+      return stateManager;
     }
   }
 

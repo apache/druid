@@ -64,6 +64,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -280,7 +281,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class RunNotice implements Notice
   {
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+    public void handle()
     {
       long nowTime = System.currentTimeMillis();
       if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
@@ -1029,7 +1030,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void runInternal() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+  public void runInternal()
   {
     try {
       possiblyRegisterListener();
@@ -1831,7 +1832,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     if (partitionIds == null || partitionIds.size() == 0) {
-      log.warn("No partitions found for stream[%s]", ioConfig.getStream());
+      String errMsg = StringUtils.format("No partitions found for stream [%s]", ioConfig.getStream());
+      stateManager.storeThrowableEvent(new StreamException(new ISE(errMsg)));
+      log.warn(errMsg);
       return false;
     }
 
@@ -2506,18 +2509,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             resetInternal(
                 createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
             );
-            throw new ISE(
+            throw new StreamException(new ISE(
                 "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting sequence",
                 sequence,
                 partition
-            );
+            ));
 
           } else {
-            throw new ISE(
+            throw new StreamException(new ISE(
                 "Previous sequenceNumber [%s] is no longer available for partition [%s]. You can clear the previous sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
                 sequence,
                 partition
-            );
+            ));
           }
         }
       }
@@ -2690,7 +2693,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       catch (Exception e) {
         log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
-        throw new RuntimeException(e);
+        throw new StreamException(e);
       }
 
       Set<StreamPartition<PartitionIdType>> partitions = partitionIds

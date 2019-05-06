@@ -146,7 +146,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   private final int numThreads;
 
-  private KafkaSupervisor supervisor;
+  private TestableKafkaSupervisor supervisor;
   private KafkaSupervisorTuningConfig tuningConfig;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
@@ -620,7 +620,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testBadMetadataOffsets() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -641,6 +641,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+
+    Assert.assertEquals(
+        "org.apache.druid.java.util.common.ISE",
+        supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
+    );
   }
 
   @Test
@@ -2117,6 +2122,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final DateTime startTime = DateTimes.nowUtc();
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -2213,6 +2220,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -2430,6 +2439,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -3136,7 +3147,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private KafkaSupervisor getTestableSupervisor(
+  private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3157,7 +3168,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  private KafkaSupervisor getTestableSupervisor(
+  private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3236,7 +3247,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   /**
    * Use when you want to mock the return value of SeekableStreamSupervisor#isTaskCurrent()
    */
-  private KafkaSupervisor getTestableSupervisorCustomIsTaskCurrent(
+  private TestableKafkaSupervisor getTestableSupervisorCustomIsTaskCurrent(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3577,6 +3588,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
       return StringUtils.format("sequenceName-%d", groupId);
+    }
+
+    private SeekableStreamSupervisorStateManager getStateManager()
+    {
+      return stateManager;
     }
   }
 
