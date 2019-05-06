@@ -87,7 +87,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
     // If metadata store hasn't been polled yet, use empty overshadowed list
     final Collection<DataSegment> overshadowed = Optional
-        .ofNullable(coordinator.getMetadataSegmentManager().getOvershadowedSegments())
+        .ofNullable(coordinator.getMetadataSegmentManager().findOvershadowedSegments())
         .orElse(Collections.emptyList());
 
     for (String tier : cluster.getTierNames()) {

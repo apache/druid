@@ -648,7 +648,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public Set<DataSegment> getOvershadowedSegments()
+  public Set<DataSegment> findOvershadowedSegments()
   {
     return overshadowedSegments;
   }

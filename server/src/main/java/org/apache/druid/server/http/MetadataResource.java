@@ -193,7 +193,7 @@ public class MetadataResource
   {
     // If metadata store hasn't been polled yet, use empty overshadowed list
     final Collection<DataSegment> overshadowedSegments = Optional
-        .ofNullable(metadataSegmentManager.getOvershadowedSegments())
+        .ofNullable(metadataSegmentManager.findOvershadowedSegments())
         .orElse(Collections.emptyList());
 
     final Stream<DataSegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
