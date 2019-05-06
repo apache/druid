@@ -156,11 +156,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   public Set<Integer> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      List<PartitionInfo> partitions = consumer.partitionsFor(stream);
-      if (partitions == null) {
+      // use consumer.listTopics() instead of partitionsFor() to force a remote call so we can detect stream issues
+      Map<String, List<PartitionInfo>> topics = consumer.listTopics();
+      if (topics == null || topics.get(stream) == null) {
         throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
       }
-      return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+
+      return topics.get(stream).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
     });
   }
 

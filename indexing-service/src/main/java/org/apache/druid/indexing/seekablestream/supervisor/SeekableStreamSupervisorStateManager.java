@@ -22,11 +22,11 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -67,7 +67,6 @@ public class SeekableStreamSupervisorStateManager
   private final State healthySteadyState;
 
   private final Deque<ExceptionEvent> recentEventsQueue;
-  private final CircularBuffer<State> stateHistory;
 
   private State supervisorState;
 
@@ -100,7 +99,6 @@ public class SeekableStreamSupervisorStateManager
     this.healthySteadyState = healthySteadyState;
 
     this.recentEventsQueue = new ConcurrentLinkedDeque<>();
-    this.stateHistory = new CircularBuffer<>(supervisorConfig.getMaxStoredExceptionEvents());
   }
 
   /**
@@ -181,8 +179,6 @@ public class SeekableStreamSupervisorStateManager
     // will instead trigger setting the state to an unhealthy one if we are now over the error thresholds.
     maybeSetState(healthySteadyState);
 
-    stateHistory.add(supervisorState);
-
     // reset for next run
     currentRunSuccessful = true;
   }
@@ -197,19 +193,19 @@ public class SeekableStreamSupervisorStateManager
     return supervisorState;
   }
 
-  public List<State> getStateHistory()
+  public boolean isAtLeastOneSuccessfulRun()
   {
-    List<State> retVal = new ArrayList<>();
-    for (int i = 0; i < stateHistory.size(); i++) {
-      retVal.add(stateHistory.get(i));
-    }
-
-    return retVal;
+    return atLeastOneSuccessfulRun;
   }
 
   @JsonPropertyOrder({"timestamp", "exceptionClass", "streamException", "message"})
   public static class ExceptionEvent
   {
+    private static final List<String> SKIPPED_EXCEPTION_CLASSES = ImmutableList.of(
+        RuntimeException.class.getName(),
+        StreamException.class.getName()
+    );
+
     private final DateTime timestamp;
     private final String exceptionClass;
     private final boolean streamException;
@@ -252,7 +248,7 @@ public class SeekableStreamSupervisorStateManager
       return ((List<Throwable>) ExceptionUtils.getThrowableList(t))
           .stream()
           .map(x -> x.getClass().getName())
-          .filter(x -> !RuntimeException.class.getName().equals(x))
+          .filter(x -> !SKIPPED_EXCEPTION_CLASSES.contains(x))
           .findFirst()
           .orElse(Exception.class.getName());
     }

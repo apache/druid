@@ -94,7 +94,7 @@ public class SeekableStreamSupervisorStateManagerTest
 
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(State.RUNNING, stateManager.getSupervisorState());
-      stateManager.storeThrowableEvent(new StreamException(new Exception("DOH!")));
+      stateManager.storeThrowableEvent(new StreamException(new IllegalStateException("DOH!")));
       stateManager.markRunFinished();
     }
     Assert.assertEquals(State.LOST_CONTACT_WITH_STREAM, stateManager.getSupervisorState());
@@ -102,7 +102,7 @@ public class SeekableStreamSupervisorStateManagerTest
 
     stateManager.getExceptionEvents().forEach(x -> {
       Assert.assertTrue(x.isStreamException());
-      Assert.assertEquals(StreamException.class.getName(), x.getExceptionClass());
+      Assert.assertEquals(IllegalStateException.class.getName(), x.getExceptionClass());
     });
   }
 
@@ -112,7 +112,7 @@ public class SeekableStreamSupervisorStateManagerTest
     stateManager.maybeSetState(State.CONNECTING_TO_STREAM);
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(State.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
-      stateManager.storeThrowableEvent(new StreamException(new Exception("DOH!")));
+      stateManager.storeThrowableEvent(new StreamException(new IllegalStateException("DOH!")));
       stateManager.markRunFinished();
     }
     Assert.assertEquals(State.UNABLE_TO_CONNECT_TO_STREAM, stateManager.getSupervisorState());
@@ -120,7 +120,7 @@ public class SeekableStreamSupervisorStateManagerTest
 
     stateManager.getExceptionEvents().forEach(x -> {
       Assert.assertTrue(x.isStreamException());
-      Assert.assertEquals(StreamException.class.getName(), x.getExceptionClass());
+      Assert.assertEquals(IllegalStateException.class.getName(), x.getExceptionClass());
     });
   }
 
@@ -252,7 +252,7 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testGetThrowableEvents()
   {
     List<Exception> exceptions = ImmutableList.of(
-        new StreamException(new Exception("oof")),
+        new StreamException(new UnsupportedOperationException("oof")),
         new NullPointerException("oof"),
         new RuntimeException(new StreamException(new Exception("oof"))),
         new RuntimeException(new IllegalArgumentException("oof"))
@@ -264,17 +264,10 @@ public class SeekableStreamSupervisorStateManagerTest
 
     Assert.assertEquals(State.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());
 
-    Assert.assertEquals(ImmutableList.of(
-        State.WAITING_TO_RUN,
-        State.WAITING_TO_RUN,
-        State.UNABLE_TO_CONNECT_TO_STREAM,
-        State.UNHEALTHY_SUPERVISOR
-    ), stateManager.getStateHistory());
-
     List<Pair<String, Boolean>> expected = ImmutableList.of(
-        Pair.of("org.apache.druid.indexing.seekablestream.common.StreamException", true),
+        Pair.of("java.lang.UnsupportedOperationException", true),
         Pair.of("java.lang.NullPointerException", false),
-        Pair.of("org.apache.druid.indexing.seekablestream.common.StreamException", true),
+        Pair.of("java.lang.Exception", true),
         Pair.of("java.lang.IllegalArgumentException", false)
     );
 

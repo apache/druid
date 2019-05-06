@@ -41,7 +41,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      List<SeekableStreamSupervisorStateManager.State> stateHistory,
       List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
@@ -57,7 +56,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         offsetsLastUpdated,
         suspended,
         state,
-        stateHistory,
         recentErrors
     );
   }
@@ -79,7 +77,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            (getOffsetsLastUpdated() != null ? ", sequenceLastUpdated=" + getOffsetsLastUpdated() : "") +
            ", suspended=" + getSuspended() +
            ", state=" + getState() +
-           ", stateHistory=" + getStateHistory() +
            ", recentErrors=" + getRecentErrors() +
            '}';
   }

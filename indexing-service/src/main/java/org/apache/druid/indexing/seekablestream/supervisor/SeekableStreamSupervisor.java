@@ -1035,7 +1035,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       possiblyRegisterListener();
 
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
-      updatePartitionDataFromStream();
+      if (!updatePartitionDataFromStream() && !stateManager.isAtLeastOneSuccessfulRun()) {
+        return; // if we can't connect to the stream and this is the first run, stop and wait to retry the connection
+      }
 
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
       discoverTasks();
@@ -1059,15 +1061,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.info("[%s] supervisor is suspended.", dataSource);
         gracefulShutdownInternal();
       }
+
+      if (log.isDebugEnabled()) {
+        log.debug(generateReport(true).toString());
+      } else {
+        log.info(generateReport(false).toString());
+      }
+    }
+    catch (Exception e) {
+      stateManager.storeThrowableEvent(e);
+      log.warn(e, "Exception in supervisor run loop for dataSource [%s]", dataSource);
     }
     finally {
       stateManager.markRunFinished();
-    }
-
-    if (log.isDebugEnabled()) {
-      log.debug(generateReport(true).toString());
-    } else {
-      log.info(generateReport(false).toString());
     }
   }
 
@@ -1197,7 +1203,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
           }
           catch (IOException e) {
-            stateManager.storeThrowableEvent(e);
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
             throw new RuntimeException(e);
           }
@@ -1468,7 +1473,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     }
     catch (InterruptedException | ExecutionException | TimeoutException e) {
-      stateManager.storeThrowableEvent(e);
       throw new RuntimeException(e);
     }
   }
@@ -1522,7 +1526,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
     catch (Exception e) {
-      stateManager.storeThrowableEvent(e);
       throw new RuntimeException(e);
     }
 
@@ -1812,7 +1815,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected abstract String baseTaskName();
 
-  private void updatePartitionDataFromStream()
+  private boolean updatePartitionDataFromStream()
   {
     Set<PartitionIdType> partitionIds;
     try {
@@ -1822,14 +1825,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.storeThrowableEvent(e);
-      log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
+      log.warn("Could not fetch partitions for topic/stream [%s]: %s", ioConfig.getStream(), e.getMessage());
       log.debug(e, "full stack trace");
-      return;
+      return false;
     }
 
     if (partitionIds == null || partitionIds.size() == 0) {
       log.warn("No partitions found for stream[%s]", ioConfig.getStream());
-      return;
+      return false;
     }
 
     log.debug("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
@@ -1869,6 +1872,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       }
     }
+
+    return true;
   }
 
   private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
