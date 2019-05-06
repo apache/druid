@@ -1536,7 +1536,7 @@
                             <excludes>
                                 <exclude>publications/**</exclude>
                                 <exclude>codestyle/*-forbidden-apis.txt</exclude>
-                                <exclude>quickstart/tutorial/conf/**</exclude>
+                                <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
