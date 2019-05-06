@@ -378,7 +378,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     log.info("Setting version to: %s", version);
 
     final String buildResult = invokeForeignLoader(
-        "io.druid.indexing.common.task.HadoopIndexTask$HadoopBuildDictInnerProcessing",
+        "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopBuildDictInnerProcessing",
         new String[]{
             toolbox.getObjectMapper().writeValueAsString(indexerSchema),
             ZkConfigManager.getZkHosts(),
