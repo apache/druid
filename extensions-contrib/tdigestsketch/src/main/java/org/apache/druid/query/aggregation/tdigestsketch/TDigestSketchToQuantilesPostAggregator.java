@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Post aggregation operator that can take in aggregated t-digest sketches and
+ * Post aggregation operator that can take in aggregated T-Digest sketches and
  * generate quantiles from it.
  */
 public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
@@ -57,6 +57,7 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
     this.fractions = Preconditions.checkNotNull(fractions, "array of fractions is null");
+    Preconditions.checkArgument(this.fractions.length > 1, "Array of fractions cannot be empty");
   }
 
   @Override

@@ -29,7 +29,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 /**
- * Factory that creates t-digest merge sketch aggreators. See {@link TDigestMergeSketchAggregator}
+ * Factory to create {@link TDigestMergeSketchAggregator}
  */
 public class TDigestMergeSketchAggregatorFactory extends TDigestBuildSketchAggregatorFactory
 {

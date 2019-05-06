@@ -26,7 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * Aggregator that merges tDigest based sketches generated from {@link TDigestBuildSketchAggregator}
+ * Aggregator that merges T-Digest based sketches generated from {@link TDigestBuildSketchAggregator}
  */
 public class TDigestMergeSketchAggregator implements Aggregator
 {

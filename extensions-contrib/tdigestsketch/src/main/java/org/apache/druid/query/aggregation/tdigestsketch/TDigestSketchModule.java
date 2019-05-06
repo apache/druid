@@ -32,9 +32,7 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import java.util.List;
 
 /**
- * Module defining aggregators for the tdigest based sketches
- *
- * @see TDigestBuildSketchAggregatorFactory
+ * Module defining aggregators for the T-Digest based sketches
  */
 public class TDigestSketchModule implements DruidModule
 {
