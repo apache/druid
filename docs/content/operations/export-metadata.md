@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Migrating Derby Metadata and Local Deep Storage"
+title: "Export Metadata Tool"
 ---
 
 <!--
@@ -22,14 +22,11 @@ title: "Migrating Derby Metadata and Local Deep Storage"
   ~ under the License.
   -->
 
-# Migrating Derby Metadata and Local Deep Storage
+# Export Metadata Tool
 
-If you have been running an evaluation Druid cluster using the built-in Derby metadata storage and local
-deep storage (configurations used by the tutorial and single-machine quickstarts), and wish to migrate to a 
-more production-capable metadata store such as MySQL or PostgreSQL, and/or migrate your deep storage from local
-to S3 or HDFS, Druid provides the `export-metadata` tool to assist with such migrations.
+Druid includes an `export-metadata` tool for assisting with migration of cluster metadata and deep storage.
 
-This tool exports the contents of the following Druid tables:
+This tool exports the contents of the following Druid metadata tables:
 - segments
 - rules
 - config
@@ -39,6 +36,10 @@ This tool exports the contents of the following Druid tables:
 Additionally, the tool can rewrite the local deep storage location descriptors in the rows of the segments table 
 to point to new deep storage locations (S3, HDFS, and local rewrite paths are supported).
 
+The tool has the following limitations:
+- Only exporting from Derby metadata is currently supported
+- If rewriting load specs for deep storage migration, only migrating from local deep storage is currently supported.
+
 ## `export-metadata` Options
 
 The `export-metadata` tool provides the following options:
@@ -47,7 +48,9 @@ The `export-metadata` tool provides the following options:
 
 `--output-path`, `-o`: The output directory of the tool. CSV files for the Druid segments, rules, config, datasource, and supervisors tables will be written to this directory.
 
-### S3 Migration
+### Deep Storage Migration
+
+#### Migration to S3 Deep Storage
 
 By setting the options below, the tool will rewrite the segment load specs to point to a new S3 deep storage location.
 
@@ -67,13 +70,13 @@ druid.storage.storageDirectory=/druid/segments
 
 If the target S3 bucket was `migration`, with a base key of `example`, the contents of `s3://migration/example/` must be identical to that of `/druid/segments` on the old local filesystem.
 
-### HDFS Migration
+#### Migration to HDFS Deep Storage
 
 By setting the options below, the tool will rewrite the segment load specs to point to a new HDFS deep storage location.
 
 This helps users migrate segments stored in local deep storage to HDFS.
 
-`--hadoopStorageDirectory`, `h`: The HDFS path that will hold the migrated segments
+`--hadoopStorageDirectory`, `-h`: The HDFS path that will hold the migrated segments
 
 When copying the local deep storage segments to HDFS, the rewrite performed by this tool requires that the directory structure of the segments be unchanged, with the exception of directory names containing colons (`:`).
 
@@ -96,7 +99,7 @@ In this example, the `wikipedia` segment above under `/druid/segments` in local 
 
 `wikipedia/2016-06-27T02_00_00.000Z_2016-06-27T03_00_00.000Z/2019-05-03T21_57_15.950Z/1/index.zip`
 
-### Local to Local Migration
+#### Migration to New Local Deep Storage Path
 
 By setting the options below, the tool will rewrite the segment load specs to point to a new local deep storage location.
 
@@ -117,10 +120,11 @@ If the new path  was `/migration/example`, the contents of `/migration/example/`
 
 ## Running the tool
 
-To use the tool, you can run the following command:
+To use the tool, you can run the following from the root of the Druid package:
 
 ```bash
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" org.apache.druid.cli.Main tools export-metadata -o /tmp/csv
+cd ${DRUID_ROOT}
+java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata -o /tmp/csv
 ```
 
 In the example command above:
@@ -128,7 +132,7 @@ In the example command above:
 - `conf/druid/single-server/micro-quickstart/_common` is the directory containing the `common.runtime.properties` file used by the existing deployment.
 - `/tmp/csv` is the output directory
 
-## Importing to MySQL/PostgreSQL
+## Importing Metadata
 
 After running the tool, the output directory will contain `<table-name>_raw.csv` and `<table-name>.csv` files.
 
@@ -136,9 +140,23 @@ The `<table-name>_raw.csv` files are intermediate files used by the tool, contai
 
 The `<table-name>.csv` files are used for import into another database such as MySQL and PostgreSQL and have any configured deep storage location rewrites applied.
 
-Example import commands for MySQL and PostgreSQL are shown below.
+Example import commands for Derby, MySQL, and PostgreSQL are shown below.
 
-These example import commands expect `/tmp/csv` and its contents to be accessible from the server. For other options, such as importing from the client filesystem, please refer to the MySQL or PostgreSQL documentation.
+These example import commands expect `/tmp/csv` and its contents to be accessible from the server. For other options, such as importing from the client filesystem, please refer to the database's documentation.
+
+### Derby
+
+```sql
+CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SEGMENTS','/tmp/csv/druid_segments.csv',',','"',null,0);
+
+CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_RULES','/tmp/csv/druid_rules.csv',',','"',null,0);
+
+CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_CONFIG','/tmp/csv/druid_config.csv',',','"',null,0);
+
+CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_DATASOURCE','/tmp/csv/druid_dataSource.csv',',','"',null,0);
+
+CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SUPERVISORS','/tmp/csv/druid_supervisors.csv',',','"',null,0);
+```
 
 ### MySQL
 
