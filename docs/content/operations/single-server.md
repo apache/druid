@@ -36,6 +36,10 @@ The `micro-quickstart` is sized for small machines like laptops and is intended 
 
 The other configurations are intended for general use single-machine deployments. They are sized for hardware roughly based on Amazon's i3 series of EC2 instances.
 
+The startup scripts for these example configurations run a single ZK instance along with the Druid services. You can choose to deploy ZK separately as well.
+
+The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.html#coordinator-operation).
+
 ## Single Server Reference Configurations
 
 Micro-Quickstart: 4 CPU, 16GB RAM

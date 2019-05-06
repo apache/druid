@@ -107,11 +107,10 @@ This will bring up instances of Zookeeper and the Druid services, all running on
 ```bash
 $ ./bin/start-micro-quickstart 
 [Fri May  3 11:40:50 2019] Running command[zk], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk conf
-[Fri May  3 11:40:50 2019] Running command[coordinator], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[coordinator-overlord], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/coordinator-overlord.log]: bin/run-druid coordinator-overlord conf/druid/single-server/micro-quickstart
 [Fri May  3 11:40:50 2019] Running command[broker], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker conf/druid/single-server/micro-quickstart
 [Fri May  3 11:40:50 2019] Running command[router], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/router.log]: bin/run-druid router conf/druid/single-server/micro-quickstart
 [Fri May  3 11:40:50 2019] Running command[historical], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical conf/druid/single-server/micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[overlord], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord conf/druid/single-server/micro-quickstart
 [Fri May  3 11:40:50 2019] Running command[middleManager], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager conf/druid/single-server/micro-quickstart
 ```
 
