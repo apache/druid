@@ -120,7 +120,7 @@ public class ITBasicAuthConfigurationTest
   private CoordinatorResourceTestClient coordinatorClient;
 
   @BeforeMethod
-  public void before() throws Exception
+  public void before()
   {
     // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
     RetryUtil.retryUntilTrue(
