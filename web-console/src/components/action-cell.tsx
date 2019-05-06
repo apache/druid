@@ -16,58 +16,21 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
+import * as React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  height: 100%;
-  overflow: hidden;
-  font-size: 13px;
+import './action-cell.scss';
+
+export interface ActionCellProps extends React.Props<any> {
 }
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
+export class ActionCell extends React.Component<ActionCellProps, {}> {
+  constructor(props: ActionCellProps, context: any) {
+    super(props, context);
   }
 
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-svg {
-  width: auto;
-  height: auto;
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
-
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.bp3-form-group {
-  .bp3-form-content {
-    position: relative;
-
-    & > .bp3-popover-wrapper {
-      position: absolute;
-      right: 0;
-      top: 7px;
-    }
+  render() {
+    return <div className="action-cell">
+      {this.props.children}
+    </div>;
   }
 }

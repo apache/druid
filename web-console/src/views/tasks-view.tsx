@@ -23,6 +23,7 @@ import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
+import { ActionCell } from '../components/action-cell';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
@@ -477,7 +478,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const supervisorActions = this.getSupervisorActions(id, supervisorSuspended);
               const supervisorMenu = basicActionsToMenu(supervisorActions);
 
-              return <div className="action-cell">
+              return <ActionCell>
                 <Icon
                   icon={IconNames.SEARCH_TEMPLATE}
                   onClick={() => this.setState({
@@ -491,7 +492,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                     <Icon icon={IconNames.WRENCH}/>
                   </Popover>
                 }
-              </div>;
+              </ActionCell>;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Actions')
           }
@@ -657,7 +658,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const taskActions = this.getTaskActions(id, status);
               const taskMenu = basicActionsToMenu(taskActions);
 
-              return <div className="action-cell">
+              return <ActionCell>
                 <Icon
                   icon={IconNames.SEARCH_TEMPLATE}
                   onClick={() => this.setState({
@@ -671,7 +672,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                     <Icon icon={IconNames.WRENCH}/>
                   </Popover>
                 }
-              </div>;
+              </ActionCell>;
             },
             Aggregated: row => '',
             show: taskTableColumnSelectionHandler.showColumn('Actions')
