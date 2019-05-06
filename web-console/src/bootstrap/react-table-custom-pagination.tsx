@@ -100,7 +100,7 @@ export class ReactTableCustomPagination extends React.Component<ReactTableCustom
     } = this.props;
 
     return (
-      <div className={'-pagination'} style={style}>
+      <div className="-pagination" style={style}>
         <div className="-previous">
           <Button
             fill
