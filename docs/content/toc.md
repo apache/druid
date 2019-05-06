@@ -111,7 +111,6 @@ layout: toc
     * [MiddleManager](/docs/VERSION/design/middlemanager.html)
       * [Peons](/docs/VERSION/design/peons.html)
     * [Router](/docs/VERSION/development/router.html) (optional; experimental)
-    * [Realtime Node](/docs/VERSION/design/realtime.html) (deprecated)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
