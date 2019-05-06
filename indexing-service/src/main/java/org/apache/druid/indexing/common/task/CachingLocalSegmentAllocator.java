@@ -61,6 +61,7 @@ public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
                                .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
   }
 
+  // TODO: fix - this is called before intervalToVersion is initialized
   @Override
   Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds()
   {

@@ -874,7 +874,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
-    if (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity()) {
+    if (!isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig) && (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity())) {
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
         return new CachingRemoteSegmentAllocator(toolbox, getId(), allocateSpec);
       } else {
@@ -882,8 +882,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             toolbox,
             getId(),
             dataSchema,
-            isOverwriteMode(),
-            isChangeSegmentGranularity(),
+            needMinorOverwrite(),
             getAllOverwritingSegmentMeta()
         );
       }
@@ -1031,7 +1030,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       log.info("Pushed segments[%s]", pushed.getSegments());
 
       // Probably we can publish atomicUpdateGroup along with segments.
-      final Set<DataSegment> inputSegments = !isGuaranteedRollup && isOverwriteMode() && !isChangeSegmentGranularity()
+      final Set<DataSegment> inputSegments = !isGuaranteedRollup && needMinorOverwrite()
                                              ? getAllInputSegments()
                                              : null;
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);

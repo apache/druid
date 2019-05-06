@@ -42,12 +42,11 @@ public class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
   private final ActionBasedSegmentAllocator internalAllocator;
 
   public RemoteSegmentAllocator(
-      TaskToolbox toolbox,
-      String taskId,
-      DataSchema dataSchema,
-      boolean isOverwriteMode,
-      boolean isChangeSegmentGranularity,
-      Map<Interval, OverwritingRootGenerationPartitions> overwritingSegmentMetaMap
+      final TaskToolbox toolbox,
+      final String taskId,
+      final DataSchema dataSchema,
+      final boolean needMinorOverwrite,
+      final Map<Interval, OverwritingRootGenerationPartitions> overwritingSegmentMetaMap
   )
   {
     this.taskId = taskId;
@@ -60,7 +59,7 @@ public class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
               .bucketInterval(row.getTimestamp())
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
           final ShardSpecFactory shardSpecFactory;
-          if (isOverwriteMode && !isChangeSegmentGranularity) {
+          if (needMinorOverwrite) {
             final OverwritingRootGenerationPartitions overwritingSegmentMeta = overwritingSegmentMetaMap.get(interval);
             if (overwritingSegmentMeta == null) {
               throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);

@@ -303,7 +303,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
     private SegmentAllocator createSegmentAllocator()
     {
-      if (ingestionSchema.getIOConfig().isAppendToExisting() || !isChangeSegmentGranularity()) {
+      if (ingestionSchema.getIOConfig().isAppendToExisting() || needMinorOverwrite()) {
         return new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),
             ingestionSchema.getDataSchema(),
@@ -313,7 +313,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
                   .bucketInterval(row.getTimestamp())
                   .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
               final ShardSpecFactory shardSpecFactory;
-              if (isOverwriteMode() && !isChangeSegmentGranularity()) {
+              if (needMinorOverwrite()) {
                 final OverwritingRootGenerationPartitions overwritingSegmentMeta = getOverwritingSegmentMeta(interval);
                 if (overwritingSegmentMeta == null) {
                   throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);

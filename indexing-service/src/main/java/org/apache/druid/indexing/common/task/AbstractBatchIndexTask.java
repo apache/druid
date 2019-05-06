@@ -291,12 +291,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
-  // TODO: perhaps merge the below methods
-  protected boolean isChangeSegmentGranularity()
-  {
-    return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
-  }
-
   public Set<DataSegment> getAllInputSegments()
   {
     return Preconditions.checkNotNull(allInputSegments, "allInputSegments is not initialized");
@@ -308,17 +302,27 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return Collections.unmodifiableMap(overwritingRootGenPartitions);
   }
 
+  public boolean needMinorOverwrite()
+  {
+    return hasInputSegments() && !isChangeSegmentGranularity();
+  }
+
+  public boolean isChangeSegmentGranularity()
+  {
+    return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
+  }
+
+  private boolean hasInputSegments()
+  {
+    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
+    return !overwritingRootGenPartitions.isEmpty();
+  }
+
   @Nullable
   public OverwritingRootGenerationPartitions getOverwritingSegmentMeta(Interval interval)
   {
     Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
     return overwritingRootGenPartitions.get(interval);
-  }
-
-  public boolean isOverwriteMode()
-  {
-    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
-    return !overwritingRootGenPartitions.isEmpty();
   }
 
   public static void verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(List<DataSegment> sortedSegments)
