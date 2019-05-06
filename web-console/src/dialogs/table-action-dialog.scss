@@ -16,74 +16,78 @@
  * limitations under the License.
  */
 
+$side-bar-width: 120px;
+
 .table-action-dialog {
   &.bp3-dialog {
+    position: relative;
     width: 700px;
     top: 5%;
     height: 70vh;
-    display: grid;
-    grid-template-columns: 15% 0% 85%;
-    padding-bottom: 0;
-    padding-right: 10px;
-  }
 
-  .side-bar {
-
-    .info-button {
-      &.active {
-        background-color: #2C74A8;
-      }
-
-      width: 100%;
-      height: 10vh;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-
-      .bp3-icon {
-        margin-right: 0;
-      }
-
-      .bp3-button-text {
-        margin-top: 5px;
-      }
+    &::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      top: 40px;
+      bottom: 0;
+      left: $side-bar-width;
+      border-right: 1px solid #1f2832;
     }
   }
 
-  .bp3-divider {
+  .bp3-dialog-body {
+    position: relative;
     margin: 0;
-  }
 
-  .main-section {
-    height: 100%;
-    padding-left: 10px;
-    padding-bottom: 20px;
+    .side-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 120px;
+      height: 100%;
 
-    .top-actions {
-      display: flex;
-      justify-content: space-between;
-      margin: 1vh 0;
-    }
-
-    .textarea {
-      height: 85%;
-      padding:0 5px;
-
-      textarea {
-        height: 100%;
+      .tab-button {
         width: 100%;
-        resize: none;
+        height: 10vh;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        border-radius: 0;
+
+        &.active {
+          background-color: #2C74A8;
+        }
+
+        .bp3-icon {
+          margin-right: 0;
+        }
+
+        .bp3-button-text {
+          margin-top: 5px;
+        }
       }
     }
 
-    .bottom-buttons {
-      margin: 2vh 0;
-      display: flex;
-      justify-content: space-between;
+    .main-section {
+      position: absolute;
+      top: 0;
+      left: $side-bar-width;
+      right: 0;
+      height: 100%;
+      padding: 10px 20px;
+    }
+  }
 
-      button {
-        width: 100px;
-        margin: 0 5px;
+  .bp3-dialog-footer {
+    position: relative;
+
+    .footer-actions-left {
+      position: absolute;
+      left: $side-bar-width;
+
+      & > * {
+        margin-right: 10px;
       }
     }
   }

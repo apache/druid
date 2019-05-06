@@ -16,61 +16,70 @@
  * limitations under the License.
  */
 
-import { Button, Dialog, Divider, Icon, IDialogProps, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, IconName, IDialogProps, Intent } from '@blueprintjs/core';
 import * as React from 'react';
 
 import './table-action-dialog.scss';
 
-interface TableActionDialogProps extends IDialogProps {
-  sideButtonMetadata: SideButtonMetaData[];
-  onClose: () => void;
-}
-
-interface TableActionDialogState {
-
-}
-
 export interface SideButtonMetaData {
-  icon: string;
+  icon: IconName;
   text: string;
   active?: boolean;
   onClick?: () => void;
 }
 
-export class TableActionDialog extends React.Component<TableActionDialogProps, TableActionDialogState> {
+interface TableActionDialogProps extends IDialogProps {
+  sideButtonMetadata: SideButtonMetaData[];
+  onClose: () => void;
+  bottomButtons?: React.ReactNode;
+}
+
+export class TableActionDialog extends React.Component<TableActionDialogProps, {}> {
   constructor(props: TableActionDialogProps) {
     super(props);
     this.state = {};
   }
 
   render() {
-    const { sideButtonMetadata, onClose } = this.props;
+    const { sideButtonMetadata, isOpen, onClose, title, bottomButtons } = this.props;
 
     return <Dialog
-      className={'table-action-dialog'}
-      isOpen
+      className="table-action-dialog"
+      isOpen={isOpen}
       onClose={onClose}
+      title={title}
     >
-      <div className={'side-bar'}>
-        {
-          sideButtonMetadata.map((d: any) => {
-            return <Button
-              className={`info-button`}
-              icon={<Icon icon={d.icon} iconSize={20}/>}
-              key={d.text}
-              text={d.text}
-              intent={d.active ? Intent.PRIMARY : Intent.NONE}
-              minimal={!d.active}
-              onClick={d.onClick}
-            />;
-          })
-        }
+      <div className={Classes.DIALOG_BODY}>
+        <div className="side-bar">
+          {
+            sideButtonMetadata.map((d: SideButtonMetaData) => (
+              <Button
+                className="tab-button"
+                icon={<Icon icon={d.icon} iconSize={20}/>}
+                key={d.text}
+                text={d.text}
+                intent={d.active ? Intent.PRIMARY : Intent.NONE}
+                minimal={!d.active}
+                onClick={d.onClick}
+              />
+            ))
+          }
+        </div>
+        <div className="main-section">
+          {this.props.children}
+        </div>
       </div>
-
-      <Divider/>
-
-      <div className={'main-section'}>
-        {this.props.children}
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className="footer-actions-left">
+          {bottomButtons}
+        </div>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button
+            text="Close"
+            intent={Intent.PRIMARY}
+            onClick={onClose}
+          />
+        </div>
       </div>
     </Dialog>;
   }

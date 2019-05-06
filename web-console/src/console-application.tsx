@@ -240,9 +240,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
-      return <div className={'loading-capabilities'}>
+      return <div className="loading-capabilities">
         <Loader
-          loadingText={''}
+          loadingText=""
           loading={capabilitiesLoading}
         />
       </div>;

@@ -16,151 +16,74 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, IDialogProps, Intent, TextArea} from '@blueprintjs/core';
-import axios from 'axios';
+import { IDialogProps } from '@blueprintjs/core';
 import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
 
-import { AppToaster } from '../singletons/toaster';
-import { downloadFile } from '../utils';
+import { ShowJson } from '../components/show-json';
+import { BasicAction, basicActionsToButtons } from '../utils/basic-action';
 
 import { SideButtonMetaData, TableActionDialog } from './table-action-dialog';
 
 interface SupervisorTableActionDialogProps extends IDialogProps {
+  supervisorId: string;
+  actions: BasicAction[];
   onClose: () => void;
-  metaData: SupervisorTableActionDialogMetaData;
-  terminateSupervisor: (id: string) => void;
-  resetSupervisor: (id: string) => void;
-  resumeSupervisor: (id: string) => void;
-  suspendSupervisor: (id: string) => void;
 }
 
 interface SupervisorTableActionDialogState {
-  jsonValue: string;
   activeTab: 'payload' | 'status' | 'stats' | 'history';
-}
-
-export interface SupervisorTableActionDialogMetaData {
-  id: string | null;
-  supervisorSuspended: boolean;
 }
 
 export class SupervisorTableActionDialog extends React.Component<SupervisorTableActionDialogProps, SupervisorTableActionDialogState> {
   constructor(props: SupervisorTableActionDialogProps) {
     super(props);
     this.state = {
-      jsonValue: '',
       activeTab: 'payload'
     };
-    this.getJsonInfo('payload');
-  }
-
-  private getJsonInfo = async (endpoint: string): Promise<void> => {
-    const { id } = this.props.metaData;
-    if (endpoint === 'payload') endpoint = '';
-    try {
-      const resp = await axios.get(`/druid/indexer/v1/supervisor/${id}/${endpoint}`);
-      const data = resp.data;
-      this.setState({
-        jsonValue: JSON.stringify(data, undefined, 2)
-      });
-    } catch (e) {
-      AppToaster.show({
-        message: e.response.data,
-        intent: Intent.WARNING
-      });
-      this.setState({
-        jsonValue: ''
-      });
-    }
-  }
-
-  private onClickSideButton = (tab: 'payload' | 'status' | 'stats' | 'history') => {
-    this.getJsonInfo(tab);
-    this.setState({
-      activeTab: tab
-    });
   }
 
   render(): React.ReactNode {
-    const { onClose, terminateSupervisor, resetSupervisor, resumeSupervisor, suspendSupervisor } = this.props;
-    const { activeTab, jsonValue } = this.state;
-    const { id, supervisorSuspended } = this.props.metaData;
+    const { supervisorId, actions, onClose } = this.props;
+    const { activeTab } = this.state;
 
     const supervisorTableSideButtonMetadata: SideButtonMetaData[] = [
-      {icon: 'align-left', text: 'Payload', active: activeTab === 'payload',
-        onClick: () => this.onClickSideButton('payload')},
-      {icon: 'dashboard', text: 'Status', active: activeTab === 'status',
-        onClick: () => this.onClickSideButton('status')},
-      {icon: 'chart', text: 'Statistics', active: activeTab === 'stats',
-        onClick: () => this.onClickSideButton('stats')},
-      {icon: 'history', text: 'History', active: activeTab === 'history',
-        onClick: () => this.onClickSideButton('history')}
+      {
+        icon: 'align-left',
+        text: 'Payload',
+        active: activeTab === 'payload',
+        onClick: () => this.setState({ activeTab: 'payload' })
+      },
+      {
+        icon: 'dashboard',
+        text: 'Status',
+        active: activeTab === 'status',
+        onClick: () => this.setState({ activeTab: 'status' })
+      },
+      {
+        icon: 'chart',
+        text: 'Statistics',
+        active: activeTab === 'stats',
+        onClick: () => this.setState({ activeTab: 'stats' })
+      },
+      {
+        icon: 'history',
+        text: 'History',
+        active: activeTab === 'history',
+        onClick: () => this.setState({ activeTab: 'history' })
+      }
     ];
 
     return <TableActionDialog
       isOpen
       sideButtonMetadata={supervisorTableSideButtonMetadata}
       onClose={onClose}
+      title={`Supervisor: ${supervisorId}`}
+      bottomButtons={basicActionsToButtons(actions)}
     >
-      <div className={'top-actions'}>
-        <div/>
-        <ButtonGroup className={'right-buttons'}>
-          <Button
-            text={'Save'}
-            onClick={() => downloadFile(jsonValue, 'json', `supervisor-${id}-${activeTab}.json`)}
-            minimal
-          />
-          <CopyToClipboard
-            text={jsonValue}
-          >
-            <Button
-              text={'Copy'}
-              onClick={() => {AppToaster.show({message: 'Copied to clipboard', intent: Intent.SUCCESS}); }}
-              minimal
-            />
-          </CopyToClipboard>
-          <Button
-            text={'View raw data'}
-            minimal
-            onClick={() => window.open(`/druid/indexer/v1/supervisor/${id}/${activeTab === 'payload' ? '' : activeTab}`, '_blank')}
-          />
-        </ButtonGroup>
-      </div>
-
-      <div className={'textarea'}>
-        <TextArea
-          readOnly
-          value={jsonValue}
-        />
-      </div>
-
-      <div className={'bottom-buttons'}>
-        <div>
-          <Button
-            key="terminate"
-            text={'Terminate'}
-            intent={Intent.DANGER}
-            onClick={() => id ? terminateSupervisor(id) : null}
-          />
-          <Button
-            key="resumeandsuspend"
-            text={supervisorSuspended ? 'Resume' : 'Suspend'}
-            onClick={() => id ? (supervisorSuspended ? resumeSupervisor(id) : suspendSupervisor(id)) : null}
-          />
-          <Button
-            key="reset"
-            text={'Reset'}
-            onClick={() => id ? resetSupervisor(id) : null}
-          />
-        </div>
-        <Button
-          text={'Close'}
-          intent={Intent.PRIMARY}
-          onClick={onClose}
-        />
-      </div>
-
+      {activeTab === 'payload' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`} downloadFilename={`supervisor-payload-${supervisorId}.json`}/>}
+      {activeTab === 'status' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`} downloadFilename={`supervisor-status-${supervisorId}.json`}/>}
+      {activeTab === 'stats' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`} downloadFilename={`supervisor-stats-${supervisorId}.json`}/>}
+      {activeTab === 'history' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`} downloadFilename={`supervisor-history-${supervisorId}.json`}/>}
     </TableActionDialog>;
   }
 }

@@ -16,13 +16,27 @@
  * limitations under the License.
  */
 
-@import "../variables";
+.show-log {
+  position: relative;
+  height: 100%;
 
-.tasks-view {
-  padding-bottom: 50px;
+  .top-actions {
+    text-align: right;
+    padding-bottom: 10px;
 
-  .view-control-bar,
-  .ReactTable {
-    margin-bottom: $standard-padding;
+    & > * {
+      display: inline-block;
+    }
+  }
+
+  .main-area {
+    height: calc(100% - 40px);
+
+    textarea {
+      height: 100%;
+      width: 100%;
+      resize: none;
+      white-space: pre;
+    }
   }
 }
