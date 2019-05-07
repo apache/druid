@@ -65,19 +65,22 @@ In the example commands below:
 - `extensions` is the Druid extensions directory
 - `conf/druid/single-server/micro-quickstart/_common` is the directory containing the `common.runtime.properties` file used by the existing deployment.
 - `base` corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
+- The `--connectURI` parameter corresponds to the value of `druid.metadata.storage.connector.connectURI`.
+- The `--user` parameter corresponds to the value of `druid.metadata.storage.connector.user`.
+- The `--password` parameter corresponds to the value of `druid.metadata.storage.connector.password`.
 
 #### MySQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI=<mysql-uri> --user <user> --pass <pass> --base druid
+java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid
 ```
 
 #### PostgreSQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI=<postgresql-uri> --user <user> --pass <pass> --base druid
+java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid
 ```
 
 ### Import metadata
