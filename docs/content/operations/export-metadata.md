@@ -137,13 +137,14 @@ To use the tool, you can run the following from the root of the Druid package:
 
 ```bash
 cd ${DRUID_ROOT}
+mkdir /tmp/csv
 java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:derby://localhost:1527/var/druid/metadata.db;" -o /tmp/csv
 ```
 
 In the example command above:
 - `lib` is the the Druid lib directory
 - `extensions` is the Druid extensions directory
-- `/tmp/csv` is the output directory
+- `/tmp/csv` is the output directory. Please make sure that this directory exists.
 
 ## Importing Metadata
 
