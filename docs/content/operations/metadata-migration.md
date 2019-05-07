@@ -70,14 +70,14 @@ In the example commands below:
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=["mysql-metadata-storage] org.apache.druid.cli.Main tools metadata-init --connectURI=<mysql-uri> --user <user> --pass <pass> --base druid
+java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI=<mysql-uri> --user <user> --pass <pass> --base druid
 ```
 
 #### PostgreSQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=["postgresql-metadata-storage] org.apache.druid.cli.Main tools metadata-init --connectURI=<postgresql-uri> --user <user> --pass <pass> --base druid
+java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI=<postgresql-uri> --user <user> --pass <pass> --base druid
 ```
 
 ### Import metadata
