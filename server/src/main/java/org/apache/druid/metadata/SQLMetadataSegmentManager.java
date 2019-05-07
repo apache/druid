@@ -762,7 +762,13 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       return segment;
     }
     DataSegment alreadyExistingSegment = dataSource.getSegment(segment.getId());
-    return alreadyExistingSegment != null ? alreadyExistingSegment : segment;
+    /**
+     * Use {@link DataSegment#trueEquals(Object)} to take into account all attributes of the newly polled
+     * segment like loadSpec, shardSpec, metrics, dimensions etc.
+     */
+    return alreadyExistingSegment != null
+           ? (alreadyExistingSegment.trueEquals(segment) ? alreadyExistingSegment : segment)
+           : segment;
   }
 
   private String getSegmentsTable()

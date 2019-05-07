@@ -54,6 +54,8 @@ import java.util.stream.Collectors;
  *
  * DataSegment's equality ({@link #equals}/{@link #hashCode}) and {@link #compareTo} methods consider only the
  * {@link SegmentId} of the segment.
+ *
+ * If you need to do true equality check between two DataSegment objects, use {@link #trueEquals}
  */
 @PublicApi
 public class DataSegment implements Comparable<DataSegment>
@@ -299,6 +301,41 @@ public class DataSegment implements Comparable<DataSegment>
       return getId().equals(((DataSegment) o).getId());
     }
     return false;
+  }
+
+  /**
+   *
+   * This method takes into account all the attributes of DataSegment unlike {@code equals}.
+   *
+   */
+  public boolean trueEquals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!this.equals(o)) {
+      return false;
+    }
+    final DataSegment that = (DataSegment) o;
+    if (!binaryVersion.equals(that.binaryVersion)) {
+      return false;
+    }
+    if (size != that.size) {
+      return false;
+    }
+    if (!shardSpec.equals(that.shardSpec)) {
+      return false;
+    }
+    if (!loadSpec.equals(that.loadSpec)) {
+      return false;
+    }
+    if (!dimensions.equals(that.dimensions)) {
+      return false;
+    }
+    if (!metrics.equals(that.metrics)) {
+      return false;
+    }
+    return true;
   }
 
   @Override
