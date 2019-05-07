@@ -98,6 +98,20 @@ public class ExportMetadata extends GuiceRunnable
       required = false)
   public String outputPath = null;
 
+  @Option(
+      name = {"-x", "--use-hex-blobs"},
+      title = "use-hex-blobs",
+      description = "Write BLOB payloads as hex strings",
+      required = false)
+  public boolean useHexBlobs = false;
+
+  @Option(
+      name = {"-t", "--booleans-as-strings"},
+      title = "booleans-as-strings",
+      description = "Write boolean values as true/false strings instead of 1/0",
+      required = false)
+  public boolean booleansAsStrings = false;
+
   private static final Logger log = new Logger(ExportMetadata.class);
 
   private static final CSVParser parser = new CSVParser();
@@ -346,9 +360,9 @@ public class ExportMetadata extends GuiceRunnable
         newLineBuilder.append(parsed[2]).append(","); //created_date
         newLineBuilder.append(parsed[3]).append(","); //start
         newLineBuilder.append(parsed[4]).append(","); //end
-        newLineBuilder.append("true".equals(parsed[5]) ? "1" : "0").append(","); //partitioned
+        newLineBuilder.append(convertBooleanString(parsed[5])).append(","); //partitioned
         newLineBuilder.append(parsed[6]).append(","); //version
-        newLineBuilder.append("true".equals(parsed[7]) ? "1" : "0").append(","); //used
+        newLineBuilder.append(convertBooleanString(parsed[7])).append(","); //used
 
         if (s3Bucket != null || hadoopStorageDirectory != null || newLocalPath != null) {
           newLineBuilder.append(makePayloadWithConvertedLoadSpec(parsed[8]));
@@ -400,7 +414,11 @@ public class ExportMetadata extends GuiceRunnable
     }
 
     String serialized = jsonMapper.writeValueAsString(segment);
-    return escapeJSONForCSV(serialized);
+    if (useHexBlobs) {
+      return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
+    } else {
+      return escapeJSONForCSV(serialized);
+    }
   }
 
   /**
@@ -413,8 +431,20 @@ public class ExportMetadata extends GuiceRunnable
       String payload
   )
   {
+    if (useHexBlobs) {
+      return payload;
+    }
     String json = StringUtils.fromUtf8(DatatypeConverter.parseHexBinary(payload));
     return escapeJSONForCSV(json);
+  }
+
+  private String convertBooleanString(String booleanString)
+  {
+    if (booleansAsStrings) {
+      return booleanString;
+    } else {
+      return "true".equals(booleanString) ? "1" : "0";
+    }
   }
 
   private String escapeJSONForCSV(String json)

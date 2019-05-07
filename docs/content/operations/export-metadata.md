@@ -48,6 +48,12 @@ The `export-metadata` tool provides the following options:
 
 `--output-path`, `-o`: The output directory of the tool. CSV files for the Druid segments, rules, config, datasource, and supervisors tables will be written to this directory.
 
+### Export Format Options
+
+`--use-hex-blobs`, `-x`: If set, export BLOB payload columns as hexadecimal strings. This needs to be set if importing back into Derby. Default is false.
+
+`--booleans-as-strings`, `-t`: If set, write boolean values as "true" or "false" instead of "1" and "0". This needs to be set if importing back into Derby. Default is false.
+
 ### Deep Storage Migration
 
 #### Migration to S3 Deep Storage
