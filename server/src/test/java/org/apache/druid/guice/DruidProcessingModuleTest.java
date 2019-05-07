@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Test;
 
 public class DruidProcessingModuleTest
@@ -29,6 +30,15 @@ public class DruidProcessingModuleTest
   @Test(expected = ProvisionException.class)
   public void testMemoryCheckThrowsException()
   {
+    // JDK 9 and above do not support checking for direct memory size
+    // so this test only validates functionality for Java 8.
+    try {
+      JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+    }
+    catch (UnsupportedOperationException e) {
+      throw new ProvisionException("Checking for direct memory size is not support on this platform");
+    }
+
     DruidProcessingModule module = new DruidProcessingModule();
     module.getIntermediateResultsPool(new DruidProcessingConfig()
     {
