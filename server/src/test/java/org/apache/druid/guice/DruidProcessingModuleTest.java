@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class DruidProcessingModuleTest
@@ -36,7 +37,7 @@ public class DruidProcessingModuleTest
       JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
     }
     catch (UnsupportedOperationException e) {
-      throw new ProvisionException("Checking for direct memory size is not support on this platform");
+      Assume.assumeNoException(e);
     }
 
     DruidProcessingModule module = new DruidProcessingModule();
