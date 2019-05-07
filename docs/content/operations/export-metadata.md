@@ -44,6 +44,13 @@ The tool has the following limitations:
 
 The `export-metadata` tool provides the following options:
 
+### Connection Properties
+
+`--connectURI`: The URI of the Derby database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true`
+`--user`: Username
+`--password`: Password
+`--base`: corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
+
 ### Output Path
 
 `--output-path`, `-o`: The output directory of the tool. CSV files for the Druid segments, rules, config, datasource, and supervisors tables will be written to this directory.
@@ -130,12 +137,12 @@ To use the tool, you can run the following from the root of the Druid package:
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata -o /tmp/csv
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:derby://localhost:1527/var/druid/metadata.db;" -o /tmp/csv
 ```
 
 In the example command above:
 - `lib` is the the Druid lib directory
-- `conf/druid/single-server/micro-quickstart/_common` is the directory containing the `common.runtime.properties` file used by the existing deployment.
+- `extensions` is the Druid extensions directory
 - `/tmp/csv` is the output directory
 
 ## Importing Metadata

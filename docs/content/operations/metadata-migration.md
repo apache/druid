@@ -63,7 +63,6 @@ Druid provides a `metadata-init` tool for creating Druid's metadata tables. Afte
 In the example commands below:
 - `lib` is the the Druid lib directory
 - `extensions` is the Druid extensions directory
-- `conf/druid/single-server/micro-quickstart/_common` is the directory containing the `common.runtime.properties` file used by the existing deployment.
 - `base` corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
 - The `--connectURI` parameter corresponds to the value of `druid.metadata.storage.connector.connectURI`.
 - The `--user` parameter corresponds to the value of `druid.metadata.storage.connector.user`.
@@ -73,14 +72,14 @@ In the example commands below:
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-init --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid
 ```
 
 #### PostgreSQL
 
 ```bash
 cd ${DRUID_ROOT}
-java -classpath "lib/*:conf/druid/single-server/micro-quickstart/_common" -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] org.apache.druid.cli.Main tools metadata-init --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-init --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid
 ```
 
 ### Import metadata

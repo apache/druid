@@ -63,6 +63,18 @@ import java.util.UUID;
 )
 public class ExportMetadata extends GuiceRunnable
 {
+  @Option(name = "--connectURI", description = "Database JDBC connection string", required = true)
+  private String connectURI;
+
+  @Option(name = "--user", description = "Database username")
+  private String user = null;
+
+  @Option(name = "--password", description = "Database password")
+  private String password = null;
+
+  @Option(name = "--base", description = "Base table name")
+  private String base = "druid";
+
   @Option(
       name = {"-b", "--s3bucket"},
       title = "s3bucket",
@@ -135,8 +147,35 @@ public class ExportMetadata extends GuiceRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         binder -> {
-          JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
-          JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
+          JsonConfigProvider.bindInstance(
+              binder,
+              Key.get(MetadataStorageConnectorConfig.class),
+              new MetadataStorageConnectorConfig()
+              {
+                @Override
+                public String getConnectURI()
+                {
+                  return connectURI;
+                }
+
+                @Override
+                public String getUser()
+                {
+                  return user;
+                }
+
+                @Override
+                public String getPassword()
+                {
+                  return password;
+                }
+              }
+          );
+          JsonConfigProvider.bindInstance(
+              binder,
+              Key.get(MetadataStorageTablesConfig.class),
+              MetadataStorageTablesConfig.fromBase(base)
+          );
           JsonConfigProvider.bindInstance(
               binder,
               Key.get(DruidNode.class, Self.class),
