@@ -48,6 +48,7 @@
                 <exclude>.dockerignore</exclude>
                 <exclude>.travis.yml</exclude>
                 <exclude>README.md</exclude>
+                <exclude>README.BINARY</exclude>
                 <exclude>publications/**</exclude>
                 <exclude>upload.sh</exclude>
                 <exclude>web-console/node_modules/**</exclude>
