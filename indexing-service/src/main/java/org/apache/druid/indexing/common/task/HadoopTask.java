@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -42,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public abstract class HadoopTask extends AbstractBatchIndexTask
@@ -138,14 +141,22 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
                                                           ? hadoopDependencyCoordinates
                                                           : defaultHadoopCoordinates;
 
-    final List<URL> jobURLs = Lists.newArrayList(
-        Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
-    );
+    ClassLoader taskClassLoader = HadoopIndexTask.class.getClassLoader();
+    final List<URL> jobURLs;
+    if (taskClassLoader instanceof URLClassLoader) {
+      // this only works with Java 8
+      jobURLs = Lists.newArrayList(
+          Arrays.asList(((URLClassLoader) taskClassLoader).getURLs())
+      );
+    } else {
+      // fallback to parsing system classpath
+      jobURLs = parseSystemClassPath();
+    }
 
     final List<URL> extensionURLs = new ArrayList<>();
     for (final File extension : Initialization.getExtensionFilesToLoad(EXTENSIONS_CONFIG)) {
-      final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
-      extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+      final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+      extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
     }
 
     jobURLs.addAll(extensionURLs);
@@ -158,8 +169,8 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
             finalHadoopDependencyCoordinates,
             EXTENSIONS_CONFIG
         )) {
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
-      localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+      localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 
     final ClassLoader classLoader = new URLClassLoader(
@@ -188,6 +199,23 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
 
     return classLoader;
+  }
+
+  static List<URL> parseSystemClassPath()
+  {
+    List<URL> jobURLs;
+    String[] paths = System.getProperty("java.class.path").split(File.pathSeparator);
+    jobURLs = Stream.of(paths).map(
+        s -> {
+          try {
+            return Paths.get(s).toUri().toURL();
+          }
+          catch (MalformedURLException e) {
+            throw new UnsupportedOperationException("Unable to create URL classpath entry", e);
+          }
+        }
+    ).collect(Collectors.toList());
+    return jobURLs;
   }
 
   /**
