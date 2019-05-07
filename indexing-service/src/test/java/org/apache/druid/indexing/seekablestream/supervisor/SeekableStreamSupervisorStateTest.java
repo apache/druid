@@ -488,6 +488,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     taskRunner.unregisterListener("testSupervisorId");
     indexTaskClient.close();
+    recordSupplier.close();
 
     replayAll();
 
