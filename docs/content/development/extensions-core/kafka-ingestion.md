@@ -230,7 +230,7 @@ follows:
 |CREATING_TASKS (first iteration only)|The supervisor is creating tasks and discovering state|
 |RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
 |SUSPENDED|The supervisor has been suspended|
-|SHUTTING_DOWN|Shutdown has been called but the supervisor hasn’t fully shutdown yet|
+|STOPPING|The supervisor is stopping|
 
 States marked with "first iteration only" only occur on the supervisor's first iteration at startup or after suspension.
 
@@ -369,9 +369,9 @@ Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|druid.supervisor.stream.healthinessThreshold|The number of successful iterations before the supervisor flips from an UNHEALTHY to a RUNNING state|3|
-|druid.supervisor.stream.unhealthinessThreshold|The number of iterations failed before the supervisor flips from a RUNNING to an UNHEALTHY state|3|
-|druid.supervisor.stream.taskHealthinessThreshold|The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state|3|
-|druid.supervisor.stream.taskUnhealthinessThreshold|The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state|3|
+|druid.supervisor.stream.healthinessThreshold|The number of successful runs before an unhealthy supervisor is again considered healthy|3|
+|druid.supervisor.stream.unhealthinessThreshold|The number of failed runs before the supervisor is considered unhealthy|3|
+|druid.supervisor.stream.taskHealthinessThreshold|The number of consecutive task successes before an unhealthy supervisor is again considered healthy|3|
+|druid.supervisor.stream.taskUnhealthinessThreshold|The number of consecutive task failures before the supervisor is considered unhealthy|3|
 |druid.supervisor.stream.storingStackTraces|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint|false|
 |druid.supervisor.stream.maxStoredExceptionEvents|The maximum number of exception events that can be returned through the supervisor `/status` endpoint|`max(healthinessThreshold, unhealthinessThreshold)`|

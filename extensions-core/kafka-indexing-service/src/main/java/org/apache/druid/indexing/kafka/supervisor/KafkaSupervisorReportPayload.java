@@ -40,6 +40,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
+      boolean healthy,
       SeekableStreamSupervisorStateManager.State state,
       List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
@@ -55,6 +56,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         aggregateLag,
         offsetsLastUpdated,
         suspended,
+        healthy,
         state,
         recentErrors
     );
@@ -75,7 +77,8 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
            (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
            (getOffsetsLastUpdated() != null ? ", sequenceLastUpdated=" + getOffsetsLastUpdated() : "") +
-           ", suspended=" + getSuspended() +
+           ", suspended=" + isSuspended() +
+           ", healthy=" + isHealthy() +
            ", state=" + getState() +
            ", recentErrors=" + getRecentErrors() +
            '}';

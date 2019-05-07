@@ -34,6 +34,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Integer replicas,
       Long durationSeconds,
       boolean suspended,
+      boolean healthy,
       SeekableStreamSupervisorStateManager.State state,
       List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
@@ -49,6 +50,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         null,
         null,
         suspended,
+        healthy,
         state,
         recentErrors
     );
@@ -65,7 +67,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", durationSeconds=" + getDurationSeconds() +
            ", active=" + getActiveTasks() +
            ", publishing=" + getPublishingTasks() +
-           ", suspended=" + getSuspended() +
+           ", suspended=" + isSuspended() +
+           ", healthy=" + isHealthy() +
            ", state=" + getState() +
            ", recentErrors=" + getRecentErrors() +
            '}';

@@ -181,7 +181,13 @@ public class SupervisorResource
                            .build();
           }
 
-          return Response.ok(spec.get()).build();
+          boolean healthyOrNotApplicable = !(spec.get().getPayload() instanceof HealthCheckableSupervisorReportPayload)
+                                           || ((HealthCheckableSupervisorReportPayload) spec.get()
+                                                                                            .getPayload()).isHealthy();
+
+          return Response.status(healthyOrNotApplicable ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
+                         .entity(spec.get())
+                         .build();
         }
     );
   }
@@ -311,7 +317,8 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id)
+      @PathParam("id") final String id
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {

@@ -51,7 +51,7 @@ public class SeekableStreamSupervisorStateManager
     CREATING_TASKS(true, true),
     RUNNING(true, false),
     SUSPENDED(true, false),
-    SHUTTING_DOWN(true, false);
+    STOPPING(true, false);
 
     private final boolean healthy;
     private final boolean firstRunOnly;
@@ -145,7 +145,7 @@ public class SeekableStreamSupervisorStateManager
     }
   }
 
-  public void storeThrowableEvent(Throwable t)
+  public void recordThrowableEvent(Throwable t)
   {
     recentEventsQueue.add(new ExceptionEvent(t, supervisorConfig.isStoringStackTraces()));
 
@@ -156,7 +156,7 @@ public class SeekableStreamSupervisorStateManager
     currentRunSuccessful = false;
   }
 
-  public void storeCompletedTaskState(TaskState state)
+  public void recordCompletedTaskState(TaskState state)
   {
     if (state.isSuccess()) {
       consecutiveSuccessfulTasks++;
@@ -191,6 +191,11 @@ public class SeekableStreamSupervisorStateManager
   public State getSupervisorState()
   {
     return supervisorState;
+  }
+
+  public boolean isHealthy()
+  {
+    return supervisorState != null && supervisorState.healthy;
   }
 
   public boolean isAtLeastOneSuccessfulRun()

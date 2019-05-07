@@ -662,7 +662,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Preconditions.checkState(lifecycleStarted, "lifecycle not started");
 
       log.info("Beginning shutdown of [%s]", supervisorId);
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.SHUTTING_DOWN);
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.STOPPING);
 
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
@@ -710,7 +710,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.info("[%s] has stopped", supervisorId);
       }
       catch (Exception e) {
-        stateManager.storeThrowableEvent(e);
+        stateManager.recordThrowableEvent(e);
         log.makeAlert(e, "Exception stopping [%s]", supervisorId)
            .emit();
       }
@@ -756,7 +756,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     notice.handle();
                   }
                   catch (Throwable e) {
-                    stateManager.storeThrowableEvent(e);
+                    stateManager.recordThrowableEvent(e);
                     log.makeAlert(e, "SeekableStreamSupervisor[%s] failed to handle notice", dataSource)
                        .addData("noticeClass", notice.getClass().getSimpleName())
                        .emit();
@@ -764,7 +764,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 }
               }
               catch (InterruptedException e) {
-                stateManager.storeThrowableEvent(e);
+                stateManager.recordThrowableEvent(e);
                 log.info("SeekableStreamSupervisor[%s] interrupted, exiting", dataSource);
               }
             }
@@ -788,7 +788,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       }
       catch (Exception e) {
-        stateManager.storeThrowableEvent(e);
+        stateManager.recordThrowableEvent(e);
         if (recordSupplier != null) {
           recordSupplier.close();
         }
@@ -1070,7 +1070,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
     catch (Exception e) {
-      stateManager.storeThrowableEvent(e);
+      stateManager.recordThrowableEvent(e);
       log.warn(e, "Exception in supervisor run loop for dataSource [%s]", dataSource);
     }
     finally {
@@ -1378,7 +1378,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                     .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                               }
                               catch (InterruptedException | ExecutionException | TimeoutException e) {
-                                stateManager.storeThrowableEvent(e);
+                                stateManager.recordThrowableEvent(e);
                                 log.warn(e, "Exception while stopping task");
                               }
                               return false;
@@ -1396,7 +1396,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                             }
                             catch (InterruptedException | ExecutionException | TimeoutException e) {
-                              stateManager.storeThrowableEvent(e);
+                              stateManager.recordThrowableEvent(e);
                               log.warn(e, "Exception while stopping task");
                             }
                             return false;
@@ -1438,7 +1438,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                         return true;
                       }
                       catch (Throwable t) {
-                        stateManager.storeThrowableEvent(t);
+                        stateManager.recordThrowableEvent(t);
                         log.error(t, "Something bad while discovering task [%s]", taskId);
                         return null;
                       }
@@ -1514,7 +1514,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             futures.get(i).get();
           }
           catch (Exception e) {
-            stateManager.storeThrowableEvent(e);
+            stateManager.recordThrowableEvent(e);
             log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
             killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
             taskGroup.tasks.remove(taskId);
@@ -1825,7 +1825,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
     catch (Exception e) {
-      stateManager.storeThrowableEvent(e);
+      stateManager.recordThrowableEvent(e);
       log.warn("Could not fetch partitions for topic/stream [%s]: %s", ioConfig.getStream(), e.getMessage());
       log.debug(e, "full stack trace");
       return false;
@@ -1833,7 +1833,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     if (partitionIds == null || partitionIds.size() == 0) {
       String errMsg = StringUtils.format("No partitions found for stream [%s]", ioConfig.getStream());
-      stateManager.storeThrowableEvent(new StreamException(new ISE(errMsg)));
+      stateManager.recordThrowableEvent(new StreamException(new ISE(errMsg)));
       log.warn(errMsg);
       return false;
     }
@@ -2024,7 +2024,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // This will cause us to create a new set of tasks next cycle that will start from the sequences in
             // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
             // publishing failed and we need to re-ingest)
-            stateManager.storeCompletedTaskState(TaskState.SUCCESS);
+            stateManager.recordCompletedTaskState(TaskState.SUCCESS);
             return Futures.transform(
                 stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
                 new Function<Object, Map<PartitionIdType, SequenceOffsetType>>()
@@ -2086,7 +2086,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   throw new RuntimeException(e);
                 }
                 catch (ExecutionException e) {
-                  stateManager.storeThrowableEvent(e);
+                  stateManager.recordThrowableEvent(e);
                   pauseException = e.getCause() == null ? e : e.getCause();
                 }
 
@@ -2236,7 +2236,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
 
           if (taskData.status.isFailure()) {
-            stateManager.storeCompletedTaskState(TaskState.FAILED);
+            stateManager.recordCompletedTaskState(TaskState.FAILED);
             iTask.remove(); // remove failed task
             if (group.tasks.isEmpty()) {
               // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
@@ -2249,7 +2249,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
             log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
-            stateManager.storeCompletedTaskState(TaskState.SUCCESS);
+            stateManager.recordCompletedTaskState(TaskState.SUCCESS);
             futures.add(
                 stopTasksInGroup(group, "Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds())
             );
@@ -2334,7 +2334,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // remove failed tasks
         if (taskData.status.isFailure()) {
-          stateManager.storeCompletedTaskState(TaskState.FAILED);
+          stateManager.recordCompletedTaskState(TaskState.FAILED);
           iTasks.remove();
           continue;
         }
@@ -2342,7 +2342,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
         // be recreated with the next set of sequences
         if (taskData.status.isSuccess()) {
-          stateManager.storeCompletedTaskState(TaskState.SUCCESS);
+          stateManager.recordCompletedTaskState(TaskState.SUCCESS);
           futures.add(stopTasksInGroup(taskGroup, "task[%s] succeeded in the same taskGroup", taskData.status.getId()));
           iTaskGroups.remove();
           break;
@@ -2635,7 +2635,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskQueue.get().add(indexTask);
         }
         catch (EntryExistsException e) {
-          stateManager.storeThrowableEvent(e);
+          stateManager.recordThrowableEvent(e);
           log.error("Tried to add task [%s] but it already exists", indexTask.getId());
         }
       } else {

@@ -27,19 +27,19 @@ public class SeekableStreamSupervisorConfig
   @JsonProperty
   private boolean storingStackTraces = false;
 
-  // The number of runs failed before the supervisor flips from a RUNNING to an UNHEALTHY state
+  // The number of failed runs before the supervisor is considered unhealthy
   @JsonProperty
   private int unhealthinessThreshold = 3;
 
-  // The number of successful runs before the supervisor flips from an UNHEALTHY to a RUNNING state
+  // The number of successful runs before an unhealthy supervisor is again considered healthy
   @JsonProperty
   private int healthinessThreshold = 3;
 
-  // The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state
+  // The number of consecutive task failures before the supervisor is considered unhealthy
   @JsonProperty
   private int taskUnhealthinessThreshold = 3;
 
-  // The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state
+  // The number of consecutive task successes before an unhealthy supervisor is again considered healthy
   @JsonProperty
   private int taskHealthinessThreshold = 3;
 

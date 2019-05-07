@@ -248,6 +248,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
         spec.isSuspended(),
+        stateManager.isHealthy(),
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents()
     );
