@@ -87,8 +87,8 @@
                         <configuration>
                             <target>
                                 <concat destfile="${project.build.directory}/../../README.BINARY">
-                                    <fileset file="${project.build.directory}/../../README.md" />
-                                    <fileset file="${project.build.directory}/../../LABELS.md" />
+                                    <fileset file="${project.build.directory}/../../README" />
+                                    <fileset file="${project.build.directory}/../../LABELS" />
                                 </concat>
                             </target>
                         </configuration>

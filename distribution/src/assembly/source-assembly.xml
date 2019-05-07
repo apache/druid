@@ -47,7 +47,7 @@
                 <exclude>.gitignore</exclude>
                 <exclude>.dockerignore</exclude>
                 <exclude>.travis.yml</exclude>
-                <exclude>README.BINARY</exclude>
+                <exclude>README.md</exclude>
                 <exclude>publications/**</exclude>
                 <exclude>upload.sh</exclude>
                 <exclude>web-console/node_modules/**</exclude>
@@ -68,7 +68,7 @@
             <directory>${project.build.directory}</directory>
             <includes>
                 <include>git.version</include>
-                <include>README.md</include>
+                <include>README</include>
             </includes>
             <outputDirectory/>
         </fileSet>
