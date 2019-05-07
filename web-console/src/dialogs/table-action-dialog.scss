@@ -21,9 +21,9 @@ $side-bar-width: 120px;
 .table-action-dialog {
   &.bp3-dialog {
     position: relative;
-    width: 700px;
+    width: 90vw;
+    height: 85vh;
     top: 5%;
-    height: 70vh;
 
     &::after {
       content: "";

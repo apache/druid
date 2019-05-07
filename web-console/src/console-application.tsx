@@ -190,12 +190,12 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.resetInitialsWithDelay();
   }
 
-  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
+  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'scrollable' | 'narrow-pad' = 'normal') => {
     const { hideLegacy } = this.props;
 
     return <>
       <HeaderBar active={active} hideLegacy={hideLegacy} goToLoadDataView={this.goToLoadDataView}/>
-      <div className={classNames('view-container', { scrollable })}>{el}</div>
+      <div className={classNames('view-container', classType)}>{el}</div>
     </>;
   }
 
@@ -205,7 +205,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-  return this.wrapInViewContainer('load-data', <LoadDataView seed={this.loadDataViewSeed} goToTask={this.goToTask}/>);
+    return this.wrapInViewContainer('load-data', <LoadDataView seed={this.loadDataViewSeed} goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
   private wrappedSqlView = () => {
@@ -224,12 +224,12 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, true);
+    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
   }
 
   private wrappedServersView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, true);
+    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, 'scrollable');
   }
 
   private wrappedLookupsView = () => {
