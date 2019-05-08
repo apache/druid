@@ -19,15 +19,15 @@
 
 package org.apache.druid.segment.virtual;
 
-import net.thisptr.jackson.jq.internal.misc.Strings;
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,7 +35,8 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
 {
   private final List<String> unknownColumns;
   private final Set<String> arrayInputs;
-  private final Map<String, Expr> transformedCache;
+  private final Set<String> ignoredColumns;
+  private final Int2ObjectMap<Expr> transformedCache;
 
   public OpportunisticMultiValueStringExpressionColumnValueSelector(
       Expr expression,
@@ -46,7 +47,8 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
     super(expression, bindings);
     this.unknownColumns = new ArrayList<>(unknownColumnsSet);
     this.arrayInputs = Parser.findArrayFnBindings(expression);
-    this.transformedCache = new HashMap<>();
+    this.ignoredColumns = new HashSet<>();
+    this.transformedCache = new Int2ObjectArrayMap(unknownColumns.size());
   }
 
   @Override
@@ -55,8 +57,13 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
     List<String> arrayBindings =
         unknownColumns.stream().filter(x -> !arrayInputs.contains(x) && isBindingArray(x)).collect(Collectors.toList());
 
+    if (ignoredColumns.size() > 0) {
+      unknownColumns.removeAll(ignoredColumns);
+      ignoredColumns.clear();
+    }
+
     if (arrayBindings.size() > 0) {
-      final String key = Strings.join(",", arrayBindings);
+      final int key = arrayBindings.hashCode();
       if (transformedCache.containsKey(key)) {
         return transformedCache.get(key).eval(bindings);
       }
@@ -74,6 +81,8 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
       if (binding instanceof String[] && ((String[]) binding).length > 1) {
         //      if (binding instanceof String[]) {
         return true;
+      } else if (binding instanceof Number) {
+        ignoredColumns.add(x);
       }
     }
     return false;

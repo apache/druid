@@ -137,7 +137,7 @@ public class ExpressionSelectors
   {
     final List<String> columns = Parser.findRequiredBindings(expression);
     final Set<String> expectedArrays = Parser.findArrayFnBindings(expression);
-    final Set<String> actualArrays = Parser.findArrayFnBindings(expression);
+    final Set<String> actualArrays = new HashSet<>();
     final Set<String> unknownIfArrays = new HashSet<>();
 
     if (columns.size() == 1) {
@@ -449,13 +449,13 @@ public class ExpressionSelectors
 
   @VisibleForTesting
   @Nonnull
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean multiValue)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
       final IndexedInts row = selector.getRow();
 
-      if (row.size() == 1 && !multiValue) {
+      if (row.size() == 1 && !coerceArray) {
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data

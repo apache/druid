@@ -381,7 +381,7 @@ class LambdaExpr implements Expr
   @Override
   public String toString()
   {
-    return "(" + args + " " + expr + ")";
+    return "(" + args + " -> " + expr + ")";
   }
 
   public String getIdentifier()
