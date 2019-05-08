@@ -568,7 +568,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             }
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
 
-            QueryToolChest.fetchAggregatorsFromCache(
+            CacheStrategy.fetchAggregatorsFromCache(
                 aggsIter,
                 results,
                 isResultLevelCache,

@@ -409,7 +409,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   DimensionHandlerUtils.convertObjectToType(resultIter.next(), query.getDimensionSpec().getOutputType())
               );
 
-              QueryToolChest.fetchAggregatorsFromCache(
+              CacheStrategy.fetchAggregatorsFromCache(
                   aggIter,
                   resultIter,
                   isResultLevelCache,

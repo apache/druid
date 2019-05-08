@@ -334,7 +334,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
-            QueryToolChest.fetchAggregatorsFromCache(
+            CacheStrategy.fetchAggregatorsFromCache(
                 aggsIter,
                 resultIter,
                 isResultLevelCache,
