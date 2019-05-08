@@ -20,8 +20,8 @@ import { Code } from '@blueprintjs/core';
 import { number } from 'prop-types';
 import * as React from 'react';
 
-import { Field } from '../components/auto-form';
-import { ExternalLink } from '../components/external-link';
+import { Field } from '../components/auto-form/auto-form';
+import { ExternalLink } from '../components/external-link/external-link';
 
 import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';

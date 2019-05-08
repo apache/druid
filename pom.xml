@@ -1563,6 +1563,7 @@
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
+                                <exclude>src/**/*.snap</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
