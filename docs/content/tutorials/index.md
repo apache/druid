@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Apache Druid (incubating) Quickstart"
+title: "Apache Druid (incubating) Single-Server Quickstart"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) Quickstart"
   ~ under the License.
   -->
 
-# Apache Druid (incubating) Quickstart
+# Apache Druid (incubating) Single-Server Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
