@@ -36,7 +36,7 @@ Build from Source
 You can build Apache Druid (incubating) directly from source.
 
 Prerequisites:
-  JDK 8, minimum 8u92, recommended 8u191+ if using Docker
+  JDK 8, 8u92+
   Maven version 3.x
 
 

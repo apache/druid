@@ -31,8 +31,8 @@ For building the latest code in master, follow the instructions [here](https://g
 #### Prerequisites
 
 ##### Installing Java and Maven:
-- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
-- [Maven version 3.x](http://maven.apache.org/download.cgi)
+- JDK 8, 8u92+
+- Maven version 3.x
 
 ##### Downloading the source:
 
