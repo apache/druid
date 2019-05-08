@@ -276,7 +276,8 @@ public class TopNQueryQueryToolChestTest
     }
   }
 
-  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType) {
+  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
+  {
     switch (valueType) {
       case LONG:
         return new LongLastAggregatorFactory("complexMetric", "test");
@@ -291,7 +292,8 @@ public class TopNQueryQueryToolChestTest
     }
   }
 
-  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue) {
+  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue)
+  {
     switch (valueType) {
       case LONG:
       case DOUBLE:

@@ -56,7 +56,7 @@ import org.apache.druid.query.groupby.having.NotHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.ordering.StringComparators;;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
@@ -507,7 +507,8 @@ public class GroupByQueryQueryToolChestTest
     doTestCacheStrategy(ValueType.LONG, 2L);
   }
 
-  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType) {
+  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
+  {
     switch (valueType) {
       case LONG:
         return new LongLastAggregatorFactory("complexMetric", "test");
@@ -522,7 +523,8 @@ public class GroupByQueryQueryToolChestTest
     }
   }
 
-  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue) {
+  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue)
+  {
     switch (valueType) {
       case LONG:
       case DOUBLE:
