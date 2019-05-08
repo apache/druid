@@ -76,6 +76,7 @@ import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -100,6 +101,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -380,7 +383,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(13, fields.size());
+    Assert.assertEquals(14, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -401,14 +404,19 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable()
   {
-
     final SystemSchema.SegmentsTable segmentsTable = EasyMock
         .createMockBuilder(SystemSchema.SegmentsTable.class)
         .withConstructor(druidSchema, metadataView, mapper, authMapper)
         .createMock();
     EasyMock.replay(segmentsTable);
-    final Set<DataSegment> publishedSegments =
-        new HashSet<>(Arrays.asList(publishedSegment1, publishedSegment2, publishedSegment3, segment1, segment2));
+    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentWithOvershadowedStatus(publishedSegment1, true),
+        new SegmentWithOvershadowedStatus(publishedSegment2, false),
+        new SegmentWithOvershadowedStatus(publishedSegment3, false),
+        new SegmentWithOvershadowedStatus(segment1, true),
+        new SegmentWithOvershadowedStatus(segment2, false)
+    ));
+
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
@@ -459,7 +467,8 @@ public class SystemSchemaTest extends CalciteTestBase
         3L, //numRows
         1L, //is_published
         1L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        1L //is_overshadowed
     );
 
     verifyRow(
@@ -471,7 +480,8 @@ public class SystemSchemaTest extends CalciteTestBase
         3L, //numRows
         1L, //is_published
         1L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        0L //is_overshadowed
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -484,7 +494,8 @@ public class SystemSchemaTest extends CalciteTestBase
         2L, //numRows
         0L, //is_published
         1L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        0L //is_overshadowed
     );
 
     verifyRow(
@@ -496,7 +507,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //numRows
         0L, //is_published
         1L, //is_available
-        1L //is_realtime
+        1L, //is_realtime
+        0L //is_overshadowed
     );
 
     verifyRow(
@@ -508,7 +520,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //numRows
         0L, //is_published
         1L, //is_available
-        1L //is_realtime
+        1L, //is_realtime
+        0L //is_overshadowed
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
@@ -521,7 +534,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //numRows
         1L, //is_published
         0L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        1L //is_overshadowed
     );
 
     verifyRow(
@@ -533,7 +547,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //numRows
         1L, //is_published
         0L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        0L //is_overshadowed
     );
 
     verifyRow(
@@ -545,7 +560,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //numRows
         1L, //is_published
         0L, //is_available
-        0L //is_realtime
+        0L, //is_realtime
+        0L //is_overshadowed
     );
 
     // Verify value types.
@@ -561,7 +577,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long numRows,
       long isPublished,
       long isAvailable,
-      long isRealtime)
+      long isRealtime,
+      long isOvershadowed)
   {
     Assert.assertEquals(segmentId, row[0].toString());
     SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), 0);
@@ -576,6 +593,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isPublished, row[9]);
     Assert.assertEquals(isAvailable, row[10]);
     Assert.assertEquals(isRealtime, row[11]);
+    Assert.assertEquals(isOvershadowed, row[12]);
   }
 
   @Test

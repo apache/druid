@@ -260,10 +260,6 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = iterateAllUsedSegments();
 
-    if (dataSegments == null) {
-      return underReplicationCountsPerDataSourcePerTier;
-    }
-
     final DateTime now = DateTimes.nowUtc();
 
     for (final DataSegment segment : dataSegments) {
@@ -299,10 +295,6 @@ public class DruidCoordinator
     final Object2IntOpenHashMap<String> numsUnavailableUsedSegmentsPerDataSource = new Object2IntOpenHashMap<>();
 
     final Iterable<DataSegment> dataSegments = iterateAllUsedSegments();
-
-    if (dataSegments == null) {
-      return numsUnavailableUsedSegmentsPerDataSource;
-    }
 
     for (DataSegment segment : dataSegments) {
       if (segmentReplicantLookup.getLoadedReplicants(segment.getId()) == 0) {
@@ -392,7 +384,8 @@ public class DruidCoordinator
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(segment.getDataSource());
+      ImmutableDruidDataSource dataSource =
+          segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(segment.getDataSource());
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }

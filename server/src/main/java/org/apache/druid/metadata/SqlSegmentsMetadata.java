@@ -71,9 +71,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -87,27 +87,31 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadata.class);
 
   /**
-   * Marker interface for objects stored in {@link #latestDataSourcesUpdate}. See the comment for that field for
-   * details.
+   * Marker interface for objects stored in {@link #latestDatabasePoll}. See the comment for that field for details.
    */
-  private interface Update
+  private interface DatabasePoll
   {}
 
-  /** Periodically updates {@link #dataSources} via {@link #poll()}. */
-  private static class PeriodicPollUpdate implements Update
+  /** Represents periodic {@link #poll}s happening from {@link #exec}. */
+  private static class PeriodicDatabasePoll implements DatabasePoll
   {
     /**
      * This future allows to wait until {@link #dataSources} is initialized in the first {@link #poll()} happening since
-     * {@link #startPollingDatabasePeriodically()} is called for the first time, or since the last happens-before
-     * visible {@link #startPollingDatabasePeriodically()} in case of Coordinator's leadership changes.
+     * {@link #startPollingDatabasePeriodically()} is called for the first time, or since the last visible (in
+     * happens-before terms) call to {@link #startPollingDatabasePeriodically()} in case of Coordinator's leadership
+     * changes.
      */
     final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
   }
 
-  private static class OnDemandUpdate implements Update
+  /**
+   * Represents on-demand {@link #poll} initiated at periods of time when SqlSegmentsMetadata doesn't poll the database
+   * periodically.
+   */
+  private static class OnDemandDatabasePoll implements DatabasePoll
   {
     final long initiationTimeNanos = System.nanoTime();
-    final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    final CompletableFuture<Void> pollCompletionFuture = new CompletableFuture<>();
 
     long nanosElapsedFromInitiation()
     {
@@ -120,8 +124,11 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * #poll}, and {@link #isPollingDatabasePeriodically}. These methods should be synchronized to prevent from being
    * called at the same time if two different threads are calling them. This might be possible if Coordinator gets and
    * drops leadership repeatedly in quick succession.
+   *
+   * This lock is also used to synchronize {@link #awaitOrPerformDataSourcesUpdate} for times when SqlSegmentsMetadata
+   * is not polling the database periodically (in other words, when the Coordinator is not the leader).
    */
-  private final ReentrantReadWriteLock startStopLock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock startStopUpdateLock = new ReentrantReadWriteLock();
 
   /**
    * Used to ensure that {@link #poll()} is never run concurrently. It should already be so (at least in production
@@ -129,8 +136,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * scheduled in a single-threaded {@link #exec}, so this lock is an additional safety net in case there are bugs in
    * the code, and for tests, where {@link #poll()} is called from the outside code.
    *
-   * Not using {@link #startStopLock}.writeLock() in order to still be able to run {@link #poll()} concurrently with
-   * {@link #isPollingDatabasePeriodically()}.
+   * Not using {@link #startStopUpdateLock}.writeLock() in order to still be able to run {@link #poll()} concurrently
+   * with {@link #isPollingDatabasePeriodically()}.
    */
   private final Object pollLock = new Object();
 
@@ -151,22 +158,36 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   private volatile @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSources = null;
 
   /**
-   * The latest updates manages {@link #poll()} calls which update {@link #dataSources}, either periodically (see
-   * {@link #startPollingDatabasePeriodically}, {@link #stopPollingDatabasePeriodically}) or "on demand", when one of
-   * the methods that accesses {@link #dataSources} state, such as {@link #prepareImmutableDataSourceWithUsedSegments},
-   * is called when the Coordinator is not the leader and therefore periodic polling of database is off.
+   * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSources}, either
+   * periodically (see {@link PeriodicDatabasePoll}, {@link #startPollingDatabasePeriodically}, {@link
+   * #stopPollingDatabasePeriodically}) or "on demand" (see {@link OnDemandDatabasePoll}), when one of the methods that
+   * accesses {@link #dataSources} state (such as {@link #prepareImmutableDataSourceWithUsedSegments}) is called when
+   * the Coordinator is not the leader and therefore SqlSegmentsMetadata isn't polling the database periodically.
    *
    * The notion and the complexity of "on demand" updates was introduced to simplify the interface of {@link
    * SegmentsMetadata} and guarantee that it always returns consistent and relatively up-to-date data from methods like
    * {@link #prepareImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive updates. The last part is
-   * achieved via "hooking on" other updates by awaiting on {@link PeriodicPollUpdate#firstPollCompletionFuture} or
-   * {@link OnDemandUpdate#completionFuture}, see {@link #awaitOrPerformDataSourcesUpdate()} method implementation for
-   * details.
+   * achieved via "hooking on" other updates by awaiting on {@link PeriodicDatabasePoll#firstPollCompletionFuture} or
+   * {@link OnDemandDatabasePoll#pollCompletionFuture}, see {@link #awaitOrPerformDataSourcesUpdate} method
+   * implementation for details.
+   *
+   * Note: the overall implementation of periodic/on-demand polls is not completely optimal: for example, when the
+   * Coordinator just stopped leading, the latest periodic {@link #poll} (which is still "fresh") is not considered
+   * and a new on-demand poll is always initiated. This is done to simplify the implementation, while the efficiency
+   * during Coordinator leadership switches is not a priority.
+   *
+   * This field is {@code volatile} because it's checked and updated in a double-checked locking manner in {@link
+   * #awaitOrPerformDataSourcesUpdate()}.
    */
-  private final AtomicReference<Update> latestDataSourcesUpdate = new AtomicReference<>();
+  private volatile @Nullable DatabasePoll latestDatabasePoll = null;
+
+  /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
+  @GuardedBy("startStopUpdateLock")
+  private @Nullable Future<?> periodicPollTaskFuture = null;
 
   /** The number of times {@link #startPollingDatabasePeriodically} was called. */
   private long startPollingCount = 0;
+
   /**
    * Equal to the current {@link #startPollingCount} value if the SqlSegmentsMetadata is currently started; -1 if
    * currently stopped.
@@ -180,6 +201,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * {@link SQLMetadataRuleManager} also has a similar issue.
    */
   private long currentStartPollingOrder = -1;
+
   private ScheduledExecutorService exec = null;
 
   @Inject
@@ -203,7 +225,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @LifecycleStart
   public void start()
   {
-    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    ReentrantReadWriteLock.WriteLock lock = startStopUpdateLock.writeLock();
     lock.lock();
     try {
       exec = Execs.scheduledSingleThreaded(getClass().getName() + "-Exec--%d");
@@ -220,7 +242,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @LifecycleStop
   public void stop()
   {
-    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    ReentrantReadWriteLock.WriteLock lock = startStopUpdateLock.writeLock();
     lock.lock();
     try {
       exec.shutdownNow();
@@ -234,7 +256,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @Override
   public void startPollingDatabasePeriodically()
   {
-    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    ReentrantReadWriteLock.WriteLock lock = startStopUpdateLock.writeLock();
     lock.lock();
     try {
       if (exec == null) {
@@ -244,14 +266,14 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
         return;
       }
 
-      PeriodicPollUpdate periodicPollUpdate = new PeriodicPollUpdate();
-      latestDataSourcesUpdate.set(periodicPollUpdate);
+      PeriodicDatabasePoll periodicPollUpdate = new PeriodicDatabasePoll();
+      latestDatabasePoll = periodicPollUpdate;
 
       startPollingCount++;
       currentStartPollingOrder = startPollingCount;
       final long localStartOrder = currentStartPollingOrder;
 
-      exec.scheduleWithFixedDelay(
+      periodicPollTaskFuture = exec.scheduleWithFixedDelay(
           createPollTaskForStartOrder(localStartOrder, periodicPollUpdate),
           0,
           periodicPollDelay.getMillis(),
@@ -263,7 +285,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     }
   }
 
-  private Runnable createPollTaskForStartOrder(long startOrder, PeriodicPollUpdate periodicPollUpdate)
+  private Runnable createPollTaskForStartOrder(long startOrder, PeriodicDatabasePoll periodicPollUpdate)
   {
     return () -> {
       // poll() is synchronized together with startPollingDatabasePeriodically(), stopPollingDatabasePeriodically() and
@@ -271,7 +293,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
       // localStartedOrder doesn't match the new currentStartPollingOrder). It's needed to avoid flakiness in
       // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
-      ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
+      ReentrantReadWriteLock.ReadLock lock = startStopUpdateLock.readLock();
       lock.lock();
       try {
         if (startOrder == currentStartPollingOrder) {
@@ -300,12 +322,15 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   @Override
   public void stopPollingDatabasePeriodically()
   {
-    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    ReentrantReadWriteLock.WriteLock lock = startStopUpdateLock.writeLock();
     lock.lock();
     try {
       if (!isPollingDatabasePeriodically()) {
         return;
       }
+
+      periodicPollTaskFuture.cancel(false);
+      latestDatabasePoll = null;
 
       // NOT nulling dataSources, allowing to query the latest polled data even when this SegmentsMetadata object is
       // stopped.
@@ -319,42 +344,55 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
 
   private void awaitOrPerformDataSourcesUpdate()
   {
-    // CAS loop on latestDataSourcesUpdate.
-    while (true) {
-      Update latestUpdate = latestDataSourcesUpdate.get();
-      if (latestUpdate instanceof PeriodicPollUpdate) {
-        Futures.getUnchecked(((PeriodicPollUpdate) latestUpdate).firstPollCompletionFuture);
+    // Double-checked locking with awaitPeriodicOrFreshOnDemandDataSourcesUpdate() call playing the role of the "check".
+    if (awaitPeriodicOrFreshOnDemandDataSourcesUpdate()) {
+      return;
+    }
+    ReentrantReadWriteLock.WriteLock lock = startStopUpdateLock.writeLock();
+    lock.lock();
+    try {
+      if (awaitPeriodicOrFreshOnDemandDataSourcesUpdate()) {
         return;
       }
-      if (latestUpdate instanceof OnDemandUpdate) {
-        long periodicPollDelayNanos = TimeUnit.MILLISECONDS.toNanos(periodicPollDelay.getMillis());
-        OnDemandUpdate latestNnDemandUpdate = (OnDemandUpdate) latestUpdate;
-        boolean latestUpdateIsFresh = latestNnDemandUpdate.nanosElapsedFromInitiation() < periodicPollDelayNanos;
-        if (latestUpdateIsFresh) {
-          Futures.getUnchecked(latestNnDemandUpdate.completionFuture);
-          return;
-        }
-        // Latest update is not fresh. Fall through to CAS update to a new OnDemandUpdate.
-      } else {
-        assert latestUpdate == null;
-      }
-      OnDemandUpdate newOnDemandUpdate = new OnDemandUpdate();
-      if (latestDataSourcesUpdate.compareAndSet(latestUpdate, newOnDemandUpdate)) {
-        doOnDemandPoll(newOnDemandUpdate);
-        return;
-      }
-      // Continue CAS loop.
+      OnDemandDatabasePoll newOnDemandUpdate = new OnDemandDatabasePoll();
+      this.latestDatabasePoll = newOnDemandUpdate;
+      doOnDemandPoll(newOnDemandUpdate);
+    }
+    finally {
+      lock.unlock();
     }
   }
 
-  private void doOnDemandPoll(OnDemandUpdate onDemandUpdate)
+  private boolean awaitPeriodicOrFreshOnDemandDataSourcesUpdate()
+  {
+    DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
+    if (latestDatabasePoll instanceof PeriodicDatabasePoll) {
+      Futures.getUnchecked(((PeriodicDatabasePoll) latestDatabasePoll).firstPollCompletionFuture);
+      return true;
+    }
+    if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
+      long periodicPollDelayNanos = TimeUnit.MILLISECONDS.toNanos(periodicPollDelay.getMillis());
+      OnDemandDatabasePoll latestOnDemandUpdate = (OnDemandDatabasePoll) latestDatabasePoll;
+      boolean latestUpdateIsFresh = latestOnDemandUpdate.nanosElapsedFromInitiation() < periodicPollDelayNanos;
+      if (latestUpdateIsFresh) {
+        Futures.getUnchecked(latestOnDemandUpdate.pollCompletionFuture);
+        return true;
+      }
+      // Latest on-demand update is not fresh. Fall through to return false from this method.
+    } else {
+      assert latestDatabasePoll == null;
+    }
+    return false;
+  }
+
+  private void doOnDemandPoll(OnDemandDatabasePoll onDemandUpdate)
   {
     try {
       poll();
-      onDemandUpdate.completionFuture.complete(null);
+      onDemandUpdate.pollCompletionFuture.complete(null);
     }
     catch (Throwable t) {
-      onDemandUpdate.completionFuture.completeExceptionally(t);
+      onDemandUpdate.pollCompletionFuture.completeExceptionally(t);
       throw t;
     }
   }
@@ -849,7 +887,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     // isPollingDatabasePeriodically() is synchronized together with startPollingDatabasePeriodically(),
     // stopPollingDatabasePeriodically() and poll() to ensure that the latest currentStartPollingOrder is always visible.
     // readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
-    ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
+    ReentrantReadWriteLock.ReadLock lock = startStopUpdateLock.readLock();
     lock.lock();
     try {
       return currentStartPollingOrder >= 0;

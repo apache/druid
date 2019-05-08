@@ -24,7 +24,6 @@ import org.apache.druid.utils.JvmUtils;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -94,6 +93,9 @@ public class ByteBufferUtils
     }
   }
 
+  /**
+   * NB: while Druid no longer support Java 7, this method would still work with that version as well.
+   */
   private static MethodHandle unmapJava7Or8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
     // "Compile" a MethodHandle that is roughly equivalent to the following lambda:
@@ -128,14 +130,12 @@ public class ByteBufferUtils
 
   private static MethodHandle unmapJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-    Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
-    MethodHandle unmapper = lookup.findVirtual(unsafeClass, "invokeCleaner",
-                                               MethodType.methodType(void.class, ByteBuffer.class)
+    MethodHandle unmapper = lookup.findVirtual(
+        UnsafeUtils.theUnsafeClass(),
+        "invokeCleaner",
+        MethodType.methodType(void.class, ByteBuffer.class)
     );
-    Field f = unsafeClass.getDeclaredField("theUnsafe");
-    f.setAccessible(true);
-    Object theUnsafe = f.get(null);
-    return unmapper.bindTo(theUnsafe);
+    return unmapper.bindTo(UnsafeUtils.theUnsafe());
   }
 
   /**

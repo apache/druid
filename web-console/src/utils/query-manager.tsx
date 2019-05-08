@@ -18,7 +18,7 @@
 
 import debounce = require('lodash.debounce');
 
-export interface QueryState<R> {
+export interface QueryStateInt<R> {
   result: R | null;
   loading: boolean;
   error: string | null;
@@ -26,20 +26,20 @@ export interface QueryState<R> {
 
 export interface QueryManagerOptions<Q, R> {
   processQuery: (query: Q) => Promise<R>;
-  onStateChange?: (queryResolve: QueryState<R>) => void;
+  onStateChange?: (queryResolve: QueryStateInt<R>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
 }
 
 export class QueryManager<Q, R> {
   private processQuery: (query: Q) => Promise<R>;
-  private onStateChange?: (queryResolve: QueryState<R>) => void;
+  private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
 
   private terminated = false;
   private nextQuery: Q;
   private lastQuery: Q;
   private actuallyLoading = false;
-  private state: QueryState<R> = {
+  private state: QueryStateInt<R> = {
     result: null,
     loading: false,
     error: null
@@ -64,7 +64,7 @@ export class QueryManager<Q, R> {
     }
   }
 
-  private setState(queryState: QueryState<R>) {
+  private setState(queryState: QueryStateInt<R>) {
     this.state = queryState;
     if (this.onStateChange && !this.terminated) {
       this.onStateChange(queryState);
@@ -130,7 +130,7 @@ export class QueryManager<Q, R> {
     return this.lastQuery;
   }
 
-  public getState(): QueryState<R> {
+  public getState(): QueryStateInt<R> {
     return this.state;
   }
 

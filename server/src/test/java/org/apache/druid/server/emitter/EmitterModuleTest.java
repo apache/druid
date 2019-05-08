@@ -31,9 +31,13 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.core.ParametrizedUriEmitter;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -41,6 +45,8 @@ import java.util.Properties;
 
 public class EmitterModuleTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testParametrizedUriEmitterConfig()
@@ -55,10 +61,30 @@ public class EmitterModuleTest
     props.setProperty("druid.emitter.parametrized.httpEmitting.maxBatchSize", "4");
     props.setProperty("druid.emitter.parametrized.httpEmitting.flushTimeOut", "1000");
 
-    final Emitter emitter =
-        makeInjectorWithProperties(props).getInstance(Emitter.class);
+    final Emitter emitter = makeInjectorWithProperties(props).getInstance(Emitter.class);
+
     // Testing that ParametrizedUriEmitter is successfully deserialized from the above config
-    Assert.assertTrue(emitter instanceof ParametrizedUriEmitter);
+    Assert.assertThat(emitter, CoreMatchers.instanceOf(ParametrizedUriEmitter.class));
+  }
+
+  @Test
+  public void testMissingEmitterType()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.emitter", "");
+
+    final Emitter emitter = makeInjectorWithProperties(props).getInstance(Emitter.class);
+    Assert.assertThat(emitter, CoreMatchers.instanceOf(NoopEmitter.class));
+  }
+
+  @Test
+  public void testInvalidEmitterType()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.emitter", "invalid");
+
+    expectedException.expectMessage("Unknown emitter type[druid.emitter]=[invalid]");
+    makeInjectorWithProperties(props).getInstance(Emitter.class);
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

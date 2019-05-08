@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Switch } from '@blueprintjs/core';
+import { Button, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
+import { FormGroup } from '@blueprintjs/core/lib/esnext';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
+import { ActionCell } from '../components/action-cell';
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
@@ -40,6 +42,7 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
+import { BasicAction, basicActionsToMenu } from '../utils/basic-action';
 
 import './datasource-view.scss';
 
@@ -76,11 +79,13 @@ export interface DatasourcesViewState {
 
   showUnused: boolean;
   retentionDialogOpenOn: { datasource: string, rules: any[] } | null;
-  compactionDialogOpenOn: {datasource: string, configData: any} | null;
-  dropDataDatasource: string | null;
-  dataSourceToMarkAsUsedAllSegmentsIn: string | null;
-  killDatasource: string | null;
-
+  compactionDialogOpenOn: { datasource: string, configData: any } | null;
+  dataSourceToMarkAsUnusedAllSegmentsIn: string | null;
+  dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn: string | null;
+  dataSourceToKillAllSegmentsIn: string | null;
+  dataSourceToMarkSegmentsAsUsedOrUnusedIn: string | null;
+  markAsUsedOrUnusedAction: 'markUsed' | 'markUnused';
+  markAsUsedOrUnusedInterval: string;
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -114,10 +119,12 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       showUnused: false,
       retentionDialogOpenOn: null,
       compactionDialogOpenOn: null,
-      dropDataDatasource: null,
-      dataSourceToMarkAsUsedAllSegmentsIn: null,
-      killDatasource: null
-
+      dataSourceToMarkAsUnusedAllSegmentsIn: null,
+      dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn: null,
+      dataSourceToKillAllSegmentsIn: null,
+      dataSourceToMarkSegmentsAsUsedOrUnusedIn: null,
+      markAsUsedOrUnusedAction: 'markUnused',
+      markAsUsedOrUnusedInterval: ''
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
@@ -200,77 +207,118 @@ GROUP BY 1`);
     this.datasourceQueryManager.terminate();
   }
 
-  renderDropDataAction() {
-    const { dropDataDatasource } = this.state;
+  renderMarkAsUnusedAllSegmentsInDataSourceAction() {
+    const { dataSourceToMarkAsUnusedAllSegmentsIn } = this.state;
 
     return <AsyncActionDialog
       action={
-        dropDataDatasource ? async () => {
-          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {});
+        dataSourceToMarkAsUnusedAllSegmentsIn ? async () => {
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dataSourceToMarkAsUnusedAllSegmentsIn}`, {});
           return resp.data;
         } : null
       }
-      confirmButtonText="Drop data"
-      successText="Data has been dropped"
-      failText="Could not drop data"
+      confirmButtonText="Mark as unused all segments belonging to data source"
+      successText="All segments belonging to data source has been marked as unused"
+      failText="Failed to mark as unused all segments belonging to data source"
       intent={Intent.DANGER}
       onClose={(success) => {
-        this.setState({ dropDataDatasource: null });
+        this.setState({ dataSourceToMarkAsUnusedAllSegmentsIn: null });
         if (success) this.datasourceQueryManager.rerunLastQuery();
       }}
     >
       <p>
-        {`Are you sure you want to drop all the data for datasource '${dropDataDatasource}'?`}
+        {`Are you sure you want to mark as unused all segments in data source '${dataSourceToMarkAsUnusedAllSegmentsIn}'?`}
       </p>
     </AsyncActionDialog>;
   }
 
-  renderUseAction() {
-    const { dataSourceToMarkAsUsedAllSegmentsIn } = this.state;
+  renderMarkAsUsedAllNonOvershadowedSegmentsInDataSourceAction() {
+    const { dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn } = this.state;
 
     return <AsyncActionDialog
       action={
-        dataSourceToMarkAsUsedAllSegmentsIn ? async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/datasources/${dataSourceToMarkAsUsedAllSegmentsIn}`, {});
+        dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn ? async () => {
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn}`, {});
           return resp.data;
         } : null
       }
-      confirmButtonText="Mark as used all segments belonging to data source"
-      successText="All segments belonging to data source has been marked as used"
-      failText="Failed to mark as used all segments belonging to data source"
+      confirmButtonText="Mark as used all non-overshadowed segments belonging to data source"
+      successText="All non-overshadowed segments belonging to data source has been marked as used"
+      failText="Failed to mark as used all non-overshadowed segments belonging to data source"
       intent={Intent.PRIMARY}
       onClose={(success) => {
-        this.setState({ dataSourceToMarkAsUsedAllSegmentsIn: null });
+        this.setState({ dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn: null });
         if (success) this.datasourceQueryManager.rerunLastQuery();
       }}
     >
       <p>
-        {`Are you sure you want to mark as used all segments belonging to data source '${dataSourceToMarkAsUsedAllSegmentsIn}'?`}
+        {`Are you sure you want to mark as used all non-overshadowed segments belonging to data source '${dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn}'?`}
       </p>
+    </AsyncActionDialog>;
+  }
+
+  renderMarkAsUsedOrUnusedSegmentsInIntervalAction() {
+    const { dataSourceToMarkSegmentsAsUsedOrUnusedIn, markAsUsedOrUnusedAction, markAsUsedOrUnusedInterval } = this.state;
+    const usedOrUnused = markAsUsedOrUnusedAction === 'markUsed' ? 'used' : 'unused';
+
+    return <AsyncActionDialog
+      action={
+        dataSourceToMarkSegmentsAsUsedOrUnusedIn ? async () => {
+          if (!markAsUsedOrUnusedInterval) return;
+          const resp = await axios.post(
+              `/druid/coordinator/v1/datasources/${dataSourceToMarkSegmentsAsUsedOrUnusedIn}/${markAsUsedOrUnusedAction}`,
+              { interval: markAsUsedOrUnusedInterval }
+          );
+          return resp.data;
+        } : null
+      }
+      confirmButtonText={`Mark as ${usedOrUnused} segments belonging to data source in the specified interval`}
+      confirmButtonDisabled={!/.\/./.test(markAsUsedOrUnusedInterval)}
+      successText={`Segments belonging to data source in the specified interval has been marked as ${usedOrUnused}`}
+      failText={`Failed to mark segments as ${usedOrUnused}`}
+      intent={Intent.PRIMARY}
+      onClose={(success) => {
+        this.setState({ dataSourceToMarkSegmentsAsUsedOrUnusedIn: null });
+        if (success) this.datasourceQueryManager.rerunLastQuery();
+      }}
+    >
+      <p>
+        {`Please select the interval in which you want to mark segments as ${usedOrUnused}`}
+      </p>
+      <FormGroup>
+        <InputGroup
+          value={markAsUsedOrUnusedInterval}
+          onChange={(e: any) => {
+            const v = e.target.value;
+            this.setState({ markAsUsedOrUnusedInterval: v.toUpperCase() });
+          }}
+          placeholder="2018-01-01T00:00:00/2018-01-03T00:00:00"
+        />
+      </FormGroup>
     </AsyncActionDialog>;
   }
 
   renderKillAction() {
-    const { killDatasource } = this.state;
+    const { dataSourceToKillAllSegmentsIn } = this.state;
 
     return <AsyncActionDialog
       action={
-        killDatasource ? async () => {
-          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`, {});
+        dataSourceToKillAllSegmentsIn ? async () => {
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dataSourceToKillAllSegmentsIn}?kill=true&interval=1000/3000`, {});
           return resp.data;
         } : null
       }
-      confirmButtonText="Permanently delete data"
-      successText="Kill task was issued. Datasource will be deleted"
-      failText="Could not submit kill task"
+      confirmButtonText="Permanently delete (kill) all segments belonging to data source"
+      successText="Kill task was issued. All segments belonging to data source will be permanently deleted"
+      failText="Failed to submit a task to permanently delete (kill) all segments belonging to data source"
       intent={Intent.DANGER}
       onClose={(success) => {
-        this.setState({ killDatasource: null });
+        this.setState({ dataSourceToKillAllSegmentsIn: null });
         if (success) this.datasourceQueryManager.rerunLastQuery();
       }}
     >
       <p>
-        {`Are you sure you want to permanently delete the data in datasource '${killDatasource}'?`}
+        {`Are you sure you want to permanently delete (kill) all segments belonging to data source '${dataSourceToKillAllSegmentsIn}'?`}
       </p>
       <p>
         This action can not be undone.
@@ -352,6 +400,43 @@ GROUP BY 1`);
         }
       }
     });
+  }
+
+  getDatasourceActions(datasource: string, unused: boolean): BasicAction[] {
+    if (unused) {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Mark as used all non-overshadowed segments in data source',
+          onAction: () => this.setState({ dataSourceToMarkAsUsedAllNonOvershadowedSegmentsIn: datasource })
+        },
+        {
+          icon: IconNames.TRASH,
+          title: 'Permanently delete (kill) all segments in data source',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ dataSourceToKillAllSegmentsIn: datasource })
+        }
+      ];
+    } else {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Mark segments as used by interval in data source',
+          onAction: () => this.setState({ dataSourceToMarkSegmentsAsUsedOrUnusedIn: datasource, markAsUsedOrUnusedAction: 'markUsed' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Mark segments as unused by interval in data source',
+          onAction: () => this.setState({ dataSourceToMarkSegmentsAsUsedOrUnusedIn: datasource, markAsUsedOrUnusedAction: 'markUnused' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Mark as unused all segments in data source',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ dataSourceToMarkAsUnusedAllSegmentsIn: datasource })
+        }
+      ];
+    }
   }
 
   renderRetentionDialog() {
@@ -527,21 +612,22 @@ GROUP BY 1`);
             Header: 'Actions',
             accessor: 'datasource',
             id: 'actions',
-            width: 160,
+            width: 70,
             filterable: false,
             Cell: row => {
               const datasource = row.value;
               const { unused } = row.original;
-              if (unused) {
-                return <div>
-                  <a onClick={() => this.setState({ dataSourceToMarkAsUsedAllSegmentsIn: datasource })}>Mark as used all segments</a>&nbsp;&nbsp;&nbsp;
-                  <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>;
-              } else {
-                return <div>
-                  <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>;
-              }
+              const datasourceActions = this.getDatasourceActions(datasource, unused);
+              const datasourceMenu = basicActionsToMenu(datasourceActions);
+
+              return <ActionCell>
+                {
+                  datasourceMenu &&
+                  <Popover content={datasourceMenu} position={Position.BOTTOM_RIGHT}>
+                    <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: tableColumnSelectionHandler.showColumn('Actions')
           }
@@ -549,8 +635,9 @@ GROUP BY 1`);
         defaultPageSize={50}
         className="-striped -highlight"
       />
-      {this.renderDropDataAction()}
-      {this.renderUseAction()}
+      {this.renderMarkAsUnusedAllSegmentsInDataSourceAction()}
+      {this.renderMarkAsUsedAllNonOvershadowedSegmentsInDataSourceAction()}
+      {this.renderMarkAsUsedOrUnusedSegmentsInIntervalAction()}
       {this.renderKillAction()}
       {this.renderRetentionDialog()}
       {this.renderCompactionDialog()}

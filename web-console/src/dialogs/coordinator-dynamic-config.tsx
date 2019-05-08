@@ -22,6 +22,7 @@ import axios from 'axios';
 import * as React from 'react';
 
 import { AutoForm } from '../components/auto-form';
+import { ExternalLink } from '../components/external-link';
 import { AppToaster } from '../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../utils';
 
@@ -124,7 +125,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.
-        For more information please refer to the <a href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration" target="_blank">documentation</a>.
+        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
       </p>
       <AutoForm
         fields={[
