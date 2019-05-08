@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -119,7 +118,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -163,6 +161,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class AppenderatorDriverRealtimeIndexTaskTest
 {
@@ -208,7 +207,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -1244,8 +1243,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
       IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
       Assert.assertEquals(expectedMetrics, reportData.getRowStats());
-      Assert.assertTrue(status.getErrorMsg()
-                              .contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
+
+      Pattern errorPattern = Pattern.compile(
+          "(?s)java\\.lang\\.IllegalArgumentException.*\n"
+          + "\tat (java\\.base/)?java\\.nio\\.Buffer\\..*"
+      );
+      Assert.assertTrue(errorPattern.matcher(status.getErrorMsg()).matches());
     }
   }
 
@@ -1607,9 +1610,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
-        ),
+        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),

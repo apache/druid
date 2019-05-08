@@ -27,7 +27,7 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class DruidRelToDruidRule extends ConverterRule
 {
-  private static DruidRelToDruidRule INSTANCE = new DruidRelToDruidRule();
+  private static final DruidRelToDruidRule INSTANCE = new DruidRelToDruidRule();
 
   private DruidRelToDruidRule()
   {

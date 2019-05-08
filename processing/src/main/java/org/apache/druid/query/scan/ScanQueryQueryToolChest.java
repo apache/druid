@@ -25,7 +25,6 @@ import com.google.common.base.Functions;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
@@ -33,8 +32,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-
-import java.util.Map;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
@@ -58,38 +55,30 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
-    return new QueryRunner<ScanResultValue>()
-    {
-      @Override
-      public Sequence<ScanResultValue> run(
-          final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
-      )
-      {
-        // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
-        // the same way, even if they have different default legacy values.
-        final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
-        final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-
-        if (scanQuery.getLimit() == Long.MAX_VALUE) {
-          return runner.run(queryPlusWithNonNullLegacy, responseContext);
-        }
-        return new BaseSequence<>(
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
-            {
-              @Override
-              public ScanQueryLimitRowIterator make()
-              {
-                return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
-              }
-
-              @Override
-              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
-              {
-                CloseQuietly.close(iterFromMake);
-              }
-            }
-        );
+    return (queryPlus, responseContext) -> {
+      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
+      // the same way, even if they have different default legacy values.
+      final ScanQuery scanQuery = ((ScanQuery) (queryPlus.getQuery()))
+          .withNonNullLegacy(scanQueryConfig);
+      final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
+      if (scanQuery.getLimit() == Long.MAX_VALUE) {
+        return runner.run(queryPlusWithNonNullLegacy, responseContext);
       }
+      return new BaseSequence<>(
+          new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+          {
+            @Override
+            public ScanQueryLimitRowIterator make()
+            {
+              return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+            }
+
+            @Override
+            public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+            {
+              CloseQuietly.close(iterFromMake);
+            }
+          });
     };
   }
 
@@ -117,18 +106,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public QueryRunner<ScanResultValue> preMergeQueryDecoration(final QueryRunner<ScanResultValue> runner)
   {
-    return new QueryRunner<ScanResultValue>()
-    {
-      @Override
-      public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
-      {
-        ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
-        if (scanQuery.getFilter() != null) {
-          scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
-          queryPlus = queryPlus.withQuery(scanQuery);
-        }
-        return runner.run(queryPlus, responseContext);
+    return (queryPlus, responseContext) -> {
+      ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
+      if (scanQuery.getFilter() != null) {
+        scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
+        queryPlus = queryPlus.withQuery(scanQuery);
       }
+      return runner.run(queryPlus, responseContext);
     };
   }
 }

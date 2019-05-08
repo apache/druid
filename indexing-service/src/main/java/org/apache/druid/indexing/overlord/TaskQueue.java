@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -272,6 +271,11 @@ public class TaskQueue
               }
             }
             taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
+          } else if (isTaskPending(task)) {
+            // if the taskFutures contain this task and this task is pending, also let the taskRunner
+            // to run it to guarantee it will be assigned to run
+            // see https://github.com/apache/incubator-druid/pull/6991
+            taskRunner.run(task);
           }
         }
         // Kill tasks that shouldn't be running
@@ -314,6 +318,13 @@ public class TaskQueue
         giant.unlock();
       }
     }
+  }
+
+  private boolean isTaskPending(Task task)
+  {
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
   }
 
   /**
@@ -585,7 +596,7 @@ public class TaskQueue
     }
     catch (Exception e) {
       log.warn(e, "Failed to sync tasks from storage!");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       giant.unlock();

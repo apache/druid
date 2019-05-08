@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -109,7 +108,7 @@ public class RemoteTaskActionClient implements TaskActionClient
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
-            throw Throwables.propagate(e2);
+            throw new RuntimeException(e2);
           }
         }
       }

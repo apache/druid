@@ -228,8 +228,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               {
                 return localDeepStorage;
               }
-            },
-            getObjectMapper()
+            }
         ),
         new DataSegmentKiller()
         {
@@ -293,22 +292,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             }
           },
           new DropwizardRowIngestionMetersFactory()
-      );
-    }
-
-    @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
-    {
-      return TaskStatus.fromCode(
-          getId(),
-          new TestParallelIndexTaskRunner(
-              toolbox,
-              getId(),
-              getGroupId(),
-              getIngestionSchema(),
-              getContext(),
-              new NoopIndexingServiceClient()
-          ).run()
       );
     }
   }

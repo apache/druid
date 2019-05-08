@@ -60,6 +60,9 @@ public class TLSServerConfig
   private boolean requireClientCertificate = false;
 
   @JsonProperty
+  private boolean requestClientCertificate = false;
+
+  @JsonProperty
   private String trustStoreType;
 
   @JsonProperty
@@ -132,6 +135,11 @@ public class TLSServerConfig
     return requireClientCertificate;
   }
 
+  public boolean isRequestClientCertificate()
+  {
+    return requestClientCertificate;
+  }
+
   public String getTrustStoreType()
   {
     return trustStoreType;
@@ -175,6 +183,7 @@ public class TLSServerConfig
            ", includeProtocols=" + includeProtocols +
            ", excludeProtocols=" + excludeProtocols +
            ", requireClientCertificate=" + requireClientCertificate +
+           ", requestClientCertificate=" + requestClientCertificate +
            ", trustStoreType='" + trustStoreType + '\'' +
            ", trustStorePath='" + trustStorePath + '\'' +
            ", trustStoreAlgorithm='" + trustStoreAlgorithm + '\'' +

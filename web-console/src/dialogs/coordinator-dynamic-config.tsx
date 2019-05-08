@@ -17,37 +17,62 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import { IconNames } from "@blueprintjs/icons";
-import { AppToaster } from '../singletons/toaster';
+import * as React from 'react';
+
 import { AutoForm } from '../components/auto-form';
-import { getDruidErrorMessage } from '../utils';
+import { ExternalLink } from '../components/external-link';
+import { AppToaster } from '../singletons/toaster';
+import { getDruidErrorMessage, QueryManager } from '../utils';
+
 import { SnitchDialog } from './snitch-dialog';
+
 import './coordinator-dynamic-config.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
-  isOpen: boolean,
-  onClose: () => void
+  onClose: () => void;
 }
 
 export interface CoordinatorDynamicConfigDialogState {
   dynamicConfig: Record<string, any> | null;
+  historyRecords: any[];
 }
 
 export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
+
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null
-    }
+      dynamicConfig: null,
+      historyRecords: []
+    };
+  }
+
+  componentDidMount() {
+    this.getClusterConfig();
+
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/coordinator/v1/config/history?count=100`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
   }
 
   async getClusterConfig() {
     let config: Record<string, any> | null = null;
     try {
-      const configResp = await axios.get("/druid/coordinator/v1/config");
-      config = configResp.data
+      const configResp = await axios.get('/druid/coordinator/v1/config');
+      config = configResp.data;
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
@@ -61,14 +86,14 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     });
   }
 
-  private saveClusterConfig = async (author: string, comment: string) => {
+  private saveClusterConfig = async (comment: string) => {
     const { onClose } = this.props;
-    let newState: any = this.state.dynamicConfig;
+    const newState: any = this.state.dynamicConfig;
     try {
-      await axios.post("/druid/coordinator/v1/config", newState, {
+      await axios.post('/druid/coordinator/v1/config', newState, {
         headers: {
-          "X-Druid-Author": author,
-          "X-Druid-Comment": comment
+          'X-Druid-Author': 'console',
+          'X-Druid-Comment': comment
         }
       });
     } catch (e) {
@@ -87,75 +112,75 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
   }
 
   render() {
-    const { isOpen, onClose } = this.props;
-    const { dynamicConfig } = this.state;
+    const { onClose } = this.props;
+    const { dynamicConfig, historyRecords } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
-      isOpen={ isOpen }
+      isOpen
       onSave={this.saveClusterConfig}
-      onOpening={() => {this.getClusterConfig()}}
-      onClose={ onClose }
+      onClose={onClose}
       title="Coordinator dynamic config"
+      historyRecords={historyRecords}
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.
-        For more information please refer to the <a href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration" target="_blank">documentation</a>.
+        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
       </p>
       <AutoForm
         fields={[
           {
-            name: "balancerComputeThreads",
-            type: "number"
+            name: 'balancerComputeThreads',
+            type: 'number'
           },
           {
-            name: "emitBalancingStats",
-            type: "boolean"
+            name: 'emitBalancingStats',
+            type: 'boolean'
           },
           {
-            name: "killAllDataSources",
-            type: "boolean"
+            name: 'killAllDataSources',
+            type: 'boolean'
           },
           {
-            name: "killDataSourceWhitelist",
-            type: "string-array"
+            name: 'killDataSourceWhitelist',
+            type: 'string-array'
           },
           {
-            name: "killPendingSegmentsSkipList",
-            type: "string-array"
+            name: 'killPendingSegmentsSkipList',
+            type: 'string-array'
           },
           {
-            name: "maxSegmentsInNodeLoadingQueue",
-            type: "number"
+            name: 'maxSegmentsInNodeLoadingQueue',
+            type: 'number'
           },
           {
-            name: "maxSegmentsToMove",
-            type: "number"
+            name: 'maxSegmentsToMove',
+            type: 'number'
           },
           {
-            name: "mergeBytesLimit",
-            type: "size-bytes"
+            name: 'mergeBytesLimit',
+            type: 'size-bytes'
           },
           {
-            name: "mergeSegmentsLimit",
-            type: "number"
+            name: 'mergeSegmentsLimit',
+            type: 'number'
           },
           {
-            name: "millisToWaitBeforeDeleting",
-            type: "number"
+            name: 'millisToWaitBeforeDeleting',
+            type: 'number'
           },
           {
-            name: "replicantLifetime",
-            type: "number"
+            name: 'replicantLifetime',
+            type: 'number'
           },
           {
-            name: "replicationThrottleLimit",
-            type: "number"
+            name: 'replicationThrottleLimit',
+            type: 'number'
           }
         ]}
         model={dynamicConfig}
         onChange={m => this.setState({ dynamicConfig: m })}
       />
-    </SnitchDialog>
+    </SnitchDialog>;
   }
 }

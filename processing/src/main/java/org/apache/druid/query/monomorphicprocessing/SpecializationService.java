@@ -21,6 +21,7 @@ package org.apache.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
+import org.apache.druid.java.util.common.DefineClassUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.objectweb.asm.ClassReader;
@@ -28,12 +29,10 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.SimpleRemapper;
-import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -64,19 +63,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class SpecializationService
 {
   private static final Logger LOG = new Logger(SpecializationService.class);
-
-  private static final Unsafe UNSAFE;
-
-  static {
-    try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
-    }
-    catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
-    }
-  }
 
   /**
    * If true, specialization is not actually done, an instance of prototypeClass is used as a "specialized" instance.
@@ -182,7 +168,12 @@ public final class SpecializationService
         ClassReader prototypeClassReader = new ClassReader(getPrototypeClassBytecode());
         prototypeClassReader.accept(classTransformer, 0);
         byte[] specializedClassBytecode = specializedClassWriter.toByteArray();
-        Class<T> specializedClass = defineClass(specializedClassName, specializedClassBytecode);
+        @SuppressWarnings("unchecked")
+        Class<T> specializedClass = (Class<T>) DefineClassUtils.defineClass(
+            prototypeClass,
+            specializedClassBytecode,
+            specializedClassName
+        );
         specializedClassCounter.incrementAndGet();
         return specializedClass.newInstance();
       }
@@ -204,19 +195,6 @@ public final class SpecializationService
         remapping.put(classBytecodeName(sourceClass.getName()), classBytecodeName(remappingClass.getName()));
       }
       return remapping;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Class<T> defineClass(String specializedClassName, byte[] specializedClassBytecode)
-    {
-      return (Class<T>) UNSAFE.defineClass(
-          specializedClassName,
-          specializedClassBytecode,
-          0,
-          specializedClassBytecode.length,
-          prototypeClass.getClassLoader(),
-          prototypeClass.getProtectionDomain()
-      );
     }
 
     /**

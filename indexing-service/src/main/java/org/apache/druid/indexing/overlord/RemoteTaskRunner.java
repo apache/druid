@@ -341,7 +341,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       lifecycleLock.started();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       lifecycleLock.exitStart();
@@ -379,7 +379,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       lifecycleLock.exitStop();
@@ -573,7 +573,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     final RemoteTaskRunnerWorkItem completeTask, runningTask, pendingTask;
     if ((pendingTask = pendingTasks.get(task.getId())) != null) {
-      log.info("Assigned a task[%s] that is already pending, not doing anything", task.getId());
+      log.info("Assigned a task[%s] that is already pending!", task.getId());
+      runPendingTasks();
       return pendingTask.getResult();
     } else if ((runningTask = runningTasks.get(task.getId())) != null) {
       ZkWorker zkWorker = findWorkerRunningTask(task.getId());
@@ -676,12 +677,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 ).get();
               }
               catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               catch (ExecutionException e) {
                 // Unwrap if possible
                 Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
           }
@@ -692,7 +693,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   /**
    * Adds a task to the pending queue
    */
-  private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
+  @VisibleForTesting
+  RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
     final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
@@ -797,7 +799,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         log.info("Tried to delete status path[%s] that didn't exist! Must've gone away already?", statusPath);
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -1106,7 +1108,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return retVal;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1145,7 +1147,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         scheduleTasksCleanupForWorker(worker.getHost(), getAssignedTasks(worker));
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         try {
@@ -1208,7 +1210,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             }
             catch (Exception e) {
               log.makeAlert("Exception while cleaning up worker[%s]", worker).emit();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         },
@@ -1322,7 +1324,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           }
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
       return getWorkerFromZK(lazyWorkers.values());

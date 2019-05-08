@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
@@ -279,7 +278,7 @@ public class PullDependencies implements Runnable
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     log.info(
@@ -321,7 +320,7 @@ public class PullDependencies implements Runnable
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -411,7 +410,7 @@ public class PullDependencies implements Runnable
     }
     catch (Exception e) {
       log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     log.info("Finish downloading extension [%s]", versionedArtifact);
   }
@@ -459,7 +458,7 @@ public class PullDependencies implements Runnable
         remoteRepositories.add(r);
       }
       catch (URISyntaxException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

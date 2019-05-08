@@ -20,10 +20,6 @@
 @import '../node_modules/@blueprintjs/core/lib/css/blueprint';
 @import '../lib/react-table';
 
-* {
-  position: relative;
-}
-
 html,
 body {
   //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
@@ -50,5 +46,28 @@ svg {
 }
 
 .app-container {
+  position: absolute;
   height: 100%;
+  width: 100%;
+}
+
+.label-info-text {
+  max-width: 400px;
+  padding: 15px;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.bp3-form-group {
+  .bp3-form-content {
+    position: relative;
+
+    & > .bp3-popover-wrapper {
+      position: absolute;
+      right: 0;
+      top: 7px;
+    }
+  }
 }

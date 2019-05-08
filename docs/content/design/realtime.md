@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Real-time Node"
+title: "Real-time Process"
 ---
 
 <!--
@@ -22,17 +22,17 @@ title: "Real-time Node"
   ~ under the License.
   -->
 
-# Real-time Node
+# Real-time Process
 
 <div class="note info">
-NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
+NOTE: Realtime processes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
 </div>
 
-For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
+For Apache Druid (incubating) Real-time Process Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
 For Real-time Ingestion, see [Realtime Ingestion](../ingestion/stream-ingestion.html).
 
-Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and transfer these segments off to [Historical](../design/historical.html) nodes. They use ZooKeeper to monitor the transfer and the metadata storage to store metadata about the transferred segment. Once transfered, segments are forgotten by the Realtime nodes.
+Realtime processes provide a realtime index. Data indexed via these processes is immediately available for querying. Realtime processes will periodically build segments representing the data they’ve collected over some span of time and transfer these segments off to [Historical](../design/historical.html) processes. They use ZooKeeper to monitor the transfer and the metadata storage to store metadata about the transferred segment. Once transfered, segments are forgotten by the Realtime processes.
 
 ### Running
 
@@ -71,10 +71,10 @@ Given those expectations, adding a firehose is straightforward and completely en
 HTTP Endpoints
 --------------
 
-The real-time node exposes several HTTP endpoints for interactions.
+The real-time process exposes several HTTP endpoints for interactions.
 
 ### GET
 
 * `/status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.

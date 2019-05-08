@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Alerts"
+title: "Apache Druid (incubating) Alerts"
 ---
 
 <!--

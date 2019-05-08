@@ -21,7 +21,6 @@ package org.apache.druid.storage.hdfs;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -92,7 +91,6 @@ public class HdfsStorageDruidModule implements DruidModule
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentFinderBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentFinder.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
 
@@ -107,7 +105,7 @@ public class HdfsStorageDruidModule implements DruidModule
       FileSystem.get(conf);
     }
     catch (IOException ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

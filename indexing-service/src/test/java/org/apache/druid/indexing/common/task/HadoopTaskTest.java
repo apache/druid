@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -98,7 +98,7 @@ public class HadoopTaskTest
     Assert.assertFalse(classLoader instanceof ApplicationClassLoader);
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
-    final ClassLoader appLoader = HadoopDruidConverterConfig.class.getClassLoader();
+    final ClassLoader appLoader = HadoopDruidIndexerConfig.class.getClassLoader();
     Assert.assertNotEquals(StringUtils.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
   }
 }

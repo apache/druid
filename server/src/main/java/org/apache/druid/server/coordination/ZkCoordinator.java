@@ -32,9 +32,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Use {@link org.apache.druid.server.coordinator.HttpLoadQueuePeon} for segment load/drops.
@@ -54,6 +56,7 @@ public class ZkCoordinator
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
+  private final ExecutorService segmentLoadUnloadService;
 
   @Inject
   public ZkCoordinator(
@@ -61,7 +64,8 @@ public class ZkCoordinator
       ObjectMapper jsonMapper,
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
-      CuratorFramework curator
+      CuratorFramework curator,
+      SegmentLoaderConfig config
   )
   {
     this.dataSegmentChangeHandler = loadDropHandler;
@@ -69,6 +73,10 @@ public class ZkCoordinator
     this.zkPaths = zkPaths;
     this.me = me;
     this.curator = curator;
+    this.segmentLoadUnloadService = Execs.multiThreaded(
+        config.getNumLoadingThreads(),
+        "ZKCoordinator--%d"
+    );
   }
 
   @LifecycleStart
@@ -102,63 +110,12 @@ public class ZkCoordinator
             new PathChildrenCacheListener()
             {
               @Override
-              public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
+              public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
               {
                 final ChildData child = event.getData();
                 switch (event.getType()) {
                   case CHILD_ADDED:
-                    final String path = child.getPath();
-                    final DataSegmentChangeRequest request = jsonMapper.readValue(
-                        child.getData(), DataSegmentChangeRequest.class
-                    );
-
-                    log.info("New request[%s] with zNode[%s].", request.asString(), path);
-
-                    try {
-                      request.go(
-                          dataSegmentChangeHandler,
-                          new DataSegmentChangeCallback()
-                          {
-                            boolean hasRun = false;
-
-                            @Override
-                            public void execute()
-                            {
-                              try {
-                                if (!hasRun) {
-                                  curator.delete().guaranteed().forPath(path);
-                                  log.info("Completed request [%s]", request.asString());
-                                  hasRun = true;
-                                }
-                              }
-                              catch (Exception e) {
-                                try {
-                                  curator.delete().guaranteed().forPath(path);
-                                }
-                                catch (Exception e1) {
-                                  log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                                }
-                                log.error(e, "Exception while removing zNode[%s]", path);
-                                throw Throwables.propagate(e);
-                              }
-                            }
-                          }
-                      );
-                    }
-                    catch (Exception e) {
-                      try {
-                        curator.delete().guaranteed().forPath(path);
-                      }
-                      catch (Exception e1) {
-                        log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                      }
-
-                      log.makeAlert(e, "Segment load/unload: uncaught exception.")
-                         .addData("node", path)
-                         .addData("nodeProperties", request)
-                         .emit();
-                    }
-
+                    childAdded(child);
                     break;
                   case CHILD_REMOVED:
                     log.info("zNode[%s] was removed", event.getData().getPath());
@@ -168,16 +125,70 @@ public class ZkCoordinator
                 }
               }
             }
+
         );
         loadQueueCache.start();
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       started = true;
     }
+  }
+
+  private void childAdded(ChildData child)
+  {
+    segmentLoadUnloadService.submit(() -> {
+      final String path = child.getPath();
+      DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
+      try {
+        final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
+            child.getData(),
+            DataSegmentChangeRequest.class
+        );
+
+        finalRequest.go(
+            dataSegmentChangeHandler,
+            new DataSegmentChangeCallback()
+            {
+              @Override
+              public void execute()
+              {
+                try {
+                  curator.delete().guaranteed().forPath(path);
+                  log.info("Completed request [%s]", finalRequest.asString());
+                }
+                catch (Exception e) {
+                  try {
+                    curator.delete().guaranteed().forPath(path);
+                  }
+                  catch (Exception e1) {
+                    log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
+                  }
+                  log.error(e, "Exception while removing zNode[%s]", path);
+                  throw new RuntimeException(e);
+                }
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        // Something went wrong in either deserializing the request using jsonMapper or when invoking it
+        try {
+          curator.delete().guaranteed().forPath(path);
+        }
+        catch (Exception e1) {
+          log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
+        }
+
+        log.makeAlert(e, "Segment load/unload: uncaught exception.")
+           .addData("node", path)
+           .addData("nodeProperties", request)
+           .emit();
+      }
+    });
   }
 
   @LifecycleStop
@@ -193,7 +204,7 @@ public class ZkCoordinator
         loadQueueCache.close();
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         loadQueueCache = null;

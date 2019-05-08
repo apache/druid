@@ -91,6 +91,9 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 {
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
 
+  private static final CacheManager DISABLED_CACHE_MANAGER = new CacheManager(0);
+  private static final PrefetchConfig DISABLED_PREFETCH_CONFIG = new PrefetchConfig(0L, 0L, 0L, 0L);
+
   public static final int DEFAULT_MAX_FETCH_RETRY = 3;
 
   private final CacheManager<T> cacheManager;
@@ -157,6 +160,22 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, @Nullable File temporaryDirectory) throws IOException
+  {
+    return connectInternal(firehoseParser, temporaryDirectory, this.prefetchConfig, this.cacheManager);
+  }
+
+  @Override
+  public Firehose connectForSampler(StringInputRowParser parser, @Nullable File temporaryDirectory) throws IOException
+  {
+    return connectInternal(parser, temporaryDirectory, DISABLED_PREFETCH_CONFIG, DISABLED_CACHE_MANAGER);
+  }
+
+  private Firehose connectInternal(
+      StringInputRowParser firehoseParser,
+      @Nullable File temporaryDirectory,
+      PrefetchConfig prefetchConfig,
+      CacheManager cacheManager
+  ) throws IOException
   {
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));

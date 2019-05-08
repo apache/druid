@@ -46,7 +46,7 @@ public abstract class BroadcastDistributionRule implements Rule
     } else {
       params.getDruidCluster().getAllServers().forEach(
           eachHolder -> {
-            if (!eachHolder.isInMaintenance()
+            if (!eachHolder.isDecommissioning()
                 && colocatedDataSources.stream()
                                        .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)) {
               loadServerHolders.add(eachHolder);

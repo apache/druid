@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -129,10 +128,10 @@ public class IndexGeneratorJob implements Jobby
           + " either there was no input data to process or all the input events were discarded due to some error",
           e.getMessage()
       );
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
@@ -727,7 +726,7 @@ public class IndexGeneratorJob implements Jobby
                         }
                         catch (Exception e) {
                           log.error(e, "persist index error");
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                         finally {
                           // close this index
@@ -826,13 +825,6 @@ public class IndexGeneratorJob implements Jobby
                 JobHelper.INDEX_ZIP,
                 config.DATA_SEGMENT_PUSHER
             ),
-            JobHelper.makeFileNamePath(
-                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
-                outputFS,
-                segmentTemplate,
-                JobHelper.DESCRIPTOR_JSON,
-                config.DATA_SEGMENT_PUSHER
-            ),
             JobHelper.makeTmpPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
@@ -863,7 +855,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       catch (ExecutionException | TimeoutException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         index.close();

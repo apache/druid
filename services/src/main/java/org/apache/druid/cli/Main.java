@@ -78,10 +78,10 @@ public class Main
         DruidJsonValidator.class,
         PullDependencies.class,
         CreateTables.class,
-        InsertSegment.class,
         DumpSegment.class,
         ResetCluster.class,
-        ValidateSegments.class
+        ValidateSegments.class,
+        ExportMetadata.class
     );
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")

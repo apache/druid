@@ -113,6 +113,11 @@ public abstract class IngestionTestBase
     return lockbox;
   }
 
+  public IndexerSQLMetadataStorageCoordinator getStorageCoordinator()
+  {
+    return storageCoordinator;
+  }
+
   public TaskActionToolbox createTaskActionToolbox()
   {
     storageCoordinator.start();

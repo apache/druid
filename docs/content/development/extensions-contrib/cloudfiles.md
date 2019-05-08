@@ -24,9 +24,11 @@ title: "Rackspace Cloud Files"
 
 # Rackspace Cloud Files
 
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-cloudfiles-extensions` extension.
+
 ## Deep Storage
 
-[Rackspace Cloud Files](http://www.rackspace.com/cloud/files/) is another option for deep storage. This requires some additional druid configuration.
+[Rackspace Cloud Files](http://www.rackspace.com/cloud/files/) is another option for deep storage. This requires some additional Druid configuration.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

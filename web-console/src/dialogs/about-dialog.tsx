@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
+import { AnchorButton, Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
-import { Button, Dialog, Classes, AnchorButton, Intent } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+
+import { ExternalLink } from '../components/external-link';
 import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../variables';
 
 export interface AboutDialogProps extends React.Props<any> {
-  isOpen: boolean,
-  onClose: () => void
+  onClose: () => void;
 }
 
 export interface AboutDialogState {
@@ -36,15 +37,15 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
   }
 
   render() {
-    const { isOpen, onClose } = this.props;
+    const { onClose } = this.props;
 
+    /* tslint:disable:jsx-alignment */
     return <Dialog
-      icon={IconNames.INFO_SIGN}
+      icon={IconNames.GRAPH}
       onClose={onClose}
       title="Apache Druid"
-      isOpen={isOpen}
-      usePortal={true}
-      canEscapeKeyClose={true}
+      isOpen
+      canEscapeKeyClose
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
@@ -53,14 +54,14 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
           </strong>
         </p>
         <p>
-          For help and support with Druid, please refer to the <a
-          href={DRUID_COMMUNITY} target="_blank">community page</a> and the <a
-          href={DRUID_USER_GROUP} target="_blank">user groups</a>.
+          For help and support with Druid, please refer to the <ExternalLink
+          href={DRUID_COMMUNITY}>community page</ExternalLink> and the <ExternalLink
+          href={DRUID_USER_GROUP}>user groups</ExternalLink>.
         </p>
         <p>
           Druid is made with ❤️ by a community of passionate developers.
-          To contribute, join in the discussion on the <a
-          href={DRUID_DEVELOPER_GROUP} target="_blank">developer group</a>.
+          To contribute, join in the discussion on the <ExternalLink
+          href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
         </p>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
@@ -76,5 +77,6 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
         </div>
       </div>
     </Dialog>;
+    /* tslint:enable:jsx-alignment */
   }
 }

@@ -342,9 +342,7 @@ public class TimeseriesBenchmark
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -359,9 +357,7 @@ public class TimeseriesBenchmark
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -379,9 +375,7 @@ public class TimeseriesBenchmark
     Query filteredQuery = query.withDimFilter(filter);
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, filteredQuery);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -414,8 +408,6 @@ public class TimeseriesBenchmark
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }

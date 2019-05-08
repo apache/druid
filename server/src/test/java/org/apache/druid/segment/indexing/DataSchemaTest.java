@@ -48,6 +48,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -287,7 +288,7 @@ public class DataSchemaTest
   }
   
   @Test
-  public void testEmptyDatasource() throws Exception
+  public void testEmptyDatasource()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -374,5 +375,83 @@ public class DataSchemaTest
             ImmutableList.of(Intervals.of("2014/2015"))
         )
     );
+  }
+
+  @Test
+  public void testSerdeWithUpdatedDataSchemaAddedField() throws IOException
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    DataSchema originalSchema = new DataSchema(
+        "test",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+            },
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        jsonMapper
+    );
+
+    String serialized = jsonMapper.writeValueAsString(originalSchema);
+    TestModifiedDataSchema deserialized = jsonMapper.readValue(serialized, TestModifiedDataSchema.class);
+
+    Assert.assertEquals(null, deserialized.getExtra());
+    Assert.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
+    Assert.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
+    Assert.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
+    Assert.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
+    Assert.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
+    Assert.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
+  }
+
+  @Test
+  public void testSerdeWithUpdatedDataSchemaRemovedField() throws IOException
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
+        "test",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+            },
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        jsonMapper,
+        "some arbitrary string"
+    );
+
+    String serialized = jsonMapper.writeValueAsString(originalSchema);
+    DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+
+    Assert.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
+    Assert.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
+    Assert.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
+    Assert.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
+    Assert.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
+    Assert.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
   }
 }

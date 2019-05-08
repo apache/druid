@@ -30,7 +30,7 @@ title: "Ingestion"
 
 ### Datasources and segments
 
-Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
+Apache Druid (incubating) data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
 partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a "chunk" (for
 example, a single day, if your datasource is partitioned by day). Within a chunk, data is partitioned into one or more
 "segments". Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
@@ -162,13 +162,13 @@ to load that segment and instructs that Historical to do so.
 ## Ingestion methods
 
 In most ingestion methods, this work is done by Druid
-MiddleManager nodes. One exception is Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce
-job on YARN (although MiddleManager nodes are still involved in starting and monitoring the Hadoop jobs).
+MiddleManager processes. One exception is Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce
+job on YARN (although MiddleManager processes are still involved in starting and monitoring the Hadoop jobs).
 
-Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.html), they will be loaded by Druid Historical nodes. Some Druid
-ingestion methods additionally support _real-time queries_, meaning you can query in-flight data on MiddleManager nodes
+Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.html), they will be loaded by Druid Historical processes. Some Druid
+ingestion methods additionally support _real-time queries_, meaning you can query in-flight data on MiddleManager processes
 before it is finished being converted and written to deep storage. In general, a small amount of data will be in-flight
-on MiddleManager nodes relative to the larger amount of historical data being served from Historical nodes.
+on MiddleManager processes relative to the larger amount of historical data being served from Historical processes.
 
 See the [Design](../design/index.html) page for more details on how Druid stores and manages your data.
 
@@ -291,9 +291,9 @@ For compaction documentation, please see [tasks](../ingestion/tasks.html).
 
 Druid supports retention rules, which are used to define intervals of time where data should be preserved, and intervals where data should be discarded.
 
-Druid also supports separating Historical nodes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
+Druid also supports separating Historical processes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
 
-These features are useful for performance/cost management; a common use case is separating Historical nodes into a "hot" tier and a "cold" tier.
+These features are useful for performance/cost management; a common use case is separating Historical processes into a "hot" tier and a "cold" tier.
 
 For more information, please see [Load rules](../operations/rule-configuration.html).
 

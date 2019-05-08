@@ -20,6 +20,7 @@
   overflow: hidden;
 
   .logo {
+    position: relative;
     width: 100px;
     height: 50px;
 
@@ -30,5 +31,9 @@
       transform: translate(-50%,-50%);
       height: 75px;
     }
+  }
+
+  * {
+    white-space: nowrap;
   }
 }

@@ -29,6 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,6 +41,8 @@ import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -51,8 +54,10 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -133,6 +138,15 @@ public class CompactionTask extends AbstractTask
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @JsonIgnore
+  private final CoordinatorClient coordinatorClient;
+
+  @JsonIgnore
+  private final SegmentLoaderFactory segmentLoaderFactory;
+
+  @JsonIgnore
+  private final RetryPolicyFactory retryPolicyFactory;
+
+  @JsonIgnore
   private List<IndexTask> indexTaskSpecs;
 
   @JsonCreator
@@ -153,7 +167,10 @@ public class CompactionTask extends AbstractTask
       @JacksonInject ObjectMapper jsonMapper,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject CoordinatorClient coordinatorClient,
+      @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+      @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -186,6 +203,9 @@ public class CompactionTask extends AbstractTask
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.coordinatorClient = coordinatorClient;
+    this.segmentLoaderFactory = segmentLoaderFactory;
+    this.retryPolicyFactory = retryPolicyFactory;
   }
 
   @JsonProperty
@@ -278,20 +298,23 @@ public class CompactionTask extends AbstractTask
           metricsSpec,
           keepSegmentGranularity,
           segmentGranularity,
-          jsonMapper
+          jsonMapper,
+          coordinatorClient,
+          segmentLoaderFactory,
+          retryPolicyFactory
       ).stream()
-      .map(spec -> new IndexTask(
-          getId(),
-          getGroupId(),
-          getTaskResource(),
-          getDataSource(),
-          spec,
-          getContext(),
-          authorizerMapper,
-          chatHandlerProvider,
-          rowIngestionMetersFactory
-      ))
-      .collect(Collectors.toList());
+       .map(spec -> new IndexTask(
+           getId(),
+           getGroupId(),
+           getTaskResource(),
+           getDataSource(),
+           spec,
+           getContext(),
+           authorizerMapper,
+           chatHandlerProvider,
+           rowIngestionMetersFactory
+       ))
+       .collect(Collectors.toList());
     }
 
     if (indexTaskSpecs.isEmpty()) {
@@ -338,7 +361,10 @@ public class CompactionTask extends AbstractTask
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final Boolean keepSegmentGranularity,
       @Nullable final Granularity segmentGranularity,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final CoordinatorClient coordinatorClient,
+      final SegmentLoaderFactory segmentLoaderFactory,
+      final RetryPolicyFactory retryPolicyFactory
   ) throws IOException, SegmentLoadingException
   {
     Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -379,7 +405,14 @@ public class CompactionTask extends AbstractTask
         return Collections.singletonList(
             new IndexIngestionSpec(
                 dataSchema,
-                createIoConfig(toolbox, dataSchema, segmentProvider.interval),
+                createIoConfig(
+                    toolbox,
+                    dataSchema,
+                    segmentProvider.interval,
+                    coordinatorClient,
+                    segmentLoaderFactory,
+                    retryPolicyFactory
+                ),
                 compactionTuningConfig
             )
         );
@@ -411,7 +444,14 @@ public class CompactionTask extends AbstractTask
           specs.add(
               new IndexIngestionSpec(
                   dataSchema,
-                  createIoConfig(toolbox, dataSchema, interval),
+                  createIoConfig(
+                      toolbox,
+                      dataSchema,
+                      interval,
+                      coordinatorClient,
+                      segmentLoaderFactory,
+                      retryPolicyFactory
+                  ),
                   compactionTuningConfig
               )
           );
@@ -438,7 +478,14 @@ public class CompactionTask extends AbstractTask
         return Collections.singletonList(
             new IndexIngestionSpec(
                 dataSchema,
-                createIoConfig(toolbox, dataSchema, segmentProvider.interval),
+                createIoConfig(
+                    toolbox,
+                    dataSchema,
+                    segmentProvider.interval,
+                    coordinatorClient,
+                    segmentLoaderFactory,
+                    retryPolicyFactory
+                ),
                 compactionTuningConfig
             )
         );
@@ -446,17 +493,29 @@ public class CompactionTask extends AbstractTask
     }
   }
 
-  private static IndexIOConfig createIoConfig(TaskToolbox toolbox, DataSchema dataSchema, Interval interval)
+  private static IndexIOConfig createIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval interval,
+      CoordinatorClient coordinatorClient,
+      SegmentLoaderFactory segmentLoaderFactory,
+      RetryPolicyFactory retryPolicyFactory
+  )
   {
     return new IndexIOConfig(
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
+            null,
             null, // no filter
             // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
             dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
             Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
-            toolbox.getIndexIO()
+            null,
+            toolbox.getIndexIO(),
+            coordinatorClient,
+            segmentLoaderFactory,
+            retryPolicyFactory
         ),
         false
     );
@@ -790,7 +849,16 @@ public class CompactionTask extends AbstractTask
         }
 
         final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
-        final int maxRowsPerSegment = Math.toIntExact(Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes));
+        final long maxRowsPerSegmentLong = Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes);
+        final int maxRowsPerSegment = Numbers.toIntExact(
+            maxRowsPerSegmentLong,
+            StringUtils.format(
+                "Estimated maxRowsPerSegment[%s] is out of integer value range. "
+                + "Please consider reducing targetCompactionSizeBytes[%s].",
+                maxRowsPerSegmentLong,
+                targetCompactionSizeBytes
+            )
+        );
         Preconditions.checkState(maxRowsPerSegment > 0, "Negative maxRowsPerSegment[%s]", maxRowsPerSegment);
 
         log.info(
@@ -799,8 +867,11 @@ public class CompactionTask extends AbstractTask
             avgRowsPerByte,
             nonNullTargetCompactionSizeBytes
         );
+        // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+        // If this is set to something too small, compactionTask can generate small segments
+        // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
         return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment);
+            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
       } else {
         return tuningConfig;
       }
@@ -811,7 +882,7 @@ public class CompactionTask extends AbstractTask
      * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#maxRowsPerSegment},
      * {@link IndexTuningConfig#maxTotalRows}, or {@link IndexTuningConfig#numShards} together.
      * {@link #hasPartitionConfig} checks one of those configs is set.
-     *
+     * <p>
      * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
      * returns true. If targetCompactionSizeBytes is not set, this returns null or
      * {@link DataSourceCompactionConfig#DEFAULT_TARGET_COMPACTION_SIZE_BYTES} according to the result of
@@ -860,6 +931,9 @@ public class CompactionTask extends AbstractTask
     private final AuthorizerMapper authorizerMapper;
     private final ChatHandlerProvider chatHandlerProvider;
     private final RowIngestionMetersFactory rowIngestionMetersFactory;
+    private final CoordinatorClient coordinatorClient;
+    private final SegmentLoaderFactory segmentLoaderFactory;
+    private final RetryPolicyFactory retryPolicyFactory;
 
     @Nullable
     private Interval interval;
@@ -885,7 +959,10 @@ public class CompactionTask extends AbstractTask
         ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper,
         ChatHandlerProvider chatHandlerProvider,
-        RowIngestionMetersFactory rowIngestionMetersFactory
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        CoordinatorClient coordinatorClient,
+        SegmentLoaderFactory segmentLoaderFactory,
+        RetryPolicyFactory retryPolicyFactory
     )
     {
       this.dataSource = dataSource;
@@ -893,6 +970,9 @@ public class CompactionTask extends AbstractTask
       this.authorizerMapper = authorizerMapper;
       this.chatHandlerProvider = chatHandlerProvider;
       this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+      this.coordinatorClient = coordinatorClient;
+      this.segmentLoaderFactory = segmentLoaderFactory;
+      this.retryPolicyFactory = retryPolicyFactory;
     }
 
     public Builder interval(Interval interval)
@@ -968,7 +1048,10 @@ public class CompactionTask extends AbstractTask
           jsonMapper,
           authorizerMapper,
           chatHandlerProvider,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          coordinatorClient,
+          segmentLoaderFactory,
+          retryPolicyFactory
       );
     }
   }

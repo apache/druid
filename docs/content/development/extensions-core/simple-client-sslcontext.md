@@ -24,8 +24,8 @@ title: "Simple SSLContext Provider Module"
 
 # Simple SSLContext Provider Module
 
-This module contains a simple implementation of [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html)
-that will be injected to be used with HttpClient that Druid nodes use internally to communicate with each other. To learn more about
+This Apache Druid (incubating) module contains a simple implementation of [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html)
+that will be injected to be used with HttpClient that Druid processes use internally to communicate with each other. To learn more about
 Java's SSL support, please refer to [this](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html) guide.
 
 # Configuration
@@ -45,9 +45,9 @@ The following table contains optional parameters for supporting client certifica
 |`druid.client.https.keyStorePath`|The file path or URL of the TLS/SSL Key store containing the client certificate that Druid will use when communicating with other Druid services. If this is null, the other properties in this table are ignored.|none|yes|
 |`druid.client.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.client.https.certAlias`|Alias of TLS client certificate in the keystore.|none|yes|
-|`druid.client.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|no|
+|`druid.client.https.keyStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Key Store.|none|no|
 |`druid.client.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
-|`druid.client.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
+|`druid.client.https.keyManagerPassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Key Manager.|none|no|
 |`druid.client.https.validateHostnames`|Validate the hostname of the server. This should not be disabled unless you are using [custom TLS certificate checks](../../operations/tls-support.html#custom-tls-certificate-checks) and know that standard hostname validation is not needed.|true|no|
 
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible

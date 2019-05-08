@@ -5369,6 +5369,12 @@ public class GroupByQueryRunnerTest
             new BaseHavingSpec()
             {
               @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
+              @Override
               public boolean eval(Row row)
               {
                 return (row.getMetric("idx_subpostagg").floatValue() < 3800);
@@ -5629,6 +5635,12 @@ public class GroupByQueryRunnerTest
         .setHavingSpec(
             new BaseHavingSpec()
             {
+              @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
               @Override
               public boolean eval(Row row)
               {
