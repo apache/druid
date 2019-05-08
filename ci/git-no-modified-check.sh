@@ -17,10 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cd $TRAVIS_BUILD_DIR
+#cd $TRAVIS_BUILD_DIR
 
 if [[ `git status --porcelain` ]]
 then
   echo "Detected modified files that are not committed to git, failing build."
   exit 1
+else
+  echo "This directory is clean."
+  exit 0
 fi
