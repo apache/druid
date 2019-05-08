@@ -19,7 +19,7 @@
 .load-data-view {
   height: 100%;
   display: grid;
-  grid-gap: 10px 15px;
+  grid-gap: 10px 5px;
   grid-template-columns: 1fr 280px;
   grid-template-rows: 55px 1fr 28px;
   grid-template-areas:
@@ -60,7 +60,7 @@
   &.partition,
   &.tuning,
   &.publish {
-    grid-gap: 20px 50px;
+    grid-gap: 20px 40px;
     grid-template-columns: 1fr 1fr 1fr;
     grid-template-areas:
       "navi navi navi"
@@ -70,6 +70,8 @@
     .main,
     .other {
       overflow: auto;
+      padding: 0 5px;
+      margin: 0;
     }
   }
 
@@ -77,6 +79,7 @@
     grid-area: navi;
     white-space: nowrap;
     overflow: auto;
+    padding: 0 5px;
 
     .stage-section {
       display: inline-block;
@@ -98,6 +101,7 @@
   .main {
     grid-area: main;
     position: relative;
+    margin: 0 5px;
 
     .raw-lines {
       position: absolute;
@@ -212,6 +216,8 @@
 
   .control {
     grid-area: ctrl;
+    overflow: auto;
+    padding: 0 5px;
 
     .intro {
       margin-bottom: 15px;
@@ -225,6 +231,7 @@
   .next-bar {
     grid-area: next;
     text-align: right;
+    padding: 0 5px;
 
     .prev {
       float: left;
