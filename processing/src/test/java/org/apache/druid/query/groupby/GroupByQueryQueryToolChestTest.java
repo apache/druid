@@ -598,7 +598,7 @@ public class GroupByQueryQueryToolChestTest
         )
     );
 
-    // Please see the comments on aggregator serde and type handling in GroupByQueryQueryToolChest.pullFromCache()
+    // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
     final Row typeAdjustedResult2;
     if (valueType == ValueType.FLOAT) {
       typeAdjustedResult2 = new MapBasedRow(
