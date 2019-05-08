@@ -351,7 +351,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
               closeOnExit,
-              wasQueryPushedDown
+              wasQueryPushedDown,
+              true
           )
       );
 
@@ -414,6 +415,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
               closeOnExit,
+              false,
               false
           )
       );

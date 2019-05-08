@@ -105,7 +105,8 @@ public class RowBasedGrouperHelper
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
       final AggregatorFactory[] aggregatorFactories,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final boolean useVirtualizedColumnSelectorFactory
   )
   {
     return createGrouperAccumulatorPair(
@@ -123,7 +124,8 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize
+        mergeBufferSize,
+        useVirtualizedColumnSelectorFactory
     );
   }
 
@@ -147,7 +149,8 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final boolean useVirtualizedColumnSelectorFactory
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -159,10 +162,14 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
-    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+
+    ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         columnSelectorRow,
         rawInputRowSignature
     );
+    if (useVirtualizedColumnSelectorFactory) {
+      columnSelectorFactory = query.getVirtualColumns().wrap(columnSelectorFactory);
+    }
 
     final boolean willApplyLimitPushDown = query.isApplyLimitPushDown();
     final DefaultLimitSpec limitSpec = willApplyLimitPushDown ? (DefaultLimitSpec) query.getLimitSpec() : null;
