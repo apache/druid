@@ -24,14 +24,11 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
 import java.util.List;
-import java.util.function.BiFunction;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.
@@ -91,7 +88,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
-   *
+   * 
    * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
    * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
    * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
