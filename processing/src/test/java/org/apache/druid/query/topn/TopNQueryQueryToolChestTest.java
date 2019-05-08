@@ -369,6 +369,7 @@ public class TopNQueryQueryToolChestTest
         )
     );
 
+    // Please see the comments on aggregator serde and type handling in TopNQueryQueryToolChest.pullFromCache()
     final Result<TopNResultValue> typeAdjustedResult2;
     if (valueType == ValueType.FLOAT) {
       typeAdjustedResult2 = new Result<>(
