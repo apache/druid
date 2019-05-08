@@ -105,7 +105,7 @@ public interface MetadataSegmentManager
    * not yet been polled.)
    */
   @Nullable
-  Collection<DataSegment> findOvershadowedSegments();
+  Collection<DataSegment> getOvershadowedSegments();
 
   /**
    * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.

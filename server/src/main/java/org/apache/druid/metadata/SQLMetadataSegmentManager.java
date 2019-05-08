@@ -63,7 +63,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -648,7 +647,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public Set<DataSegment> findOvershadowedSegments()
+  public Set<DataSegment> getOvershadowedSegments()
   {
     return overshadowedSegments;
   }
@@ -763,9 +762,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   /**
    * This method builds a timeline from given segments and finds the overshadowed segments
    *
-   * @return set of overshadowed segments
+   * @return overshadowed segments list
    */
-  private Set<DataSegment> determineOvershadowedSegments(Iterable<DataSegment> segments)
+  private List<DataSegment> determineOvershadowedSegments(Iterable<DataSegment> segments)
   {
     final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
     segments.forEach(segment -> timelines
@@ -775,7 +774,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     // It's fine to add all overshadowed segments to a single collection because only
     // a small fraction of the segments in the cluster are expected to be overshadowed,
     // so building this collection shouldn't generate a lot of garbage.
-    final Set<DataSegment> overshadowedSegments = new HashSet<>();
+    final List<DataSegment> overshadowedSegments = new ArrayList<>();
     for (DataSegment dataSegment : segments) {
       final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
       if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
