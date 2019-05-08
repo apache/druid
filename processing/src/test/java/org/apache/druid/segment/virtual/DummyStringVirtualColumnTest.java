@@ -259,15 +259,15 @@ public class DummyStringVirtualColumnTest
     List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
     List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674l, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2000-01-01T00:00:00.000Z",
             COUNT,
-            372l,
+            372L,
             VSTRING_DIM,
             "total_market"
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372l, VSTRING_DIM, "upfront")
+        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -304,7 +304,7 @@ public class DummyStringVirtualColumnTest
     List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
     List<Row> expectedRows = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674l, VSTRING_DIM, "spot")
+        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -341,8 +341,8 @@ public class DummyStringVirtualColumnTest
     List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
     List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674l, VSTRING_DIM, "spot"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372l, VSTRING_DIM, "upfront")
+        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -382,7 +382,7 @@ public class DummyStringVirtualColumnTest
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                        .put(COUNT, 1674l)
+                        .put(COUNT, 1674L)
                         .put(VSTRING_DIM, "spot")
                         .build()
                 )
