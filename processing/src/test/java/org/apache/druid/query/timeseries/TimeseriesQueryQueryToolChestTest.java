@@ -138,7 +138,7 @@ public class TimeseriesQueryQueryToolChestTest
         // null timestamp similar to grandTotal
         null,
         new TimeseriesResultValue(
-            ImmutableMap.of("metric1", 2, "metric0", 3, "post", 10)
+            ImmutableMap.of("metric1", 2, "metric0", 3, "complexMetric", "val1", "post", 10)
         )
     );
 
