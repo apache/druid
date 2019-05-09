@@ -16,6 +16,7 @@ specific language governing permissions and limitations
 under the License.
 
 
+
 Apache Druid (incubating) is a high performance analytics data store for event-driven data. More information about Druid
 can be found on http://www.druid.io.
 
@@ -24,15 +25,14 @@ along this path, our site will move from http://druid.io/ to https://druid.apach
 
 
 Documentation
------------------
-You can find the documentation for the latest Druid release on the project website http://druid.io/docs/latest/.
+-------------
+You can find the documentation for this Druid release on the project website http://druid.io/docs/DRUIDVERSION/.
 
-You can get started with Druid with our quickstart at http://druid.io/docs/latest/tutorials/quickstart.html.
+You can get started with Druid with our quickstart at http://druid.io/docs/DRUIDVERSION/tutorials/quickstart.html.
 
 
 Build from Source
 -----------------
-
 You can build Apache Druid (incubating) directly from source.
 
 Prerequisites:
@@ -66,7 +66,7 @@ Note: the AWS S3 unit tests require the 'AWS_DEFAULT_REGION' environment variabl
 
 
 Community
-------------
+---------
 Community support is available on the druid-user mailing list druid-user@googlegroups.com also available at
 https://groups.google.com/forum/#!forum/druid-user.
 
@@ -76,7 +76,7 @@ dev-subscribe@druid.apache.org.
 
 
 Contributing
--------------
+------------
 If you find any bugs, please file a GitHub issue at https://github.com/apache/incubator-druid/issues.
 
 If you wish to contribute, please follow the guidelines listed at http://druid.io/community/.

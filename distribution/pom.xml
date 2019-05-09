@@ -117,6 +117,20 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
                             <execution>
+                                <id>versionify-readme</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.parent.basedir}/docs/_bin/build-textfile-readme.sh</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.parent.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
                                 <goals>
