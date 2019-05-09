@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
@@ -79,6 +80,17 @@ public class ExpressionVirtualColumnTest
           "a", ImmutableList.of("a", "b", "c"),
           "b", ImmutableList.of("1", "2", "3"),
           "c", ImmutableList.of("4", "5", "6")
+      )
+  );
+  private static final InputRow ROWMULTI2 = new MapBasedInputRow(
+      DateTimes.of("2000-01-02T01:00:00").getMillis(),
+      ImmutableList.of(),
+      ImmutableMap.of(
+          "x", 3L,
+          "y", 4L,
+          "a", ImmutableList.of("d", "e", "f"),
+          "b", ImmutableList.of("3", "4", "5"),
+          "c", ImmutableList.of("7", "8", "9")
       )
   );
 
@@ -137,7 +149,14 @@ public class ExpressionVirtualColumnTest
       TestExprMacroTable.INSTANCE
   );
 
-  private static final ExpressionVirtualColumn SCALE_LIST = new ExpressionVirtualColumn(
+  private static final ExpressionVirtualColumn SCALE_LIST_IMPLICIT = new ExpressionVirtualColumn(
+      "expr",
+      "b * 2",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
+
+  private static final ExpressionVirtualColumn SCALE_LIST_EXPLICIT = new ExpressionVirtualColumn(
       "expr",
       "map(b -> b * 2, b)",
       ValueType.STRING,
@@ -176,11 +195,19 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testMultiObjectSelector()
   {
+    DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
+
+    final BaseObjectColumnValueSelector selectorImplicit = SCALE_LIST_IMPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
     CURRENT_ROW.set(ROWMULTI);
+    Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorImplicit.getObject());
+    CURRENT_ROW.set(ROWMULTI2);
+    Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorImplicit.getObject());
 
-    final BaseObjectColumnValueSelector selector = SCALE_LIST.makeDimensionSelector(new DefaultDimensionSpec("expr", "expr"), COLUMN_SELECTOR_FACTORY);
-
-    Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selector.getObject());
+    final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
+    CURRENT_ROW.set(ROWMULTI);
+    Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorExplicit.getObject());
+    CURRENT_ROW.set(ROWMULTI2);
+    Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorExplicit.getObject());
   }
 
   @Test

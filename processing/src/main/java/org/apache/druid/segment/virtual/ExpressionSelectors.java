@@ -489,21 +489,32 @@ public class ExpressionSelectors
         if (val instanceof Number || val instanceof String) {
           return val;
         } else if (val instanceof List) {
-          // strings can be lists of strings!!
-          // this can happen from an "unknown" capabilites multi-value string dimension row, and we fallback to the
-          // object selector
-          Object[] arrayVal = ((List) val).stream().map(Object::toString).toArray(String[]::new);
-          if (arrayVal.length > 0) {
-            return arrayVal;
-          }
-          return new String[]{null};
+          return coerceListDimToStringArray((List) val);
         } else {
           return null;
         }
+      };
+    } else if (clazz.isAssignableFrom(List.class)) {
+      return () -> {
+        final Object val = selector.getObject();
+        if (val != null) {
+          return coerceListDimToStringArray((List) val);
+        }
+        return null;
       };
     } else {
       // No numbers or strings.
       return null;
     }
+  }
+
+  @Nonnull
+  private static Object coerceListDimToStringArray(List val)
+  {
+    Object[] arrayVal = val.stream().map(Object::toString).toArray(String[]::new);
+    if (arrayVal.length > 0) {
+      return arrayVal;
+    }
+    return new String[]{null};
   }
 }
