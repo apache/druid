@@ -35,7 +35,7 @@ public class TDigestSketchJsonSerializer extends JsonSerializer<MergingDigest>
       SerializerProvider serializerProvider
   ) throws IOException
   {
-    jsonGenerator.writeBinary(TDigestSketchOperations.toBytes(tDigest));
+    jsonGenerator.writeBinary(TDigestSketchUtils.toBytes(tDigest));
   }
 
 }

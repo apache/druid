@@ -22,13 +22,14 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class TDigestSketchOperations
+public class TDigestSketchUtils
 {
   // Class is not meant to be instantiated
-  private TDigestSketchOperations()
+  private TDigestSketchUtils()
   {
   }
 
@@ -54,5 +55,36 @@ public class TDigestSketchOperations
     ByteBuffer result = ByteBuffer.wrap(arr);
     tDigest.asBytes(result);
     return result.array();
+  }
+
+  /**
+   * This method computes an estimate of the max intermediate size of a {@link MergingDigest}.
+   * Since there is no utility available in the T-Digest library to compute this size,
+   * the below code is inspired by looking at
+   * {@link MergingDigest#MergingDigest(double, int, int)}
+   * This method is current as of 3.2 version and many need to change in future.
+   */
+  static int getMaxIntermdiateTDigestSize(int compression)
+  {
+    int intermediateSize = 0;
+    int centroidArraySize = (int) (2 * Math.ceil(compression)) + 10;
+    intermediateSize += 2 * centroidArraySize * Double.BYTES;
+    int tempBufferSize = (int) (5 * Math.ceil(compression));
+    intermediateSize += 2 * tempBufferSize * Double.BYTES;
+    intermediateSize += tempBufferSize * Integer.BYTES;
+    // Adding an extra buffer of 1K for overhead
+    return intermediateSize + 1000;
+  }
+
+  static void throwExceptionForWrongType(ColumnValueSelector selector)
+  {
+    final String msg = selector.getObject() == null
+                       ? StringUtils.format("Expected a number, but received null")
+                       : StringUtils.format(
+                           "Expected a number, but received [%s] of type [%s]",
+                           selector.getObject(),
+                           selector.getObject().getClass()
+                       );
+    throw new IAE(msg);
   }
 }

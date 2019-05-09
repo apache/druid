@@ -52,7 +52,7 @@ public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest
     if (val == null) {
       return EMPTY_BYTES;
     }
-    return TDigestSketchOperations.toBytes(val);
+    return TDigestSketchUtils.toBytes(val);
   }
 
   @Override

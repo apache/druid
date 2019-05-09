@@ -20,8 +20,6 @@
 package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.tdunning.math.stats.MergingDigest;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -57,19 +55,14 @@ public class TDigestBuildSketchAggregator implements Aggregator
   }
 
   @Override
-  public synchronized void aggregate()
+  public void aggregate()
   {
     if (selector.getObject() instanceof Number) {
-      histogram.add(((Number) selector.getObject()).doubleValue());
+      synchronized (this) {
+        histogram.add(((Number) selector.getObject()).doubleValue());
+      }
     } else {
-      final String msg = selector.getObject() == null
-                         ? StringUtils.format("Expected a number, but received null")
-                         : StringUtils.format(
-                             "Expected a number, but received [%s] of type [%s]",
-                             selector.getObject(),
-                             selector.getObject().getClass()
-                         );
-      throw new IAE(msg);
+      TDigestSketchUtils.throwExceptionForWrongType(selector);
     }
   }
 

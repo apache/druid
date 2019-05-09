@@ -187,7 +187,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object serializedSketch)
   {
-    return TDigestSketchOperations.deserialize(serializedSketch);
+    return TDigestSketchUtils.deserialize(serializedSketch);
   }
 
   @Override
@@ -230,9 +230,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    //TODO: need support in tdigest to return appropriate value here.
-    //For now returning a sensible value
-    return 100000;
+    return TDigestSketchUtils.getMaxIntermdiateTDigestSize(compression);
   }
 
   @Override

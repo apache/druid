@@ -45,13 +45,15 @@ public class TDigestMergeSketchAggregator implements Aggregator
   }
 
   @Override
-  public synchronized void aggregate()
+  public void aggregate()
   {
     final MergingDigest sketch = selector.getObject();
     if (sketch == null) {
       return;
     }
-    this.tdigestSketch.add(sketch);
+    synchronized (this) {
+      this.tdigestSketch.add(sketch);
+    }
   }
 
   @Override

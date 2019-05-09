@@ -89,7 +89,7 @@ The result of the aggregation is a T-Digest sketch that is built by merging pre-
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|This String should always be "buildTDigestSketch"|yes|
+|type|This String should always be "mergeTDigestSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field containing raw numeric values.|yes|
 |compression|Parameter that determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches.|no, defaults to 100|

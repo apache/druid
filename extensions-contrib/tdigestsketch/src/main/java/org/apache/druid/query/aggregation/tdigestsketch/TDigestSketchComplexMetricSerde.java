@@ -76,7 +76,7 @@ public class TDigestSketchComplexMetricSerde extends ComplexMetricSerde
             }
           }
         }
-        return TDigestSketchOperations.deserialize(object);
+        return TDigestSketchUtils.deserialize(object);
       }
     };
   }
