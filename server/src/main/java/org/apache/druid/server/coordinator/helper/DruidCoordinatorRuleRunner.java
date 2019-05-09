@@ -42,7 +42,7 @@ import java.util.Set;
 public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
-  private static int MAX_MISSING_RULES = 10;
+  private static final int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -81,28 +81,28 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // find available segments which are not overshadowed by other segments in DB
-    // only those would need to be loaded/dropped
-    // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    final Set<DataSegment> overshadowed = ImmutableDruidDataSource
-        .determineOvershadowedSegments(params.getAvailableSegments());
+    // Find used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
+    // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
+    // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
+    Set<DataSegment> overshadowed = ImmutableDruidDataSource.determineOvershadowedSegments(params.getUsedSegments());
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutAvailableSegments()
+        .buildFromExistingWithoutUsedSegments()
         .withReplicationManager(replicatorThrottler)
         .build();
 
-    // Run through all matched rules for available segments
+    // Run through all matched rules for used segments
     DateTime now = DateTimes.nowUtc();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : params.getAvailableSegments()) {
+    for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment)) {
         // Skipping overshadowed segments
         continue;

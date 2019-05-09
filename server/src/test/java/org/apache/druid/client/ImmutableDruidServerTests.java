@@ -17,25 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.client;
+
+import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
 
 import java.util.Collection;
 
-/**
- * Exception thrown by {@link MetadataSegmentManager} when a segment id is unknown.
- */
-public class UnknownSegmentIdException extends Exception
+public final class ImmutableDruidServerTests
 {
-  private final Collection<String> unknownSegmentIds;
 
-  UnknownSegmentIdException(Collection<String> segmentIds)
+  public static void expectSegments(ImmutableDruidServer mockServer, Collection<DataSegment> segments)
   {
-    super("Cannot find segment ids " + segmentIds);
-    this.unknownSegmentIds = segmentIds;
+    EasyMock.expect(mockServer.iterateAllSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(mockServer.getNumSegments()).andReturn(segments.size()).anyTimes();
   }
 
-  public Collection<String> getUnknownSegmentIds()
-  {
-    return unknownSegmentIds;
-  }
+  private ImmutableDruidServerTests() {}
 }

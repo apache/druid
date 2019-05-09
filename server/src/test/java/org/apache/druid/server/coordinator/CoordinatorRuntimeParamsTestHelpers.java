@@ -17,25 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.server.coordinator;
 
-import java.util.Collection;
+import org.apache.druid.java.util.common.DateTimes;
 
-/**
- * Exception thrown by {@link MetadataSegmentManager} when a segment id is unknown.
- */
-public class UnknownSegmentIdException extends Exception
+public class CoordinatorRuntimeParamsTestHelpers
 {
-  private final Collection<String> unknownSegmentIds;
-
-  UnknownSegmentIdException(Collection<String> segmentIds)
+  public static DruidCoordinatorRuntimeParams.Builder newBuilder()
   {
-    super("Cannot find segment ids " + segmentIds);
-    this.unknownSegmentIds = segmentIds;
+    return DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withStartTimeNanos(System.nanoTime())
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"));
   }
 
-  public Collection<String> getUnknownSegmentIds()
+  public static DruidCoordinatorRuntimeParams.Builder newBuilder(DruidCluster druidCluster)
   {
-    return unknownSegmentIds;
+    return newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster));
   }
+
+  private CoordinatorRuntimeParamsTestHelpers() {}
 }

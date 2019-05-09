@@ -19,10 +19,14 @@
 
 package org.apache.druid.utils;
 
+import com.google.common.collect.Iterables;
+
 import java.util.AbstractCollection;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -66,6 +70,13 @@ public final class CollectionUtils
         return size;
       }
     };
+  }
+
+  public static <E> TreeSet<E> newTreeSet(Comparator<? super E> comparator, Iterable<E> elements)
+  {
+    TreeSet<E> set = new TreeSet<>(comparator);
+    Iterables.addAll(set, elements);
+    return set;
   }
 
   private CollectionUtils() {}

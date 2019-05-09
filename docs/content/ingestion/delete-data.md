@@ -37,7 +37,8 @@ A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/
 
 ## Kill Task
 
-Kill tasks delete all information about a segment and removes it from deep storage. Killable segments must be disabled (used==0) in the Druid segment table. The available grammar is:
+Kill tasks delete all information about a segment and removes it from deep storage. Segments to kill must be unused
+(used==0) in the Druid segment table. The available grammar is:
 
 ```json
 {

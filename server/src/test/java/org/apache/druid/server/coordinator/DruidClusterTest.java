@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,9 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DruidClusterTest
 {
@@ -100,8 +97,9 @@ public class DruidClusterTest
   @Before
   public void setup()
   {
-    cluster = new DruidCluster(
-        ImmutableSet.of(
+    cluster = DruidClusterBuilder
+        .newBuilder()
+        .withRealtimes(
             new ServerHolder(
                 new ImmutableDruidServer(
                     new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
@@ -111,22 +109,20 @@ public class DruidClusterTest
                 ),
                 new LoadQueuePeonTester()
             )
-        ),
-        ImmutableMap.of(
-            "tier1",
-            Stream.of(
-                new ServerHolder(
-                    new ImmutableDruidServer(
-                        new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
-                        0L,
-                        ImmutableMap.of("src1", dataSources.get("src1")),
-                        1
-                    ),
-                    new LoadQueuePeonTester()
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
-    );
+        .addTier(
+            "tier1",
+            new ServerHolder(
+                new ImmutableDruidServer(
+                    new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+                    0L,
+                    ImmutableMap.of("src1", dataSources.get("src1")),
+                    1
+                ),
+                new LoadQueuePeonTester()
+            )
+        )
+        .build();
   }
 
   @Test

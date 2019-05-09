@@ -117,7 +117,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     // since x_0 <= y_0, Y must overlap X if y_0 < x_1
     if (y0 < x1) {
-      /**
+      /*
        * We have two possible cases of overlap:
        *
        * X  = [ A )[ B )[ C )   or  [ A )[ B )
@@ -151,7 +151,7 @@ public class CostBalancerStrategy implements BalancerStrategy
              intervalCost(beta, beta, gamma) + // cost(B, C)
              2 * (beta + FastMath.exp(-beta) - 1); // cost(B, B)
     } else {
-      /**
+      /*
        * In the case where there is no overlap:
        *
        * Given that x_0 <= y_0,
@@ -258,9 +258,14 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      Iterable<DataSegment> segments = server.getServer().getLazyAllSegments();
-      for (DataSegment s : segments) {
-        cost += computeJointSegmentsCost(s, segments);
+      // segments are dumped into an array because it's probably better than iterating the iterateAllSegments() result
+      // quadratically in a loop, which can generate garbage in the form of Stream, Spliterator, Iterator, etc. objects
+      // whose total memory volume exceeds the size of the DataSegment array.
+      DataSegment[] segments = server.getServer().iterateAllSegments().toArray(new DataSegment[0]);
+      for (DataSegment s1 : segments) {
+        for (DataSegment s2 : segments) {
+          cost += computeJointSegmentsCost(s1, s2);
+        }
       }
     }
     return cost;
@@ -280,7 +285,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().getLazyAllSegments()) {
+      for (DataSegment segment : server.getServer().iterateAllSegments()) {
         cost += computeJointSegmentsCost(segment, segment);
       }
     }
@@ -288,10 +293,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public void emitStats(
-      String tier,
-      CoordinatorStats stats, List<ServerHolder> serverHolderList
-  )
+  public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList)
   {
     final double initialTotalCost = calculateInitialTotalCost(serverHolderList);
     final double normalization = calculateNormalization(serverHolderList);
@@ -334,7 +336,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
     cost += computeJointSegmentsCost(
         proposalSegment,
-        Iterables.filter(server.getServer().getLazyAllSegments(), segment -> !proposalSegment.equals(segment))
+        Iterables.filter(server.getServer().iterateAllSegments(), segment -> !proposalSegment.equals(segment))
     );
 
     // plus the costs of segments that will be loaded

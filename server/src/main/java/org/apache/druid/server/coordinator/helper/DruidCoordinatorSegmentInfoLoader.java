@@ -41,26 +41,22 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    log.info("Starting coordination. Getting available segments.");
+    log.info("Starting coordination. Getting used segments.");
 
-    final Iterable<DataSegment> dataSegments = coordinator.iterateAvailableDataSegments();
-    if (dataSegments == null) {
-      log.info("Metadata store not polled yet, canceling this run.");
-      return null;
-    }
+    final Iterable<DataSegment> usedSegments = coordinator.iterateAllUsedSegments();
 
     // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
     // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
-    // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() (which is called
+    // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createUsedSegmentsSet() (which is called
     // below) guarantees to go over the passed iterable exactly once.
     //
-    // An iterable returned from iterateAvailableDataSegments() is not simply iterated (with size checks) before passing
-    // into DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() because iterateAvailableDataSegments()'s
+    // An iterable returned from iterateAllUsedSegments() is not simply iterated (with size checks) before passing
+    // into DruidCoordinatorRuntimeParams.createUsedSegmentsSet() because iterateAllUsedSegments()'s
     // documentation says to strive to avoid iterating the result more than once.
     //
     //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
-    Iterable<DataSegment> availableSegmentsWithSizeChecking = Iterables.transform(
-        dataSegments,
+    Iterable<DataSegment> usedSegmentsWithSizeChecking = Iterables.transform(
+        usedSegments,
         segment -> {
           if (segment.getSize() < 0) {
             log.makeAlert("No size on a segment")
@@ -70,21 +66,21 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
           return segment;
         }
     );
-    final TreeSet<DataSegment> availableSegments =
-        DruidCoordinatorRuntimeParams.createAvailableSegmentsSet(availableSegmentsWithSizeChecking);
+    final TreeSet<DataSegment> usedSegmentSet =
+        DruidCoordinatorRuntimeParams.createUsedSegmentsSet(usedSegmentsWithSizeChecking);
 
-    // Log info about all available segments
+    // Log info about all used segments
     if (log.isDebugEnabled()) {
-      log.debug("Available DataSegments");
-      for (DataSegment dataSegment : availableSegments) {
+      log.debug("Used Segments");
+      for (DataSegment dataSegment : usedSegmentSet) {
         log.debug("  %s", dataSegment);
       }
     }
 
-    log.info("Found [%,d] available segments.", availableSegments.size());
+    log.info("Found [%,d] used segments.", usedSegmentSet.size());
 
     return params.buildFromExisting()
-                 .setAvailableSegments(availableSegments)
+                 .setUsedSegments(usedSegmentSet)
                  .build();
   }
 }

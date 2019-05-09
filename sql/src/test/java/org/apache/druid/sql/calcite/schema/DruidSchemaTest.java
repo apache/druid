@@ -271,7 +271,8 @@ public class DruidSchemaTest extends CalciteTestBase
     final Pair<ImmutableDruidServer, DataSegment> pair = druidServers
         .stream()
         .flatMap(druidServer -> druidServer
-            .getLazyAllSegments().stream()
+            .iterateAllSegments()
+            .stream()
             .filter(segment -> segment.equals(existingSegment))
             .map(segment -> Pair.of(druidServer, segment))
         )

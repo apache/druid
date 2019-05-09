@@ -43,7 +43,7 @@ public class SegmentReplicantLookup
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
 
-        for (DataSegment segment : server.getLazyAllSegments()) {
+        for (DataSegment segment : server.iterateAllSegments()) {
           Integer numReplicants = segmentsInCluster.get(segment.getId(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;

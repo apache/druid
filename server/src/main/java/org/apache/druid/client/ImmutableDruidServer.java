@@ -42,19 +42,19 @@ public class ImmutableDruidServer
   private final DruidServerMetadata metadata;
   private final long currSize;
   private final ImmutableMap<String, ImmutableDruidDataSource> dataSources;
-  private final int totalSegments;
+  private final int numSegments;
 
   public ImmutableDruidServer(
       DruidServerMetadata metadata,
       long currSize,
       ImmutableMap<String, ImmutableDruidDataSource> dataSources,
-      int totalSegments
+      int numSegments
   )
   {
     this.metadata = Preconditions.checkNotNull(metadata);
     this.currSize = currSize;
     this.dataSources = dataSources;
-    this.totalSegments = totalSegments;
+    this.numSegments = numSegments;
   }
 
   public String getName()
@@ -128,21 +128,24 @@ public class ImmutableDruidServer
   }
 
   /**
-   * Returns a lazy collection with all segments in all data sources, stored on this ImmutableDruidServer. The order
-   * of segments in this collection is unspecified.
-   *
-   * Calling {@link Collection#size()} on the returned collection is cheap, O(1).
+   * Returns a lazy collection with all segments in all data sources stored on this ImmutableDruidServer to be used for
+   * iteration or {@link Collection#stream()} transformation. The order of segments in this collection is unspecified.
    *
    * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
    * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
    * once rather than several times.
    */
-  public Collection<DataSegment> getLazyAllSegments()
+  public Collection<DataSegment> iterateAllSegments()
   {
     return CollectionUtils.createLazyCollectionFromStream(
         () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()),
-        totalSegments
+        numSegments
     );
+  }
+
+  public int getNumSegments()
+  {
+    return numSegments;
   }
 
   public String getURL()
