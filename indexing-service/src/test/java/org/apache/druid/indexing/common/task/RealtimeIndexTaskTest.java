@@ -31,11 +31,8 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -47,6 +44,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
+import org.apache.druid.indexing.common.TestFirehose;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -117,7 +115,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.Runnables;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -134,14 +131,11 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -155,86 +149,6 @@ public class RealtimeIndexTaskTest
       "host",
       new NoopEmitter()
   );
-
-  private static final String FAIL_DIM = "__fail__";
-
-  private static class TestFirehose implements Firehose
-  {
-    private final InputRowParser<Map<String, Object>> parser;
-    private final Deque<Optional<Map<String, Object>>> queue = new ArrayDeque<>();
-    private boolean closed = false;
-
-    public TestFirehose(final InputRowParser<Map<String, Object>> parser)
-    {
-      this.parser = parser;
-    }
-
-    public void addRows(List<Map<String, Object>> rows)
-    {
-      synchronized (this) {
-        rows.stream().map(Optional::ofNullable).forEach(queue::add);
-        notifyAll();
-      }
-    }
-
-    @Override
-    public boolean hasMore()
-    {
-      try {
-        synchronized (this) {
-          while (queue.isEmpty() && !closed) {
-            wait();
-          }
-          return !queue.isEmpty();
-        }
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public InputRow nextRow()
-    {
-      synchronized (this) {
-        final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
-        if (row != null && row.getRaw(FAIL_DIM) != null) {
-          throw new ParseException(FAIL_DIM);
-        }
-        return row;
-      }
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
-    }
-
-    @Override
-    public void close()
-    {
-      synchronized (this) {
-        closed = true;
-        notifyAll();
-      }
-    }
-  }
-
-  private static class TestFirehoseFactory implements FirehoseFactory<InputRowParser>
-  {
-    public TestFirehoseFactory()
-    {
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws ParseException
-    {
-      return new TestFirehose(parser);
-    }
-  }
 
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
@@ -521,7 +435,7 @@ public class RealtimeIndexTaskTest
             ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "foo"),
 
             // Bad row- will be unparseable.
-            ImmutableMap.of("dim1", "foo", "met1", 2.0, FAIL_DIM, "x"),
+            ImmutableMap.of("dim1", "foo", "met1", 2.0, TestFirehose.FAIL_DIM, "x"),
 
             // Old row- will be thrownAway.
             ImmutableMap.of("t", now.minus(Period.days(1)).getMillis(), "dim1", "foo", "met1", 2.0),
@@ -907,7 +821,7 @@ public class RealtimeIndexTaskTest
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
-        new TestFirehoseFactory(),
+        new TestFirehose.TestFirehoseFactory(),
         null,
         null
     );

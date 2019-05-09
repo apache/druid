@@ -21,6 +21,7 @@ import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
+import { UrlBaser } from '../singletons/url-baser';
 import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
 
 import './home-view.scss';
@@ -341,7 +342,7 @@ GROUP BY 1`);
 
     return <div className="home-view app-view">
       {this.renderCard({
-        href: '/status',
+        href: UrlBaser.base('/status'),
         icon: IconNames.GRAPH,
         title: 'Status',
         loading: state.statusLoading,

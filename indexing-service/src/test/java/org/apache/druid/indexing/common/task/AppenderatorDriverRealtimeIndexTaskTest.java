@@ -161,6 +161,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class AppenderatorDriverRealtimeIndexTaskTest
 {
@@ -1242,8 +1243,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
       IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
       Assert.assertEquals(expectedMetrics, reportData.getRowStats());
-      Assert.assertTrue(status.getErrorMsg()
-                              .contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
+
+      Pattern errorPattern = Pattern.compile(
+          "(?s)java\\.lang\\.IllegalArgumentException.*\n"
+          + "\tat (java\\.base/)?java\\.nio\\.Buffer\\..*"
+      );
+      Assert.assertTrue(errorPattern.matcher(status.getErrorMsg()).matches());
     }
   }
 

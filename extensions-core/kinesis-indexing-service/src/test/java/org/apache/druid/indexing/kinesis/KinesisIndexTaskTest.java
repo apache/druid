@@ -1215,6 +1215,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 13)).once();
 
+    recordSupplier.close();
+    expectLastCall().once();
+
     replayAll();
 
     final KinesisIndexTask task = createTask(
@@ -1371,6 +1374,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 13)).once();
 
+    recordSupplier.close();
+    expectLastCall().once();
 
     replayAll();
 
@@ -1545,7 +1550,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                                           .once();
 
     recordSupplier.close();
-    expectLastCall().once();
+    expectLastCall().atLeastOnce();
 
     replayAll();
 
@@ -1912,6 +1917,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                                           .andReturn(Collections.emptyList())
                                           .anyTimes();
 
+    recordSupplier.close();
+    expectLastCall().once();
+
     replayAll();
 
     final KinesisIndexTask task1 = createTask(
@@ -2031,6 +2039,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     recordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
+
+    recordSupplier.close();
+    expectLastCall().once();
 
     // simulate 1 record at a time
     expect(recordSupplier.poll(anyLong())).andReturn(Collections.singletonList(records.get(0)))
