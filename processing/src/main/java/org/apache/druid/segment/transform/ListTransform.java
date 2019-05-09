@@ -58,6 +58,12 @@ public class ListTransform implements Transform
                     list.add(s);
                 }
             }
+            else {
+              String[] splitStr = str.split(",");
+              for (String s : splitStr) {
+                list.add(s);
+              }
+            }
 
             return list;
         }
@@ -68,7 +74,7 @@ public class ListTransform implements Transform
 
             Object rawValue = getValueFromRow(row, fieldName);
 
-            if (rawValue != null) {
+            if (rawValue != null && !rawValue.equals("NULL")) {
                 // ["welog_bayes_strategy_new","welog_bayes_region_new_strategy"]
                 String rawString = rawValue.toString().trim();
 
