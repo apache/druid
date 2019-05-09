@@ -320,7 +320,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   }
 
   @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
@@ -880,18 +880,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
-    if (!isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig) && (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity())) {
-      if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
-        return new CachingRemoteSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
-      } else {
-        return new RemoteSegmentAllocator(
-            toolbox,
-            getId(),
-            dataSchema,
-            needMinorOverwrite(),
-            getAllOverwritingSegmentMeta()
-        );
-      }
+    if (!isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
+        && (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity())) {
+      return new RemoteSegmentAllocator(
+          toolbox,
+          getId(),
+          dataSchema,
+          hasInputSegments() && !isChangeSegmentGranularity(),
+          getAllOverwritingSegmentMeta()
+      );
     } else {
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.
       // Instead, a local allocator is used.
@@ -1036,7 +1033,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       log.info("Pushed segments[%s]", pushed.getSegments());
 
       // Probably we can publish atomicUpdateGroup along with segments.
-      final Set<DataSegment> inputSegments = !isGuaranteedRollup && needMinorOverwrite()
+      final Set<DataSegment> inputSegments = !isGuaranteedRollup && hasInputSegments() && !isChangeSegmentGranularity()
                                              ? getAllInputSegments()
                                              : null;
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);

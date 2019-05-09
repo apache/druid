@@ -243,7 +243,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));

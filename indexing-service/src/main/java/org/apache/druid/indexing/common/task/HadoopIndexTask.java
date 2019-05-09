@@ -221,7 +221,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     final Granularity segmentGranularity = spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));

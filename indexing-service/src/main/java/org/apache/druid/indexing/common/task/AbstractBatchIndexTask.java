@@ -112,7 +112,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public abstract List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException;
 
-  public abstract boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments);
+  public abstract boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments);
 
   public abstract boolean isPerfectRollup();
 
@@ -175,7 +175,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return true;
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean isInitialRequest) throws IOException
+  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean isInitialRequest)
+      throws IOException
   {
     if (segments.isEmpty()) {
       changeSegmentGranularity = false;
@@ -188,7 +189,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       // Create a timeline to find latest segments only
       final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
 
-      changeSegmentGranularity = changeSegmentGranularity(intervals);
+      changeSegmentGranularity = checkIfChangeSegmentGranularity(intervals);
       if (changeSegmentGranularity) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -309,17 +310,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return Collections.unmodifiableMap(overwritingRootGenPartitions);
   }
 
-  public boolean needMinorOverwrite()
-  {
-    return hasInputSegments() && !isChangeSegmentGranularity();
-  }
-
   public boolean isChangeSegmentGranularity()
   {
     return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
   }
 
-  private boolean hasInputSegments()
+  public boolean hasInputSegments()
   {
     Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
     return !overwritingRootGenPartitions.isEmpty();

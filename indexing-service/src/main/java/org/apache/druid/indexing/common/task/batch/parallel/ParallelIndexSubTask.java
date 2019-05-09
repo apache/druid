@@ -245,7 +245,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
     return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
@@ -309,7 +309,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
     private SegmentAllocator createSegmentAllocator()
     {
-      if (ingestionSchema.getIOConfig().isAppendToExisting() || needMinorOverwrite()) {
+      if (ingestionSchema.getIOConfig().isAppendToExisting() || !isChangeSegmentGranularity()) {
         return new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),
             ingestionSchema.getDataSchema(),
@@ -319,7 +319,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
                   .bucketInterval(row.getTimestamp())
                   .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
               final ShardSpecFactory shardSpecFactory;
-              if (needMinorOverwrite()) {
+              if (hasInputSegments() && !isChangeSegmentGranularity()) {
                 final OverwritingRootGenerationPartitions overwritingSegmentMeta = getOverwritingSegmentMeta(interval);
                 if (overwritingSegmentMeta == null) {
                   throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);

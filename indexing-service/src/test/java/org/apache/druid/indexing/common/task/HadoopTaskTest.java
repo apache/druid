@@ -82,7 +82,7 @@ public class HadoopTaskTest
       }
 
       @Override
-      public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+      public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
       {
         return true;
       }

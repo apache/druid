@@ -292,7 +292,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
   {
     return (keepSegmentGranularity != null && !keepSegmentGranularity)
         || (segmentGranularity != null);
