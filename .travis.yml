@@ -23,7 +23,7 @@ dist: trusty
 group: deprecated-2017Q4
 
 jdk:
-  - oraclejdk8
+  - openjdk8
 
 cache:
   directories:
