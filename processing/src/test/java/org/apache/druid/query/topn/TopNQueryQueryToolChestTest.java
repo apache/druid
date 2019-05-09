@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -35,8 +36,14 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQueryRunners;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -269,6 +276,36 @@ public class TopNQueryQueryToolChestTest
     }
   }
 
+  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
+  {
+    switch (valueType) {
+      case LONG:
+        return new LongLastAggregatorFactory("complexMetric", "test");
+      case DOUBLE:
+        return new DoubleLastAggregatorFactory("complexMetric", "test");
+      case FLOAT:
+        return new FloatLastAggregatorFactory("complexMetric", "test");
+      case STRING:
+        return new StringLastAggregatorFactory("complexMetric", "test", null);
+      default:
+        throw new IllegalArgumentException("bad valueType: " + valueType);
+    }
+  }
+
+  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue)
+  {
+    switch (valueType) {
+      case LONG:
+      case DOUBLE:
+      case FLOAT:
+        return new SerializablePair<>(123L, dimValue);
+      case STRING:
+        return new SerializablePairLongString(123L, (String) dimValue);
+      default:
+        throw new IllegalArgumentException("bad valueType: " + valueType);
+    }
+  }
+
   private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
   {
     CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy =
@@ -282,7 +319,10 @@ public class TopNQueryQueryToolChestTest
                 new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 null,
                 Granularities.ALL,
-                ImmutableList.of(new CountAggregatorFactory("metric1")),
+                ImmutableList.of(
+                    new CountAggregatorFactory("metric1"),
+                    getComplexAggregatorFactoryForValueType(valueType)
+                ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 null
             )
@@ -295,7 +335,8 @@ public class TopNQueryQueryToolChestTest
             Collections.singletonList(
                 ImmutableMap.of(
                     "test", dimValue,
-                    "metric1", 2
+                    "metric1", 2,
+                    "complexMetric", getIntermediateComplexValue(valueType, dimValue)
                 )
             )
         )
@@ -323,11 +364,47 @@ public class TopNQueryQueryToolChestTest
                 ImmutableMap.of(
                     "test", dimValue,
                     "metric1", 2,
+                    "complexMetric", dimValue,
                     "post", 10
                 )
             )
         )
     );
+
+    // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
+    final Result<TopNResultValue> typeAdjustedResult2;
+    if (valueType == ValueType.FLOAT) {
+      typeAdjustedResult2 = new Result<>(
+          DateTimes.utc(123L),
+          new TopNResultValue(
+              Collections.singletonList(
+                  ImmutableMap.of(
+                      "test", dimValue,
+                      "metric1", 2,
+                      "complexMetric", 2.1d,
+                      "post", 10
+                  )
+              )
+          )
+      );
+    } else if (valueType == ValueType.LONG) {
+      typeAdjustedResult2 = new Result<>(
+          DateTimes.utc(123L),
+          new TopNResultValue(
+              Collections.singletonList(
+                  ImmutableMap.of(
+                      "test", dimValue,
+                      "metric1", 2,
+                      "complexMetric", 2,
+                      "post", 10
+                  )
+              )
+          )
+      );
+    } else {
+      typeAdjustedResult2 = result2;
+    }
+
 
     Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
         result2
@@ -339,7 +416,7 @@ public class TopNQueryQueryToolChestTest
     );
 
     Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(result2, fromResultCacheResult);
+    Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 
   static class MockQueryRunner implements QueryRunner<Result<TopNResultValue>>
