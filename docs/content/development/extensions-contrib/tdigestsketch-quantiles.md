@@ -127,7 +127,7 @@ This returns an array of quantiles corresponding to a given array of fractions.
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|This String should always be "buildTDigestSketch"|yes|
+|type|This String should always be "quantilesFromTDigestSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field containing raw numeric values.|yes|
 |fractions|Non-empty array of fractions between 0 and 1|yes|
