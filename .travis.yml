@@ -22,10 +22,6 @@ sudo: false
 dist: trusty
 group: deprecated-2017Q4
 
-language: node_js
-node_js:
-  - "10"
-
 jdk:
   - oraclejdk8
 
