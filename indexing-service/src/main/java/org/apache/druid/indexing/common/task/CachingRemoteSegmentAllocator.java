@@ -35,10 +35,11 @@ public class CachingRemoteSegmentAllocator extends CachingSegmentAllocator
   public CachingRemoteSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String dataSource,
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
-    super(toolbox, taskId, allocateSpec);
+    super(toolbox, taskId, dataSource, allocateSpec);
   }
 
   @Override

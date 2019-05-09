@@ -68,6 +68,7 @@ import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -335,7 +336,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public Granularity getSegmentGranularity(Interval interval)
   {
-    return ingestionSchema.dataSchema.getGranularitySpec().getSegmentGranularity();
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    if (granularitySpec instanceof ArbitraryGranularitySpec) {
+      return null;
+    } else {
+      return granularitySpec.getSegmentGranularity();
+    }
   }
 
   private boolean tryLockIfNecessary(TaskActionClient actionClient, Collection<Interval> intervals) throws IOException
@@ -876,7 +882,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     if (!isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig) && (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity())) {
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
-        return new CachingRemoteSegmentAllocator(toolbox, getId(), allocateSpec);
+        return new CachingRemoteSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
       } else {
         return new RemoteSegmentAllocator(
             toolbox,

@@ -40,6 +40,7 @@ public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocat
 {
   private final TaskToolbox toolbox;
   private final String taskId;
+  private final String dataSource;
   private final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec;
   @Nullable
   private final ShardSpecs shardSpecs;
@@ -50,11 +51,13 @@ public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocat
   public CachingSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String dataSource,
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
     this.toolbox = toolbox;
     this.taskId = taskId;
+    this.dataSource = dataSource;
     this.allocateSpec = allocateSpec;
     this.sequenceNameToSegmentId = new HashMap<>();
 
@@ -84,6 +87,11 @@ public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocat
   String getTaskId()
   {
     return taskId;
+  }
+
+  String getDataSource()
+  {
+    return dataSource;
   }
 
   Map<Interval, Pair<ShardSpecFactory, Integer>> getAllocateSpec()

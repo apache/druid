@@ -56,6 +56,8 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
@@ -235,7 +237,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public Granularity getSegmentGranularity(Interval interval)
   {
-    return spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
+    final GranularitySpec granularitySpec = spec.getDataSchema().getGranularitySpec();
+    if (granularitySpec instanceof ArbitraryGranularitySpec) {
+      return null;
+    } else {
+      return granularitySpec.getSegmentGranularity();
+    }
   }
 
   @JsonProperty("spec")

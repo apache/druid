@@ -52,6 +52,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
+import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -260,7 +261,12 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public Granularity getSegmentGranularity(Interval interval)
   {
-    return ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    if (granularitySpec instanceof ArbitraryGranularitySpec) {
+      return null;
+    } else {
+      return granularitySpec.getSegmentGranularity();
+    }
   }
 
   @VisibleForTesting

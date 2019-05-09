@@ -130,13 +130,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       throws IOException
   {
     if (requireLockInputSegments()) {
-      // This method finds segments falling in all given intervals and then tries to lock those segments.
-      // Thus, there might be a race between calling findInputSegments() and tryLockWithSegments(),
-      // i.e., a new segment can be added to the interval or an existing segment might be removed.
-      // Removed segments should be fine because indexing tasks would do nothing with removed segments.
-      // However, tasks wouldn't know about new segments added after findInputSegments() call, it may missing those
-      // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
-      if (!intervals.isEmpty()) {
+      if (isPerfectRollup()) {
+        return tryTimeChunkLock(client, intervals);
+      } else if (!intervals.isEmpty()) {
+        // This method finds segments falling in all given intervals and then tries to lock those segments.
+        // Thus, there might be a race between calling findInputSegments() and tryLockWithSegments(),
+        // i.e., a new segment can be added to the interval or an existing segment might be removed.
+        // Removed segments should be fine because indexing tasks would do nothing with removed segments.
+        // However, tasks wouldn't know about new segments added after findInputSegments() call, it may missing those
+        // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
         return tryLockWithSegments(client, findInputSegments(client, intervals), isInitialRequest);
       } else {
         return true;
@@ -147,6 +149,30 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       overwritingRootGenPartitions = Collections.emptyMap();
       return true;
     }
+  }
+
+  boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  {
+    allInputSegments = Collections.emptySet();
+    overwritingRootGenPartitions = Collections.emptyMap();
+    // In this case, the intervals to lock must be alighed with segmentGranularity if it's defined
+    final Set<Interval> uniqueIntervals = new HashSet<>();
+    for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
+      final Granularity segmentGranularity = getSegmentGranularity(interval);
+      if (segmentGranularity == null) {
+        uniqueIntervals.add(interval);
+      } else {
+        Iterables.addAll(uniqueIntervals, segmentGranularity.getIterable(interval));
+      }
+    }
+
+    for (Interval interval : uniqueIntervals) {
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+      if (lock == null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean isInitialRequest) throws IOException
@@ -163,27 +189,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
 
       changeSegmentGranularity = changeSegmentGranularity(intervals);
-      if (changeSegmentGranularity || isPerfectRollup()) {
-        allInputSegments = Collections.emptySet();
-        overwritingRootGenPartitions = Collections.emptyMap();
-        // In this case, the intervals to lock must be alighed with segmentGranularity if it's defined
-        final Set<Interval> uniqueIntervals = new HashSet<>();
-        for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
-          final Granularity segmentGranularity = getSegmentGranularity(interval);
-          if (segmentGranularity == null) {
-            uniqueIntervals.add(interval);
-          } else {
-            Iterables.addAll(uniqueIntervals, segmentGranularity.getIterable(interval));
-          }
-        }
-
-        for (Interval interval : uniqueIntervals) {
-          final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
-          if (lock == null) {
-            return false;
-          }
-        }
-        return true;
+      if (changeSegmentGranularity) {
+        return tryTimeChunkLock(client, intervals);
       } else {
         final List<DataSegment> segmentsToLock;
         final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(

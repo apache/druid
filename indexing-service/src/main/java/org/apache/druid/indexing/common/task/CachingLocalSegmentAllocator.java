@@ -39,10 +39,6 @@ import java.util.stream.IntStream;
 
 public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
 {
-  private final String dataSource;
-
-  private final Map<Interval, String> intervalToVersion;
-
   public CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
@@ -52,19 +48,16 @@ public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
   {
     // This segment allocator doesn't need inputPartitionIds because the newly created segments don't have to store
     // direcOvershadowingSegments
-    super(toolbox, taskId, allocateSpec);
-    this.dataSource = dataSource;
-
-    intervalToVersion = toolbox.getTaskActionClient()
-                               .submit(new LockListAction())
-                               .stream()
-                               .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+    super(toolbox, taskId, dataSource, allocateSpec);
   }
 
-  // TODO: fix - this is called before intervalToVersion is initialized
   @Override
-  Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds()
+  Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds() throws IOException
   {
+    final Map<Interval, String> intervalToVersion = getToolbox().getTaskActionClient()
+                                                                .submit(new LockListAction())
+                                                                .stream()
+                                                                .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
     final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = getAllocateSpec();
     final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = new HashMap<>(allocateSpec.size());
     for (Entry<Interval, Pair<ShardSpecFactory, Integer>> entry : allocateSpec.entrySet()) {
@@ -80,9 +73,9 @@ public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
           interval,
           IntStream.range(0, numSegmentsToAllocate)
                    .mapToObj(i -> new SegmentIdWithShardSpec(
-                       dataSource,
+                       getDataSource(),
                        interval,
-                       findVersion(interval),
+                       findVersion(intervalToVersion, interval),
                        shardSpecFactory.create(getToolbox().getObjectMapper(), i)
                    ))
                    .collect(Collectors.toList())
@@ -91,7 +84,7 @@ public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
     return intervalToSegmentIds;
   }
 
-  private String findVersion(Interval interval)
+  private static String findVersion(Map<Interval, String> intervalToVersion, Interval interval)
   {
     return intervalToVersion.entrySet().stream()
                             .filter(entry -> entry.getKey().contains(interval))
