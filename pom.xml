@@ -1558,7 +1558,7 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS.md</exclude>
+                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
