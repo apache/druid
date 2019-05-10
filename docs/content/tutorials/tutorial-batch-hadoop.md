@@ -148,13 +148,13 @@ cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml
 From the host machine, run the following, where {PATH_TO_DRUID} is replaced by the path to the Druid package.
 
 ```bash
-mkdir -p {PATH_TO_DRUID}/quickstart/tutorial/conf/druid/_common/hadoop-xml
-cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/quickstart/tutorial/conf/druid/_common/hadoop-xml/
+mkdir -p {PATH_TO_DRUID}/conf/druid/single-server/micro-quickstart/_common/hadoop-xml
+cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/conf/druid/single-server/micro-quickstart/_common/hadoop-xml/
 ```
 
 ### Update Druid segment and log storage
 
-In your favorite text editor, open `quickstart/tutorial/conf/druid/_common/common.runtime.properties`, and make the following edits:
+In your favorite text editor, open `conf/druid/single-server/micro-quickstart/_common/common.runtime.properties`, and make the following edits:
 
 #### Disable local deep storage and enable HDFS deep storage
 
@@ -219,7 +219,7 @@ This tutorial is only meant to be used together with the [query tutorial](../tut
 
 If you wish to go through any of the other tutorials, you will need to:
 * Shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package.
-* Revert the deep storage and task storage config back to local types in `quickstart/tutorial/conf/druid/_common/common.runtime.properties`
+* Revert the deep storage and task storage config back to local types in `conf/druid/single-server/micro-quickstart/_common/common.runtime.properties`
 * Restart the cluster
 
 This is necessary because the other ingestion tutorials will write to the same "wikipedia" datasource, and later tutorials expect the cluster to use local deep storage.

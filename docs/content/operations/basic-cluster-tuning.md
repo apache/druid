@@ -27,6 +27,8 @@ This rule-of-thumb scales using the number of CPU cores as a convenient proxy fo
 
 Having a heap that is too large can result in excessively long GC collection pauses, the ~24GB upper limit is imposed to avoid this.
 
+If caching is enabled on Historicals, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
+
 Running out of heap on the Historicals can indicate misconfiguration or usage patterns that are overloading the cluster.
 
 ##### Lookups
@@ -88,7 +90,7 @@ We recommend using SSDs for storage on the Historicals, as they handle segment d
 
 To estimate total memory usage of the Historical under these guidelines:
 
-- Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps)`
+- Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 ### Broker
@@ -103,6 +105,8 @@ The biggest contributions to heap usage on Brokers are:
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments. 
 
 The heap size will vary based on data size and usage patterns, but 4G to 8G is a good starting point for a small or medium cluster. For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GB-60GB.
+
+If caching is enabled on the Broker, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
 #### Direct Memory Sizing
 
