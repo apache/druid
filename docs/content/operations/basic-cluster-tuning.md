@@ -200,9 +200,9 @@ Be sure to add `(2 * total size of all loaded lookups)` to your Task heap size i
 
 For Tasks, 1 or 2 processing threads are often enough, as the Tasks tend to hold much less queryable data than Historical processes.
 
-- `druid.processing.numThreads`: set this to 1 or 2
-- `druid.processing.numMergeBuffers`: set this to 2
-- `druid.processing.buffer.sizeBytes`: can be set to 500MB
+- `druid.indexer.fork.property.druid.processing.numThreads`: set this to 1 or 2
+- `druid.indexer.fork.property.druid.processing.numMergeBuffers`: set this to 2
+- `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MB
 
 ##### Direct Memory Sizing
 
