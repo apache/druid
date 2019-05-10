@@ -409,7 +409,7 @@ rather than on the Master server.
 
 ## Start Master Server
 
-Copy the Druid distribution and your edited configurations to your Master servers. 
+Copy the Druid distribution and your edited configurations to your Master servers.
 
 If you have been editing the configurations on your local machine, you can use *rsync* to copy them:
 

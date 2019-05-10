@@ -91,7 +91,7 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 `druid.server.maxSize` controls the total size of segment data that can be assigned by the Coordinator to a Historical.
 
-Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
+Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
 
 Therefore, `druid.server.maxSize` should be set such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / `druid.server.maxSize`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance.
 
@@ -112,18 +112,20 @@ To estimate total memory usage of the Historical under these guidelines:
 - Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
+The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / `druid.server.maxSize`) ratio so that a greater proportion of segments can be kept in memory.
+
 ### Broker
 
 #### Heap Sizing
 
 The biggest contributions to heap usage on Brokers are:
 - Partial unmerged query results from Historicals and Tasks
-- The segment timeline
-- Cached segment metadata
+- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../ingestion/index.html#segment-states) segments.
+- Cached segment metadata: this consists of metadata, such as per-segment schemas, for all currently available segments.
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments. 
 
-The heap size will vary based on data size and usage patterns, but 4G to 8G is a good starting point for a small or medium cluster. For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GB-60GB.
+The heap size will vary based on data size and usage patterns, but 4G to 8G is a good starting point for a small or medium cluster (~15 servers or less). For a rough estimate of memory requirements on the high end, very large clusters with a node count on the order of ~100 nodes may need Broker heaps of 30GB-60GB.
 
 If caching is enabled on the Broker, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
@@ -147,7 +149,7 @@ Both `chunkPeriod` and GroupBy V1 are deprecated (use GroupBy V2 instead) and wi
 
 Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
 
-On the Brokers, please ensure that the sum of `druid.broker.http.numConnections` across all the Brokers is slightly lower than the value of `druid.server.http.numThreads` on your Historicals.
+On the Brokers, please ensure that the sum of `druid.broker.http.numConnections` across all the Brokers is slightly lower than the value of `druid.server.http.numThreads` on your Historicals and Tasks.
 
 `druid.server.http.numThreads` on the Broker should be set to a value slightly higher than `druid.broker.http.numConnections` on the same Broker.
 
@@ -156,6 +158,8 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 #### Number of Brokers
 
 A 1:15 ratio of Brokers to Historicals is a reasonable starting point (this is not a hard rule).
+
+If you need Broker HA, you can deploy 2 initially and then use the 1:15 ratio guideline for additional Brokers.
 
 #### Total Memory Usage
 
@@ -289,7 +293,7 @@ The `druid.processing.numThreads` configuration controls the size of the process
 
 `druid.processing.buffer.sizeBytes` is a closely related property that controls the size of the off-heap buffers allocated to the processing threads. 
 
-One buffer is allocated for each processing thread. A size between 500MB and 1GB (the default) is a reasonable choice for general use.
+One buffer is allocated for each processing thread. A size between 500MB and 1GB is a reasonable choice for general use.
 
 The TopN and GroupBy queries use these buffers to store intermediate computed results. As the buffer size increases, more data can be processed in a single pass.
 
