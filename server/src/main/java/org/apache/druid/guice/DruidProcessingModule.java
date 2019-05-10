@@ -159,12 +159,10 @@ public class DruidProcessingModule implements Module
     catch (UnsupportedOperationException e) {
       log.debug("Checking for direct memory size is not support on this platform: %s", e);
       log.info(
-          "Unable to determine max direct memory size. If -XX:MaxDirectMemorySize is set, make sure "
-          + "a) -XX:MaxDirectMemorySize is set to at least [%,d] bytes (25%% of maximum heap size), or "
-          + "b) set druid.processing.buffer.sizeBytes, such that "
-          + "druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1) "
-          + "does not exceed the value of -XX:MaxDirectMemorySize",
-          DruidProcessingConfig.computeMaxMemoryFromMaxHeapSize(),
+          "Unable to determine max direct memory size. If druid.processing.buffer.sizeBytes is explicitly configured, "
+          + "then make sure to set -XX:MaxDirectMemorySize to at least \"druid.processing.buffer.sizeBytes * "
+          + "(druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)\", "
+          + "or else set -XX:MaxDirectMemorySize to at least 25%% of maximum jvm heap size.",
           config.getNumMergeBuffers(),
           config.getNumThreads()
       );
