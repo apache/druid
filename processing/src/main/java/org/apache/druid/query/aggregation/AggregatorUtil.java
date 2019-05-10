@@ -121,6 +121,11 @@ public class AggregatorUtil
   public static final byte MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID = 0x36;
   public static final byte MOMENTS_SKETCH_MERGE_CACHE_TYPE_ID = 0x37;
 
+  // TDigest sketch aggregators
+  public static final byte TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID = 0x38;
+  public static final byte TDIGEST_MERGE_SKETCH_CACHE_TYPE_ID = 0x39;
+  public static final byte TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 0x40;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
