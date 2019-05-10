@@ -269,9 +269,9 @@ You can set the Coordinator heap to the same size as your Broker heap, or slight
 
 The main performance-related setting on the Overlord is the heap size.
 
-The heap requirements of the Overlord scale with the number of servers, segments, and tasks in the cluster.
+The heap requirements of the Overlord scale primarily with the number of running Tasks.
 
-You can set the Overlord heap to the same size as your Broker heap, or slightly smaller: both services have to process cluster-wide state and answer API requests about this state.
+The Overlord tends to require less resources than the Coordinator or Broker. You can generally set the Overlord heap to a value that's 25-50% of your Coordinator heap.
 
 ## Router
 

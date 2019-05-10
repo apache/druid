@@ -206,7 +206,7 @@ a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in t
 Let's submit the `wikipedia-index-hadoop-.json` task:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json 
+bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json --url http://localhost:8081
 ```
 
 ## Querying your data
