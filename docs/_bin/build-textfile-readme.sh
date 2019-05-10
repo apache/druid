@@ -16,5 +16,13 @@
 # limitations under the License.
 
 BASEDIR=$1
-DRUIDVERSION=$2
-sed -e "s/DRUIDVERSION/${DRUIDVERSION}/" ${BASEDIR}/README.template > ${BASEDIR}/README
+DRUID_VERSION=$2
+THIS_OR_THE_LATEST="this"
+
+if ! [[ "$DRUID_VERSION" =~ [0-9]+\.[0-9]+\.[0-9]+(\-incubating)?$ ]];
+then
+  DRUID_VERSION="latest"
+  THIS_OR_THE_LATEST="the latest"
+fi
+
+sed -e "s/{THIS_OR_THE_LATEST}/${THIS_OR_THE_LATEST}/;s/{DRUIDVERSION}/${DRUID_VERSION}/" ${BASEDIR}/README.template > ${BASEDIR}/README

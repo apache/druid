@@ -26,9 +26,9 @@ along this path, our site will move from http://druid.io/ to https://druid.apach
 
 Documentation
 -------------
-You can find the documentation for this Druid release on the project website http://druid.io/docs/DRUIDVERSION/.
+You can find the documentation for {THIS_OR_THE_LATEST} Druid release on the project website http://druid.io/docs/{DRUIDVERSION}/.
 
-You can get started with Druid with our quickstart at http://druid.io/docs/DRUIDVERSION/tutorials/quickstart.html.
+You can get started with Druid with our quickstart at http://druid.io/docs/{DRUIDVERSION}/tutorials/quickstart.html.
 
 
 Build from Source
