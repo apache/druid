@@ -232,7 +232,7 @@ On top of those requirements, allocating more task slots in your cluster is a go
 
 ###### Hadoop Ingestion
 
-If you using [Hadoop Batch Ingestion](../ingestion/hadoop.html), you can lower the amount of resources allocated per Task. Batch ingestion tasks do not need to answer queries, and the bulk of the ingestion workload will be executed on the Hadoop cluster, so the Tasks do not require much resources.
+If you are only using [Hadoop Batch Ingestion](../ingestion/hadoop.html) with no other ingestion types, you can lower the amount of resources allocated per Task. Batch ingestion tasks do not need to answer queries, and the bulk of the ingestion workload will be executed on the Hadoop cluster, so the Tasks do not require much resources.
 
 ###### Parallel Native Ingestion
 
