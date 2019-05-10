@@ -121,6 +121,23 @@ public class TimeseriesQueryQueryToolChestTest
 
     Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
     Assert.assertEquals(result2, fromResultLevelCacheRes);
+
+    final Result<TimeseriesResultValue> result3 = new Result<>(
+        // null timestamp similar to grandTotal
+        null,
+        new TimeseriesResultValue(
+            ImmutableMap.of("metric1", 2, "metric0", 3, "complexMetric", "val1", "post", 10)
+        )
+    );
+
+    preparedResultLevelCacheValue = strategy.prepareForCache(true).apply(result3);
+    fromResultLevelCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
+    Assert.assertEquals(result3, fromResultLevelCacheRes);
   }
 
   @Test
