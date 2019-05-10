@@ -71,7 +71,7 @@ In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - template configurations for a clustered setup
+* `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
