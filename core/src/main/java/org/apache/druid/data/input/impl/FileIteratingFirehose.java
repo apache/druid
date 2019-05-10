@@ -22,6 +22,9 @@ package org.apache.druid.data.input.impl;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -30,8 +33,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- */
 public class FileIteratingFirehose implements Firehose
 {
   private final Iterator<LineIterator> lineIterators;
@@ -79,6 +80,22 @@ public class FileIteratingFirehose implements Firehose
     }
 
     return parser.parse(lineIterator.next());
+  }
+
+  @Override
+  public InputRowPlusRaw nextRowWithRaw()
+  {
+    if (!hasMore()) {
+      throw new NoSuchElementException();
+    }
+
+    String raw = lineIterator.next();
+    try {
+      return InputRowPlusRaw.of(parser.parse(raw), StringUtils.toUtf8(raw));
+    }
+    catch (ParseException e) {
+      return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);
+    }
   }
 
   private LineIterator getNextLineIterator()

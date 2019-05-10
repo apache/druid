@@ -1740,8 +1740,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("All tasks in group [%s] failed to transition to publishing state"),
-        EasyMock.eq(0)
+        EasyMock.eq("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task"),
+        EasyMock.contains("sequenceName-0")
     );
     expectLastCall().times(2);
     expect(taskQueue.add(capture(captured))).andReturn(true).times(2);

@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Switch } from '@blueprintjs/core';
+import { Button, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
+import { FormGroup } from '@blueprintjs/core/lib/esnext';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
+import { ActionCell } from '../components/action-cell';
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
@@ -40,20 +42,31 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
+import { BasicAction, basicActionsToMenu } from '../utils/basic-action';
 
 import './datasource-view.scss';
 
 const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Num rows', 'Actions'];
+const tableColumnsNoSql: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Actions'];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
+  noSqlMode: boolean;
 }
 
 interface Datasource {
   datasource: string;
   rules: any[];
   [key: string]: any;
+}
+
+interface DatasourceQueryResultRow {
+  datasource: string;
+  num_available_segments: number;
+  num_rows: number;
+  num_segments: number;
+  size: number;
 }
 
 export interface DatasourcesViewState {
@@ -70,7 +83,9 @@ export interface DatasourcesViewState {
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
-
+  dropReloadDatasource: string | null;
+  dropReloadAction: 'drop' | 'reload';
+  dropReloadInterval: string;
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -106,8 +121,10 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       compactionDialogOpenOn: null,
       dropDataDatasource: null,
       enableDatasource: null,
-      killDatasource: null
-
+      killDatasource: null,
+      dropReloadDatasource: null,
+      dropReloadAction: 'drop',
+      dropReloadInterval: ''
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
@@ -116,9 +133,28 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
+
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const datasources: any[] = await queryDruidSql({ query });
+        let datasources: DatasourceQueryResultRow[];
+        if (!noSqlMode) {
+          datasources = await queryDruidSql({ query });
+        } else {
+          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
+          const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+          const loadstatus = loadstatusResp.data;
+          datasources = datasourcesResp.data.map((d: any) => {
+            return {
+              datasource: d.name,
+              num_available_segments: d.properties.segments.count,
+              size: d.properties.segments.size,
+              num_segments: d.properties.segments.count + loadstatus[d.name],
+              num_rows: -1
+            };
+          });
+        }
+
         const seen = countBy(datasources, (x: any) => x.datasource);
 
         const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
@@ -133,7 +169,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        const allDatasources = datasources.concat(disabled.map(d => ({ datasource: d, disabled: true })));
+        const allDatasources = (datasources as any).concat(disabled.map(d => ({ datasource: d, disabled: true })));
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
@@ -182,7 +218,7 @@ GROUP BY 1`);
         } : null
       }
       confirmButtonText="Drop data"
-      successText="Data has been dropped"
+      successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
       failText="Could not drop data"
       intent={Intent.DANGER}
       onClose={(success) => {
@@ -218,6 +254,46 @@ GROUP BY 1`);
       <p>
         {`Are you sure you want to enable datasource '${enableDatasource}'?`}
       </p>
+    </AsyncActionDialog>;
+  }
+
+  renderDropReloadAction() {
+    const { dropReloadDatasource, dropReloadAction, dropReloadInterval } = this.state;
+    const isDrop = dropReloadAction === 'drop';
+
+    return <AsyncActionDialog
+      action={
+        dropReloadDatasource ? async () => {
+          if (!dropReloadInterval) return;
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${dropReloadDatasource}/${isDrop ? 'markUnused' : 'markUsed'}`, {
+            interval: dropReloadInterval
+          });
+          return resp.data;
+        } : null
+      }
+      confirmButtonText={`${isDrop ? 'Drop' : 'Reload'} selected data`}
+      confirmButtonDisabled={!/.\/./.test(dropReloadInterval)}
+      successText={`${isDrop ? 'Drop' : 'Reload'} request submitted`}
+      failText={`Could not ${isDrop ? 'drop' : 'reload'} data`}
+      intent={Intent.PRIMARY}
+      onClose={(success) => {
+        this.setState({ dropReloadDatasource: null });
+        if (success) this.datasourceQueryManager.rerunLastQuery();
+      }}
+    >
+      <p>
+        {`Please select the interval that you want to ${isDrop ? 'drop' : 'reload'}?`}
+      </p>
+      <FormGroup>
+        <InputGroup
+          value={dropReloadInterval}
+          onChange={(e: any) => {
+            const v = e.target.value;
+            this.setState({ dropReloadInterval: v.toUpperCase() });
+          }}
+          placeholder="2018-01-01T00:00:00/2018-01-03T00:00:00"
+        />
+      </FormGroup>
     </AsyncActionDialog>;
   }
 
@@ -325,6 +401,43 @@ GROUP BY 1`);
     });
   }
 
+  getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
+    if (disabled) {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Enable',
+          onAction: () => this.setState({ enableDatasource: datasource })
+        },
+        {
+          icon: IconNames.TRASH,
+          title: 'Permanently delete (kill task)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ killDatasource: datasource })
+        }
+      ];
+    } else {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Reload data by interval',
+          onAction: () => this.setState({ dropReloadDatasource: datasource, dropReloadAction: 'reload' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Drop data by interval',
+          onAction: () => this.setState({ dropReloadDatasource: datasource, dropReloadAction: 'drop' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Drop datasource (disable)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ dropDataDatasource: datasource })
+        }
+      ];
+    }
+  }
+
   renderRetentionDialog() {
     const { retentionDialogOpenOn, tiers } = this.state;
     if (!retentionDialogOpenOn) return null;
@@ -354,7 +467,7 @@ GROUP BY 1`);
   }
 
   renderDatasourceTable() {
-    const { goToSegments } = this.props;
+    const { goToSegments, noSqlMode } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
     const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
@@ -492,27 +605,28 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: tableColumnSelectionHandler.showColumn('Num rows')
+            show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
           },
           {
             Header: 'Actions',
             accessor: 'datasource',
             id: 'actions',
-            width: 160,
+            width: 70,
             filterable: false,
             Cell: row => {
               const datasource = row.value;
               const { disabled } = row.original;
-              if (disabled) {
-                return <div>
-                  <a onClick={() => this.setState({ enableDatasource: datasource })}>Enable</a>&nbsp;&nbsp;&nbsp;
-                  <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>;
-              } else {
-                return <div>
-                  <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>;
-              }
+              const datasourceActions = this.getDatasourceActions(datasource, disabled);
+              const datasourceMenu = basicActionsToMenu(datasourceActions);
+
+              return <ActionCell>
+                {
+                  datasourceMenu &&
+                  <Popover content={datasourceMenu} position={Position.BOTTOM_RIGHT}>
+                    <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: tableColumnSelectionHandler.showColumn('Actions')
           }
@@ -522,6 +636,7 @@ GROUP BY 1`);
       />
       {this.renderDropDataAction()}
       {this.renderEnableAction()}
+      {this.renderDropReloadAction()}
       {this.renderKillAction()}
       {this.renderRetentionDialog()}
       {this.renderCompactionDialog()}
@@ -529,7 +644,7 @@ GROUP BY 1`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { showDisabled } = this.state;
     const { tableColumnSelectionHandler } = this;
 
@@ -540,18 +655,21 @@ GROUP BY 1`);
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
-        />
+        {
+          !noSqlMode &&
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
+          />
+        }
         <Switch
           checked={showDisabled}
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
         <TableColumnSelection
-          columns={tableColumns}
+          columns={noSqlMode ? tableColumnsNoSql : tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />

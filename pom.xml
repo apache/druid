@@ -94,7 +94,7 @@
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
-        <powermock.version>1.6.6</powermock.version>
+        <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
@@ -173,6 +173,8 @@
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/momentsketch</module>
+        <module>extensions-contrib/moving-average-query</module>
+        <module>extensions-contrib/tdigestsketch</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -431,6 +433,11 @@
                 <groupId>javax.el</groupId>
                 <artifactId>javax.el-api</artifactId>
                 <version>3.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.0</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
@@ -710,12 +717,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>5.2</version>
+                <version>7.1</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>5.2</version>
+                <version>7.1</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
@@ -726,7 +733,7 @@
             <dependency>
                 <groupId>org.gridkit.lab</groupId>
                 <artifactId>jvm-attach-api</artifactId>
-                <version>1.2</version>
+                <version>1.5</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -789,7 +796,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>3.4</version>
+                <version>4.0.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1535,7 +1542,7 @@
                             <excludes>
                                 <exclude>publications/**</exclude>
                                 <exclude>codestyle/*-forbidden-apis.txt</exclude>
-                                <exclude>quickstart/tutorial/conf/**</exclude>
+                                <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
@@ -1551,7 +1558,7 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS.md</exclude>
+                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>

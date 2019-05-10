@@ -40,6 +40,7 @@ import * as ReactDOMServer from 'react-dom/server';
 
 import { SQLFunctionDoc } from '../../lib/sql-function-doc';
 import { AppToaster } from '../singletons/toaster';
+import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../variables';
 
 import { MenuCheckbox } from './menu-checkbox';
 
@@ -224,6 +225,12 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     const { query, autoComplete, bypassCache, wrapQuery } = this.state;
 
     return <Menu>
+      <MenuItem
+        icon={IconNames.HELP}
+        text="Docs"
+        href={isRune ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
+        target="_blank"
+      />
       {
         !isRune &&
         <>
@@ -233,14 +240,14 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
             onClick={() => onExplain(query)}
           />
           <MenuCheckbox
-            checked={autoComplete}
-            label="Auto complete"
-            onChange={() => this.setState({autoComplete: !autoComplete})}
-          />
-          <MenuCheckbox
             checked={wrapQuery}
             label="Wrap query with limit"
             onChange={() => this.setState({wrapQuery: !wrapQuery})}
+          />
+          <MenuCheckbox
+            checked={autoComplete}
+            label="Auto complete"
+            onChange={() => this.setState({autoComplete: !autoComplete})}
           />
         </>
       }
@@ -295,7 +302,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         </ButtonGroup>
         {
           queryElapsed &&
-          <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+          <span className="query-elapsed"> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
         }
       </div>
     </div>;
