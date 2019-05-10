@@ -290,44 +290,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelfJoinWithFallback() throws Exception
-  {
-    testQuery(
-        PLANNER_CONFIG_FALLBACK,
-        QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.VARCHAR, "")
-        ),
-        "SELECT x.dim1, y.dim1, y.dim2\n"
-        + "FROM\n"
-        + "  druid.foo x INNER JOIN druid.foo y ON x.dim1 = y.dim2\n"
-        + "WHERE\n"
-        + "  x.dim1 <> ?",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("dim1")
-                .filters(not(selector("dim1", "", null)))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build(),
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("dim1", "dim2")
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"abc", "def", "abc"}
-        )
-    );
-  }
-
-  @Test
   public void testColumnComparison() throws Exception
   {
     testQuery(
