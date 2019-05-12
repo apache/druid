@@ -32,12 +32,13 @@ import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-public class TaskActionPreconditions
+public class TaskLocks
 {
   static void checkLockCoversSegments(
       final Task task,
@@ -89,7 +90,6 @@ public class TaskActionPreconditions
           }
 
           final List<TaskLock> locks = entry.getValue();
-
           return locks.stream().anyMatch(
               lock -> {
                 if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
@@ -110,11 +110,53 @@ public class TaskActionPreconditions
     );
   }
 
+  public static List<TaskLock> findLocksForSegments(
+      final Task task,
+      final TaskLockbox taskLockbox,
+      final Collection<DataSegment> segments
+  )
+  {
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = getTaskLockMap(taskLockbox, task);
+    if (taskLockMap.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    final List<TaskLock> found = new ArrayList<>();
+    segments.forEach(segment -> {
+      final Entry<DateTime, List<TaskLock>> entry = taskLockMap.floorEntry(segment.getInterval().getStart());
+      if (entry == null) {
+        throw new ISE("Can't find lock for the interval of segment[%s]", segment.getId());
+      }
+
+      final List<TaskLock> locks = entry.getValue();
+      locks.forEach(lock -> {
+        if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
+          final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
+          if (timeChunkLock.getInterval().contains(segment.getInterval())
+              && timeChunkLock.getDataSource().equals(segment.getDataSource())
+              && timeChunkLock.getVersion().compareTo(segment.getMajorVersion()) >= 0) {
+            found.add(lock);
+          }
+        } else {
+          final SegmentLock segmentLock = (SegmentLock) lock;
+          if (segmentLock.getInterval().contains(segment.getInterval())
+              && segmentLock.getDataSource().equals(segment.getDataSource())
+              && segmentLock.getVersion().compareTo(segment.getMajorVersion()) >= 0
+              && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum()) {
+            found.add(lock);
+          }
+        }
+      });
+    });
+    return found;
+  }
+
   private static NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskLockbox taskLockbox, Task task)
   {
     final List<TaskLock> taskLocks = taskLockbox.findLocksForTask(task);
     final NavigableMap<DateTime, List<TaskLock>> taskLockMap = new TreeMap<>();
-    taskLocks.forEach(taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>()).add(taskLock));
+    taskLocks.forEach(taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>())
+                                             .add(taskLock));
     return taskLockMap;
   }
 }

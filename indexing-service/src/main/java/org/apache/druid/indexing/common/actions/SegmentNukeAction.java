@@ -66,7 +66,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     try {
       toolbox.getTaskLockbox().doInCriticalSection(

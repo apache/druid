@@ -141,7 +141,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     if (segmentsToBeOverwritten != null) {
       allSegments.addAll(segmentsToBeOverwritten);
     }
-    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
+    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
 
     if (segmentsToBeOverwritten != null && !segmentsToBeOverwritten.isEmpty()) {
       final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
@@ -178,7 +178,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     }
 
     // Non-overwriting tasks should release locks as early as possible, so that other tasks can lock same segments.
-    final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
+    final List<TaskLock> locks = TaskLocks.findLocksForSegments(task, toolbox.getTaskLockbox(), segments);
     for (TaskLock lock : locks) {
       if (lock.getGranularity() == LockGranularity.SEGMENT) {
         final SegmentLock segmentLock = (SegmentLock) lock;

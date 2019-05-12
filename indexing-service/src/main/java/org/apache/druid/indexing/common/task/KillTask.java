@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.TaskActionPreconditions;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -77,7 +77,7 @@ public class KillTask extends AbstractFixedIntervalTask
         .getTaskActionClient()
         .submit(new SegmentListUnusedAction(getDataSource(), getInterval()));
 
-    if (!TaskActionPreconditions.isLockCoversSegments(taskLockMap, unusedSegments)) {
+    if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
       throw new ISE(
           "Locks[%s] for task[%s] can't cover segments[%s]",
           taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
