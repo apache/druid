@@ -22,7 +22,7 @@ import { getDruidErrorMessage } from './druid-query';
 import { filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  getEmptyTimestampSpec,
+  getEmptyTimestampSpec, getSpecType,
   IngestionSpec,
   IoConfig, MetricSpec,
   Parser,
@@ -39,7 +39,7 @@ const BASE_SAMPLER_CONFIG: SamplerConfig = {
 };
 
 export interface SampleSpec {
-  type: 'index';
+  type: string;
   spec: IngestionSpec;
   samplerConfig: SamplerConfig;
 }
@@ -79,6 +79,14 @@ function dedupe(xs: string[]): string[] {
   });
 }
 
+type SamplerType = 'index' | 'kafka' | 'kinesis';
+
+export function getSamplerType(spec: IngestionSpec): SamplerType {
+  const specType = getSpecType(spec);
+  if (specType === 'kafka' || specType === 'kinesis') return specType;
+  return 'index';
+}
+
 export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string): string[] {
   let columns = sortWithPrefixSuffix(dedupe(
     [].concat(...(filterMap(sampleResponse.data, s => s.parsed ? Object.keys(s.parsed) : null) as any))
@@ -109,24 +117,40 @@ async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<Sa
   return sampleResp.data;
 }
 
-export async function sampleForConnect(spec: IngestionSpec): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export type SampleStrategy = 'start' | 'end';
+
+function makeSamplerIoConfig(ioConfig: IoConfig, samplerType: SamplerType, sampleStrategy: SampleStrategy): IoConfig {
+  ioConfig = deepSet(ioConfig || {}, 'type', samplerType);
+  if (samplerType === 'kafka') {
+    ioConfig = deepSet(ioConfig, 'useEarliestOffset', sampleStrategy === 'start');
+  } else if (samplerType === 'kinesis') {
+    ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
+  }
+  return ioConfig;
+}
+
+export async function sampleForConnect(spec: IngestionSpec, sampleStrategy: SampleStrategy): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index')
-      // dataSchema: {
-      //   dataSource: 'sample',
-      //   parser: {
-      //     type: 'string',
-      //     parseSpec: {
-      //       format: 'json',
-      //       dimensionsSpec: {},
-      //       timestampSpec: getEmptyTimestampSpec()
-      //     }
-      //   }
-      // }
+      type: samplerType,
+      ioConfig,
+      dataSchema: {
+        dataSource: 'sample',
+        parser: {
+          type: 'string',
+          parseSpec: {
+            format: 'regex',
+            pattern: '(.*)',
+            columns: ['a'],
+            dimensionsSpec: {},
+            timestampSpec: getEmptyTimestampSpec()
+          }
+        }
+      }
     } as any,
     samplerConfig: BASE_SAMPLER_CONFIG
   };
@@ -134,14 +158,16 @@ export async function sampleForConnect(spec: IngestionSpec): Promise<SampleRespo
   return postToSampler(sampleSpec, 'connect');
 }
 
-export async function sampleForParser(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export async function sampleForParser(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
       dataSchema: {
         dataSource: 'sample',
         parser: {
@@ -165,15 +191,17 @@ export async function sampleForParser(spec: IngestionSpec, cacheKey: string | un
   return postToSampler(sampleSpec, 'parser');
 }
 
-export async function sampleForTimestamp(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
       dataSchema: {
         dataSource: 'sample',
         parser: {
@@ -192,8 +220,9 @@ export async function sampleForTimestamp(spec: IngestionSpec, cacheKey: string |
   return postToSampler(sampleSpec, 'timestamp');
 }
 
-export async function sampleForTransform(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -203,9 +232,9 @@ export async function sampleForTransform(spec: IngestionSpec, cacheKey: string |
   if (transforms && transforms.length) {
 
     const sampleSpecHack: SampleSpec = {
-      type: 'index',
+      type: samplerType,
       spec: {
-        ioConfig: deepSet(ioConfig, 'type', 'index'),
+        ioConfig: deepSet(ioConfig, 'type', samplerType),
         dataSchema: {
           dataSource: 'sample',
           parser: {
@@ -227,9 +256,10 @@ export async function sampleForTransform(spec: IngestionSpec, cacheKey: string |
   }
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
       dataSchema: {
         dataSource: 'sample',
         parser: {
@@ -251,8 +281,9 @@ export async function sampleForTransform(spec: IngestionSpec, cacheKey: string |
   return postToSampler(sampleSpec, 'transform');
 }
 
-export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -263,9 +294,9 @@ export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | un
   if (transforms && transforms.length) {
 
     const sampleSpecHack: SampleSpec = {
-      type: 'index',
+      type: samplerType,
       spec: {
-        ioConfig: deepSet(ioConfig, 'type', 'index'),
+        ioConfig: deepSet(ioConfig, 'type', samplerType),
         dataSchema: {
           dataSource: 'sample',
           parser: {
@@ -287,9 +318,10 @@ export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | un
   }
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
       dataSchema: {
         dataSource: 'sample',
         parser: {
@@ -312,17 +344,19 @@ export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | un
   return postToSampler(sampleSpec, 'filter');
 }
 
-export async function sampleForSchema(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export async function sampleForSchema(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+  const samplerType = getSamplerType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const transformSpec: TransformSpec = deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
   const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || [];
   const queryGranularity: string = deepGet(spec, 'dataSchema.granularitySpec.queryGranularity') || 'NONE';
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
       dataSchema: {
         dataSource: 'sample',
         parser: whitelistKeys(parser, ['type', 'parseSpec']) as Parser,

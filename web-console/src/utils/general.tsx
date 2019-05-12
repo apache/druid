@@ -207,6 +207,10 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
+export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
+  return xs.filter(Boolean) as any;
+}
+
 export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
   return (xs.map(f) as any).filter(Boolean);
 }
