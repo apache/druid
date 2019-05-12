@@ -31,8 +31,11 @@ For building the latest code in master, follow the instructions [here](https://g
 #### Prerequisites
 
 ##### Installing Java and Maven:
-- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+- JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
+  like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
+
+
 
 ##### Downloading the source:
 
