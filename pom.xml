@@ -145,6 +145,7 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/bigo-extensions</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
