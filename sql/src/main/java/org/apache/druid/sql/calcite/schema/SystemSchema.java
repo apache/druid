@@ -48,13 +48,17 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -75,6 +79,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -113,6 +118,10 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
+
+  //defaults for SERVER table
+  private static final long MAX_SERVER_SIZE = 0L;
+  private static final long CURRENT_SERVER_SIZE = 0L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -177,6 +186,7 @@ public class SystemSchema extends AbstractSchema
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
   )
   {
@@ -190,7 +200,7 @@ public class SystemSchema extends AbstractSchema
     );
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, segmentsTable,
-        SERVERS_TABLE, new ServersTable(serverView, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
@@ -423,18 +433,21 @@ public class SystemSchema extends AbstractSchema
   }
 
   /**
-   * This table contains row per server. At this time it only contains the
-   * data servers (i.e. historicals and peons)
+   * This table contains row per server. It contains all the discovered servers in druid cluster.
+   * Some columns like tier and size are only applicable to historical nodes which contain segments.
    */
   static class ServersTable extends AbstractTable implements ScannableTable
   {
-    private final TimelineServerView serverView;
     private final AuthorizerMapper authorizerMapper;
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
-    public ServersTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
+    public ServersTable(
+        DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+        AuthorizerMapper authorizerMapper
+    )
     {
-      this.serverView = serverView;
       this.authorizerMapper = authorizerMapper;
+      this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     }
 
     @Override
@@ -452,25 +465,56 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
+      final Iterator<DiscoveryDruidNode> druidServers = getDruidServers(druidNodeDiscoveryProvider);
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       final FluentIterable<Object[]> results = FluentIterable
-          .from(druidServers)
-          .transform(val -> new Object[]{
-              val.getHost(),
-              extractHost(val.getHost()),
-              (long) extractPort(val.getHostAndPort()),
-              (long) extractPort(val.getHostAndTlsPort()),
-              toStringOrNull(val.getType()),
-              val.getTier(),
-              val.getCurrSize(),
-              val.getMaxSize()
+          .from(() -> druidServers)
+          .transform(val -> {
+            boolean isDataNode = false;
+            final DruidNode node = val.getDruidNode();
+            if (val.getNodeType().equals(NodeType.HISTORICAL)) {
+              isDataNode = true;
+            }
+            return new Object[]{
+                node.getHostAndPortToUse(),
+                extractHost(node.getHost()),
+                (long) extractPort(node.getHostAndPort()),
+                (long) extractPort(node.getHostAndTlsPort()),
+                toStringOrNull(val.getNodeType()),
+                isDataNode ? val.toDruidServer().getTier() : null,
+                isDataNode ? val.toDruidServer().getCurrSize() : CURRENT_SERVER_SIZE,
+                isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
+            };
           });
       return Linq4j.asEnumerable(results);
+    }
+
+    private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
+    {
+      final Collection<DiscoveryDruidNode> discoveryDruidNodes = new ArrayList<>();
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.COORDINATOR));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.OVERLORD));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.BROKER));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.ROUTER));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.HISTORICAL));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.MIDDLE_MANAGER));
+      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.PEON));
+      return discoveryDruidNodes.iterator();
+    }
+
+    private Collection<DiscoveryDruidNode> getServerTypeNodes(
+        DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+        NodeType nodeType
+    )
+    {
+      final Collection<DiscoveryDruidNode> discoveredDruidNodes = druidNodeDiscoveryProvider
+          .getForNodeType(nodeType)
+          .getAllNodes();
+      return discoveredDruidNodes;
     }
   }
 
