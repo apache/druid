@@ -29,8 +29,6 @@ This tutorial demonstrates how to delete existing data.
 For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-Completing [Tutorial: Configuring retention](../tutorials/tutorial-retention.html) first is highly recommended, as we will be using retention rules in this tutorial.
-
 ## Load initial data
 
 In this tutorial, we will use the Wikipedia edits data, with an indexing spec that creates hourly segments. This spec is located at `quickstart/tutorial/deletion-index.json`, and it creates a datasource called `deletion-tutorial`.
@@ -47,7 +45,7 @@ When the load finishes, open [http://localhost:8888/unified-console.html#datasou
 
 Permanent deletion of a Druid segment has two steps:
 
-1. The segment must first be marked as "unused". This occurs when a segment is dropped by retention rules, and when a user manually disables a segment through the Coordinator API. This tutorial will cover both cases.
+1. The segment must first be marked as "unused". This occurs when a user manually disables a segment through the Coordinator API.
 2. After segments have been marked as "unused", a Kill Task will delete any "unused" segments from Druid's metadata store as well as deep storage.
 
 Let's drop some segments now, by using the coordinator API to drop data by interval and segmentIds.
