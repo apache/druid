@@ -2438,9 +2438,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           builder.put(partition, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
         }
       } else {
-        // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
-        // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partition);
+        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage;
+        try {
+          // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
+          // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
+          offsetFromStorage = getOffsetFromStorageForPartition(partition);
+        } catch (ISE iseException) {
+          log.warn("Could not fetch offset for partition [%s], sequence [%s] - skipping this partition", partition, sequence);
+          continue;
+        }
 
         if (offsetFromStorage != null) {
           builder.put(partition, offsetFromStorage);
