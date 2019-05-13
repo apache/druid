@@ -99,13 +99,16 @@ public class LookupCoordinatorResource
   )
   {
     try {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups =
+          lookupCoordinatorManager.getKnownLookups();
       if (discover) {
         final Set<String> discovered = new HashSet<>(lookupCoordinatorManager.discoverTiers());
-        discovered.addAll(lookupCoordinatorManager.getKnownLookups().keySet());
+        if (knownLookups != null) {
+          discovered.addAll(knownLookups.keySet());
+        }
         return Response.ok().entity(discovered).build();
       }
-      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
-          .getKnownLookups();
+
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
