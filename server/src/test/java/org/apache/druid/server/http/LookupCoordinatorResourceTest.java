@@ -151,8 +151,8 @@ public class LookupCoordinatorResourceTest
     final Set<String> tiers = ImmutableSet.of("discoveredLookupTier");
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class);
-    EasyMock.expect(lookupCoordinatorManager.discoverTiers()).andReturn(tiers).once();
     EasyMock.expect(lookupCoordinatorManager.getKnownLookups()).andReturn(SINGLE_TIER_MAP).once();
+    EasyMock.expect(lookupCoordinatorManager.discoverTiers()).andReturn(tiers).once();
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
@@ -173,6 +173,7 @@ public class LookupCoordinatorResourceTest
     final RuntimeException ex = new RuntimeException(errMsg);
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class);
+    EasyMock.expect(lookupCoordinatorManager.getKnownLookups()).andReturn(SINGLE_TIER_MAP).once();
     EasyMock.expect(lookupCoordinatorManager.discoverTiers()).andThrow(ex).once();
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
