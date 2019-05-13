@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -63,7 +64,13 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   @Override
   public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
   {
-    return new TimedShutoffFirehose(parser, temporaryDirectory);
+    return new TimedShutoffFirehose(parser, temporaryDirectory, false);
+  }
+
+  @Override
+  public Firehose connectForSampler(InputRowParser parser, File temporaryDirectory) throws IOException
+  {
+    return new TimedShutoffFirehose(parser, temporaryDirectory, true);
   }
 
   class TimedShutoffFirehose implements Firehose
@@ -73,9 +80,11 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     @GuardedBy("this")
     private boolean closed = false;
 
-    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory) throws IOException
+    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory, boolean sampling) throws IOException
     {
-      firehose = delegateFactory.connect(parser, temporaryDirectory);
+      firehose = sampling
+                 ? delegateFactory.connectForSampler(parser, temporaryDirectory)
+                 : delegateFactory.connect(parser, temporaryDirectory);
 
       shutdownExec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 
@@ -108,6 +117,12 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     public InputRow nextRow()
     {
       return firehose.nextRow();
+    }
+
+    @Override
+    public InputRowPlusRaw nextRowWithRaw()
+    {
+      return firehose.nextRowWithRaw();
     }
 
     @Override

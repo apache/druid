@@ -133,7 +133,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
         jsonMapper,
         zkPaths,
         me,
-        curator
+        curator,
+        new SegmentLoaderConfig()
     );
     zkCoordinator.start();
 

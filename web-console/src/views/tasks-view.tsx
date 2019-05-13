@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
-import { Alert, Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import { Alert, Button, ButtonGroup, Icon, Intent, Label, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
+import { ActionCell } from '../components/action-cell';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { SpecDialog } from '../dialogs/spec-dialog';
+import { SupervisorTableActionDialog } from '../dialogs/supervisor-table-action-dialog';
+import { TaskTableActionDialog } from '../dialogs/task-table-action-dialog';
 import { AppToaster } from '../singletons/toaster';
-import { UrlBaser } from '../singletons/url-baser';
 import {
   addFilter,
   booleanCustomTableFilter,
@@ -38,6 +40,7 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
+import { BasicAction, basicActionsToMenu } from '../utils/basic-action';
 
 import './tasks-view.scss';
 
@@ -48,6 +51,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
+  goToLoadDataView: () => void;
   noSqlMode: boolean;
 }
 
@@ -71,7 +75,13 @@ export interface TasksViewState {
 
   supervisorSpecDialogOpen: boolean;
   taskSpecDialogOpen: boolean;
+  initSpec: any;
   alertErrorMsg: string | null;
+
+  taskTableActionDialogId: string | null;
+  taskTableActionDialogActions: BasicAction[];
+  supervisorTableActionDialogId: string | null;
+  supervisorTableActionDialogActions: BasicAction[];
 }
 
 interface TaskQueryResultRow {
@@ -131,8 +141,13 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
-      alertErrorMsg: null
+      initSpec: null,
+      alertErrorMsg: null,
 
+      taskTableActionDialogId: null,
+      taskTableActionDialogActions: [],
+      supervisorTableActionDialogId: null,
+      supervisorTableActionDialogActions: []
     };
 
     this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
@@ -224,6 +239,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     this.taskQueryManager.terminate();
   }
 
+  private closeSpecDialogs = () => {
+    this.setState({
+      supervisorSpecDialogOpen: false,
+      taskSpecDialogOpen: false,
+      initSpec: null
+    });
+  }
+
   private submitSupervisor = async (spec: JSON) => {
     try {
       await axios.post('/druid/indexer/v1/supervisor', spec);
@@ -258,6 +281,27 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       intent: Intent.SUCCESS
     });
     this.taskQueryManager.rerunLastQuery();
+  }
+
+  private getSupervisorActions(id: string, supervisorSuspended: boolean): BasicAction[] {
+    return [
+      {
+        icon: IconNames.STEP_BACKWARD,
+        title: 'Reset',
+        onAction: () => this.setState({ resetSupervisorId: id })
+      },
+      {
+        icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
+        title: supervisorSuspended ? 'Resume' : 'Suspend',
+        onAction: () => supervisorSuspended ? this.setState({ resumeSupervisorId: id }) : this.setState({ suspendSupervisorId: id })
+      },
+      {
+        icon: IconNames.CROSS,
+        title: 'Terminate',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ terminateSupervisorId: id })
+      }
+    ];
   }
 
   renderResumeSupervisorAction() {
@@ -426,28 +470,34 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'id',
-            width: 420,
+            width: 70,
             filterable: false,
             Cell: row => {
               const id = row.value;
-              const suspendResume = row.original.spec.suspended ?
-                <a onClick={() => this.setState({ resumeSupervisorId: id })}>Resume</a> :
-                <a onClick={() => this.setState({ suspendSupervisorId: id })}>Suspend</a>;
+              const supervisorSuspended = row.original.spec.suspended;
+              const supervisorActions = this.getSupervisorActions(id, supervisorSuspended);
+              const supervisorMenu = basicActionsToMenu(supervisorActions);
 
-              return <div>
-                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/stats`)} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/supervisor/${id}/history`)} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
-                {suspendResume}&nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.setState({ resetSupervisorId: id })}>Reset</a>&nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.setState({ terminateSupervisorId: id })}>Terminate</a>
-              </div>;
+              return <ActionCell>
+                <Icon
+                  icon={IconNames.SEARCH_TEMPLATE}
+                  onClick={() => this.setState({
+                    supervisorTableActionDialogId: id,
+                    supervisorTableActionDialogActions: supervisorActions
+                  })}
+                />
+                {
+                  supervisorMenu &&
+                  <Popover content={supervisorMenu} position={Position.BOTTOM_RIGHT}>
+                    <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Actions')
           }
         ]}
-        defaultPageSize={10}
+        defaultPageSize={5}
         className="-striped -highlight"
       />
       {this.renderResumeSupervisorAction()}
@@ -458,6 +508,18 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   // --------------------------------------
+
+  private getTaskActions(id: string, status: string): BasicAction[] {
+    if (status !== 'RUNNING' && status !== 'WAITING' && status !== 'PENDING') return [];
+    return [
+      {
+        icon: IconNames.CROSS,
+        title: 'Kill',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ killTaskId: id })
+      }
+    ];
+  }
 
   renderKillTaskAction() {
     const { killTaskId } = this.state;
@@ -587,20 +649,30 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'task_id',
-            width: 360,
+            width: 70,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
               const { status } = row.original;
-              return <div>
-                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}`)} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/status`)} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/reports`)} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log`)} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
-                <a href={UrlBaser.base(`/druid/indexer/v1/task/${id}/log?offset=-8192`)} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
-                {(status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a>}
-              </div>;
+              const taskActions = this.getTaskActions(id, status);
+              const taskMenu = basicActionsToMenu(taskActions);
+
+              return <ActionCell>
+                <Icon
+                  icon={IconNames.SEARCH_TEMPLATE}
+                  onClick={() => this.setState({
+                    taskTableActionDialogId: id,
+                    taskTableActionDialogActions: taskActions
+                  })}
+                />
+                {
+                  taskMenu &&
+                  <Popover content={taskMenu} position={Position.BOTTOM_RIGHT}>
+                    <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             Aggregated: row => '',
             show: taskTableColumnSelectionHandler.showColumn('Actions')
@@ -614,9 +686,20 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
-    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg } = this.state;
+    const { goToSql, goToLoadDataView, noSqlMode } = this.props;
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
+
+    const submitTaskMenu = <Menu>
+      <MenuItem
+        text="Raw JSON task"
+        onClick={() => this.setState({ taskSpecDialogOpen: true })}
+      />
+      <MenuItem
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+    </Menu>;
 
     return <div className="tasks-view app-view">
       <ViewControlBar label="Supervisors">
@@ -661,11 +744,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
           />
         }
-        <Button
-          icon={IconNames.PLUS}
-          text="Submit task"
-          onClick={() => this.setState({ taskSpecDialogOpen: true })}
-        />
+        <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.PLUS} text="Submit task"/>
+        </Popover>
         <TableColumnSelection
           columns={taskTableColumns}
           onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
@@ -673,16 +754,22 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         />
       </ViewControlBar>
       {this.renderTaskTable()}
-      { supervisorSpecDialogOpen ? <SpecDialog
-        onClose={() => this.setState({ supervisorSpecDialogOpen: false })}
-        onSubmit={this.submitSupervisor}
-        title="Submit supervisor"
-      /> : null }
-      { taskSpecDialogOpen ? <SpecDialog
-        onClose={() => this.setState({ taskSpecDialogOpen: false })}
-        onSubmit={this.submitTask}
-        title="Submit task"
-      /> : null }
+      {
+        supervisorSpecDialogOpen &&
+        <SpecDialog
+          onClose={this.closeSpecDialogs}
+          onSubmit={this.submitSupervisor}
+          title="Submit supervisor"
+        />
+      }
+      {
+        taskSpecDialogOpen &&
+        <SpecDialog
+          onClose={this.closeSpecDialogs}
+          onSubmit={this.submitTask}
+          title="Submit task"
+        />
+      }
       <Alert
         icon={IconNames.ERROR}
         intent={Intent.PRIMARY}
@@ -692,6 +779,24 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       >
         <p>{alertErrorMsg}</p>
       </Alert>
+      {
+        supervisorTableActionDialogId &&
+        <SupervisorTableActionDialog
+          isOpen
+          supervisorId={supervisorTableActionDialogId}
+          actions={supervisorTableActionDialogActions}
+          onClose={() => this.setState({supervisorTableActionDialogId: null})}
+        />
+      }
+      {
+        taskTableActionDialogId &&
+        <TaskTableActionDialog
+          isOpen
+          taskId={taskTableActionDialogId}
+          actions={taskTableActionDialogActions}
+          onClose={() => this.setState({taskTableActionDialogId: null})}
+        />
+      }
     </div>;
   }
 }
