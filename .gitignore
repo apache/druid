@@ -16,5 +16,5 @@ _site
 dependency-reduced-pom.xml
 README.BINARY
 README
-web-console/*
 *.zip
+web-console/*
