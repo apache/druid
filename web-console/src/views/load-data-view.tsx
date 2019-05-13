@@ -443,7 +443,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           this.initWith(comboType);
         } else {
           this.setState({
-            overlordModuleNeededMessage: `${title} ingestion requires the '${requiredModule}' to be loaded on the overlord.`
+            overlordModuleNeededMessage: `${title} ingestion requires the '${requiredModule}' to be loaded.`
           });
         }
       }}
@@ -616,7 +616,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           (specType === 'kafka' || specType === 'kinesis') &&
           <FormGroup label="Where should the data be sampled from?">
             <HTMLSelect value={sampleStrategy} onChange={e => this.setState({ sampleStrategy: e.target.value as any })}>
-              <option value="start">Earliest stream offset</option>
+              <option value="start">Start of stream</option>
               <option value="end">End of the stream</option>
             </HTMLSelect>
           </FormGroup>
