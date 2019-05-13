@@ -25,7 +25,9 @@ package org.apache.druid.data.input.protobuf;
 @SuppressWarnings("ALL")
 public final class ProtoTestEventWrapper
 {
-  private ProtoTestEventWrapper() {}
+  private ProtoTestEventWrapper()
+  {
+  }
 
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry
