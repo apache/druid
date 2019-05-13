@@ -119,7 +119,7 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
 
-  //defaults for SERVER table
+  //defaults for SERVERS table
   private static final long MAX_SERVER_SIZE = 0L;
   private static final long CURRENT_SERVER_SIZE = 0L;
 
