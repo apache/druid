@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -44,6 +43,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,7 +54,8 @@ import java.util.Map;
 public class BigoInputRowParser implements InputRowParser<Object>
 {
   private static final Logger log = new Logger(BigoInputRowParser.class);
-  private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
+  private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+
 
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;
