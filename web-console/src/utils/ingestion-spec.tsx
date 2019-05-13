@@ -1470,12 +1470,14 @@ export interface Bitmap {
 
 // --------------
 
-export function getBlankSpec(ingestionType: IngestionType = 'index', firehoseType: string | null = null): IngestionSpec {
-  const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(ingestionType);
+export function getBlankSpec(comboType: IngestionComboType): IngestionSpec {
+  let [ingestionType, firehoseType] = comboType.split(':');
+  if (ingestionType === 'index') ingestionType = 'index_parallel';
+  const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(ingestionType as IngestionType);
 
   const granularitySpec: GranularitySpec = {
     type: 'uniform',
-    segmentGranularity: ['index', 'index_parallel'].includes(ingestionType) ? 'DAY' : 'HOUR',
+    segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
     queryGranularity: 'HOUR'
   };
 

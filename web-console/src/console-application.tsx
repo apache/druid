@@ -32,7 +32,7 @@ import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
-import { LoadDataView, LoadDataViewSeed } from './views/load-data-view';
+import { LoadDataView } from './views/load-data-view';
 import { LookupsView } from './views/lookups-view';
 import { SegmentsView } from './views/segments-view';
 import { ServersView } from './views/servers-view';
@@ -100,7 +100,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     });
   }
 
-  private loadDataViewSeed: LoadDataViewSeed | null;
+  private initSpec: any | null;
   private taskId: string | null;
   private datasource: string | null;
   private onlyUnavailable: boolean | null;
@@ -150,7 +150,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.loadDataViewSeed = null;
+      this.initSpec = null;
       this.taskId = null;
       this.datasource = null;
       this.onlyUnavailable = null;
@@ -159,8 +159,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     }, 50);
   }
 
-  private goToLoadDataView = (loadDataViewSeed?: LoadDataViewSeed) => {
-    if (loadDataViewSeed) this.loadDataViewSeed = loadDataViewSeed;
+  private goToLoadDataView = (initSpec?: any) => {
+    if (initSpec) this.initSpec = initSpec;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }
@@ -205,7 +205,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-    return this.wrapInViewContainer('load-data', <LoadDataView seed={this.loadDataViewSeed} goToTask={this.goToTask}/>, 'narrow-pad');
+    return this.wrapInViewContainer('load-data', <LoadDataView initSpec={this.initSpec} goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
   private wrappedSqlView = () => {

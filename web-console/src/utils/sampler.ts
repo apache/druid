@@ -106,6 +106,17 @@ export function headerAndRowsFromSampleResponse(sampleResponse: SampleResponse, 
   };
 }
 
+export async function getOverlordModules(): Promise<string[]> {
+  let statusResp: any;
+  try {
+    statusResp = await axios.get(`/proxy/overlord/status`);
+  } catch (e) {
+    throw new Error(getDruidErrorMessage(e));
+  }
+
+  return statusResp.data.modules.map((m: any) => m.artifact);
+}
+
 async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<SampleResponse> {
   let sampleResp: any;
   try {

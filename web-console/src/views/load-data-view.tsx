@@ -85,7 +85,7 @@ import {
   getTuningSpecFormFields,
   GranularitySpec,
   hasParallelAbility,
-  inflateDimensionSpec,
+  inflateDimensionSpec, IngestionComboType,
   IngestionSpec,
   IngestionType,
   IoConfig,
@@ -105,6 +105,7 @@ import {
 } from '../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../utils/object-change';
 import {
+  getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
@@ -119,10 +120,14 @@ import { computeFlattenPathsForData } from '../utils/spec-utils';
 
 import './load-data-view.scss';
 
-export interface LoadDataViewSeed {
-  type?: IngestionType;
-  firehoseType?: string;
-  initSpec?: IngestionSpec;
+function showRawLine(line: string): string {
+  if (line.includes('\n')) {
+    return `<Multi-line row, length: ${line.length}>`;
+  }
+  if (line.length > 1000) {
+    return line.substr(0, 1000) + '...';
+  }
+  return line;
 }
 
 function filterMatch(testString: string, searchString: string): boolean {
@@ -169,7 +174,7 @@ const VIEW_TITLE: Record<Stage, string> = {
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
-  seed: LoadDataViewSeed | null;
+  initSpec: IngestionSpec | null;
   goToTask: (taskId: string | null) => void;
 }
 
@@ -184,6 +189,8 @@ export interface LoadDataViewState {
   newDimensionMode: DimensionMode | null;
 
   // general
+  overlordModules: string[] | null;
+  overlordModuleNeededMessage: string | null;
   sampleStrategy: SampleStrategy;
   columnFilter: string;
   specialColumnsOnly: boolean;
@@ -225,7 +232,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   constructor(props: LoadDataViewProps) {
     super(props);
 
-    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    let spec = props.initSpec || parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
 
     this.state = {
@@ -239,6 +246,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       newDimensionMode: null,
 
       // general
+      overlordModules: null,
+      overlordModuleNeededMessage: null,
       sampleStrategy: 'start',
       columnFilter: '',
       specialColumnsOnly: false,
@@ -278,7 +287,24 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   componentDidMount(): void {
+    this.getOverlordModules();
     this.updateStage('connect');
+  }
+
+  async getOverlordModules() {
+    let overlordModules: string[];
+    try {
+      overlordModules = await getOverlordModules();
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to get overlord modules: ${e.message}`,
+        intent: Intent.DANGER
+      });
+      this.setState({ overlordModules: [] });
+      return;
+    }
+
+    this.setState({ overlordModules });
   }
 
   private updateStage = (newStage: Stage) => {
@@ -395,29 +421,63 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
 
-  initWith(seed: LoadDataViewSeed) {
+  initWith(comboType: IngestionComboType) {
     this.setState({
-      spec: getBlankSpec(seed.type, seed.firehoseType)
+      spec: getBlankSpec(comboType)
     });
     setTimeout(() => {
       this.updateStage('connect');
     }, 10);
   }
 
+  renderIngestionCard(title: string, comboType: IngestionComboType, requiredModule?: string) {
+    const { overlordModules } = this.state;
+    if (!overlordModules) return null;
+    const goodToGo = !requiredModule || overlordModules.includes(requiredModule);
+
+    return <Card
+      className={classNames({ disabled: !goodToGo })}
+      interactive
+      onClick={() => {
+        if (goodToGo) {
+          this.initWith(comboType);
+        } else {
+          this.setState({
+            overlordModuleNeededMessage: `${title} ingestion requires the '${requiredModule}' to be loaded on the overlord.`
+          });
+        }
+      }}
+    >
+      {title}
+    </Card>;
+  }
+
   renderInitStage() {
+    const { overlordModuleNeededMessage } = this.state;
+
     return <>
       <div className="intro">
         Please specify where your raw data is located
       </div>
 
       <div className="cards">
-        <Card interactive onClick={() => this.initWith({ type: 'kafka' })}>Apache Kafka</Card>
-        <Card interactive onClick={() => this.initWith({ type: 'kinesis' })}>AWS Kinesis</Card>
-        <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'http' })}>HTTP(s)</Card>
-        <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-s3' })}>AWS S3</Card>
-        <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Blobstore</Card>
-        <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'local' })}>Local disk</Card>
+        {this.renderIngestionCard('Apache Kafka', 'kafka', 'druid-kafka-indexing-service')}
+        {this.renderIngestionCard('AWS Kinesis', 'kinesis', 'druid-kinesis-indexing-service')}
+        {this.renderIngestionCard('HTTP(s)', 'index:http')}
+        {this.renderIngestionCard('AWS S3', 'index:static-s3', 'druid-s3-extensions')}
+        {this.renderIngestionCard('Google Blobstore', 'index:static-google-blobstore', 'druid-google-extensions')}
+        {this.renderIngestionCard('Local disk', 'index:local')}
       </div>
+
+      <Alert
+        icon={IconNames.WARNING_SIGN}
+        intent={Intent.WARNING}
+        isOpen={Boolean(overlordModuleNeededMessage)}
+        confirmButtonText="Close"
+        onConfirm={() => this.setState({ overlordModuleNeededMessage: null })}
+      >
+        <p>{overlordModuleNeededMessage}</p>
+      </Alert>
     </>;
   }
 
@@ -507,7 +567,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         className="raw-lines"
         value={
           inputData.length ?
-          (inputData.every(l => !l) ? inputData.map(_ => '[Binary data]') : inputData).join('\n') :
+          (inputData.every(l => !l) ? inputData.map(_ => '<Binary data>') : inputData.map(showRawLine)).join('\n') :
           'No data returned from sampler'
         }
         readOnly
