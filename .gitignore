@@ -15,5 +15,5 @@ target
 _site
 dependency-reduced-pom.xml
 README.BINARY
-web-console/*
 *.zip
+web-console/*
