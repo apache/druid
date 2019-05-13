@@ -89,7 +89,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   componentDidMount(): void {
     this.lookupsGetQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
+        const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');
         const tiers = tiersResp.data;
 
         const lookupEntries: {}[] = [];
