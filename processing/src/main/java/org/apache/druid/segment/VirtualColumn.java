@@ -76,6 +76,7 @@ public interface VirtualColumn extends Cacheable
    * @param offset
    * @return the selector
    */
+  @SuppressWarnings("unused")
   @Nullable
   default DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
   {
@@ -105,6 +106,7 @@ public interface VirtualColumn extends Cacheable
    * @param offset
    * @return the selector
    */
+  @SuppressWarnings("unused")
   @Nullable
   default ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
   {
@@ -153,6 +155,7 @@ public interface VirtualColumn extends Cacheable
    * @param selector
    * @return BitmapIndex
    */
+  @SuppressWarnings("unused")
   default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
   {
     throw new UnsupportedOperationException("not supported");
