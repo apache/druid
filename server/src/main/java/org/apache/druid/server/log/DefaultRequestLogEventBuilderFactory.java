@@ -37,7 +37,9 @@ public final class DefaultRequestLogEventBuilderFactory implements RequestLogEve
     return INSTANCE;
   }
 
-  private DefaultRequestLogEventBuilderFactory() {}
+  private DefaultRequestLogEventBuilderFactory()
+  {
+  }
 
   @Override
   public ServiceEventBuilder<RequestLogEvent> createRequestLogEventBuilder(String feed, RequestLogLine requestLogLine)
