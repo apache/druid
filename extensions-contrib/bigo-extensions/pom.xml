@@ -24,12 +24,12 @@
   <name>druid-bigo-extensions</name>
   <description>druid-bigo-extensions</description>
 
-  <parent>
-    <artifactId>druid</artifactId>
-    <groupId>org.apache.druid</groupId>
-    <version>0.14.1-incubating-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
-  </parent>
+    <parent>
+        <groupId>org.apache.druid</groupId>
+        <artifactId>druid</artifactId>
+        <version>0.14.0-incubating</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
 
 
   <dependencies>
