@@ -1,6 +1,6 @@
 Fixes #XXXX.
 
-(Replace XXXX with the id of the issue fixed in this PR. Remove this line if there is no corresponding
+(Replace XXXX with the id of the issue fixed in this PR. Remove the above line if there is no corresponding
 issue. Don't reference the issue in the title of this pull-request.)
 
 (If you are a committer, follow the PR action item checklist for committers:
@@ -13,16 +13,13 @@ not necessary to repeat the description here, however, you may choose to keep on
 
 Describe your patch: what did you change in code? How did you fix the problem?
 
-If there are several relatively logically separate changes in this PR, list them. For example:
- - Fixed the bug ...
- - Renamed the class ...
- - Added a forbidden-apis entry ...
+If there are several relatively logically separate changes in this PR, create a mini-section for each of them. For
+example:
+#### Fixed the bug ...
+#### Renamed the class ...
+#### Added a forbidden-apis entry ...
 
-Some of the aspects mentioned above may be omitted for simple and small PRs.
-
-### Design
-
-Please describe any design decisions made, including:
+In each section, please describe design decisions made, including:
  - Choice of algorithms
  - Behavioral aspects. What configuration values are acceptable? How are corner cases and error conditions handled, such
    as when insufficient resources are available?
@@ -40,8 +37,7 @@ what have changed in your final design compared to your original proposal or the
 discussion. If something hasn't changed since the original discussion, you can omit a detailed discussion of those
 aspects of the design here, perhaps apart from brief mentioning for the sake of readability of this PR description.
 
-This section may be omitted for really simple and small patches. However, any patch that adds a new production class
-almost certainly shouldn't omit this section.
+Some of the aspects mentioned above may be omitted for simple and small changes.
 
 <hr>
 
@@ -51,11 +47,19 @@ This PR has:
    https://github.com/apache/incubator-druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR
    doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
-- [ ] added Javadocs to non-trivial members.
-- [ ] added code comments for hard to understand areas.
+- [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
+- [ ] added enough comments to make the code fully understandable in a single read-through for anybody who is not
+familiar with it.
 - [ ] added unit tests or modified existing tests to cover new code paths.
 - [ ] added integration tests.
-- [ ] been tested in a test environment.
-- [ ] been tested in a production environment.
+- [ ] been tested in a test Druid cluster.
 
-(Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR.)
+Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the
+items which are not done or not relevant to the PR. None of the items from the checklist above are strictly necessary,
+but it would be very helpful if you at least self-review the PR.
+
+<hr>
+
+For reviewers: the key changed/added classes in this PR are `MyFoo`, `OurBar`, and `TheirBaz`.
+
+(Add this section in big PRs to ease navigation in them for reviewers.)
