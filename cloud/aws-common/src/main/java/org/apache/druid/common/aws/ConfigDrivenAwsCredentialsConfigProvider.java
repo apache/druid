@@ -58,5 +58,7 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
   }
 
   @Override
-  public void refresh() {}
+  public void refresh()
+  {
+  }
 }

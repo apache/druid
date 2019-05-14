@@ -27,7 +27,9 @@ public class JavaBitMapFactory implements BitMapFactory
 {
   private static final BitmapFactory bitmapFactory = new BitSetBitmapFactory();
 
-  public JavaBitMapFactory() {}
+  public JavaBitMapFactory()
+  {
+  }
 
   @Override
   public MutableBitmap makeEmptyMutableBitmap()

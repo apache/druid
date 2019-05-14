@@ -317,7 +317,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   @Override
   public void start()
-  { }
+  {
+  }
 
   @Override
   public void stop()
