@@ -53,5 +53,7 @@ class SegmentCompactorUtil
     return new Interval(largeInterval.getStart(), smallInterval.getStart());
   }
 
-  private SegmentCompactorUtil() {}
+  private SegmentCompactorUtil()
+  {
+  }
 }
