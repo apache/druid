@@ -79,7 +79,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -88,6 +88,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -495,29 +496,10 @@ public class SystemSchema extends AbstractSchema
 
     private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
     {
-      final Collection<DiscoveryDruidNode> discoveryDruidNodes = new ArrayList<>();
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.COORDINATOR));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.OVERLORD));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.BROKER));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.ROUTER));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.HISTORICAL));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.MIDDLE_MANAGER));
-      discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.PEON));
-            return Arrays.stream(NodeType.values())
-                   .flatMap(t -> getServerTypeNodes(druidNodeDiscoveryProvider, t).stream())
+      return Arrays.stream(NodeType.values())
+                   .flatMap(nodeType -> druidNodeDiscoveryProvider.getForNodeType(nodeType).getAllNodes().stream())
                    .collect(Collectors.toList())
                    .iterator();
-    }
-
-    private Collection<DiscoveryDruidNode> getServerTypeNodes(
-        DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-        NodeType nodeType
-    )
-    {
-      final Collection<DiscoveryDruidNode> discoveredDruidNodes = druidNodeDiscoveryProvider
-          .getForNodeType(nodeType)
-          .getAllNodes();
-      return discoveredDruidNodes;
     }
   }
 
