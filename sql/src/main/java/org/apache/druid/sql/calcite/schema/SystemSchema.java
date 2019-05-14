@@ -439,7 +439,7 @@ public class SystemSchema extends AbstractSchema
   static class ServersTable extends AbstractTable implements ScannableTable
   {
     private final AuthorizerMapper authorizerMapper;
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+    private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
@@ -503,7 +503,10 @@ public class SystemSchema extends AbstractSchema
       discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.HISTORICAL));
       discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.MIDDLE_MANAGER));
       discoveryDruidNodes.addAll(getServerTypeNodes(druidNodeDiscoveryProvider, NodeType.PEON));
-      return discoveryDruidNodes.iterator();
+            return Arrays.stream(NodeType.values())
+                   .flatMap(t -> getServerTypeNodes(druidNodeDiscoveryProvider, t).stream())
+                   .collect(Collectors.toList())
+                   .iterator();
     }
 
     private Collection<DiscoveryDruidNode> getServerTypeNodes(
