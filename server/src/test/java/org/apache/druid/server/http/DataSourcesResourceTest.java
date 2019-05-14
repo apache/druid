@@ -966,7 +966,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnused() throws UnknownSegmentIdException
+  public void testMarkSegmentsAsUnused()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     final Set<String> segmentIds =
@@ -990,7 +990,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedNoChanges() throws UnknownSegmentIdException
+  public void testMarkSegmentsAsUnusedNoChanges()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     final Set<String> segmentIds =
@@ -1014,7 +1014,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedException() throws UnknownSegmentIdException
+  public void testMarkSegmentsAsUnusedException()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     final Set<String> segmentIds =

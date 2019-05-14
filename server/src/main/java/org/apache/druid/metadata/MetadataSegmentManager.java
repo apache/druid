@@ -72,7 +72,7 @@ public interface MetadataSegmentManager
 
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
 
-  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds) throws UnknownSegmentIdException;
+  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the

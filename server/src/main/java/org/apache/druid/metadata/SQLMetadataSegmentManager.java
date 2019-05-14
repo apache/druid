@@ -489,7 +489,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     return markNonOvershadowedSegmentsAsUsed(dataSourceName, unusedSegmentsInInterval, versionedIntervalTimeline);
   }
 
-  private static void consume(Iterator<?> iterator) {
+  private static void consume(Iterator<?> iterator)
+  {
     while (iterator.hasNext()) {
       iterator.next();
     }
