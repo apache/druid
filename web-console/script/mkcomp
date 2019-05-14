@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+let fs = require('fs-extra');
+
+if (!(process.argv.length === 3 || process.argv.length === 4)) {
+  console.log('Usage: mkcomp <what?> <component-name>');
+  process.exit();
+}
+
+let name;
+let what;
+if (process.argv.length === 4) {
+  what = process.argv[2];
+  name = process.argv[3];
+  if (!(what === 'component' || what === 'dialog' || what === 'singleton')) {
+    console.log(`Bad what, should be on of: component, dialog, singleton`);
+    process.exit();
+  }
+} else {
+  what = 'component';
+  name = process.argv[2];
+}
+
+if (!/^([a-z-])+$/.test(name)) {
+  console.log('must be a hyphen case name');
+  process.exit();
+}
+
+let path = `./src/${what}s/`;
+fs.ensureDirSync(path);
+console.log('Making path:', path);
+
+const camelName = name.replace(/(^|-)[a-z]/g, (s) => s.replace('-', '').toUpperCase());
+const year = (new Date()).getFullYear();
+
+function writeFile(path, data) {
+  try {
+    return fs.writeFileSync(path, data, {
+      flag: 'wx', // x = fail if file exists
+      encoding: 'utf8'
+    });
+  } catch (error) {
+    return console.log(`Skipping ${path}`);
+  }
+}
+
+// Make the TypeScript file
+writeFile(path + name + '.tsx',
+`/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { Button, InputGroup } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
+import * as React from 'react';
+
+import './${name}.scss';
+
+export interface ${camelName}Props extends React.Props<any> {
+}
+
+export interface ${camelName}State {
+}
+
+export class ${camelName} extends React.Component<${camelName}Props, ${camelName}State> {
+  constructor(props: ${camelName}Props, context: any) {
+    super(props, context);
+    // this.state = {};
+
+  }
+
+  render() {
+    return <div className="${name}">
+    
+    </div>;
+  }
+}
+`);
+
+// Make the SASS file
+writeFile(path + name + '.scss',
+`/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.${name} {
+
+}
+`);

@@ -27,12 +27,16 @@ public class BitmapSerde
   // default bitmap indices for Druid >= 0.7.x
   // annotation required so Jackson doesn't get confused
   @JsonTypeName("concise")
-  public static class DefaultBitmapSerdeFactory extends ConciseBitmapSerdeFactory {}
+  public static class DefaultBitmapSerdeFactory extends ConciseBitmapSerdeFactory
+  {
+  }
 
   // default bitmap indices in Druid <= 0.6.x
   @JsonTypeName("concise")
   // annotation required so Jackson doesn't get confused by subclassing
-  public static class LegacyBitmapSerdeFactory extends ConciseBitmapSerdeFactory {}
+  public static class LegacyBitmapSerdeFactory extends ConciseBitmapSerdeFactory
+  {
+  }
 
   public static BitmapSerdeFactory createLegacyFactory()
   {

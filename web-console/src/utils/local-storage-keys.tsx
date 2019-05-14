@@ -17,6 +17,7 @@
  */
 
 export const LocalStorageKeys = {
+  INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',
   SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as 'supervisor-table-column-selection',

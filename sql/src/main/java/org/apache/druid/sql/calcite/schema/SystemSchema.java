@@ -64,7 +64,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
@@ -92,6 +91,17 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
+
+  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
+      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+      Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSegment().getDataSource())
+      );
+
+  private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR =
+      segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+          segment.getDataSource())
+      );
 
   /**
    * Booleans constants represented as long type,
@@ -338,13 +348,10 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
       final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
-          raGenerator,
+          SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
           authorizerMapper
       );
       return authorizedSegments.iterator();
@@ -448,14 +455,9 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-      final Access access = AuthorizationUtils.authorizeAllResourceActions(
-          authenticationResult,
-          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
-          authorizerMapper
-      );
-      if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access);
-      }
+
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
           .transform(val -> new Object[]{
@@ -501,11 +503,23 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
-        for (DataSegment segment : druidServer.getLazyAllSegments()) {
+        final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
+            authenticationResult,
+            druidServer.getLazyAllSegments(),
+            SEGMENT_RA_GENERATOR,
+            authorizerMapper
+        );
+
+        for (DataSegment segment : authorizedServerSegments) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
           row[1] = segment.getId();
@@ -758,5 +772,23 @@ public class SystemSchema extends AbstractSchema
     }
 
     return object.toString();
+  }
+
+  /**
+   * Checks if an authenticated user has the STATE READ permissions needed to view server information.
+   */
+  private static void checkStateReadAccessForServers(
+      AuthenticationResult authenticationResult,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        authorizerMapper
+    );
+    if (!stateAccess.isAllowed()) {
+      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+    }
   }
 }

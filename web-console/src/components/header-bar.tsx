@@ -16,7 +16,19 @@
  * limitations under the License.
  */
 
-import { Alignment, AnchorButton, Button, Classes, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup, Popover, Position } from '@blueprintjs/core';
+import {
+  Alignment,
+  AnchorButton,
+  Button, Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Navbar,
+  NavbarDivider,
+  NavbarGroup,
+  Popover,
+  Position
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as React from 'react';
@@ -24,6 +36,7 @@ import * as React from 'react';
 import { AboutDialog } from '../dialogs/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
 import { OverlordDynamicConfigDialog } from '../dialogs/overlord-dynamic-config';
+import { getWikipediaSpec } from '../utils/example-ingestion-spec';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
@@ -31,14 +44,16 @@ import {
   LEGACY_COORDINATOR_CONSOLE,
   LEGACY_OVERLORD_CONSOLE
 } from '../variables';
+import { LoadDataViewSeed } from '../views/load-data-view';
 
 import './header-bar.scss';
 
-export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql' | 'lookups';
+export type HeaderActiveTab = null | 'load-data' | 'query' | 'datasources' | 'segments' | 'tasks' | 'servers' | 'lookups';
 
 export interface HeaderBarProps extends React.Props<any> {
   active: HeaderActiveTab;
   hideLegacy: boolean;
+  goToLoadDataView: (loadDataViewSeed: LoadDataViewSeed) => void;
 }
 
 export interface HeaderBarState {
@@ -110,6 +125,8 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
     const { active, hideLegacy } = this.props;
     const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen, overlordDynamicConfigDialogOpen } = this.state;
 
+    const loadDataPrimary = false;
+
     const legacyMenu = <Menu>
       <MenuItem icon={IconNames.GRAPH} text="Legacy coordinator console" href={LEGACY_COORDINATOR_CONSOLE} target="_blank" />
       <MenuItem icon={IconNames.MAP} text="Legacy overlord console" href={LEGACY_OVERLORD_CONSOLE} target="_blank" />
@@ -123,7 +140,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
     </Menu>;
 
     const configMenu = <Menu>
-      <MenuItem icon={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
+      <MenuItem icon={IconNames.SETTINGS} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
       <MenuItem icon={IconNames.WRENCH} text="Overlord dynamic config" onClick={() => this.setState({ overlordDynamicConfigDialogOpen: true })}/>
       <MenuItem icon={IconNames.PROPERTIES} active={active === 'lookups'} text="Lookups" href="#lookups"/>
     </Menu>;
@@ -133,26 +150,39 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         <a href="#">
           {this.renderLogo()}
         </a>
-        <NavbarDivider />
+
+        <NavbarDivider/>
+        <AnchorButton
+          icon={IconNames.CLOUD_UPLOAD}
+          text="Load data"
+          active={active === 'load-data'}
+          href="#load-data"
+          minimal={!loadDataPrimary}
+          intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
+        />
+        <AnchorButton minimal active={active === 'query'} icon={IconNames.APPLICATION} text="Query" href="#query" />
+
+        <NavbarDivider/>
         <AnchorButton minimal active={active === 'datasources'} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" />
         <AnchorButton minimal active={active === 'segments'} icon={IconNames.STACKED_CHART} text="Segments" href="#segments" />
         <AnchorButton minimal active={active === 'tasks'} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
+
+        <NavbarDivider/>
         <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Data servers" href="#servers" />
-        <NavbarDivider />
-        <AnchorButton minimal active={active === 'sql'} icon={IconNames.APPLICATION} text="SQL" href="#sql" />
-        <Popover className="config-popover" content={configMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.SETTINGS} text="Config"/>
-        </Popover>
+
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         {
           !hideLegacy &&
-          <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT}>
-            <Button className={Classes.MINIMAL} icon={IconNames.SHARE} text="Legacy"/>
+          <Popover content={legacyMenu} position={Position.BOTTOM_RIGHT}>
+            <Button minimal icon={IconNames.SHARE} text="Legacy"/>
           </Popover>
         }
-        <Popover className="help-popover" content={helpMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.HELP} text="Help" />
+        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
+          <Button minimal icon={IconNames.COG}/>
+        </Popover>
+        <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
+          <Button minimal icon={IconNames.HELP}/>
         </Popover>
       </NavbarGroup>
       {

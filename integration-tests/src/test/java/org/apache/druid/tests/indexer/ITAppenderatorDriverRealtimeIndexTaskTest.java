@@ -112,7 +112,9 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
         try {
           Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
         }
-        catch (InterruptedException ex) { /* nothing */ }
+        catch (InterruptedException ex) {
+          /* nothing */
+        }
         dtLast = dt; // latest timestamp
         dt = DateTimes.nowUtc();
         i++;

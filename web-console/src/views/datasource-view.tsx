@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Switch } from '@blueprintjs/core';
+import { Button, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
+import { FormGroup } from '@blueprintjs/core/lib/esnext';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
+import { ActionCell } from '../components/action-cell';
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
@@ -40,6 +42,7 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
+import { BasicAction, basicActionsToMenu } from '../utils/basic-action';
 
 import './datasource-view.scss';
 
@@ -80,7 +83,9 @@ export interface DatasourcesViewState {
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
-
+  dropReloadDatasource: string | null;
+  dropReloadAction: 'drop' | 'reload';
+  dropReloadInterval: string;
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -116,8 +121,10 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       compactionDialogOpenOn: null,
       dropDataDatasource: null,
       enableDatasource: null,
-      killDatasource: null
-
+      killDatasource: null,
+      dropReloadDatasource: null,
+      dropReloadAction: 'drop',
+      dropReloadInterval: ''
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
@@ -211,7 +218,7 @@ GROUP BY 1`);
         } : null
       }
       confirmButtonText="Drop data"
-      successText="Data has been dropped"
+      successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
       failText="Could not drop data"
       intent={Intent.DANGER}
       onClose={(success) => {
@@ -247,6 +254,46 @@ GROUP BY 1`);
       <p>
         {`Are you sure you want to enable datasource '${enableDatasource}'?`}
       </p>
+    </AsyncActionDialog>;
+  }
+
+  renderDropReloadAction() {
+    const { dropReloadDatasource, dropReloadAction, dropReloadInterval } = this.state;
+    const isDrop = dropReloadAction === 'drop';
+
+    return <AsyncActionDialog
+      action={
+        dropReloadDatasource ? async () => {
+          if (!dropReloadInterval) return;
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${dropReloadDatasource}/${isDrop ? 'markUnused' : 'markUsed'}`, {
+            interval: dropReloadInterval
+          });
+          return resp.data;
+        } : null
+      }
+      confirmButtonText={`${isDrop ? 'Drop' : 'Reload'} selected data`}
+      confirmButtonDisabled={!/.\/./.test(dropReloadInterval)}
+      successText={`${isDrop ? 'Drop' : 'Reload'} request submitted`}
+      failText={`Could not ${isDrop ? 'drop' : 'reload'} data`}
+      intent={Intent.PRIMARY}
+      onClose={(success) => {
+        this.setState({ dropReloadDatasource: null });
+        if (success) this.datasourceQueryManager.rerunLastQuery();
+      }}
+    >
+      <p>
+        {`Please select the interval that you want to ${isDrop ? 'drop' : 'reload'}?`}
+      </p>
+      <FormGroup>
+        <InputGroup
+          value={dropReloadInterval}
+          onChange={(e: any) => {
+            const v = e.target.value;
+            this.setState({ dropReloadInterval: v.toUpperCase() });
+          }}
+          placeholder="2018-01-01T00:00:00/2018-01-03T00:00:00"
+        />
+      </FormGroup>
     </AsyncActionDialog>;
   }
 
@@ -352,6 +399,43 @@ GROUP BY 1`);
         }
       }
     });
+  }
+
+  getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
+    if (disabled) {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Enable',
+          onAction: () => this.setState({ enableDatasource: datasource })
+        },
+        {
+          icon: IconNames.TRASH,
+          title: 'Permanently delete (kill task)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ killDatasource: datasource })
+        }
+      ];
+    } else {
+      return [
+        {
+          icon: IconNames.EXPORT,
+          title: 'Reload data by interval',
+          onAction: () => this.setState({ dropReloadDatasource: datasource, dropReloadAction: 'reload' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Drop data by interval',
+          onAction: () => this.setState({ dropReloadDatasource: datasource, dropReloadAction: 'drop' })
+        },
+        {
+          icon: IconNames.IMPORT,
+          title: 'Drop datasource (disable)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ dropDataDatasource: datasource })
+        }
+      ];
+    }
   }
 
   renderRetentionDialog() {
@@ -527,21 +611,22 @@ GROUP BY 1`);
             Header: 'Actions',
             accessor: 'datasource',
             id: 'actions',
-            width: 160,
+            width: 70,
             filterable: false,
             Cell: row => {
               const datasource = row.value;
               const { disabled } = row.original;
-              if (disabled) {
-                return <div>
-                  <a onClick={() => this.setState({ enableDatasource: datasource })}>Enable</a>&nbsp;&nbsp;&nbsp;
-                  <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>;
-              } else {
-                return <div>
-                  <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>;
-              }
+              const datasourceActions = this.getDatasourceActions(datasource, disabled);
+              const datasourceMenu = basicActionsToMenu(datasourceActions);
+
+              return <ActionCell>
+                {
+                  datasourceMenu &&
+                  <Popover content={datasourceMenu} position={Position.BOTTOM_RIGHT}>
+                    <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: tableColumnSelectionHandler.showColumn('Actions')
           }
@@ -551,6 +636,7 @@ GROUP BY 1`);
       />
       {this.renderDropDataAction()}
       {this.renderEnableAction()}
+      {this.renderDropReloadAction()}
       {this.renderKillAction()}
       {this.renderRetentionDialog()}
       {this.renderCompactionDialog()}

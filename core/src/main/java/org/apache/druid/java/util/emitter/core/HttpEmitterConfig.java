@@ -34,7 +34,9 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
   /**
    * For JSON deserialization only. In other cases use {@link Builder}
    */
-  public HttpEmitterConfig() {}
+  public HttpEmitterConfig()
+  {
+  }
 
   public HttpEmitterConfig(BaseHttpEmittingConfig base, String recipientBaseUrl)
   {

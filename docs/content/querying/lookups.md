@@ -55,6 +55,17 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](../development/extensions-core/lookups-cached-global.html).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](../development/extensions-core/kafka-extraction-namespace.html).
 
+Query Syntax
+------------
+
+In [Druid SQL](sql.html), lookups can be queried using the `LOOKUP` function, for example:
+
+```
+SELECT LOOKUP(column_name, 'lookup-name'), COUNT(*) FROM datasource GROUP BY 1
+```
+
+In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.html).
+
 Query Execution
 ---------------
 When executing an aggregation query involving lookups, Druid can decide to apply lookups either while scanning and
