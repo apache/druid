@@ -40,6 +40,7 @@ import * as ReactDOMServer from 'react-dom/server';
 
 import { SQLFunctionDoc } from '../../lib/sql-function-doc';
 import { AppToaster } from '../singletons/toaster';
+import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../variables';
 
 import { MenuCheckbox } from './menu-checkbox';
 
@@ -81,6 +82,28 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
       bypassCache: false,
       wrapQuery: true
     };
+  }
+
+  private replaceDefaultAutoCompleter = () => {
+    /*
+     Please refer to the source code @
+     https://github.com/ajaxorg/ace/blob/9b5b63d1dc7c1b81b58d30c87d14b5905d030ca5/lib/ace/ext/language_tools.js#L41
+     for the implementation of keyword completer
+    */
+    const keywordCompleter = {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        if (session.$mode.completer) {
+          return session.$mode.completer.getCompletions(editor, session, pos, prefix, callback);
+        }
+        const state = editor.session.getState(pos.row);
+        let keywordCompletions = session.$mode.getCompletions(state, session, pos, prefix);
+        keywordCompletions = keywordCompletions.map((d: any) => {
+          return Object.assign(d, {name: d.name.toUpperCase(), value: d.value.toUpperCase()});
+        });
+        return callback(null, keywordCompletions);
+      }
+    };
+    langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
   }
 
   private addDatasourceAutoCompleter = async (): Promise<any> => {
@@ -169,6 +192,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   private addCompleters = async () => {
     try {
+      this.replaceDefaultAutoCompleter();
       this.addFunctionAutoCompleter();
       await this.addDatasourceAutoCompleter();
       await this.addColumnNameAutoCompleter();
@@ -201,6 +225,12 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     const { query, autoComplete, bypassCache, wrapQuery } = this.state;
 
     return <Menu>
+      <MenuItem
+        icon={IconNames.HELP}
+        text="Docs"
+        href={isRune ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
+        target="_blank"
+      />
       {
         !isRune &&
         <>
@@ -210,14 +240,14 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
             onClick={() => onExplain(query)}
           />
           <MenuCheckbox
-            checked={autoComplete}
-            label="Auto complete"
-            onChange={() => this.setState({autoComplete: !autoComplete})}
-          />
-          <MenuCheckbox
             checked={wrapQuery}
             label="Wrap query with limit"
             onChange={() => this.setState({wrapQuery: !wrapQuery})}
+          />
+          <MenuCheckbox
+            checked={autoComplete}
+            label="Auto complete"
+            onChange={() => this.setState({autoComplete: !autoComplete})}
           />
         </>
       }
@@ -272,7 +302,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         </ButtonGroup>
         {
           queryElapsed &&
-          <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+          <span className="query-elapsed"> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
         }
       </div>
     </div>;

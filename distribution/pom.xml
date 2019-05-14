@@ -87,8 +87,8 @@
                         <configuration>
                             <target>
                                 <concat destfile="${project.build.directory}/../../README.BINARY">
-                                    <fileset file="${project.build.directory}/../../README.md" />
-                                    <fileset file="${project.build.directory}/../../LABELS.md" />
+                                    <fileset file="${project.build.directory}/../../README" />
+                                    <fileset file="${project.build.directory}/../../LABELS" />
                                 </concat>
                             </target>
                         </configuration>
@@ -116,6 +116,20 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
+                            <execution>
+                                <id>versionify-readme</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.parent.basedir}/docs/_bin/build-textfile-readme.sh</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.parent.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
@@ -333,6 +347,9 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

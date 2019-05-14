@@ -35,6 +35,10 @@
       overflow-y: scroll;
     }
 
+    &.narrow-pad {
+      padding: $standard-padding 10px;
+    }
+
     .app-view {
       position: relative;
     }

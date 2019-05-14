@@ -26,7 +26,7 @@ title: "Overlord Process"
 
 ### Configuration
 
-For Overlord Process Configuration, see [Overlord Configuration](../configuration/index.html#overlord).
+For Apache Druid (incubating) Overlord Process Configuration, see [Overlord Configuration](../configuration/index.html#overlord).
 
 ### HTTP Endpoints
 

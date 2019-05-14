@@ -1,0 +1,12 @@
+[
+  {
+    "server": "172.172.172.6:8283",
+    "host": "172.172.172.6",
+    "plaintext_port": 8083,
+    "tls_port": 8283,
+    "server_type": "historical",
+    "tier": "_default_tier",
+    "curr_size": 2208932412,
+    "max_size": 5000000000
+  }
+]

@@ -34,7 +34,7 @@ else
   CONFDIR="$2"
 fi
 
-CONFDIR="$(cd "$CONFDIR" && pwd)/druid"
+CONFDIR="$(cd "$CONFDIR" && pwd)"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
 cd "$WHEREAMI/.."

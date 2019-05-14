@@ -26,7 +26,7 @@ title: "Performance FAQ"
 
 ## I can't match your benchmarked results
 
-Improper configuration is by far the largest problem we see people trying to deploy Druid. The example configurations listed in the tutorials are designed for a small volume of data where all processes are on a single machine. The configs are extremely poor for actual production use.
+Improper configuration is by far the largest problem we see people trying to deploy Apache Druid (incubating). The example configurations listed in the tutorials are designed for a small volume of data where all processes are on a single machine. The configs are extremely poor for actual production use.
 
 ## What should I set my JVM heap?
 

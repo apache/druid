@@ -24,7 +24,7 @@ title: "Protobuf"
 
 # Protobuf
 
-This extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../operations/including-extensions.html) `druid-protobuf-extensions` as an extension.
+This Apache Druid (incubating) extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../operations/including-extensions.html) `druid-protobuf-extensions` as an extension.
 
 ## Protobuf Parser
 

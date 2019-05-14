@@ -24,7 +24,7 @@ title: "Graphite Emitter"
 
 # Graphite Emitter
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `graphite-emitter` extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `graphite-emitter` extension.
 
 ## Introduction
 
