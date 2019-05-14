@@ -463,6 +463,7 @@ public class ExpressionSelectors
           return new String[]{null};
         }
         final String[] strings = new String[row.size()];
+        // noinspection SSBasedInspection
         for (int i = 0; i < row.size(); i++) {
           strings[i] = selector.lookupName(row.get(i));
         }
