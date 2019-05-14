@@ -744,4 +744,4 @@ Broker will emit the following metrics for SQL.
 
 ## Authorization Permissions
 
-Please see [Defining SQL permissions](../../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.
+Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.
