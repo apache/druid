@@ -20,7 +20,7 @@
     },
     "expectedResults": [
       {
-        "server_type":"HISTORICAL"
+        "server_type":"historical"
       }
     ]
   }

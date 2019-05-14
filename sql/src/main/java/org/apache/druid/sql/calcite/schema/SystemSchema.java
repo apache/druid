@@ -484,7 +484,7 @@ public class SystemSchema extends AbstractSchema
                 extractHost(node.getHost()),
                 (long) extractPort(node.getHostAndPort()),
                 (long) extractPort(node.getHostAndTlsPort()),
-                toStringOrNull(val.getNodeType()),
+                StringUtils.toLowerCase(toStringOrNull(val.getNodeType())),
                 isDataNode ? val.toDruidServer().getTier() : null,
                 isDataNode ? val.toDruidServer().getCurrSize() : CURRENT_SERVER_SIZE,
                 isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
