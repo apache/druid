@@ -48,8 +48,8 @@ This PR has:
    doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
-- [ ] added enough comments to make the code fully understandable in a single read-through for anybody who is not
-familiar with it.
+- [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar
+reader. 
 - [ ] added unit tests or modified existing tests to cover new code paths.
 - [ ] added integration tests.
 - [ ] been tested in a test Druid cluster.
