@@ -49,13 +49,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-//import jdk.nashorn.internal.ir.ObjectNode;
 
 public class BigoInputRowParser implements InputRowParser<Object>
 {
   private static final Logger log = new Logger(BigoInputRowParser.class);
   private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
-
 
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;

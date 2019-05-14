@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class BigoExtensionsModule implements DruidModule
@@ -34,11 +34,11 @@ public class BigoExtensionsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.singletonList(
-            new SimpleModule("BigoInputRowParserModule")
-                    .registerSubtypes(
-                            new NamedType(BigoInputRowParser.class, "bigo")
-                    )
+    return Arrays.asList(
+        new SimpleModule("BigoInputRowParserModule")
+            .registerSubtypes(
+                new NamedType(BigoInputRowParser.class, "bigo")
+            )
     );
   }
 
