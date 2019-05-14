@@ -382,7 +382,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     for (String roleName : user.getRoles()) {
       BasicAuthorizerRole role = roleMap.get(roleName);
       if (role == null) {
-        log.error("User [%s] had role [%s], but role was not found.", user.getName(), roleName);
+        log.error("User [%s] had role [%s], but role object was not found.", user.getName(), roleName);
       } else {
         BasicAuthorizerRoleSimplifiedPermissions roleWithSimplifiedPermissions = new BasicAuthorizerRoleSimplifiedPermissions(
             role.getName(),
