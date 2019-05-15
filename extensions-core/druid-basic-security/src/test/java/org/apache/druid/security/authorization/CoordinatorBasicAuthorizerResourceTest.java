@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -55,9 +57,14 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class CoordinatorBasicAuthorizerResourceTest
 {
@@ -663,6 +670,129 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "", "");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoleSimplifiedPerms2, response.getEntity());
+  }
+
+  @Test
+  public void testConcurrentUpdate()
+  {
+    final int testMultiple = 100;
+
+    // setup a user and the roles
+    Response response = resource.createUser(req, AUTHORIZER_NAME, "druid");
+    Assert.assertEquals(200, response.getStatus());
+
+    List<ResourceAction> perms = ImmutableList.of(
+        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource("B", ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+    );
+
+    for (int i = 0; i < testMultiple; i++) {
+      String roleName = "druidRole-" + i;
+      response = resource.createRole(req, AUTHORIZER_NAME, roleName);
+      Assert.assertEquals(200, response.getStatus());
+
+      response = resource.setRolePermissions(req, AUTHORIZER_NAME, roleName, perms);
+      Assert.assertEquals(200, response.getStatus());
+    }
+
+    ExecutorService exec = Execs.multiThreaded(testMultiple, "thread---");
+    int[] responseCodesAssign = new int[testMultiple];
+
+    // assign 'testMultiple' roles to the user concurrently
+    List<Callable<Void>> addRoleCallables = new ArrayList<>();
+    for (int i = 0; i < testMultiple; i++) {
+      final int innerI = i;
+      String roleName = "druidRole-" + i;
+      addRoleCallables.add(
+          new Callable<Void>()
+          {
+            @Override
+            public Void call() throws Exception
+            {
+              Response response = resource.assignRoleToUser(req, AUTHORIZER_NAME, "druid", roleName);
+              responseCodesAssign[innerI] = response.getStatus();
+              return null;
+            }
+          }
+      );
+    }
+    try {
+      List<Future<Void>> futures = exec.invokeAll(addRoleCallables);
+      for (Future future : futures) {
+        future.get();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    // the API can return !200 if the update attempt fails by exhausting retries because of
+    // too much contention from other conflicting requests, make sure that we don't get any successful requests
+    // that didn't actually take effect
+    Set<String> roleNames = getRoleNamesAssignedToUser("druid");
+    for (int i = 0; i < testMultiple; i++) {
+      String roleName = "druidRole-" + i;
+      if (responseCodesAssign[i] == 200 && !roleNames.contains(roleName)) {
+        Assert.fail(
+            StringUtils.format("Got response status 200 for assigning role [%s] but user did not have role.", roleName)
+        );
+      }
+    }
+
+    // Now unassign the roles concurrently
+    List<Callable<Void>> removeRoleCallables = new ArrayList<>();
+    int[] responseCodesRemove = new int[testMultiple];
+
+    for (int i = 0; i < testMultiple; i++) {
+      final int innerI = i;
+      String roleName = "druidRole-" + i;
+      removeRoleCallables.add(
+          new Callable<Void>()
+          {
+            @Override
+            public Void call() throws Exception
+            {
+              Response response = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid", roleName);
+              responseCodesRemove[innerI] = response.getStatus();
+              return null;
+            }
+          }
+      );
+    }
+    try {
+      List<Future<Void>> futures = exec.invokeAll(removeRoleCallables);
+      for (Future future : futures) {
+        future.get();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    roleNames = getRoleNamesAssignedToUser("druid");
+    for (int i = 0; i < testMultiple; i++) {
+      String roleName = "druidRole-" + i;
+      if (responseCodesRemove[i] == 200 && roleNames.contains(roleName)) {
+        Assert.fail(
+            StringUtils.format("Got response status 200 for removing role [%s] but user still has role.", roleName)
+        );
+      }
+    }
+  }
+
+  private Set<String> getRoleNamesAssignedToUser(
+      String user
+  )
+  {
+    Response response = resource.getUser(req, AUTHORIZER_NAME, user, "");
+    Assert.assertEquals(200, response.getStatus());
+    BasicAuthorizerUserFull userFull = (BasicAuthorizerUserFull) response.getEntity();
+    Set<String> roleNames = new HashSet<>();
+    for (BasicAuthorizerRole role : userFull.getRoles()) {
+      roleNames.add(role.getName());
+    }
+    return roleNames;
   }
 
   private static Map<String, String> errorMapWithMsg(String errorMsg)
