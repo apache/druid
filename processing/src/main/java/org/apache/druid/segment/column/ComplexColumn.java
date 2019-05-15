@@ -60,6 +60,12 @@ public interface ComplexColumn extends BaseColumn
   int getLength();
 
   /**
+   * Close and release any resources associated with this column.
+   */
+  @Override
+  void close();
+
+  /**
    * Optionally overridden when complex column serialization is not based on default serialization based
    * on {@link org.apache.druid.segment.data.GenericIndexed} in {@link org.apache.druid.segment.serde.ComplexColumnSerializer}.
    * @param offset object to retrieve row number
