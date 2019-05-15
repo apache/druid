@@ -155,6 +155,19 @@ On the Brokers, please ensure that the sum of `druid.broker.http.numConnections`
 
 Tuning the cluster so that each Historical can accept 50 queries and 10 non-queries, adjusting the Brokers accordingly, is a reasonable starting point.
 
+#### Broker Backpressure
+
+When retrieving query results from Historical processes or Tasks, the Broker can optionally specify a maximum buffer size for queued, unread data, and exert backpressure on the channel to the Historical or Tasks when limit is reached (causing writes to the channel to block on the Historical/Task side until the Broker is able to drain some data from the channel).
+
+This buffer size is controlled by the `druid.broker.http.maxQueuedBytes` setting.
+
+The limit is divided across the number of Historicals/Tasks that a query would hit: suppose I have `druid.broker.http.maxQueuedBytes` set to 5MB, and the Broker receives a query that needs to be fanned out to 2 Historicals. Each per-historical channel would get a 2.5MB buffer in this case.
+
+You can generally set this to a value of approximately `2MB * number of Historicals`. As your cluster scales up with more Historicals and Tasks, consider increasing this buffer size and increasing the Broker heap accordingly.
+
+- If the buffer is too small, this can lead to inefficient queries due to the buffer filling up rapidly and stalling the channel
+- If the buffer is too large, this puts more memory pressure on the Broker due to more queued result data in the HTTP channels.
+
 #### Number of Brokers
 
 A 1:15 ratio of Brokers to Historicals is a reasonable starting point (this is not a hard rule).
