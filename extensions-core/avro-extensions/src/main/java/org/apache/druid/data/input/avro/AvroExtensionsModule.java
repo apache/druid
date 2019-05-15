@@ -42,7 +42,9 @@ import java.util.List;
 
 public class AvroExtensionsModule implements DruidModule
 {
-  public AvroExtensionsModule() {}
+  public AvroExtensionsModule()
+  {
+  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -62,7 +64,8 @@ public class AvroExtensionsModule implements DruidModule
 
   @Override
   public void configure(Binder binder)
-  { }
+  {
+  }
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GsonJsonUtil.class)
