@@ -24,7 +24,7 @@ title: "Clustering"
 
 # Clustering
 
-Druid is designed to be deployed as a scalable, fault-tolerant cluster.
+Apache Druid (incubating) is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
 your needs. 
@@ -102,12 +102,12 @@ cd apache-druid-#{DRUIDVERSION}
 In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
-* `bin/*` - scripts related to the [single-machine quickstart](quickstart.html)
+* `bin/*` - scripts related to the [single-machine quickstart](index.html)
 * `conf/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
-* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html)
+* `quickstart/*` - files related to the [single-machine quickstart](index.html)
 
 We'll be editing the files in `conf/` in order to get things running.
 

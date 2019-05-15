@@ -25,8 +25,11 @@ import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import sun.misc.Unsafe;
+import org.apache.druid.java.util.common.UnsafeUtils;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -177,24 +180,44 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
 class ByteBuffers
 {
-  private static final Unsafe UNSAFE;
   private static final long ADDRESS_OFFSET;
+  private static final MethodHandle GET_LONG;
 
   static {
     try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
-      ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer.class.getDeclaredField("address"));
+      MethodHandles.Lookup lookup = MethodHandles.lookup();
+      ADDRESS_OFFSET = lookupAddressOffset(lookup);
+      GET_LONG = lookupGetLong(lookup);
     }
-    catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
+    catch (Throwable t) {
+      throw new RuntimeException("Unable to lookup Unsafe methods", t);
     }
+  }
+
+  private static long lookupAddressOffset(MethodHandles.Lookup lookup) throws Throwable
+  {
+    MethodHandle objectFieldOffset = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "objectFieldOffset",
+                                                        MethodType.methodType(long.class, Field.class)
+    );
+    return (long) objectFieldOffset.bindTo(UnsafeUtils.theUnsafe()).invoke(Buffer.class.getDeclaredField("address"));
+  }
+
+  private static MethodHandle lookupGetLong(MethodHandles.Lookup lookup) throws Throwable
+  {
+    MethodHandle getLong = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "getLong",
+                                              MethodType.methodType(long.class, Object.class, long.class)
+    );
+    return getLong.bindTo(UnsafeUtils.theUnsafe());
   }
 
   public static long getAddress(ByteBuffer buf)
   {
-    return UNSAFE.getLong(buf, ADDRESS_OFFSET);
+    try {
+      return (long) GET_LONG.invoke(buf, ADDRESS_OFFSET);
+    }
+    catch (Throwable t) {
+      throw new UnsupportedOperationException("Unsafe.getLong is unsupported", t);
+    }
   }
 
   public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align)

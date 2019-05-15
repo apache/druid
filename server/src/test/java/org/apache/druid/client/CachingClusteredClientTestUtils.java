@@ -115,5 +115,7 @@ public final class CachingClusteredClientTestUtils
     return objectMapper;
   }
 
-  private CachingClusteredClientTestUtils() {}
+  private CachingClusteredClientTestUtils()
+  {
+  }
 }

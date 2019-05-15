@@ -24,6 +24,7 @@ import * as React from 'react';
 import ReactTable from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { LookupEditDialog } from '../dialogs/lookup-edit-dialog';
 import { AppToaster } from '../singletons/toaster';
@@ -36,6 +37,8 @@ import {
 import './lookups-view.scss';
 
 const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', 'Actions'];
+
+const DEFAULT_LOOKUP_TIER: string = '__default';
 
 export interface LookupsViewProps extends React.Props<any> {
 
@@ -88,8 +91,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   componentDidMount(): void {
     this.lookupsGetQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
-        const tiers = tiersResp.data;
+        const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');
+        const tiers = tiersResp.data && tiersResp.data.length > 0 ? tiersResp.data : [DEFAULT_LOOKUP_TIER];
 
         const lookupEntries: {}[] = [];
         const lookupResp = await axios.get('/druid/coordinator/v1/lookups/config/all');
@@ -329,14 +332,14 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     const { tableColumnSelectionHandler } = this;
 
     return <div className="lookups-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Lookups</div>
+      <ViewControlBar label="Lookups">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
         />
-        { !lookupsError &&
+        {
+          !lookupsError &&
           <Button
             icon={IconNames.PLUS}
             text="Add"
@@ -348,7 +351,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderLookupsTable()}
       {this.renderLookupEditDialog()}
       {this.renderDeleteLookupAction()}

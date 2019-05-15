@@ -24,7 +24,7 @@ title: "Approximate Histogram aggregators"
 
 # Approximate Histogram aggregators
 
-Make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
 
 The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
 

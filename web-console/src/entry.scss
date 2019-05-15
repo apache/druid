@@ -50,3 +50,24 @@ svg {
   height: 100%;
   width: 100%;
 }
+
+.label-info-text {
+  max-width: 400px;
+  padding: 15px;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.bp3-form-group {
+  .bp3-form-content {
+    position: relative;
+
+    & > .bp3-popover-wrapper {
+      position: absolute;
+      right: 0;
+      top: 7px;
+    }
+  }
+}

@@ -127,5 +127,7 @@ public final class Rows
     return metricValueString;
   }
 
-  private Rows() {}
+  private Rows()
+  {
+  }
 }

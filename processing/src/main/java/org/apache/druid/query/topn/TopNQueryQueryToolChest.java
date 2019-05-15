@@ -327,6 +327,21 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(TopNQuery query)
+      {
+        final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)
+            .appendCacheable(query.getDimensionSpec())
+            .appendCacheable(query.getTopNMetricSpec())
+            .appendInt(query.getThreshold())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheables(query.getPostAggregatorSpecs());
+        return builder.build();
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;
@@ -383,7 +398,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
             while (inputIter.hasNext()) {
               List<Object> result = (List<Object>) inputIter.next();
-              Map<String, Object> vals = Maps.newLinkedHashMap();
+              final Map<String, Object> vals = Maps.newLinkedHashMap();
 
               Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
@@ -394,10 +409,15 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   DimensionHandlerUtils.convertObjectToType(resultIter.next(), query.getDimensionSpec().getOutputType())
               );
 
-              while (aggIter.hasNext() && resultIter.hasNext()) {
-                final AggregatorFactory factory = aggIter.next();
-                vals.put(factory.getName(), factory.deserialize(resultIter.next()));
-              }
+              CacheStrategy.fetchAggregatorsFromCache(
+                  aggIter,
+                  resultIter,
+                  isResultLevelCache,
+                  (aggName, aggValueObject) -> {
+                    vals.put(aggName, aggValueObject);
+                    return null;
+                  }
+              );
 
               for (PostAggregator postAgg : postAggs) {
                 vals.put(postAgg.getName(), postAgg.compute(vals));

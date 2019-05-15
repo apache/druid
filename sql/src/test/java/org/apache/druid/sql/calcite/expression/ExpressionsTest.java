@@ -42,12 +42,15 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
@@ -464,6 +467,82 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
+  public void testRound()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("a")),
+        DruidExpression.fromExpression("round(\"a\")"),
+        10L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b")),
+        DruidExpression.fromExpression("round(\"b\")"),
+        25L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
+        DruidExpression.fromExpression("round(\"b\",-1)"),
+        30L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x")),
+        DruidExpression.fromExpression("round(\"x\")"),
+        2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), integerLiteral(1)),
+        DruidExpression.fromExpression("round(\"x\",1)"),
+        2.3
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("y")),
+        DruidExpression.fromExpression("round(\"y\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("z")),
+        DruidExpression.fromExpression("round(\"z\")"),
+        -2.0
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("The first argument to the function[round] should be integer or double type but get the STRING type");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("s")),
+        DruidExpression.fromExpression("round(\"s\")"),
+        "IAE Exception"
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidSecondArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("The second argument to the function[round] should be integer type but get the STRING type");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
+        DruidExpression.fromExpression("round(\"x\",'foo')"),
+        "IAE Exception"
+    );
+  }
+
+  @Test
   public void testDateTrunc()
   {
     testExpression(
@@ -523,6 +602,33 @@ public class ExpressionsTest extends CalciteTestBase
         "  hey ther"
     );
   }
+
+  @Test
+  public void testPad()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new LPadOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("x")
+        ),
+        DruidExpression.fromExpression("lpad(\"s\",5,'x')"),
+        "xxfoo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RPadOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("x")
+        ),
+        DruidExpression.fromExpression("rpad(\"s\",5,'x')"),
+        "fooxx"
+    );
+  }
+
 
   @Test
   public void testTimeFloor()

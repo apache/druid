@@ -411,4 +411,80 @@ public class StringUtils
     System.arraycopy(multiple, 0, multiple, copied, limit - copied);
     return new String(multiple, StandardCharsets.UTF_8);
   }
+   
+  /**
+   * Returns the string left-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters.
+   * Lpad and rpad functions are migrated from flink's scala function with minor refactor
+   * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string left-padded with pad to a length of len
+   */
+  public static String lpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+
+    // The length of the padding needed
+    int pos = Math.max(len - base.length(), 0);
+
+    // Copy the padding
+    for (int i = 0; i < pos; i += pad.length()) {
+      for (int j = 0; j < pad.length() && j < pos - i; j++) {
+        data[i + j] = pad.charAt(j);
+      }
+    }
+
+    // Copy the base
+    for (int i = 0; pos + i < len && i < base.length(); i++) {
+      data[pos + i] = base.charAt(i);
+    }
+
+    return new String(data);
+  }
+
+  /**
+   * Returns the string right-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters. 
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string right-padded with pad to a length of len
+   */
+  public static String rpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+
+    int pos = 0;
+
+    // Copy the base
+    for ( ; pos < base.length() && pos < len; pos++) {
+      data[pos] = base.charAt(pos);
+    }
+
+    // Copy the padding
+    for ( ; pos < len; pos += pad.length()) {
+      for (int i = 0; i < pad.length() && i < len - pos; i++) {
+        data[pos + i] = pad.charAt(i);
+      }
+    }
+
+    return new String(data);
+  }
+
 }

@@ -22,6 +22,7 @@ package org.apache.druid.query.timeseries;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -52,7 +53,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -275,6 +275,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(TimeseriesQuery query)
+      {
+        final CacheKeyBuilder builder = new CacheKeyBuilder(TIMESERIES_QUERY)
+            .appendBoolean(query.isDescending())
+            .appendBoolean(query.isSkipEmptyBuckets())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheables(query.getPostAggregatorSpecs())
+            .appendInt(query.getLimit())
+            .appendBoolean(query.isGrandTotal());
+        return builder.build();
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;
@@ -287,7 +303,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           TimeseriesResultValue results = input.getValue();
           final List<Object> retVal = Lists.newArrayListWithCapacity(1 + aggs.size());
 
-          retVal.add(input.getTimestamp().getMillis());
+          // Timestamp can be null if grandTotal is true.
+          if (isResultLevelCache) {
+            retVal.add(input.getTimestamp() == null ? null : input.getTimestamp().getMillis());
+          } else {
+            retVal.add(Preconditions.checkNotNull(input.getTimestamp(), "timestamp of input[%s]", input).getMillis());
+          }
           for (AggregatorFactory agg : aggs) {
             retVal.add(results.getMetric(agg.getName()));
           }
@@ -308,20 +329,32 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           private final Granularity granularity = query.getGranularity();
 
           @Override
-          public Result<TimeseriesResultValue> apply(@Nullable Object input)
+          public Result<TimeseriesResultValue> apply(Object input)
           {
             List<Object> results = (List<Object>) input;
-            Map<String, Object> retVal = Maps.newLinkedHashMap();
+            final Map<String, Object> retVal = Maps.newLinkedHashMap();
 
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
-
-            while (aggsIter.hasNext() && resultIter.hasNext()) {
-              final AggregatorFactory factory = aggsIter.next();
-              retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
+            final Number timestampNumber = (Number) resultIter.next();
+            final DateTime timestamp;
+            if (isResultLevelCache) {
+              timestamp = timestampNumber == null ? null : granularity.toDateTime(timestampNumber.longValue());
+            } else {
+              timestamp = granularity.toDateTime(Preconditions.checkNotNull(timestampNumber, "timestamp").longValue());
             }
+
+            CacheStrategy.fetchAggregatorsFromCache(
+                aggsIter,
+                resultIter,
+                isResultLevelCache,
+                (aggName, aggValueObject) -> {
+                  retVal.put(aggName, aggValueObject);
+                  return null;
+                }
+            );
+
             if (isResultLevelCache) {
               Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
               while (postItr.hasNext() && resultIter.hasNext()) {

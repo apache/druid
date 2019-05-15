@@ -42,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -108,9 +109,10 @@ public class BloomFilterGroupByQueryTest
     MapBasedRow row = ingestAndQuery(query);
 
 
-    Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("mezzanine"));
-    Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("premium"));
-    Assert.assertFalse(((BloomKFilter) row.getRaw("blooming_quality")).testString("entertainment"));
+    BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("blooming_quality"));
+    Assert.assertTrue(filter.testString("mezzanine"));
+    Assert.assertTrue(filter.testString("premium"));
+    Assert.assertFalse(filter.testString("entertainment"));
   }
 
   @Test
@@ -135,7 +137,7 @@ public class BloomFilterGroupByQueryTest
 
     Object val = row.getRaw("blooming_quality");
 
-    String serialized = BloomFilterAggregatorTest.filterToString((BloomKFilter) val);
+    String serialized = BloomFilterAggregatorTest.filterToString(BloomKFilter.deserialize((ByteBuffer) val));
     String empty = BloomFilterAggregatorTest.filterToString(filter);
 
     Assert.assertEquals(empty, serialized);

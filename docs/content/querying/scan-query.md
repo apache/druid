@@ -24,7 +24,7 @@ title: "Scan query"
 
 # Scan query
 
-The Scan query returns raw Druid rows in streaming mode.  The biggest difference between the Select query and the Scan
+The Scan query returns raw Apache Druid (incubating) rows in streaming mode.  The biggest difference between the Select query and the Scan
 query is that the Scan query does not retain all the returned rows in memory before they are returned to the client.  
 The Select query _will_ retain the rows in memory, causing memory pressure if too many rows are returned.  
 The Scan query can return all the rows without issuing another pagination query.
@@ -61,7 +61,7 @@ The following are the main parameters for Scan queries:
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
 |batchSize|How many rows buffered before return to client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
-|order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the limit is less than `druid.query.scan.maxRowsQueuedForOrdering`.  Scan queries that are either legacy mode or have a limit greater than `druid.query.scan.maxRowsQueuedForOrdering` will not be time-ordered and default to a order of "none".|none|
+|order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the `__time` column is included in the `columns` field and the requirements outlined in the [time ordering](#time-ordering) section are met.|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags (see the Query Context Properties section below).|no|
 
@@ -188,9 +188,9 @@ the query context (see the Query Context Properties section).
 The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
 In legacy mode you can expect the following behavior changes:
 
-- The __time column is returned as "timestamp" rather than "__time". This will take precedence over any other column
-you may have that is named "timestamp".
-- The __time column is included in the list of columns even if you do not specifically ask for it.
+- The `__time` column is returned as `"timestamp"` rather than `"__time"`. This will take precedence over any other column
+you may have that is named `"timestamp"`.
+- The `__time` column is included in the list of columns even if you do not specifically ask for it.
 - Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
 
 Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting

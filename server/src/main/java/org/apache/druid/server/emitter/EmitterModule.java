@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.emitter;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -130,13 +131,16 @@ public class EmitterModule implements Module
     {
       final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>(){});
 
-      emitter = findEmitter(emitterType, emitterBindings);
-
-      if (emitter == null) {
+      if (Strings.isNullOrEmpty(emitterType)) {
+        // If the emitter is unspecified, we want to default to the no-op emitter. Include empty string here too, just
+        // in case nulls are translated to empty strings at some point somewhere in the system.
         emitter = findEmitter(NoopEmitterModule.EMITTER_TYPE, emitterBindings);
+      } else {
+        emitter = findEmitter(emitterType, emitterBindings);
       }
 
       if (emitter == null) {
+        // If the requested emitter couldn't be found, throw an error. It might mean a typo, or a missing extension.
         List<String> knownTypes = new ArrayList<>();
         for (Binding<Emitter> binding : emitterBindings) {
           final Annotation annotation = binding.getKey().getAnnotation();

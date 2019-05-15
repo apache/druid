@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Processes and Servers"
+title: "Apache Druid (incubating) Processes and Servers"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Druid Processes and Servers"
   ~ under the License.
   -->
 
-# Druid Processes and Servers
+# Apache Druid (incubating) Processes and Servers
 
 ## Process Types
 

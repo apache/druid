@@ -54,7 +54,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sink implements Iterable<FireHydrant>
 {
-  private static final IncrementalIndexAddResult ALREADY_SWAPPED = new IncrementalIndexAddResult(-1, -1, null, "write after index swapped");
+  private static final IncrementalIndexAddResult ALREADY_SWAPPED =
+      new IncrementalIndexAddResult(-1, -1, null, "write after index swapped");
 
   private final Object hydrantLock = new Object();
   private final Interval interval;
@@ -64,7 +65,7 @@ public class Sink implements Iterable<FireHydrant>
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean reportParseExceptions;
-  private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
+  private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private volatile FireHydrant currHydrant;

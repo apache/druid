@@ -25,7 +25,9 @@ import it.unimi.dsi.fastutil.ints.IntList;
 
 public class IntListUtils
 {
-  private IntListUtils() {}
+  private IntListUtils()
+  {
+  }
 
   public static IntList fromTo(int from, int to)
   {

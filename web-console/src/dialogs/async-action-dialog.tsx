@@ -34,6 +34,7 @@ export interface AsyncAlertDialogProps extends React.Props<any> {
   action: null | (() => Promise<void>);
   onClose: (success: boolean) => void;
   confirmButtonText: string;
+  confirmButtonDisabled?: boolean;
   cancelButtonText?: string;
   className?: string;
   icon?: IconName;
@@ -66,20 +67,20 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
         message: `${failText}: ${e.message}`,
         intent: Intent.DANGER
       });
-      onClose(false);
       this.setState({ working: false });
+      onClose(false);
       return;
     }
     AppToaster.show({
       message: successText,
       intent: Intent.SUCCESS
     });
-    onClose(true);
     this.setState({ working: false });
+    onClose(true);
   }
 
   render() {
-    const { action, onClose, className, icon, intent, confirmButtonText, cancelButtonText, children } = this.props;
+    const { action, onClose, className, icon, intent, confirmButtonText, cancelButtonText, confirmButtonDisabled, children } = this.props;
     const { working } = this.state;
     if (!action) return null;
 
@@ -99,7 +100,7 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
         working ?
           <ProgressBar/> :
           <div className={Classes.ALERT_FOOTER}>
-            <Button intent={intent} text={confirmButtonText} onClick={this.handleConfirm}/>
+            <Button intent={intent} text={confirmButtonText} onClick={this.handleConfirm} disabled={confirmButtonDisabled}/>
             <Button text={cancelButtonText || 'Cancel'} onClick={handleClose}/>
           </div>
       }

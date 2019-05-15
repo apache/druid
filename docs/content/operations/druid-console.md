@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid console"
+title: "Apache Druid (incubating) console"
 ---
 
 <!--
@@ -41,7 +41,7 @@ Below is a description of the high-level features and functionality of the Druid
 
 ## Home
 
-The home view provide a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis#legacy-consoles) should you need them.
+The home view provide a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
 
 ![home-view](./img/01-home-view.png)
 

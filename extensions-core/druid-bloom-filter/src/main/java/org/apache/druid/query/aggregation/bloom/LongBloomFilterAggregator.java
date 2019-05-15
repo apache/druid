@@ -23,20 +23,22 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
+import java.nio.ByteBuffer;
+
 public final class LongBloomFilterAggregator extends BaseBloomFilterAggregator<BaseLongColumnValueSelector>
 {
-  LongBloomFilterAggregator(BaseLongColumnValueSelector selector, BloomKFilter collector)
+  LongBloomFilterAggregator(BaseLongColumnValueSelector selector, int maxNumEntries, boolean onHeap)
   {
-    super(selector, collector);
+    super(selector, maxNumEntries, onHeap);
   }
 
   @Override
-  public void aggregate()
+  public void bufferAdd(ByteBuffer buf)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.addLong(selector.getLong());
+      BloomKFilter.addLong(buf, selector.getLong());
     } else {
-      collector.addBytes(null, 0, 0);
+      BloomKFilter.addBytes(buf, null, 0, 0);
     }
   }
 }
