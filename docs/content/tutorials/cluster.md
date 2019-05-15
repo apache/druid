@@ -30,11 +30,11 @@ In this document, we'll set up a simple cluster and discuss how it can be furthe
 your needs. 
 
 This simple cluster will feature:
- - Two Master servers to host the Coordinator and Overlord processes
- - Scalable, fault-tolerant Data servers running Historical and MiddleManager processes
- - A Query server, hosting the Druid Broker and Router processes
+ - A Master server to host the Coordinator and Overlord processes
+ - Two scalable, fault-tolerant Data servers running Historical and MiddleManager processes
+ - A query server, hosting the Druid Broker and Router processes
 
-In production, we recommend deploying multiple Master servers with Coordinator and Overlord processes in a fault-tolerant configuration.
+In production, we recommend deploying multiple Master servers and multiple Query servers in a fault-tolerant configuration based on your specific fault-tolerance needs, but you can get started quickly with one Master and one Query server and add more servers later.
 
 ## Select hardware
 
@@ -46,7 +46,7 @@ If you do not have an existing Druid cluster, and wish to start running Druid in
 
 The Coordinator and Overlord processes are responsible for handling the metadata and coordination needs of your cluster. They can be colocated together on the same server. 
 
-In this example, we will be deploying the equivalent of two AWS [m5.2xlarge](https://aws.amazon.com/ec2/instance-types/m5/) instances for fault-tolerance.
+In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](https://aws.amazon.com/ec2/instance-types/m5/) instance.
 
 This hardware offers:
 - 8 vCPUs
@@ -88,7 +88,9 @@ Example Query server configurations that have been sized for this hardware can b
 
 The example cluster above is chosen as a single example out of many possible ways to size a Druid cluster.
 
-You can choose smaller/larger hardware or less/more servers for your specific needs and constraints. 
+You can choose smaller/larger hardware or less/more servers for your specific needs and constraints.
+
+If your use case has complex scaling requirements, you can also choose to not co-locate Druid processes (e.g., standalone Historical servers).
 
 The information in the [basic cluster tuning guide](../operations/basic-cluster-tuning.html) can help with your decision-making process and with sizing your configurations.
 
@@ -372,7 +374,7 @@ You can copy your existing Broker and Router configs to the directories under `c
 ### Fresh deployment
 
 If you are using the example cluster described above:
-- 2 Master servers (m5.2xlarge)
+- 1 Master server (m5.2xlarge)
 - 2 Data servers (i3.4xlarge)
 - 1 Query server (m5.2xlarge)
 
@@ -409,7 +411,7 @@ rather than on the Master server.
 
 ## Start Master Server
 
-Copy the Druid distribution and your edited configurations to your Master servers.
+Copy the Druid distribution and your edited configurations to your Master server.
 
 If you have been editing the configurations on your local machine, you can use *rsync* to copy them:
 
