@@ -785,7 +785,7 @@ public class CoordinatorBasicAuthorizerResourceTest
       String user
   )
   {
-    Response response = resource.getUser(req, AUTHORIZER_NAME, user, "", "");
+    Response response = resource.getUser(req, AUTHORIZER_NAME, user, "", null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerUserFull userFull = (BasicAuthorizerUserFull) response.getEntity();
     Set<String> roleNames = new HashSet<>();
