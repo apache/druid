@@ -91,6 +91,8 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 `druid.server.maxSize` controls the total size of segment data that can be assigned by the Coordinator to a Historical.
 
+`druid.segmentCache.locations` specifies locations where segment data can be stored on the Historical. The sum of available disk space across these locations should equal `druid.server.maxSize`.
+
 Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
 
 Therefore, `druid.server.maxSize` should be set such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / `druid.server.maxSize`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance.
@@ -189,6 +191,10 @@ The MiddleManager is a lightweight task controller/manager that launches Task pr
 
 The MiddleManager itself does not require much resources, you can set the heap to ~128MB generally.
 
+#### SSD storage
+
+We recommend using SSDs for storage on the MiddleManagers, as the Tasks launched by MiddleManagers handle segment data stored on disk.
+
 #### Task Count
 
 The number of tasks a MiddleManager can launch is controlled by the `druid.worker.capacity` setting. 
@@ -242,10 +248,6 @@ Please see the [General Connection Pool Guidelines](#general-connection-pool-gui
 For Tasks, `druid.server.http.numThreads` should be set to a value slightly higher than the sum of `druid.broker.http.numConnections` across all the Brokers in the cluster.
 
 Tuning the cluster so that each Task can accept 50 queries and 10 non-queries is a reasonable starting point.
-
-#### SSD storage
-
-We recommend using SSDs for storage on the MiddleManagers, as they handle segment data stored on disk.
 
 #### Total Memory Usage
 
@@ -312,13 +314,13 @@ The TopN and GroupBy queries use these buffers to store intermediate computed re
 
 ## GroupBy Merging Buffers
 
-If you plan to issue GroupBy queries, `druid.processing.numMergeBuffers` is an important configuration property. 
+If you plan to issue GroupBy V2 queries, `druid.processing.numMergeBuffers` is an important configuration property. 
 
-GroupBy queries use an additional pool of off-heap buffers for merging query results. These buffers have the same size as the processing buffers described above, set by the `druid.processing.buffer.sizeBytes` property.
+GroupBy V2 queries use an additional pool of off-heap buffers for merging query results. These buffers have the same size as the processing buffers described above, set by the `druid.processing.buffer.sizeBytes` property.
 
-Non-nested GroupBy queries require 1 merge buffer per query, while a nested GroupBy query requires 2 merge buffers (regardless of the depth of nesting). 
+Non-nested GroupBy V2 queries require 1 merge buffer per query, while a nested GroupBy V2 query requires 2 merge buffers (regardless of the depth of nesting). 
 
-The number of merge buffers determines the number of GroupBy queries that can be processed concurrently.
+The number of merge buffers determines the number of GroupBy V2 queries that can be processed concurrently.
 
 # General Connection Pool Guidelines
 
