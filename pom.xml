@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <avatica.version>1.10.0</avatica.version>
+        <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.1.0</fastutil.version>
@@ -994,7 +994,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.14</version>
+                        <version>8.20</version>
                     </dependency>
                 </dependencies>
                 <executions>

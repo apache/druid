@@ -22,30 +22,22 @@ package org.apache.druid.security.basic.authorization.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Please see the class javadocs on {@link BasicAuthorizerRoleSimplifiedPermissions} for details on the deprecation.
- */
-@Deprecated
-public class BasicAuthorizerRoleFull
+public class BasicAuthorizerUserFullSimplifiedPermissions
 {
   private final String name;
-  private final Set<String> users;
-  private final List<BasicAuthorizerPermission> permissions;
+  private final Set<BasicAuthorizerRoleSimplifiedPermissions> roles;
 
   @JsonCreator
-  public BasicAuthorizerRoleFull(
+  public BasicAuthorizerUserFullSimplifiedPermissions(
       @JsonProperty("name") String name,
-      @JsonProperty("users") Set<String> users,
-      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
+      @JsonProperty("roles") Set<BasicAuthorizerRoleSimplifiedPermissions> roles
   )
   {
     this.name = name;
-    this.users = users;
-    this.permissions = permissions == null ? new ArrayList<>() : permissions;
+    this.roles = roles == null ? new HashSet<>() : roles;
   }
 
   @JsonProperty
@@ -55,15 +47,9 @@ public class BasicAuthorizerRoleFull
   }
 
   @JsonProperty
-  public List<BasicAuthorizerPermission> getPermissions()
+  public Set<BasicAuthorizerRoleSimplifiedPermissions> getRoles()
   {
-    return permissions;
-  }
-
-  @JsonProperty
-  public Set<String> getUsers()
-  {
-    return users;
+    return roles;
   }
 
   @Override
@@ -76,15 +62,12 @@ public class BasicAuthorizerRoleFull
       return false;
     }
 
-    BasicAuthorizerRoleFull that = (BasicAuthorizerRoleFull) o;
+    BasicAuthorizerUserFullSimplifiedPermissions that = (BasicAuthorizerUserFullSimplifiedPermissions) o;
 
     if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
-    if (getUsers() != null ? !getUsers().equals(that.getUsers()) : that.getUsers() != null) {
-      return false;
-    }
-    return getPermissions() != null ? getPermissions().equals(that.getPermissions()) : that.getPermissions() == null;
+    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
 
   }
 
@@ -92,8 +75,7 @@ public class BasicAuthorizerRoleFull
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getUsers() != null ? getUsers().hashCode() : 0);
-    result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
+    result = 31 * result + (getRoles() != null ? getRoles().hashCode() : 0);
     return result;
   }
 }

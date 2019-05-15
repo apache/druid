@@ -83,7 +83,9 @@ public class StatsDEmitter implements Emitter
   }
 
   @Override
-  public void start() {}
+  public void start()
+  {
+  }
 
   @Override
   public void emit(Event event)
@@ -169,7 +171,9 @@ public class StatsDEmitter implements Emitter
   }
 
   @Override
-  public void flush() {}
+  public void flush()
+  {
+  }
 
   @Override
   public void close()
