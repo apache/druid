@@ -373,8 +373,7 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitFunctionArgs(ExprParser.FunctionArgsContext ctx)
   {
     List<Expr> args = new ArrayList<>();
-
-    for (ExprParser.ExprContext exprCtx : ctx.expr()) {
+    for (ParseTree exprCtx : ctx.expr()) {
       args.add((Expr) nodes.get(exprCtx));
     }
 
