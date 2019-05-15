@@ -60,5 +60,7 @@ public class IntArrayUtils
     } while (nextIndex != startIndex);
   }
 
-  private IntArrayUtils() {}
+  private IntArrayUtils()
+  {
+  }
 }

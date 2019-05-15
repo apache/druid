@@ -155,12 +155,12 @@ cd apache-druid-#{DRUIDVERSION}
 In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
-* `bin/*` - scripts related to the [single-machine quickstart](quickstart.html)
+* `bin/*` - scripts related to the [single-machine quickstart](index.html)
 * `conf/druid/cluster/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
-* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html)
+* `quickstart/*` - files related to the [single-machine quickstart](index.html)
 
 We'll be editing the files in `conf/druid/cluster/` in order to get things running.
 

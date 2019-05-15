@@ -52,7 +52,22 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
       return computedBufferSizeBytes.get();
     }
 
-    long directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+    long directSizeBytes;
+    try {
+      directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      log.info(
+          "Detected max direct memory size of [%,d] bytes",
+          directSizeBytes
+      );
+    }
+    catch (UnsupportedOperationException e) {
+      // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
+      directSizeBytes = computeMaxMemoryFromMaxHeapSize();
+      log.info(
+          "Defaulting to at most [%,d] bytes (25%% of max heap size) of direct memory for computation buffers",
+          directSizeBytes
+      );
+    }
 
     int numProcessingThreads = getNumThreads();
     int numMergeBuffers = getNumMergeBuffers();
@@ -62,15 +77,18 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers " +
-          "out of [%,d] max direct memory",
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers",
           computedSizePerBuffer,
           numProcessingThreads,
-          numMergeBuffers,
-          directSizeBytes
+          numMergeBuffers
       );
     }
     return computedSizePerBuffer;
+  }
+
+  public static long computeMaxMemoryFromMaxHeapSize()
+  {
+    return Runtime.getRuntime().maxMemory() / 4;
   }
 
   @Config({"druid.computation.buffer.poolCacheMaxCount", "${base_path}.buffer.poolCacheMaxCount"})

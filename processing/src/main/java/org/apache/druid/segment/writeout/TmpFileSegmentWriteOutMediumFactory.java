@@ -34,7 +34,9 @@ public final class TmpFileSegmentWriteOutMediumFactory implements SegmentWriteOu
     return INSTANCE;
   }
 
-  private TmpFileSegmentWriteOutMediumFactory() {}
+  private TmpFileSegmentWriteOutMediumFactory()
+  {
+  }
 
   @Override
   public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir) throws IOException

@@ -69,16 +69,24 @@ public class CustomEmitterFactoryTest
     }
 
     @Override
-    public void start() {}
+    public void start()
+    {
+    }
 
     @Override
-    public void emit(Event event) {}
+    public void emit(Event event)
+    {
+    }
 
     @Override
-    public void flush() {}
+    public void flush()
+    {
+    }
 
     @Override
-    public void close() {}
+    public void close()
+    {
+    }
   }
 
   @Test
