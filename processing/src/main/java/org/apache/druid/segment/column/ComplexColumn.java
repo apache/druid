@@ -28,6 +28,11 @@ import org.apache.druid.segment.data.ReadableOffset;
 import javax.annotation.Nullable;
 
 /**
+ * This interace represents a complex column and can be implemented by druid extension writer of a custom column
+ * with arbitrary serialization instead of a custom column that serializes rows of objects serialized using
+ * {@link org.apache.druid.segment.data.GenericIndexed} class which is default implementation of "writeToXXX" methods in
+ * {@link org.apache.druid.segment.serde.ComplexColumnSerializer}. In that case {@link GenericIndexedBasedComplexColumn}
+ * should be used.
  */
 @ExtensionPoint
 public interface ComplexColumn extends BaseColumn
@@ -41,7 +46,7 @@ public interface ComplexColumn extends BaseColumn
   void close();
 
   @Override
-  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  default ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return new ObjectColumnSelector()
     {
