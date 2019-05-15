@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import net.thisptr.jackson.jq.internal.misc.Strings;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -1854,7 +1853,7 @@ interface Function
       }
 
       final String split = args.get(1).eval(bindings).asString();
-      return ExprEval.ofStringArray(Strings.splitToArray(arrayString, split != null ? split : ""));
+      return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
     }
   }
 }
