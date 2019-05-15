@@ -752,58 +752,59 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
+    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
     Assert.assertEquals(10, rows.size());
     verifyServerRow(
         rows.get(0),
-        "localhost:8081",
-        "localhost",
-        8081,
+        "brokerHost:8082",
+        "brokerHost",
+        8082,
         -1,
-        "COORDINATOR",
+        "broker",
         null,
         0,
         0
     );
     verifyServerRow(
         rows.get(1),
-        "localhost:8090",
-        "localhost",
-        8090,
+        "histHost:8083",
+        "histHost",
+        8083,
         -1,
-        "OVERLORD",
-        null,
+        "historical",
+        "tier",
         0,
-        0
+        1000
     );
     verifyServerRow(
         rows.get(2),
-        "localhost:8082",
+        "localhost:8080",
         "localhost",
-        8082,
+        8080,
         -1,
-        "BROKER",
+        "peon",
         null,
         0,
         0
     );
     verifyServerRow(
         rows.get(3),
-        "brokerHost:8082",
-        "brokerHost",
-        8082,
+        "localhost:8081",
+        "localhost",
+        8081,
         -1,
-        "BROKER",
+        "coordinator",
         null,
         0,
         0
     );
     verifyServerRow(
         rows.get(4),
-        "localhost:8888",
+        "localhost:8082",
         "localhost",
-        8888,
+        8082,
         -1,
-        "ROUTER",
+        "broker",
         null,
         0,
         0
@@ -814,40 +815,40 @@ public class SystemSchemaTest extends CalciteTestBase
         "localhost",
         8083,
         -1,
-        "HISTORICAL",
+        "historical",
         "tier",
         0,
         1000
     );
     verifyServerRow(
         rows.get(6),
-        "histHost:8083",
-        "histHost",
-        8083,
+        "localhost:8090",
+        "localhost",
+        8090,
         -1,
-        "HISTORICAL",
-        "tier",
+        "overlord",
+        null,
         0,
-        1000
+        0
     );
     verifyServerRow(
         rows.get(7),
-        "mmHost:8091",
-        "mmHost",
-        8091,
+        "localhost:8888",
+        "localhost",
+        8888,
         -1,
-        "MIDDLE_MANAGER",
+        "router",
         null,
         0,
         0
     );
     verifyServerRow(
         rows.get(8),
-        "localhost:8080",
-        "localhost",
-        8080,
+        "mmHost:8091",
+        "mmHost",
+        8091,
         -1,
-        "PEON",
+        "middle_manager",
         null,
         0,
         0
@@ -858,7 +859,7 @@ public class SystemSchemaTest extends CalciteTestBase
         "peonHost",
         8080,
         -1,
-        "PEON",
+        "peon",
         null,
         0,
         0
