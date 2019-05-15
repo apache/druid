@@ -36,8 +36,10 @@ import org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAu
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRoleFull;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRoleSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -243,7 +245,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     Response response = resource.createUser(req, AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     BasicAuthorizerUser expectedUser = new BasicAuthorizerUser(
@@ -259,7 +261,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }
@@ -270,7 +272,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     Response response = resource.createRole(req, AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     BasicAuthorizerRole expectedRole = new BasicAuthorizerRole("druidRole", ImmutableList.of());
@@ -283,7 +285,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [druidRole] does not exist."), response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [druidRole] does not exist."), response.getEntity());
   }
@@ -300,7 +302,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.assignRoleToUser(req, AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     BasicAuthorizerUser expectedUser = new BasicAuthorizerUser(
@@ -309,7 +311,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerRole expectedRole = new BasicAuthorizerRole("druidRole", ImmutableList.of());
     Assert.assertEquals(expectedRole, response.getEntity());
@@ -317,7 +319,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
     expectedUser = new BasicAuthorizerUser(
         "druid",
@@ -325,7 +327,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRole, response.getEntity());
   }
@@ -348,7 +350,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.assignRoleToUser(req, AUTHORIZER_NAME, "druid2", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerUser expectedUser = new BasicAuthorizerUser(
         "druid",
@@ -356,7 +358,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", null, null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerUser expectedUser2 = new BasicAuthorizerUser(
         "druid2",
@@ -364,7 +366,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     );
     Assert.assertEquals(expectedUser2, response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerRole expectedRole = new BasicAuthorizerRole("druidRole", ImmutableList.of());
     Assert.assertEquals(expectedRole, response.getEntity());
@@ -372,7 +374,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.deleteRole(req, AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
     expectedUser = new BasicAuthorizerUser(
         "druid",
@@ -380,7 +382,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", null);
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", null, null);
     Assert.assertEquals(200, response.getStatus());
     expectedUser2 = new BasicAuthorizerUser(
         "druid2",
@@ -408,7 +410,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [wrongRole] does not exist."), response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     BasicAuthorizerRole expectedRole = new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(perms));
     Assert.assertEquals(expectedRole, response.getEntity());
@@ -422,7 +424,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", newPerms);
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     expectedRole = new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(newPerms));
     Assert.assertEquals(expectedRole, response.getEntity());
@@ -430,7 +432,7 @@ public class CoordinatorBasicAuthorizerResourceTest
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", null);
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null);
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, null);
     Assert.assertEquals(200, response.getStatus());
     expectedRole = new BasicAuthorizerRole("druidRole", null);
     Assert.assertEquals(expectedRole, response.getEntity());
@@ -486,14 +488,30 @@ public class CoordinatorBasicAuthorizerResourceTest
     Set<BasicAuthorizerRole> expectedRoles = Sets.newHashSet(expectedRole, expectedRole2);
 
     BasicAuthorizerUserFull expectedUserFull = new BasicAuthorizerUserFull("druid", expectedRoles);
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull, response.getEntity());
+    BasicAuthorizerUserFullSimplifiedPermissions expectedUserFullSimplifiedPermissions =
+        new BasicAuthorizerUserFullSimplifiedPermissions(
+            "druid",
+            BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedRoles)
+        );
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions, response.getEntity());
 
     BasicAuthorizerUserFull expectedUserFull2 = new BasicAuthorizerUserFull("druid2", expectedRoles);
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull2, response.getEntity());
+    BasicAuthorizerUserFullSimplifiedPermissions expectedUserFullSimplifiedPermissions2 =
+        new BasicAuthorizerUserFullSimplifiedPermissions(
+            "druid2",
+            BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedRoles)
+        );
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions2, response.getEntity());
 
     Set<String> expectedUserSet = Sets.newHashSet("druid", "druid2");
     BasicAuthorizerRoleFull expectedRoleFull = new BasicAuthorizerRoleFull(
@@ -501,19 +519,50 @@ public class CoordinatorBasicAuthorizerResourceTest
         expectedUserSet,
         BasicAuthorizerPermission.makePermissionList(perms)
     );
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "");
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoleFull, response.getEntity());
+    BasicAuthorizerRoleSimplifiedPermissions expectedRoleSimplifiedPerms = new BasicAuthorizerRoleSimplifiedPermissions(
+        "druidRole",
+        expectedUserSet,
+        perms
+    );
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms, response.getEntity());
+    expectedRoleSimplifiedPerms = new BasicAuthorizerRoleSimplifiedPermissions(
+        "druidRole",
+        null,
+        perms
+    );
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", null, "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms, response.getEntity());
 
     BasicAuthorizerRoleFull expectedRoleFull2 = new BasicAuthorizerRoleFull(
         "druidRole2",
         expectedUserSet,
         BasicAuthorizerPermission.makePermissionList(perms2)
     );
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "");
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoleFull2, response.getEntity());
-
+    BasicAuthorizerRoleSimplifiedPermissions expectedRoleSimplifiedPerms2 = new BasicAuthorizerRoleSimplifiedPermissions(
+        "druidRole2",
+        expectedUserSet,
+        perms2
+    );
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms2, response.getEntity());
+    expectedRoleSimplifiedPerms2 = new BasicAuthorizerRoleSimplifiedPermissions(
+        "druidRole2",
+        null,
+        perms2
+    );
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", null, "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms2, response.getEntity());
 
     perms = ImmutableList.of(
         new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
@@ -535,21 +584,34 @@ public class CoordinatorBasicAuthorizerResourceTest
     expectedRoles = Sets.newHashSet(expectedRole, expectedRole2);
     expectedUserFull = new BasicAuthorizerUserFull("druid", expectedRoles);
     expectedUserFull2 = new BasicAuthorizerUserFull("druid2", expectedRoles);
+    expectedUserFullSimplifiedPermissions = new BasicAuthorizerUserFullSimplifiedPermissions(
+        "druid",
+        BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedRoles)
+    );
+    expectedUserFullSimplifiedPermissions2 = new BasicAuthorizerUserFullSimplifiedPermissions(
+        "druid2",
+        BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedRoles)
+    );
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull, response.getEntity());
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions, response.getEntity());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull2, response.getEntity());
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions2, response.getEntity());
 
     response = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid2", "druidRole2");
     Assert.assertEquals(200, response.getStatus());
-
 
     expectedUserFull = new BasicAuthorizerUserFull("druid", Sets.newHashSet(expectedRole2));
     expectedUserFull2 = new BasicAuthorizerUserFull("druid2", Sets.newHashSet(expectedRole));
@@ -563,22 +625,44 @@ public class CoordinatorBasicAuthorizerResourceTest
         Sets.newHashSet("druid"),
         BasicAuthorizerPermission.makePermissionList(perms2)
     );
+    expectedUserFullSimplifiedPermissions = new BasicAuthorizerUserFullSimplifiedPermissions(
+        "druid",
+        BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedUserFull.getRoles())
+    );
+    expectedUserFullSimplifiedPermissions2 = new BasicAuthorizerUserFullSimplifiedPermissions(
+        "druid2",
+        BasicAuthorizerRoleSimplifiedPermissions.convertRoles(expectedUserFull2.getRoles())
+    );
+    expectedRoleSimplifiedPerms = new BasicAuthorizerRoleSimplifiedPermissions(expectedRoleFull);
+    expectedRoleSimplifiedPerms2 = new BasicAuthorizerRoleSimplifiedPermissions(expectedRoleFull2);
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull, response.getEntity());
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions, response.getEntity());
 
-    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "");
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUserFull2, response.getEntity());
+    response = resource.getUser(req, AUTHORIZER_NAME, "druid2", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUserFullSimplifiedPermissions2, response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "");
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoleFull, response.getEntity());
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms, response.getEntity());
 
-    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "");
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoleFull2, response.getEntity());
+    response = resource.getRole(req, AUTHORIZER_NAME, "druidRole2", "", "");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedRoleSimplifiedPerms2, response.getEntity());
   }
 
   private static Map<String, String> errorMapWithMsg(String errorMsg)
