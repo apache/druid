@@ -38,7 +38,7 @@
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
       <artifactId>sketches-core</artifactId>
-      <version>0.13.3</version>
+      <version>0.13.4</version>
       <exclusions>
         <exclusion>
           <groupId>com.google.code.findbugs</groupId>
