@@ -28,7 +28,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import javax.annotation.Nullable;
 
 /**
- * This interace represents a complex column and can be implemented by druid extension writer of a custom column
+ * This interface represents a complex column and can be implemented by druid extension writer of a custom column
  * with arbitrary serialization instead of a custom column that serializes rows of objects serialized using
  * {@link org.apache.druid.segment.data.GenericIndexed} class which is default implementation of "writeToXXX" methods in
  * {@link org.apache.druid.segment.serde.ComplexColumnSerializer}. In that case {@link GenericIndexedBasedComplexColumn}
@@ -37,14 +37,34 @@ import javax.annotation.Nullable;
 @ExtensionPoint
 public interface ComplexColumn extends BaseColumn
 {
+  /**
+   * @return Class of objects returned on calls to {@link ComplexColumn#getRowValue(int)} .
+   */
   Class<?> getClazz();
+
+  /**
+   * @return Typename associated with this column.
+   */
   String getTypeName();
+
+  /**
+   * Return rows in the column.
+   * @param rowNum the row number
+   * @return row object of type same as {@link ComplexColumn#getClazz()}  } at row number "rowNum" .
+   */
   Object getRowValue(int rowNum);
+
+  /**
+   * @return serialized size (in bytes) of this column.
+   */
   int getLength();
 
-  @Override
-  void close();
-
+  /**
+   * Optionally overridden when complex column serialization is not based on default serialization based
+   * on {@link org.apache.druid.segment.data.GenericIndexed} in {@link org.apache.druid.segment.serde.ComplexColumnSerializer}.
+   * @param offset object to retrieve row number
+   * @return the {@link ColumnValueSelector} object
+   */
   @Override
   default ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
