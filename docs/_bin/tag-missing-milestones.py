@@ -23,7 +23,7 @@ import requests
 
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <previous-release-commit> <new-release-commit> <milestone-number-to-tag>\n')
-  sys.stderr.write("  e.g., program myusername 75c70c2ccc 29f3a328da 30")
+  sys.stderr.write("  e.g., program myusername 75c70c2ccc 29f3a328da 30\n")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.")
   sys.exit(1)
 
