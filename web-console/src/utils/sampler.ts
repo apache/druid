@@ -245,6 +245,7 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
+        type: samplerType,
         ioConfig: deepSet(ioConfig, 'type', samplerType),
         dataSchema: {
           dataSource: 'sample',
@@ -307,6 +308,7 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
+        type: samplerType,
         ioConfig: deepSet(ioConfig, 'type', samplerType),
         dataSchema: {
           dataSource: 'sample',
