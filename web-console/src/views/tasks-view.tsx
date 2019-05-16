@@ -49,6 +49,7 @@ const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created ti
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
+  openModal: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadDataView: () => void;
@@ -139,8 +140,8 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
       killTaskId: null,
 
-      supervisorSpecDialogOpen: false,
-      taskSpecDialogOpen: false,
+      supervisorSpecDialogOpen: props.openModal === 'supervisor',
+      taskSpecDialogOpen: props.openModal === 'task',
       initSpec: null,
       alertErrorMsg: null,
 
