@@ -225,7 +225,15 @@ public class StatusResource
       totalMemory = runtime.getTotalHeapSizeBytes();
       freeMemory = runtime.getFreeHeapSizeBytes();
       usedMemory = totalMemory - freeMemory;
-      directMemory = runtime.getDirectMemorySizeBytes();
+
+      long directMemory = -1;
+      try {
+        directMemory = runtime.getDirectMemorySizeBytes();
+      }
+      catch (UnsupportedOperationException ignore) {
+        // querying direct memory is not supported
+      }
+      this.directMemory = directMemory;
     }
 
     @JsonProperty

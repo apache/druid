@@ -32,7 +32,9 @@ public class NoneGranularity extends Granularity
    * This constructor is public b/c it is serialized and deserialized
    * based on type in GranularityModule
    */
-  public NoneGranularity() {}
+  public NoneGranularity()
+  {
+  }
 
   @Override
   public DateTimeFormatter getFormatter(Formatter type)

@@ -37,14 +37,6 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 You will need:
   * Java 8 (8u92+)
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
-  
-On Mac OS X, you can use [Oracle's JDK
-8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to install
-Java.
-
-On Linux, your OS package manager should be able to help for Java. If your Ubuntu-
-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
-OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
 
 
 ### Hardware

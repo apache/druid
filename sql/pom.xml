@@ -65,6 +65,12 @@
     <dependency>
       <groupId>org.apache.calcite.avatica</groupId>
       <artifactId>avatica-server</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-http</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
