@@ -35,7 +35,8 @@ import { QueryState } from './query-state';
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   // skipCache: true,
-  numRows: 500
+  numRows: 500,
+  timeoutMs: 15000
 };
 
 export interface SampleSpec {
@@ -46,6 +47,7 @@ export interface SampleSpec {
 
 export interface SamplerConfig {
   numRows?: number;
+  timeoutMs?: number;
   cacheKey?: string;
   skipCache?: boolean;
 }
