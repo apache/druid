@@ -173,14 +173,7 @@ public class DeterminePartitionsJob implements Jobby
           }
         }
         catch (IOException ioe) {
-          if (config.isUseYarnRMJobStatusFallback()) {
-            if (!Utils.checkAppSuccessFromYarnRM(groupByJob)) {
-              log.error(ioe, "Job failed: %s", groupByJob.getJobID());
-              failureCause =
-                  "Could not retrieve job status from JobHistory server, YARN RM did not report job success either.";
-              return false;
-            }
-          } else {
+          if (!Utils.checkAppSuccessForJobIOException(ioe, groupByJob, config.isUseYarnRMJobStatusFallback())) {
             throw ioe;
           }
         }
@@ -250,14 +243,7 @@ public class DeterminePartitionsJob implements Jobby
         }
       }
       catch (IOException ioe) {
-        if (config.isUseYarnRMJobStatusFallback()) {
-          if (!Utils.checkAppSuccessFromYarnRM(dimSelectionJob)) {
-            log.error(ioe, "Job failed: %s", dimSelectionJob.getJobID());
-            failureCause =
-                "Could not retrieve job status from JobHistory server, YARN RM did not report job success either.";
-            return false;
-          }
-        } else {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, dimSelectionJob, config.isUseYarnRMJobStatusFallback())) {
           throw ioe;
         }
       }

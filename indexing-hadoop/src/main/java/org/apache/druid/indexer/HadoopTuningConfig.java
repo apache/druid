@@ -166,7 +166,7 @@ public class HadoopTuningConfig implements TuningConfig
     }
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
-    this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? false : useYarnRMJobStatusFallback;
+    this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
   }
 
   @JsonProperty

@@ -230,18 +230,10 @@ public class IndexGeneratorJob implements Jobby
         return success;
       }
       catch (IOException ioe) {
-        if (config.isUseYarnRMJobStatusFallback()) {
-          if (!Utils.checkAppSuccessFromYarnRM(job)) {
-            log.error(
-                ioe,
-                "Could not retrieve job status from JobHistory server, YARN RM did not report job success either."
-            );
-            return false;
-          } else {
-            return true;
-          }
-        } else {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, job, config.isUseYarnRMJobStatusFallback())) {
           throw ioe;
+        } else {
+          return true;
         }
       }
 

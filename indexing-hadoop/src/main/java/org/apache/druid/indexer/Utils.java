@@ -153,12 +153,36 @@ public class Utils
   }
 
   /**
+   * It is possible for a Hadoop Job to succeed, but for `job.waitForCompletion()` to fail because of
+   * issues with the JobHistory server.
+   *
    * When the JobHistory server is unavailable, it's possible to fetch the application's status
    * from the YARN ResourceManager instead.
+   *
+   * Returns true if both `useYarnRMJobStatusFallback` is enabled and YARN ResourceManager reported success for the
+   * target job.
    */
-  public static boolean checkAppSuccessFromYarnRM(Job job) throws Exception
+  public static boolean checkAppSuccessForJobIOException(
+      IOException ioe,
+      Job job,
+      boolean useYarnRMJobStatusFallback
+  )
   {
-    log.info("Could not retrieve job status from JobHistory server, trying YARN ResourceManager instead.");
+    if (!useYarnRMJobStatusFallback) {
+      log.info("useYarnRMJobStatusFallback is false, not checking YARN ResourceManager.");
+      return false;
+    }
+    log.error(ioe, "Encountered IOException with job, checking application success from YARN ResourceManager.");
+
+    boolean success = checkAppSuccessFromYarnRM(job);
+    if (!success) {
+      log.error("YARN RM did not report job success either.");
+    }
+    return success;
+  }
+
+  public static boolean checkAppSuccessFromYarnRM(Job job)
+  {
     final HttpClient httpClient = new HttpClient();
     final AtomicBoolean succeeded = new AtomicBoolean(false);
     try {
@@ -181,7 +205,12 @@ public class Utils
       return false;
     }
     finally {
-      httpClient.stop();
+      try {
+        httpClient.stop();
+      }
+      catch (Exception e) {
+        log.error(e, "Got exception with httpClient.stop() while trying to contact YARN RM.");
+      }
     }
   }
 
@@ -191,11 +220,10 @@ public class Utils
       AtomicBoolean succeeded
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
-    log.info("Attempting to retrieve app status from YARN RM.");
     String appId = StringUtils.replace(job.getJobID().toString(), "job", "application");
     String yarnRM = job.getConfiguration().get("yarn.resourcemanager.webapp.address");
-    log.info("YARN RM address: " + yarnRM);
     String yarnEndpoint = StringUtils.format("http://%s/ws/v1/cluster/apps/%s", yarnRM, appId);
+    log.info("Attempting to retrieve app status from YARN ResourceManager at [%s].", yarnEndpoint);
 
     ContentResponse res = httpClient.GET(yarnEndpoint);
     log.info("App status response from YARN RM: " + res.getContentAsString());
