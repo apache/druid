@@ -1190,6 +1190,22 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Click "Preview" to see the result of any specified transforms.
           </p>
         </Callout>
+        {
+          Boolean(transformQueryState.error && transforms.length) &&
+          <FormGroup>
+            <Button
+              icon={IconNames.EDIT}
+              text="Edit last added transform"
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                this.setState({
+                  selectedTransformIndex: transforms.length - 1,
+                  selectedTransform: transforms[transforms.length - 1]
+                });
+              }}
+            />
+          </FormGroup>
+        }
         {this.renderTransformControls()}
         <Button
           text="Preview"
@@ -1740,7 +1756,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               <Switch
                 checked={dimensionMode === 'specific'}
                 onChange={() => this.setState({ newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific' })}
-                label="Set dimensions and metrics"
+                label="Explicitly specify dimension list"
               />
               <Popover
                 content={
@@ -1875,8 +1891,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <p>
         {
           autoDetect ?
-          'Are you sure you don’t want to set the dimensions and metrics explicitly?' :
-          'Are you sure you want to set dimensions and metrics explicitly?'
+          `Are you sure you don't want to explicitly specify a dimension list?` :
+          `Are you sure you want to explicitly specify a dimension list?`
         }
       </p>
       <p>
