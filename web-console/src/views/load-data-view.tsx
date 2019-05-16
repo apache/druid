@@ -137,7 +137,7 @@ const VIEW_TITLE: Record<Stage, string> = {
 
 export interface LoadDataViewProps extends React.Props<any> {
   seed: LoadDataViewSeed | null;
-  goToTask: (taskId: string | null, openModal?: string | null) => void;
+  goToTask: (taskId: string | null, openDialog?: string | null) => void;
 }
 
 export interface LoadDataViewState {
