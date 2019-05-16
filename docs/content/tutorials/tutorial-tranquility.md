@@ -48,13 +48,13 @@ The startup scripts for the tutorial will expect the contents of the Tranquility
 
 ## Enable Tranquility Server
 
-- In your `quickstart/tutorial/conf/tutorial-cluster.conf`, uncomment the `tranquility-server` line.
-- Stop your *bin/supervise* command (CTRL-C) and then restart it by again running `bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf`.
+- In your `conf/supervise/single-server/micro-quickstart.conf`, uncomment the `tranquility-server` line.
+- Stop your *bin/supervise* command (CTRL-C) and then restart it by again running `bin/supervise -c conf/supervise/single-server/micro-quickstart.conf`.
 
 As part of the output of *supervise* you should see something like:
 
 ```bash
-Running command[tranquility-server], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile quickstart/tutorial/conf/tranquility/server.json -Ddruid.extensions.loadList=[]
+Running command[tranquility-server], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile conf/tranquility/server.json -Ddruid.extensions.loadList=[]
 ```
 
 You can check the log file in `var/sv/tranquility-server.log` to confirm that the server is starting up properly.
@@ -96,7 +96,7 @@ Please follow the [query tutorial](../tutorials/tutorial-query.html) to run some
 
 If you wish to go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package, as the other tutorials will write to the same "wikipedia" datasource.
 
-When cleaning up after running this Tranquility tutorial, it is also necessary to recomment the `tranquility-server` line in `quickstart/tutorial/conf/tutorial-cluster.conf` before restarting the cluster.
+When cleaning up after running this Tranquility tutorial, it is also necessary to recomment the `tranquility-server` line in `conf/supervise/single-server/micro-quickstart.conf` before restarting the cluster.
 
 
 ## Further reading
