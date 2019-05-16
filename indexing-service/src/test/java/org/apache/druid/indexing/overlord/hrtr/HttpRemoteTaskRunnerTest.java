@@ -1324,7 +1324,7 @@ public class HttpRemoteTaskRunnerTest
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
-    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
