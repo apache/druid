@@ -27,5 +27,7 @@ public final class PartitionIds
   public static int NON_ROOT_GEN_END_PARTITION_ID = 65536; // exclusive
   public static short UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE = -1;
 
-  private PartitionIds() {}
+  private PartitionIds()
+  {
+  }
 }
