@@ -401,7 +401,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         <div className="cards">
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'http' })}>HTTP(s)</Card>
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-s3' })}>AWS S3</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Blobstore</Card>
+          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Cloud Storage</Card>
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'local' })}>Local disk</Card>
         </div>
       </div>
