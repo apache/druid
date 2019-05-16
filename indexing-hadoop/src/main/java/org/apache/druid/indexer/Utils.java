@@ -19,9 +19,12 @@
 
 package org.apache.druid.indexer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,12 +36,17 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -141,6 +149,68 @@ public class Utils
     catch (IOException | InterruptedException ie) {
       log.error(ie, "couldn't get failure cause for job [%s]", failedJob.getJobName());
       return null;
+    }
+  }
+
+  /**
+   * When the JobHistory server is unavailable, it's possible to fetch the application's status
+   * from the YARN ResourceManager instead.
+   */
+  public static boolean checkAppSuccessFromYarnRM(Job job) throws Exception
+  {
+    log.info("Could not retrieve job status from JobHistory server, trying YARN ResourceManager instead.");
+    final HttpClient httpClient = new HttpClient();
+    final AtomicBoolean succeeded = new AtomicBoolean(false);
+    try {
+      httpClient.start();
+      RetryUtils.retry(
+          () -> {
+            checkAppSuccessFromYarnRMOnce(httpClient, job, succeeded);
+            return null;
+          },
+          ex -> {
+            return !succeeded.get();
+          },
+          5
+      );
+      return succeeded.get();
+    }
+    catch (Exception e) {
+      log.error(e, "Got exception while trying to contact YARN RM.");
+      // we're already in a best-effort fallback failure handling case, just stop if we have issues with the http client
+      return false;
+    }
+    finally {
+      httpClient.stop();
+    }
+  }
+
+  private static void checkAppSuccessFromYarnRMOnce(
+      HttpClient httpClient,
+      Job job,
+      AtomicBoolean succeeded
+  ) throws IOException, InterruptedException, ExecutionException, TimeoutException
+  {
+    log.info("Attempting to retrieve app status from YARN RM.");
+    String appId = StringUtils.replace(job.getJobID().toString(), "job", "application");
+    String yarnRM = job.getConfiguration().get("yarn.resourcemanager.webapp.address");
+    log.info("YARN RM address: " + yarnRM);
+    String yarnEndpoint = StringUtils.format("http://%s/ws/v1/cluster/apps/%s", yarnRM, appId);
+
+    ContentResponse res = httpClient.GET(yarnEndpoint);
+    log.info("App status response from YARN RM: " + res.getContentAsString());
+    Map<String, Object> respMap = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+        res.getContentAsString(),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    );
+
+    Map<String, Object> appMap = (Map<String, Object>) respMap.get("app");
+    String state = (String) appMap.get("state");
+    String finalStatus = (String) appMap.get("finalStatus");
+    if ("FINISHED".equals(state) && "SUCCEEDED".equals(finalStatus)) {
+      succeeded.set(true);
     }
   }
 }

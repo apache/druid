@@ -129,10 +129,24 @@ public class DetermineHashedPartitionsJob implements Jobby
         JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
       }
 
-      if (!groupByJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", groupByJob.getJobID());
-        failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!groupByJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", groupByJob.getJobID());
+          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+          return false;
+        }
+      }
+      catch (IOException ioe) {
+        if (config.isUseYarnRMJobStatusFallback()) {
+          if (!Utils.checkAppSuccessFromYarnRM(groupByJob)) {
+            log.error(ioe, "Job failed: %s", groupByJob.getJobID());
+            failureCause =
+                "Could not retrieve job status from JobHistory server, YARN RM did not report job success either.";
+            return false;
+          }
+        } else {
+          throw ioe;
+        }
       }
 
       /*

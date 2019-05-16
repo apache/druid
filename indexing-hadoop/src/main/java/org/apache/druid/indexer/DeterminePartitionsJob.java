@@ -165,10 +165,24 @@ public class DeterminePartitionsJob implements Jobby
         }
 
 
-        if (!groupByJob.waitForCompletion(true)) {
-          log.error("Job failed: %s", groupByJob.getJobID());
-          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-          return false;
+        try {
+          if (!groupByJob.waitForCompletion(true)) {
+            log.error("Job failed: %s", groupByJob.getJobID());
+            failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+            return false;
+          }
+        }
+        catch (IOException ioe) {
+          if (config.isUseYarnRMJobStatusFallback()) {
+            if (!Utils.checkAppSuccessFromYarnRM(groupByJob)) {
+              log.error(ioe, "Job failed: %s", groupByJob.getJobID());
+              failureCause =
+                  "Could not retrieve job status from JobHistory server, YARN RM did not report job success either.";
+              return false;
+            }
+          } else {
+            throw ioe;
+          }
         }
       } else {
         log.info("Skipping group-by job.");
@@ -228,10 +242,24 @@ public class DeterminePartitionsJob implements Jobby
       }
 
 
-      if (!dimSelectionJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
-        failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!dimSelectionJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
+          failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
+          return false;
+        }
+      }
+      catch (IOException ioe) {
+        if (config.isUseYarnRMJobStatusFallback()) {
+          if (!Utils.checkAppSuccessFromYarnRM(dimSelectionJob)) {
+            log.error(ioe, "Job failed: %s", dimSelectionJob.getJobID());
+            failureCause =
+                "Could not retrieve job status from JobHistory server, YARN RM did not report job success either.";
+            return false;
+          }
+        } else {
+          throw ioe;
+        }
       }
 
       /*

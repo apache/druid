@@ -212,21 +212,39 @@ public class IndexGeneratorJob implements Jobby
         JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
       }
 
-      boolean success = job.waitForCompletion(true);
+      try {
+        boolean success = job.waitForCompletion(true);
 
-      Counters counters = job.getCounters();
-      if (counters == null) {
-        log.info("No counters found for job [%s]", job.getJobName());
-      } else {
-        Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-        if (invalidRowCount != null) {
-          jobStats.setInvalidRowCount(invalidRowCount.getValue());
+        Counters counters = job.getCounters();
+        if (counters == null) {
+          log.info("No counters found for job [%s]", job.getJobName());
         } else {
-          log.info("No invalid row counter found for job [%s]", job.getJobName());
+          Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+          if (invalidRowCount != null) {
+            jobStats.setInvalidRowCount(invalidRowCount.getValue());
+          } else {
+            log.info("No invalid row counter found for job [%s]", job.getJobName());
+          }
+        }
+
+        return success;
+      }
+      catch (IOException ioe) {
+        if (config.isUseYarnRMJobStatusFallback()) {
+          if (!Utils.checkAppSuccessFromYarnRM(job)) {
+            log.error(
+                ioe,
+                "Could not retrieve job status from JobHistory server, YARN RM did not report job success either."
+            );
+            return false;
+          } else {
+            return true;
+          }
+        } else {
+          throw ioe;
         }
       }
 
-      return success;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
