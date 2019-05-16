@@ -62,9 +62,9 @@ export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
   }
 
   render() {
+
     const { endpoint, downloadFilename } = this.props;
     const { jsonValue } = this.state;
-
     return <div className="show-json">
       <div className="top-actions">
         <ButtonGroup className="right-buttons">

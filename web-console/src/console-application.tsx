@@ -107,6 +107,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   private onlyUnavailable: boolean | null;
   private initSql: string | null;
   private middleManager: string | null;
+  private edit: boolean | null;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -158,11 +159,16 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       this.onlyUnavailable = null;
       this.initSql = null;
       this.middleManager = null;
+      this.edit = null;
     }, 50);
   }
 
-  private goToLoadDataView = (initSpec?: any) => {
+  private goToLoadDataView = (taskId?: string, initSpec?: any ) => {
     if (initSpec) this.initSpec = initSpec;
+    if (taskId) {
+      this.taskId = taskId;
+      this.edit = true;
+    }
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }
@@ -208,7 +214,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-    return this.wrapInViewContainer('load-data', <LoadDataView initSpec={this.initSpec} goToTask={this.goToTask}/>, 'narrow-pad');
+
+    return this.wrapInViewContainer('load-data', <LoadDataView taskId={this.taskId} initSpec={this.initSpec}  goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
   private wrappedSqlView = () => {

@@ -52,7 +52,7 @@ export type HeaderActiveTab = null | 'load-data' | 'query' | 'datasources' | 'se
 export interface HeaderBarProps extends React.Props<any> {
   active: HeaderActiveTab;
   hideLegacy: boolean;
-  goToLoadDataView: () => void;
+  goToLoadDataView: (taskId: string) => void;
 }
 
 export interface HeaderBarState {

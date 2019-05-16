@@ -14,9 +14,7 @@
     "moduleNameMapper": {
       "\\.scss$": "identity-obj-proxy"
     },
-    "testMatch": [
-      "**/?(*.)+(spec).ts?(x)"
-    ]
+    "testMatch": "**/?(*.)+(spec).ts?(x)"
   },
   "scripts": {
     "watch": "./script/watch",

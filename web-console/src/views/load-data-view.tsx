@@ -27,6 +27,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import {edit} from 'brace';
 import 'brace/mode/json';
 import 'brace/theme/solarized_dark';
 import * as classNames from 'classnames';
@@ -175,14 +176,14 @@ const VIEW_TITLE: Record<Stage, string> = {
 
 export interface LoadDataViewProps extends React.Props<any> {
   initSpec: IngestionSpec | null;
-  goToTask: (taskId: string | null, openDialog?: string) => void;
+  taskId?: string | null;
+  goToTask: (taskId: string | null, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
   stage: Stage;
   spec: IngestionSpec;
   cacheKey: string | undefined;
-
   // dialogs / modals
   showResetConfirm: boolean;
   newRollup: boolean | null;
@@ -234,7 +235,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let spec = props.initSpec || parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
-
     this.state = {
       stage: 'connect',
       spec,
@@ -288,7 +288,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    this.updateStage('connect');
+    if (this.props.taskId) {
+        this.getJsonInfo();
+        this.updateStage('json-spec');
+    } else {
+      this.updateStage('connect');
+    }
   }
 
   async getOverlordModules() {
@@ -334,7 +339,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   render() {
     const { stage, spec } = this.state;
-
     if (!Object.keys(spec).length) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
         {this.renderInitStage()}
@@ -361,7 +365,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       {this.renderResetConfirm()}
     </div>;
   }
-
   renderStepNav() {
     const { stage } = this.state;
 
@@ -2355,13 +2358,26 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   // ==================================================================
+  private getJsonInfo = async (): Promise<void> => {
+    if (this.props.taskId) {
+      let endpoint = `/druid/indexer/v1/supervisor/${this.props.taskId}`;
+      if (!this.props.taskId.indexOf('index')) {
+        endpoint = `/druid/indexer/v1/task/${this.props.taskId}`;
+      }
+      try {
+        const resp = await axios.get(endpoint);
+        const data = resp.data;
+        this.updateSpec(this.props.taskId.indexOf('index') ? resp.data : resp.data.payload.spec);
+      } catch (e) {
+      }
+    }
+  }
 
   renderJsonSpecStage() {
     const { goToTask } = this.props;
     const { spec } = this.state;
-
     return <>
-      <div className="main">
+      <div className="main here">
         <JSONInput
           value={spec}
           onChange={(s) => {
