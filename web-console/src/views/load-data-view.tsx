@@ -466,7 +466,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         {this.renderIngestionCard('AWS Kinesis', 'kinesis', 'druid-kinesis-indexing-service')}
         {this.renderIngestionCard('HTTP(s)', 'index:http')}
         {this.renderIngestionCard('AWS S3', 'index:static-s3', 'druid-s3-extensions')}
-        {this.renderIngestionCard('Google Blobstore', 'index:static-google-blobstore', 'druid-google-extensions')}
+        {this.renderIngestionCard('Google Cloud Storage', 'index:static-google-blobstore', 'druid-google-extensions')}
         {this.renderIngestionCard('Local disk', 'index:local')}
         <Card interactive onClick={() => goToTask(null, 'supervisor')}>
           Other (streaming)
