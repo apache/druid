@@ -17,29 +17,52 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+package org.apache.druid.segment.column;
 
-import com.google.common.base.Supplier;
-import org.apache.druid.segment.column.ComplexColumn;
-import org.apache.druid.segment.column.GenericIndexedBasedComplexColumn;
 import org.apache.druid.segment.data.GenericIndexed;
 
 /**
+ * Implementation of {@link ComplexColumn} to be used when complex column serialization is done by using
+ * {@link GenericIndexed} by using default implementations of "writeToXXX" methods in
+ * {@link org.apache.druid.segment.serde.ComplexColumnSerializer}
 */
-public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
+public class GenericIndexedBasedComplexColumn implements ComplexColumn
 {
-  private final GenericIndexed<?> complexType;
+  private final GenericIndexed<?> index;
   private final String typeName;
 
-  public ComplexColumnPartSupplier(final String typeName, final GenericIndexed<?> complexType)
+  public GenericIndexedBasedComplexColumn(String typeName, GenericIndexed<?> index)
   {
-    this.complexType = complexType;
+    this.index = index;
     this.typeName = typeName;
   }
 
   @Override
-  public ComplexColumn get()
+  public Class<?> getClazz()
   {
-    return new GenericIndexedBasedComplexColumn(typeName, complexType);
+    return index.getClazz();
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    return typeName;
+  }
+
+  @Override
+  public Object getRowValue(int rowNum)
+  {
+    return index.get(rowNum);
+  }
+
+  @Override
+  public int getLength()
+  {
+    return index.size();
+  }
+
+  @Override
+  public void close()
+  {
   }
 }
