@@ -102,6 +102,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private initSpec: any | null;
   private taskId: string | null;
+  private openDialog: string | null;
   private datasource: string | null;
   private onlyUnavailable: boolean | null;
   private initSql: string | null;
@@ -152,6 +153,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     setTimeout(() => {
       this.initSpec = null;
       this.taskId = null;
+      this.openDialog = null;
       this.datasource = null;
       this.onlyUnavailable = null;
       this.initSql = null;
@@ -165,8 +167,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.resetInitialsWithDelay();
   }
 
-  private goToTask = (taskId: string | null) => {
+  private goToTask = (taskId: string | null, openDialog?: string) => {
     this.taskId = taskId;
+    if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
   }
@@ -224,7 +227,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
   }
 
   private wrappedServersView = () => {
