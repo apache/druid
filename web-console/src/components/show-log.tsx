@@ -126,6 +126,11 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
             minimal
             onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
           />
+            <Checkbox
+              label="Tail Log"
+              checked={this.state.tail}
+              onChange={this.handleCheckboxChange}
+            />
         </ButtonGroup>
       </div>
       <div className="main-area">
@@ -135,13 +140,6 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
           value={logValue}
           ref={this.log}
         />
-      </div>
-      <div className="checkbox-area">
-      <Checkbox
-        label="Tail Log"
-        checked={this.state.tail}
-        onChange={this.handleCheckboxChange}
-      />
       </div>
     </div>;
   }
