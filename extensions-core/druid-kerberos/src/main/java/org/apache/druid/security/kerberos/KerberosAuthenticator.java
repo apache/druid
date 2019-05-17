@@ -43,20 +43,9 @@ import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.http.HttpHeader;
-import sun.security.krb5.EncryptedData;
-import sun.security.krb5.EncryptionKey;
-import sun.security.krb5.internal.APReq;
-import sun.security.krb5.internal.EncTicketPart;
-import sun.security.krb5.internal.Krb5;
-import sun.security.krb5.internal.Ticket;
-import sun.security.krb5.internal.crypto.KeyUsage;
-import sun.security.util.DerInputStream;
-import sun.security.util.DerValue;
 
 import javax.security.auth.Subject;
-import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.kerberos.KerberosPrincipal;
-import javax.security.auth.kerberos.KeyTab;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
@@ -89,7 +78,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -230,56 +218,36 @@ public class KerberosAuthenticator implements Authenticator
       public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
           throws IOException, ServletException
       {
-        HttpServletRequest httpReq = (HttpServletRequest) request;
-
         // If there's already an auth result, then we have authenticated already, skip this.
         if (request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
           filterChain.doFilter(request, response);
           return;
         }
 
+        // In the hadoop-auth 2.7.3 code that this was adapted from, the login would've occurred during init() of
+        // the AuthenticationFilter via `initializeAuthHandler(authHandlerClassName, filterConfig)`.
+        // Since we co-exist with other authentication schemes, don't login until we've checked that
+        // some other Authenticator didn't already validate this request.
         if (loginContext == null) {
           initializeKerberosLogin();
         }
 
+        // Checking for excluded paths is Druid-specific, not from hadoop-auth
         String path = ((HttpServletRequest) request).getRequestURI();
         if (isExcluded(path)) {
           filterChain.doFilter(request, response);
         } else {
-          String clientPrincipal;
-          try {
-            Cookie[] cookies = httpReq.getCookies();
-            if (cookies == null) {
-              clientPrincipal = getPrincipalFromRequestNew((HttpServletRequest) request);
-            } else {
-              clientPrincipal = null;
-              for (Cookie cookie : cookies) {
-                if ("hadoop.auth".equals(cookie.getName())) {
-                  Matcher matcher = HADOOP_AUTH_COOKIE_REGEX.matcher(cookie.getValue());
-                  if (matcher.matches()) {
-                    clientPrincipal = matcher.group(1);
-                    break;
-                  }
-                }
-              }
-            }
-          }
-          catch (Exception ex) {
-            clientPrincipal = null;
-          }
-
-          if (clientPrincipal != null) {
-            request.setAttribute(
-                AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                new AuthenticationResult(clientPrincipal, authorizerName, name, null)
-            );
-          }
+          // Run the original doFilter method, but with modifications to error handling
+          doFilterSuper(request, response, filterChain);
         }
-
-        doFilterSuper(request, response, filterChain);
       }
 
-      // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling
+
+      /**
+       * Copied from hadoop-auth 2.7.3 AuthenticationFilter, to allow us to change error response handling.
+       * Specifically, we want to defer the sending of 401 Unauthorized so that other Authenticators later in the chain
+       * can check the request.
+       */
       private void doFilterSuper(ServletRequest request, ServletResponse response, FilterChain filterChain)
           throws IOException, ServletException
       {
@@ -548,73 +516,6 @@ public class KerberosAuthenticator implements Authenticator
           ),
           };
     }
-  }
-
-  private String getPrincipalFromRequestNew(HttpServletRequest req)
-  {
-    String authorization = req.getHeader(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.AUTHORIZATION);
-    if (authorization == null
-        || !authorization.startsWith(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE)) {
-      return null;
-    } else {
-      authorization = authorization.substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE
-                                                  .length()).trim();
-      final byte[] clientToken = StringUtils.decodeBase64String(authorization);
-      try {
-        DerInputStream ticketStream = new DerInputStream(clientToken);
-        DerValue[] values = ticketStream.getSet(clientToken.length, true);
-
-        // see this link for AP-REQ format: https://tools.ietf.org/html/rfc1510#section-5.5.1
-        for (DerValue value : values) {
-          if (isValueAPReq(value)) {
-            APReq apReq = new APReq(value);
-            Ticket ticket = apReq.ticket;
-            EncryptedData encData = ticket.encPart;
-            int eType = encData.getEType();
-
-            // find the server's key
-            EncryptionKey finalKey = null;
-            Subject serverSubj = loginContext.getSubject();
-            Set<Object> serverCreds = serverSubj.getPrivateCredentials(Object.class);
-            for (Object cred : serverCreds) {
-              if (cred instanceof KeyTab) {
-                KeyTab serverKeyTab = (KeyTab) cred;
-                KerberosPrincipal kerberosPrincipal = new KerberosPrincipal(serverPrincipal);
-                KerberosKey[] serverKeys = serverKeyTab.getKeys(kerberosPrincipal);
-                for (KerberosKey key : serverKeys) {
-                  if (key.getKeyType() == eType) {
-                    finalKey = new EncryptionKey(key.getKeyType(), key.getEncoded());
-                    break;
-                  }
-                }
-              }
-            }
-
-            if (finalKey == null) {
-              log.error("Could not find matching key from server creds.");
-              return null;
-            }
-
-            // decrypt the ticket with the server's key
-            byte[] decryptedBytes = encData.decrypt(finalKey, KeyUsage.KU_TICKET);
-            decryptedBytes = encData.reset(decryptedBytes);
-            EncTicketPart decrypted = new EncTicketPart(decryptedBytes);
-            String clientPrincipal = decrypted.cname.toString();
-            return clientPrincipal;
-          }
-        }
-      }
-      catch (Exception ex) {
-        throw new RuntimeException(ex);
-      }
-    }
-
-    return null;
-  }
-
-  private boolean isValueAPReq(DerValue value)
-  {
-    return value.isConstructed((byte) Krb5.KRB_AP_REQ);
   }
 
   private void initializeKerberosLogin() throws ServletException
