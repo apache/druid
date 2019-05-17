@@ -42,154 +42,160 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParser {
-    private static final String SEPERATOR = "-";
-    public static final String NAME = "name";
-    public static final String VALUE = "value";
-    public static final String TIMESTAMP_COLUMN = "timestamp";
-    private final ParseSpec parseSpec;
-    private Parser<String, Object> parser;
-    private final List<String> dimensions;
+public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParser
+{
+  private static final String SEPERATOR = "-";
+  public static final String NAME = "name";
+  public static final String VALUE = "value";
+  public static final String TIMESTAMP_COLUMN = "timestamp";
+  private final ParseSpec parseSpec;
+  private Parser<String, Object> parser;
+  private final List<String> dimensions;
 
-    @JsonCreator
-    public OpenCensusProtobufInputRowParser(
-            @JsonProperty("parseSpec") ParseSpec parseSpec
-    ) {
-        this.parseSpec = parseSpec;
-        this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
+  @JsonCreator
+  public OpenCensusProtobufInputRowParser(
+      @JsonProperty("parseSpec") ParseSpec parseSpec
+  )
+  {
+    this.parseSpec = parseSpec;
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
+  }
+
+  @Override
+  public ParseSpec getParseSpec()
+  {
+    return parseSpec;
+  }
+
+  @Override
+  public OpenCensusProtobufInputRowParser withParseSpec(ParseSpec parseSpec)
+  {
+    return new OpenCensusProtobufInputRowParser(parseSpec);
+  }
+
+  @Override
+  public List<InputRow> parseBatch(ByteBuffer input)
+  {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
+    Metric metric;
+    try {
+      metric = Metric.parseFrom(ByteString.copyFrom(input));
+    }
+    catch (InvalidProtocolBufferException e) {
+      throw new ParseException(e, "Protobuf message could not be parsed");
     }
 
-    @Override
-    public ParseSpec getParseSpec() {
-        return parseSpec;
+    final List<String> dimensions;
+
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      Set<String> recordDimensions = metric.getMetricDescriptor().getLabelKeysList().stream()
+          .map(s -> s.getKey())
+          .collect(Collectors.toSet());
+      recordDimensions.add(NAME);
+      recordDimensions.add(VALUE);
+
+
+      dimensions = Lists.newArrayList(
+          Sets.difference(recordDimensions, parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
     }
 
-    @Override
-    public OpenCensusProtobufInputRowParser withParseSpec(ParseSpec parseSpec) {
-        return new OpenCensusProtobufInputRowParser(parseSpec);
+    // Flatten out the OpenCensus record into druid rows.
+    List<InputRow> rows = new ArrayList<>();
+    for (TimeSeries ts : metric.getTimeseriesList()) {
+
+      HashMap<String, Object> labels = new HashMap<>();
+
+      // Add labels to record.
+      for (int i = 0; i < metric.getMetricDescriptor().getLabelKeysCount(); i++) {
+        labels.put(metric.getMetricDescriptor().getLabelKeys(i).getKey(), ts.getLabelValues(i).getValue());
+      }
+
+      // One row per timeseries- point.
+      for (Point point : ts.getPointsList()) {
+        // Time in millis
+        labels.put(TIMESTAMP_COLUMN, point.getTimestamp().getSeconds() * 1000);
+
+        switch (point.getValueCase()) {
+          case DOUBLE_VALUE:
+            HashMap<String, Object> doubleGauge = new HashMap<>();
+            doubleGauge.putAll(labels);
+            doubleGauge.put(NAME, metric.getMetricDescriptor().getName());
+            doubleGauge.put(VALUE, point.getDoubleValue());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(doubleGauge),
+                dimensions,
+                doubleGauge
+            ));
+            break;
+          case INT64_VALUE:
+            HashMap<String, Object> intGauge = new HashMap<>();
+            intGauge.putAll(labels);
+            intGauge.put(VALUE, point.getInt64Value());
+            intGauge.put(NAME, metric.getMetricDescriptor().getName());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(intGauge),
+                dimensions,
+                intGauge
+            ));
+            break;
+          case SUMMARY_VALUE:
+            // count
+            HashMap<String, Object> summaryCount = new HashMap<>();
+            summaryCount.putAll(labels);
+            summaryCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
+            summaryCount.put(VALUE, point.getSummaryValue().getCount().getValue());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(summaryCount),
+                dimensions,
+                summaryCount
+            ));
+
+            // sum
+            HashMap<String, Object> summarySum = new HashMap<>();
+            summarySum.putAll(labels);
+            summarySum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
+            summarySum.put(VALUE, point.getSummaryValue().getSnapshot().getSum().getValue());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(summarySum),
+                dimensions,
+                summarySum
+            ));
+
+            // TODO : Do we put percentiles into druid ?
+            break;
+          case DISTRIBUTION_VALUE:
+            // count
+            HashMap<String, Object> distCount = new HashMap<>();
+            distCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
+            distCount.put(VALUE, point.getDistributionValue().getCount());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(distCount),
+                dimensions,
+                distCount
+            ));
+
+            // sum
+            HashMap<String, Object> distSum = new HashMap<>();
+            distSum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
+            distSum.put(VALUE, point.getDistributionValue().getSum());
+            rows.add(new MapBasedInputRow(
+                parseSpec.getTimestampSpec().extractTimestamp(distSum),
+                dimensions,
+                distSum
+            ));
+            // TODO: How to handle buckets ?
+            break;
+        }
+      }
     }
-
-    @Override
-    public List<InputRow> parseBatch(ByteBuffer input) {
-        if (parser == null) {
-            // parser should be created when it is really used to avoid unnecessary initialization of the underlying
-            // parseSpec.
-            parser = parseSpec.makeParser();
-        }
-        Metric metric;
-        try {
-            metric = Metric.parseFrom(ByteString.copyFrom(input));
-        } catch (InvalidProtocolBufferException e) {
-            throw new ParseException(e, "Protobuf message could not be parsed");
-        }
-
-        final List<String> dimensions;
-
-        if (!this.dimensions.isEmpty()) {
-            dimensions = this.dimensions;
-        } else {
-            Set<String> recordDimensions = metric.getMetricDescriptor().getLabelKeysList().stream()
-                    .map(s -> s.getKey())
-                    .collect(Collectors.toSet());
-            recordDimensions.add(NAME);
-            recordDimensions.add(VALUE);
-
-
-            dimensions = Lists.newArrayList(
-                    Sets.difference(recordDimensions, parseSpec.getDimensionsSpec().getDimensionExclusions())
-            );
-        }
-
-        // Flatten out the OpenCensus record into druid rows.
-        List<InputRow> rows = new ArrayList<>();
-        for (TimeSeries ts : metric.getTimeseriesList()) {
-
-            HashMap<String, Object> labels = new HashMap<>();
-
-            // Add labels to record.
-            for (int i = 0; i < metric.getMetricDescriptor().getLabelKeysCount(); i++) {
-                labels.put(metric.getMetricDescriptor().getLabelKeys(i).getKey(), ts.getLabelValues(i).getValue());
-            }
-
-            // One row per timeseries- point.
-            for (Point point : ts.getPointsList()) {
-                // Time in millis
-                labels.put(TIMESTAMP_COLUMN, point.getTimestamp().getSeconds() * 1000);
-
-                switch (point.getValueCase()) {
-                    case DOUBLE_VALUE:
-                        HashMap<String, Object> doubleGauge = new HashMap<>();
-                        doubleGauge.putAll(labels);
-                        doubleGauge.put(NAME, metric.getMetricDescriptor().getName());
-                        doubleGauge.put(VALUE, point.getDoubleValue());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(doubleGauge),
-                                dimensions,
-                                doubleGauge
-                        ));
-                        break;
-                    case INT64_VALUE:
-                        HashMap<String, Object> intGauge = new HashMap<>();
-                        intGauge.putAll(labels);
-                        intGauge.put(VALUE, point.getInt64Value());
-                        intGauge.put(NAME, metric.getMetricDescriptor().getName());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(intGauge),
-                                dimensions,
-                                intGauge
-                        ));
-                        break;
-                    case SUMMARY_VALUE:
-                        // count
-                        HashMap<String, Object> summaryCount = new HashMap<>();
-                        summaryCount.putAll(labels);
-                        summaryCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
-                        summaryCount.put(VALUE, point.getSummaryValue().getCount().getValue());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(summaryCount),
-                                dimensions,
-                                summaryCount
-                        ));
-
-                        // sum
-                        HashMap<String, Object> summarySum = new HashMap<>();
-                        summarySum.putAll(labels);
-                        summarySum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
-                        summarySum.put(VALUE, point.getSummaryValue().getSnapshot().getSum().getValue());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(summarySum),
-                                dimensions,
-                                summarySum
-                        ));
-
-                        // TODO : Do we put percentiles into druid ?
-                        break;
-                    case DISTRIBUTION_VALUE:
-                        // count
-                        HashMap<String, Object> distCount = new HashMap<>();
-                        distCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
-                        distCount.put(VALUE, point.getDistributionValue().getCount());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(distCount),
-                                dimensions,
-                                distCount
-                        ));
-
-                        // sum
-                        HashMap<String, Object> distSum = new HashMap<>();
-                        distSum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
-                        distSum.put(VALUE, point.getDistributionValue().getSum());
-                        rows.add(new MapBasedInputRow(
-                                parseSpec.getTimestampSpec().extractTimestamp(distSum),
-                                dimensions,
-                                distSum
-                        ));
-                        // TODO: How to handle buckets ?
-                        break;
-                }
-            }
-        }
-        return rows;
-    }
+    return rows;
+  }
 
 }

@@ -28,19 +28,22 @@ import org.apache.druid.initialization.DruidModule;
 import java.util.Collections;
 import java.util.List;
 
-public class OpenCensusProtobufExtensionsModule implements DruidModule {
+public class OpenCensusProtobufExtensionsModule implements DruidModule
+{
 
-    @Override
-    public List<? extends Module> getJacksonModules() {
-        return Collections.singletonList(
-                new SimpleModule("OpenCensusProtobufInputRowParserModule")
-                        .registerSubtypes(
-                                new NamedType(OpenCensusProtobufInputRowParser.class, "opencensus-protobuf")
-                        )
-        );
-    }
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return Collections.singletonList(
+        new SimpleModule("OpenCensusProtobufInputRowParserModule")
+            .registerSubtypes(
+                new NamedType(OpenCensusProtobufInputRowParser.class, "opencensus-protobuf")
+            )
+    );
+  }
 
-    @Override
-    public void configure(Binder binder) {
-    }
+  @Override
+  public void configure(Binder binder)
+  {
+  }
 }
