@@ -130,10 +130,10 @@ public class WorkerSelectUtils
                                                                      new WorkerTierSpec.TierConfig(null, null)
                                                                  );
       final String defaultTier = tierConfig.getDefaultTier();
-      final Map<String, String> tiers = tierConfig.getTiers();
+      final Map<String, String> tierAffinity = tierConfig.getTierAffinity();
 
       // select worker from preferred tier
-      final String preferredTier = tiers != null ? tiers.get(task.getDataSource()) : defaultTier;
+      final String preferredTier = tierAffinity != null ? tierAffinity.get(task.getDataSource()) : defaultTier;
       if (preferredTier != null) {
         final ImmutableMap<String, ImmutableWorkerInfo> tierWorkers = getTierWorkers(preferredTier, runnableWorkers);
         final ImmutableWorkerInfo selected = workerSelector.apply(tierWorkers);

@@ -1030,7 +1030,7 @@ useful if you want work evenly distributed across your middleManagers.
 
 ###### Equal Distribution With Tier Spec
 
-This strategy is a variant of `Equal Distribution`, which support `workerTierSpec` field rather than `affinityConfig`. By specifying `workerTierSpec`, you can assign tasks to run on different tiers of MiddleManagers based on the tasks' **taskType** and **dataSource name**.
+This strategy is a variant of `Equal Distribution`, which support `workerTierSpec` field rather than `affinityConfig`. By specifying `workerTierSpec`, you can assign tasks to run on different tiers of MiddleManagers based on the tasks' **taskType** and **dataSource name**. This strategy can't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1049,7 +1049,7 @@ type is "index_kafka", while dataSource "ds1" run on _tier2_.
       "tierMap": {
         "index_kafka": {
            "defaultTier": "tier1",
-           "tiers": {
+           "tierAffinity": {
               "ds1": "tier2"
            }
         }
@@ -1075,7 +1075,7 @@ middleManagers up to capacity simultaneously, rather than a single middleManager
 
 ###### Fill Capacity With Tier Spec
 
-This strategy is a variant of `Fill Capacity`, which support `workerTierSpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithTierSpec_ strategy.
+This strategy is a variant of `Fill Capacity`, which support `workerTierSpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithTierSpec_ strategy. This strategy can't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1133,7 +1133,7 @@ field. If not provided, the default is to not use it at all.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`defaultTier`|Specify default tier for a task type.|null|
-|`tiers`|A JSON map object mapping a datasource String name to a tier String name of the MiddleManager. If tier isn't specified for a datasource, then using the `defaultTier`. If no specified tier and the `defaultTier` is also null, then tasks can run on any available MiddleManagers.|null|
+|`tierAffinity`|A JSON map object mapping a datasource String name to a tier String name of the MiddleManager. If tier isn't specified for a datasource, then using the `defaultTier`. If no specified tier and the `defaultTier` is also null, then tasks can run on any available MiddleManagers.|null|
 
 ##### Autoscaler
 

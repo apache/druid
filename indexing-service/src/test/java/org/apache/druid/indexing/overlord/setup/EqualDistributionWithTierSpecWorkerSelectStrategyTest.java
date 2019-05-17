@@ -65,41 +65,59 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
       );
 
   @Test
-  public void testFindWorkerForTask()
+  public void testFindWorkerForTaskWithNullWorkerTierSpec()
   {
-    final WorkerTierSpec workerTierSpec = new WorkerTierSpec(
+    ImmutableWorkerInfo worker = selectWorker(null);
+    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testFindWorkerForTaskWithPreferredTier()
+  {
+    // test defaultTier != null and tierAffinity != null
+    final WorkerTierSpec workerTierSpec1 = new WorkerTierSpec(
         ImmutableMap.of(
             "noop",
             new WorkerTierSpec.TierConfig(
-                "t1",
-                ImmutableMap.of("ds1", "t1")
+                "t2",
+                ImmutableMap.of("ds1", "t2")
             )
         ),
         false
     );
-    final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
+    ImmutableWorkerInfo worker1 = selectWorker(workerTierSpec1);
+    Assert.assertEquals("localhost3", worker1.getWorker().getHost());
+
+    // test defaultTier == null and tierAffinity != null
+    final WorkerTierSpec workerTierSpec2 = new WorkerTierSpec(
+        ImmutableMap.of(
+            "noop",
+            new WorkerTierSpec.TierConfig(
+                null,
+                ImmutableMap.of("ds1", "t2")
+            )
+        ),
+        false
     );
-    Assert.assertEquals("localhost1", worker.getWorker().getHost());
-  }
 
-  @Test
-  public void testFindWorkerForTaskWithNullWorkerTierSpec()
-  {
-    final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
-        null);
+    ImmutableWorkerInfo worker2 = selectWorker(workerTierSpec2);
+    Assert.assertEquals("localhost3", worker2.getWorker().getHost());
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
+    // test defaultTier != null and tierAffinity == null
+    final WorkerTierSpec workerTierSpec3 = new WorkerTierSpec(
+        ImmutableMap.of(
+            "noop",
+            new WorkerTierSpec.TierConfig(
+                "t2",
+                null
+            )
+        ),
+        false
     );
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+
+    ImmutableWorkerInfo worker3 = selectWorker(workerTierSpec3);
+    Assert.assertEquals("localhost3", worker3.getWorker().getHost());
   }
 
   @Test
@@ -115,14 +133,8 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
         ),
         false
     );
-    final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
-    );
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
@@ -139,14 +151,8 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
         ),
         false
     );
-    final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
-    );
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
@@ -163,6 +169,13 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
         ),
         true
     );
+
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
+    Assert.assertNull(worker);
+  }
+
+  private ImmutableWorkerInfo selectWorker(WorkerTierSpec workerTierSpec)
+  {
     final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
         workerTierSpec);
 
@@ -171,6 +184,7 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         new NoopTask(null, "ds1", 1, 0, null, null, null)
     );
-    Assert.assertNull(worker);
+
+    return worker;
   }
 }

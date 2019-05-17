@@ -65,9 +65,17 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
       );
 
   @Test
-  public void testFindWorkerForTask()
+  public void testFindWorkerForTaskWithNullWorkerTierSpec()
   {
-    final WorkerTierSpec workerTierSpec = new WorkerTierSpec(
+    ImmutableWorkerInfo worker = selectWorker(null);
+    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testFindWorkerForTaskWithPreferredTier()
+  {
+    // test defaultTier != null and tierAffinity != null
+    final WorkerTierSpec workerTierSpec1 = new WorkerTierSpec(
         ImmutableMap.of(
             "noop",
             new WorkerTierSpec.TierConfig(
@@ -77,29 +85,39 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
         ),
         false
     );
-    final FillCapacityWithTierSpecWorkerSelectStrategy strategy = new FillCapacityWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
+    ImmutableWorkerInfo worker1 = selectWorker(workerTierSpec1);
+    Assert.assertEquals("localhost1", worker1.getWorker().getHost());
+
+    // test defaultTier == null and tierAffinity != null
+    final WorkerTierSpec workerTierSpec2 = new WorkerTierSpec(
+        ImmutableMap.of(
+            "noop",
+            new WorkerTierSpec.TierConfig(
+                null,
+                ImmutableMap.of("ds1", "t1")
+            )
+        ),
+        false
     );
-    Assert.assertEquals("localhost1", worker.getWorker().getHost());
-  }
 
-  @Test
-  public void testFindWorkerForTaskWithNullWorkerTierSpec()
-  {
-    final FillCapacityWithTierSpecWorkerSelectStrategy strategy = new FillCapacityWithTierSpecWorkerSelectStrategy(
-        null);
+    ImmutableWorkerInfo worker2 = selectWorker(workerTierSpec2);
+    Assert.assertEquals("localhost1", worker2.getWorker().getHost());
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
+    // test defaultTier != null and tierAffinity == null
+    final WorkerTierSpec workerTierSpec3 = new WorkerTierSpec(
+        ImmutableMap.of(
+            "noop",
+            new WorkerTierSpec.TierConfig(
+                "t1",
+                null
+            )
+        ),
+        false
     );
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+
+    ImmutableWorkerInfo worker3 = selectWorker(workerTierSpec3);
+    Assert.assertEquals("localhost1", worker3.getWorker().getHost());
   }
 
   @Test
@@ -115,14 +133,8 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
         ),
         false
     );
-    final FillCapacityWithTierSpecWorkerSelectStrategy strategy = new FillCapacityWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
-    );
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
@@ -139,14 +151,8 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
         ),
         false
     );
-    final FillCapacityWithTierSpecWorkerSelectStrategy strategy = new FillCapacityWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
 
-    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
-        WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
-    );
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
@@ -163,6 +169,13 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
         ),
         true
     );
+
+    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
+    Assert.assertNull(worker);
+  }
+
+  private ImmutableWorkerInfo selectWorker(WorkerTierSpec workerTierSpec)
+  {
     final FillCapacityWithTierSpecWorkerSelectStrategy strategy = new FillCapacityWithTierSpecWorkerSelectStrategy(
         workerTierSpec);
 
@@ -171,6 +184,7 @@ public class FillCapacityWithTierSpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         new NoopTask(null, "ds1", 1, 0, null, null, null)
     );
-    Assert.assertNull(worker);
+
+    return worker;
   }
 }

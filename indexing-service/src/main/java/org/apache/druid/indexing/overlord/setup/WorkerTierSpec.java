@@ -86,16 +86,16 @@ public class WorkerTierSpec
   {
     private final String defaultTier;
     // key: datasource, value: tier
-    private final Map<String, String> tiers;
+    private final Map<String, String> tierAffinity;
 
     @JsonCreator
     public TierConfig(
         @JsonProperty("defaultTier") String defaultTier,
-        @JsonProperty("tiers") Map<String, String> tiers
+        @JsonProperty("tierAffinity") Map<String, String> tierAffinity
     )
     {
       this.defaultTier = defaultTier;
-      this.tiers = tiers;
+      this.tierAffinity = tierAffinity;
     }
 
     @JsonProperty
@@ -105,9 +105,9 @@ public class WorkerTierSpec
     }
 
     @JsonProperty
-    public Map<String, String> getTiers()
+    public Map<String, String> getTierAffinity()
     {
-      return tiers;
+      return tierAffinity;
     }
 
     @Override
@@ -121,13 +121,13 @@ public class WorkerTierSpec
       }
       final TierConfig that = (TierConfig) o;
       return Objects.equals(defaultTier, that.defaultTier) &&
-             Objects.equals(tiers, that.tiers);
+             Objects.equals(tierAffinity, that.tierAffinity);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(defaultTier, tiers);
+      return Objects.hash(defaultTier, tierAffinity);
     }
 
     @Override
@@ -135,7 +135,7 @@ public class WorkerTierSpec
     {
       return "TierConfig{" +
              "defaultTier=" + defaultTier +
-             ", tiers=" + tiers +
+             ", tierAffinity=" + tierAffinity +
              '}';
     }
   }

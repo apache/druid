@@ -42,7 +42,7 @@ public class WorkerTierSpecTest
     String jsonStr = "{\n"
                      + "  \"strong\": true,\n"
                      + "  \"tierMap\": {\n"
-                     + "    \"index_kafka\": {\"defaultTier\": \"t1\", \"tiers\": {\"ds1\": \"t2\"}}\n"
+                     + "    \"index_kafka\": {\"defaultTier\": \"t1\", \"tierAffinity\": {\"ds1\": \"t2\"}}\n"
                      + "  }\n"
                      + "}";
 
