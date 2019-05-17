@@ -41,7 +41,7 @@ Below is a description of the high-level features and functionality of the Druid
 
 ## Home
 
-The home view provide a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis#legacy-consoles) should you need them.
+The home view provides a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
 
 ![home-view](./img/01-home-view.png)
 
@@ -68,11 +68,11 @@ The task view is also the home of supervisors. From this view you can check the 
 
 ![tasks-1](./img/05-tasks-1.png)
 
-The tasks table let’s you see the currently running and recently completed tasks. From this table you can monitor individual tasks and also submit new tasks by entering their JSON spec.
+The tasks table allows you see the currently running and recently completed tasks. From this table you can monitor individual tasks and also submit new tasks by entering their JSON spec.
 
 ![tasks-2](./img/06-tasks-2.png)
 
-Since there will likely be a lot of tasks you can group the tasks by their type, datasource, or status to make navigation easier.
+Since there will likely be a lot of tasks, you can group the tasks by their type, datasource, or status to make navigation easier.
 
 ![tasks-3](./img/07-tasks-3.png)
 
@@ -84,10 +84,10 @@ The data servers tab lets you see the current status of the historical nodes and
 
 ## SQL
 
-The SQL view lets you issue direct DruidSQL queries and display the results as a simple table. Note that despite the name this view also allows you to enter native Druid queries in Hjson format.
+The SQL view lets you issue direct DruidSQL queries and display the results as a simple table.
 
 ![sql](./img/09-sql-1.png)
 
-The SQL view issues queries in Druid's native query format, which is JSON over HTTP. To send Druid's native query, you must start your query with { and in the format of JSON.
+The SQL view can also issue queries in Druid's native query format, which is JSON over HTTP. To send a native Druid query, you must start your query with { and in the format of JSON.
 
 ![sql](./img/10-sql-2.png)

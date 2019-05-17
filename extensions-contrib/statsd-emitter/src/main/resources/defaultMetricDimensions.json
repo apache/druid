@@ -1,7 +1,9 @@
 {
   "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer"},
+  "query/bytes" : { "dimensions" : ["dataSource", "type"], "type" : "count"},
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
+  "query/node/bytes" : { "dimensions" : ["server"], "type" : "count"},
   "query/node/backpressure": { "dimensions" : ["server"], "type" : "timer"},
   "query/intervalChunk/time" : { "dimensions" : [], "type" : "timer"},
 
@@ -10,6 +12,11 @@
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
   "query/segmentAndCache/time" : { "dimensions" : [], "type" : "timer" },
   "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer" },
+
+  "query/count" : { "dimensions" : [], "type" : "count" },
+  "query/success/count" : { "dimensions" : [], "type" : "count" },
+  "query/failed/count" : { "dimensions" : [], "type" : "count" },
+  "query/interrupted/count" : { "dimensions" : [], "type" : "count" },
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "count" },
@@ -35,6 +42,7 @@
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persist/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persist/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
@@ -44,6 +52,16 @@
   "ingest/handoff/failed" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
+
+  "ingest/kafka/lag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/kafka/maxLag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/kafka/avgLag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+
+  "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
@@ -55,6 +73,8 @@
   "segment/dropped/count" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/deleted/count" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/unneeded/count" : { "dimensions" : ["tier"], "type" : "count" },
+  "segment/unavailable/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "segment/underReplicated/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
   "segment/cost/raw" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/cost/normalization" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/cost/normalized" : { "dimensions" : ["tier"], "type" : "count" },
@@ -68,6 +88,7 @@
   "segment/max" : { "dimensions" : [], "type" : "gauge"},
   "segment/used" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
   "segment/usedPercent" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "convertRange" : true },
+  "segment/pendingDelete" : { "dimensions" : [], "type" : "gauge"},
 
   "jvm/pool/committed" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
   "jvm/pool/init" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },

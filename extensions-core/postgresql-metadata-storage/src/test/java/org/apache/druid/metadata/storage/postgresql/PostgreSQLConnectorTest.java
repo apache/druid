@@ -50,7 +50,8 @@ public class PostgreSQLConnectorTest
                 null
             )
         ),
-        new PostgreSQLConnectorConfig()
+        new PostgreSQLConnectorConfig(),
+        new PostgreSQLTablesConfig()
     );
 
     Assert.assertTrue(connector.isTransientException(new SQLException("bummer, connection problem", "08DIE")));

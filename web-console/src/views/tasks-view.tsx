@@ -117,7 +117,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
-  static statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+  static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -600,7 +600,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: (row) => { return {status: row.status, created_time: row.created_time}; },
+            accessor: (row) => ({ status: row.status, created_time: row.created_time, toString: () => row.status }),
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
@@ -617,20 +617,20 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 {errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a>}
               </span>;
             },
-            PivotValue: (opt) => {
-              const { subRows, value } = opt;
-              if (!subRows || !subRows.length) return '';
-              return `${subRows[0]._original['status']} (${subRows.length})`;
-            },
-            Aggregated: (opt: any) => {
-              const { subRows, column } = opt;
-              const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row._original[column.id]);
-              const previewCount = countBy(previewValues);
-              return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
-            },
             sortMethod: (d1, d2) => {
-              const statusRanking: any = TasksView.statusRanking;
-              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
+              const typeofD1 = typeof d1;
+              const typeofD2 = typeof d2;
+              if (typeofD1 !== typeofD2) return 0;
+              switch (typeofD1) {
+                case 'string':
+                  return TasksView.statusRanking[d1] - TasksView.statusRanking[d2];
+
+                case 'object':
+                  return TasksView.statusRanking[d1.status] - TasksView.statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
+
+                default:
+                  return 0;
+              }
             },
             filterMethod: (filter: Filter, row: any) => {
               return booleanCustomTableFilter(filter, row.status.status);
