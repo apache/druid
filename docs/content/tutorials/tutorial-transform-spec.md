@@ -135,7 +135,7 @@ This filter selects the first 3 rows, and it will exclude the final "lion" row i
 Let's submit this task now, which has been included at `quickstart/tutorial/transform-index.json`:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/transform-index.json
+bin/post-index-task --file quickstart/tutorial/transform-index.json --url http://localhost:8081
 ```
 
 ## Query the transformed data

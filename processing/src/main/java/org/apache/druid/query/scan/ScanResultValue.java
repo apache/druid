@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
@@ -79,18 +80,18 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   public long getFirstEventTimestamp(ScanQuery.ResultFormat resultFormat)
   {
     if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-      Long timestamp = (Long) ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
-      if (timestamp == null) {
+      Object timestampObj = ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
+      if (timestampObj == null) {
         throw new ISE("Unable to compare timestamp for rows without a time column");
       }
-      return timestamp;
+      return DimensionHandlerUtils.convertObjectToLong(timestampObj);
     } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
       int timeColumnIndex = this.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);
       if (timeColumnIndex == -1) {
         throw new ISE("Unable to compare timestamp for rows without a time column");
       }
       List<Object> firstEvent = (List<Object>) ((List<Object>) this.getEvents()).get(0);
-      return (Long) firstEvent.get(timeColumnIndex);
+      return DimensionHandlerUtils.convertObjectToLong(firstEvent.get(timeColumnIndex));
     }
     throw new UOE("Unable to get first event timestamp using result format of [%s]", resultFormat.toString());
   }
@@ -104,7 +105,6 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     }
     return singleEventScanResultValues;
   }
-
 
   @Override
   public boolean equals(Object o)

@@ -35,7 +35,9 @@ import org.junit.runner.RunWith;
 @RunWith(EasyMockRunner.class)
 public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
 {
-  private static class TestChatHandler implements ChatHandler {}
+  private static class TestChatHandler implements ChatHandler
+  {
+  }
 
   private static final String TEST_SERVICE_NAME = "test-service-name";
   private static final String TEST_HOST = "test-host";

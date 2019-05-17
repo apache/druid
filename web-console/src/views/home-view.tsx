@@ -21,6 +21,7 @@ import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
+import { UrlBaser } from '../singletons/url-baser';
 import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
 
 import './home-view.scss';
@@ -51,6 +52,11 @@ export interface HomeViewState {
   segmentCount: number;
   segmentCountError: string | null;
 
+  supervisorCountLoading: boolean;
+  runningSupervisorCount: number;
+  suspendedSupervisorCount: number;
+  supervisorCountError: string | null;
+
   taskCountLoading: boolean;
   runningTaskCount: number;
   pendingTaskCount: number;
@@ -72,6 +78,7 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
   private statusQueryManager: QueryManager<string, any>;
   private datasourceQueryManager: QueryManager<string, any>;
   private segmentQueryManager: QueryManager<string, any>;
+  private supervisorQueryManager: QueryManager<string, any>;
   private taskQueryManager: QueryManager<string, any>;
   private dataServerQueryManager: QueryManager<string, any>;
   private middleManagerQueryManager: QueryManager<string, any>;
@@ -90,6 +97,11 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
       segmentCountLoading: false,
       segmentCount: 0,
       segmentCountError: null,
+
+      supervisorCountLoading: false,
+      runningSupervisorCount: 0,
+      suspendedSupervisorCount: 0,
+      supervisorCountError: null,
 
       taskCountLoading: false,
       runningTaskCount: 0,
@@ -187,6 +199,30 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
     });
 
     this.segmentQueryManager.runQuery(`SELECT COUNT(*) as "count" FROM sys.segments`);
+
+    // -------------------------
+    this.supervisorQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        const data = resp.data;
+        const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
+        const suspendedSupervisorCount = data.filter((d: any) => d.spec.suspended === true).length;
+        return {
+          runningSupervisorCount,
+          suspendedSupervisorCount
+        };
+      },
+      onStateChange: ({result, loading, error}) => {
+        this.setState({
+          runningSupervisorCount: result ? result.runningSupervisorCount : 0,
+          suspendedSupervisorCount: result ? result.suspendedSupervisorCount : 0,
+          supervisorCountLoading: loading,
+          supervisorCountError: error
+        });
+      }
+    });
+
+    this.supervisorQueryManager.runQuery('dummy');
 
     // -------------------------
 
@@ -306,7 +342,7 @@ GROUP BY 1`);
 
     return <div className="home-view app-view">
       {this.renderCard({
-        href: '/status',
+        href: UrlBaser.base('/status'),
         icon: IconNames.GRAPH,
         title: 'Status',
         loading: state.statusLoading,
@@ -330,6 +366,19 @@ GROUP BY 1`);
         loading: state.segmentCountLoading,
         content: pluralIfNeeded(state.segmentCount, 'segment'),
         error: state.datasourceCountError
+      })}
+
+      {this.renderCard({
+        href: '#tasks',
+        icon: IconNames.LIST_COLUMNS,
+        title: 'Supervisors',
+        loading: state.supervisorCountLoading,
+        content: <>
+            {!Boolean(state.runningSupervisorCount + state.suspendedSupervisorCount) && <p>0 supervisors</p>}
+            {Boolean(state.runningSupervisorCount) && <p>{pluralIfNeeded(state.runningSupervisorCount, 'running supervisor')}</p>}
+            {Boolean(state.suspendedSupervisorCount) && <p>{pluralIfNeeded(state.suspendedSupervisorCount, 'suspended supervisor')}</p>}
+          </>,
+        error: state.supervisorCountError
       })}
 
       {this.renderCard({

@@ -188,9 +188,9 @@ the query context (see the Query Context Properties section).
 The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
 In legacy mode you can expect the following behavior changes:
 
-- The __time column is returned as "timestamp" rather than "__time". This will take precedence over any other column
-you may have that is named "timestamp".
-- The __time column is included in the list of columns even if you do not specifically ask for it.
+- The `__time` column is returned as `"timestamp"` rather than `"__time"`. This will take precedence over any other column
+you may have that is named `"timestamp"`.
+- The `__time` column is included in the list of columns even if you do not specifically ask for it.
 - Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
 
 Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting

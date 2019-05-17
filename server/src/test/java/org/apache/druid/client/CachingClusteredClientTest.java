@@ -1874,8 +1874,8 @@ public class CachingClusteredClientTest
                 .andReturn(expectations.getQueryRunner())
                 .times(0, 1);
 
-        final Capture<? extends QueryPlus> capture = new Capture();
-        final Capture<? extends Map> context = new Capture();
+        final Capture<? extends QueryPlus> capture = Capture.newInstance();
+        final Capture<? extends Map> context = Capture.newInstance();
         QueryRunner queryable = expectations.getQueryRunner();
 
         if (query instanceof TimeseriesQuery) {
@@ -2023,8 +2023,8 @@ public class CachingClusteredClientTest
                 .andReturn(expectations.getQueryRunner())
                 .once();
 
-        final Capture<? extends QueryPlus> capture = new Capture();
-        final Capture<? extends Map> context = new Capture();
+        final Capture<? extends QueryPlus> capture = Capture.newInstance();
+        final Capture<? extends Map> context = Capture.newInstance();
         queryCaptures.add(capture);
         QueryRunner queryable = expectations.getQueryRunner();
 

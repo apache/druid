@@ -41,7 +41,7 @@ import {
 import './segments-view.scss';
 
 const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition',
-  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available'];
+  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available', 'Is overshadowed'];
 const tableColumnsNoSql: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'];
 
 export interface SegmentsViewProps extends React.Props<any> {
@@ -78,6 +78,7 @@ interface SegmentQueryResultRow {
   is_available: number;
   is_published: number;
   is_realtime: number;
+  is_overshadowed: number;
 }
 
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
@@ -139,7 +140,8 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
               num_replicas: -1,
               is_available: -1,
               is_published: -1,
-              is_realtime: -1
+              is_realtime: -1,
+              is_overshadowed: -1
             };
           });
         }));
@@ -179,7 +181,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     const totalQuerySize = (page + 1) * pageSize;
 
     const queryParts = [
-      `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "payload"`,
+      `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
       `FROM sys.segments`
     ];
 
@@ -352,6 +354,13 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           accessor: (row) => String(Boolean(row.is_available)),
           Filter: makeBooleanFilter(),
           show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is available')
+        },
+        {
+          Header: 'Is overshadowed',
+          id: 'is_overshadowed',
+          accessor: (row) => String(Boolean(row.is_overshadowed)),
+          Filter: makeBooleanFilter(),
+          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is overshadowed')
         }
       ]}
       defaultPageSize={50}

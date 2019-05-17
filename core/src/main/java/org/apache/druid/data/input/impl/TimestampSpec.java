@@ -47,7 +47,7 @@ public class TimestampSpec
 
   private final String timestampColumn;
   private final String timestampFormat;
-  // this value should never be set for production data
+  // this value should never be set for production data; the data loader uses it before a timestamp column is chosen
   private final DateTime missingValue;
   /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
   private final Function<Object, DateTime> timestampConverter;
@@ -59,7 +59,7 @@ public class TimestampSpec
   public TimestampSpec(
       @JsonProperty("column") String timestampColumn,
       @JsonProperty("format") String format,
-      // this value should never be set for production data
+      // this value should never be set for production data; the data loader uses it before a timestamp column is chosen
       @JsonProperty("missingValue") DateTime missingValue
   )
   {
