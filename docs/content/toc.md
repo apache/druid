@@ -165,7 +165,7 @@ layout: toc
 
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
-  * [Libraries](/docs/VERSION/development/libraries.html)
+  * [Libraries](/libraries.html)
   * [Extensions](/docs/VERSION/development/extensions.html)
   * [JavaScript](/docs/VERSION/development/javascript.html)
   * [Build From Source](/docs/VERSION/development/build.html)
