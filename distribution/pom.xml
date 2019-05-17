@@ -634,6 +634,8 @@
                                         <argument>org.apache.druid.extensions.contrib:aliyun-oss-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-opencensus-extensions</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
