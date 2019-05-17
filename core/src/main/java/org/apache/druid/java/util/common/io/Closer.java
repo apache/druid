@@ -85,7 +85,6 @@ import java.util.Deque;
  * careful to ensure that Closer is not used in code that might be executed by Hadoop indexing service. We copy Closer
  * to Druid codebase in order to remove this headache.
  *
- * @author Colin Decker
  * @since Guava 14.0
  */
 // Coffee's for {@link Closer closers} only.

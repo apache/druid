@@ -28,7 +28,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 /**
  * This aggregator builds sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
- * @author Alexander Saydakov
  */
 public class HllSketchBuildAggregator implements Aggregator
 {

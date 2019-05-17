@@ -37,7 +37,6 @@ import java.util.Objects;
 
 /**
  * Base class for both build and merge factories
- * @author Alexander Saydakov
  */
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
