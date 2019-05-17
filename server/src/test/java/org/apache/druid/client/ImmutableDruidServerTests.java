@@ -33,5 +33,7 @@ public final class ImmutableDruidServerTests
     EasyMock.expect(mockServer.getNumSegments()).andReturn(segments.size()).anyTimes();
   }
 
-  private ImmutableDruidServerTests() {}
+  private ImmutableDruidServerTests()
+  {
+  }
 }

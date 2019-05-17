@@ -36,7 +36,9 @@ public final class DruidClusterBuilder
   private @Nullable Set<ServerHolder> realtimes = null;
   private final Map<String, Iterable<ServerHolder>> historicals = new HashMap<>();
 
-  private DruidClusterBuilder() {}
+  private DruidClusterBuilder()
+  {
+  }
 
   public DruidClusterBuilder withRealtimes(ServerHolder... realtimes)
   {
