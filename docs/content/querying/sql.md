@@ -638,7 +638,7 @@ ORDER BY 2 DESC
 ```
 
 ### SERVERS table
-Servers table lists all data servers(any server that hosts a segment). It includes both Historicals and Peons.
+Servers table lists all discovered servers in the cluster.
 
 |Column|Type|Notes|
 |------|-----|-----|
@@ -646,10 +646,10 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |host|STRING|Hostname of the server|
 |plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
 |tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
-|server_type|STRING|Type of Druid service. Possible values include: Historical, realtime and indexer_executor(Peon).|
-|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
-|current_size|LONG|Current size of segments in bytes on this server|
-|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+|server_type|STRING|Type of Druid service. Possible values include: COORDINATOR, OVERLORD,  BROKER, ROUTER, HISTORICAL, MIDDLE_MANAGER or PEON.|
+|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's null|
+|current_size|LONG|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's 0|
 
 To retrieve information about all servers, use the query:
 
@@ -744,4 +744,4 @@ Broker will emit the following metrics for SQL.
 
 ## Authorization Permissions
 
-Please see [Defining SQL permissions](../../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.
+Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.

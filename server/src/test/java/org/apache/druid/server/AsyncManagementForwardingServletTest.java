@@ -472,9 +472,13 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     }
 
     @Override
-    public void registerListener(Listener listener) {}
+    public void registerListener(Listener listener)
+    {
+    }
 
     @Override
-    public void unregisterListener() {}
+    public void unregisterListener()
+    {
+    }
   }
 }

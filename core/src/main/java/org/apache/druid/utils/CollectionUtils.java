@@ -79,5 +79,7 @@ public final class CollectionUtils
     return set;
   }
 
-  private CollectionUtils() {}
+  private CollectionUtils()
+  {
+  }
 }

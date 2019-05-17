@@ -764,6 +764,7 @@ public class CalciteTests
         TEST_AUTHORIZER_MAPPER,
         druidLeaderClient,
         druidLeaderClient,
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
         getJsonMapper()
     );
     return schema;

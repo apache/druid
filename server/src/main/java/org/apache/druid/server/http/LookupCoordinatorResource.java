@@ -61,9 +61,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Contains information about lookups exposed through the coordinator
@@ -97,11 +99,16 @@ public class LookupCoordinatorResource
   )
   {
     try {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups =
+          lookupCoordinatorManager.getKnownLookups();
       if (discover) {
-        return Response.ok().entity(lookupCoordinatorManager.discoverTiers()).build();
+        final Set<String> discovered = new HashSet<>(lookupCoordinatorManager.discoverTiers());
+        if (knownLookups != null) {
+          discovered.addAll(knownLookups.keySet());
+        }
+        return Response.ok().entity(discovered).build();
       }
-      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
-          .getKnownLookups();
+
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {

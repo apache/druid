@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -30,7 +30,7 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  *
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
-@PublicApi
+@ExtensionPoint
 public interface BaseLongColumnValueSelector extends HotLoopCallee, BaseNullableColumnValueSelector
 {
   @CalledFromHotLoop

@@ -39,10 +39,14 @@ public class NoopSegmentHandoffNotifierFactory implements SegmentHandoffNotifier
     }
 
     @Override
-    public void start() {}
+    public void start()
+    {
+    }
 
     @Override
-    public void close() {}
+    public void close()
+    {
+    }
   };
 
   @Override
