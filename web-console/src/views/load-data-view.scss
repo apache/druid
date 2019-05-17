@@ -38,14 +38,10 @@
       font-size: 20px;
     }
 
-    .section-title {
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-
     .cards {
       .bp3-card {
         display: inline-block;
+        vertical-align: top;
         width: 250px;
         height: 140px;
         margin-right: 15px;
@@ -53,6 +49,10 @@
         font-size: 24px;
         text-align: center;
         padding-top: 47px;
+
+        &.disabled {
+          opacity: 0.4;
+        }
       }
     }
   }
