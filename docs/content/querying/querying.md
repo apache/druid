@@ -37,7 +37,7 @@ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:applica
 ```
  
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
-[client libraries](../development/libraries.html) in other languages to query Druid. 
+[client libraries](/libraries.html) in other languages to query Druid.
 
 The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 
