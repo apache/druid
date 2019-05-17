@@ -77,6 +77,7 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -113,13 +114,13 @@ public class IndexGeneratorJob implements Jobby
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
-    try {
-      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
-
+    try (FileSystem fs = descriptorInfoDir.getFileSystem(conf)) {
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
-        publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getId());
+        try (final InputStream input = fs.open(status.getPath())) {
+          final DataSegment segment = jsonMapper.readValue(input, DataSegment.class);
+          publishedSegmentsBuilder.add(segment);
+          log.info("Adding segment %s to the list of published segments", segment.getId());
+        }
       }
     }
     catch (FileNotFoundException e) {
@@ -133,9 +134,8 @@ public class IndexGeneratorJob implements Jobby
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
-    return publishedSegments;
+    return publishedSegmentsBuilder.build();
   }
 
   private final HadoopDruidIndexerConfig config;

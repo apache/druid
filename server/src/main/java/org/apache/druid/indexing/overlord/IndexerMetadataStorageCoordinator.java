@@ -40,8 +40,6 @@ public interface IndexerMetadataStorageCoordinator
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
    *
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the requested interval.
-   *
-   * @throws IOException
    */
   default List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
   {
@@ -65,8 +63,6 @@ public interface IndexerMetadataStorageCoordinator
    * @param intervals  The intervals for which all applicable and used datasources are requested.
    *
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
-   *
-   * @throws IOException
    */
   List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals);
 
@@ -77,6 +73,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param segments set of segments to add
    *
    * @return set of segments actually added
+   *
+   * @throws IOException
    */
   Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
 

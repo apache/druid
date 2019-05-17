@@ -85,7 +85,7 @@ public class RequestLoggerProviderTest
     );
 
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("missing property 'type'");
+    expectedException.expectMessage("missing type id property 'type'");
 
     configurator.configurate(
         properties,

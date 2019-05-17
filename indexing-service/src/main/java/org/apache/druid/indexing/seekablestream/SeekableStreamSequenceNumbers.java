@@ -19,19 +19,10 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 import java.util.Map;
 
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = SeekableStreamEndSequenceNumbers.class)
-@JsonSubTypes({
-    @Type(name = "start", value = SeekableStreamStartSequenceNumbers.class),
-    @Type(name = "end", value = SeekableStreamEndSequenceNumbers.class)
-})
 public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {
   /**

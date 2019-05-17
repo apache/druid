@@ -31,6 +31,14 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
 
   @JsonCreator
   public KafkaDataSourceMetadata(
+      @JsonProperty("partitions") SeekableStreamEndSequenceNumbers<Integer, Long> kafkaPartitions
+  )
+  {
+    super(kafkaPartitions);
+  }
+
+  @JsonCreator
+  public KafkaDataSourceMetadata(
       @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> kafkaPartitions
   )
   {
