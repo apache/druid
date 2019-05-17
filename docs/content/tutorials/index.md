@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Apache Druid (incubating) Quickstart"
+title: "Apache Druid (incubating) Single-Server Quickstart"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) Quickstart"
   ~ under the License.
   -->
 
-# Apache Druid (incubating) Quickstart
+# Apache Druid (incubating) Single-Server Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
@@ -63,7 +63,7 @@ In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - template configurations for a clustered setup
+* `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid

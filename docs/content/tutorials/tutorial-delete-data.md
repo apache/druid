@@ -38,7 +38,7 @@ In this tutorial, we will use the Wikipedia edits data, with an indexing spec th
 Let's load this initial data:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/deletion-index.json 
+bin/post-index-task --file quickstart/tutorial/deletion-index.json --url http://localhost:8081
 ```
 
 When the load finishes, open [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.

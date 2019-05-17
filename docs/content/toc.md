@@ -30,21 +30,22 @@ layout: toc
     * [Query processing](/docs/VERSION/design/index.html#query-processing)
     * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
     * [Ingestion overview](/docs/VERSION/ingestion/index.html)
-  * [Quickstart](/docs/VERSION/tutorials/index.html)
-    * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
-    * [Tutorial: Loading stream data from Apache Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
-    * [Tutorial: Loading a file using Apache Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
-    * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
-    * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
-  * Further tutorials
-    * [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html)
-    * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
-    * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
-    * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
-    * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
-    * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html)
-    * [Tutorial: Transforming input data](/docs/VERSION/tutorials/tutorial-transform-spec.html)
-  * [Clustering](/docs/VERSION/tutorials/cluster.html)
+  * [Getting Started](/docs/VERSION/operations/getting-started.html)
+    * [Single-server Quickstart](/docs/VERSION/tutorials/index.html)
+      * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
+      * [Tutorial: Loading stream data from Apache Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
+      * [Tutorial: Loading a file using Apache Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
+      * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
+      * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
+      * Further tutorials
+        * [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html)
+        * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
+        * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
+        * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
+        * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
+        * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html)
+        * [Tutorial: Transforming input data](/docs/VERSION/tutorials/tutorial-transform-spec.html)
+    * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion
   * [Ingestion overview](/docs/VERSION/ingestion/index.html)
@@ -131,7 +132,6 @@ layout: toc
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [High Availability](/docs/VERSION/operations/high-availability.html)
-  * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
   * [Management UIs](/docs/VERSION/operations/management-uis.html)
   * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
   * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
@@ -140,6 +140,9 @@ layout: toc
   * [TLS Support](/docs/VERSION/operations/tls-support.html)
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
   * [HTTP Compression](/docs/VERSION/operations/http-compression.html)
+  * [Basic Cluster Tuning](/docs/VERSION/operations/basic-cluster-tuning.html)
+  * [Single-server Deployment Examples](/docs/VERSION/operations/single-server.html)
+  * [Clustered Deployment Example](/docs/VERSION/operations/example-cluster.html)
 
 ## Configuration
   * [Configuration Reference](/docs/VERSION/configuration/index.html)
@@ -154,7 +157,7 @@ layout: toc
   * [Caching](/docs/VERSION/configuration/index.html#cache-configuration)
   * [General Query Configuration](/docs/VERSION/configuration/index.html#general-query-configuration)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
-  
+
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
