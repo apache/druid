@@ -147,8 +147,28 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
     replayAll();
 
-    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(DATA_SCHEMA, null, new KinesisSupervisorIOConfig(
-        STREAM,
+    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        DATA_SCHEMA,
+        null,
+        new KinesisSupervisorIOConfig(
+            STREAM,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
         null,
         null,
         null,
@@ -156,16 +176,11 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         null,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
-        false
-    ), null, null, null, null, null, null, null, null, null, null, null);
+        null
+    );
 
     KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
         supervisorSpec,

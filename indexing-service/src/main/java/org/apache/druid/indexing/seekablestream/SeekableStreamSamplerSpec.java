@@ -76,14 +76,18 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   @Override
   public SamplerResponse sample()
   {
-    return firehoseSampler.sample(new FirehoseFactory()
-    {
-      @Override
-      public Firehose connect(InputRowParser parser, @Nullable File temporaryDirectory)
-      {
-        return getFirehose(parser);
-      }
-    }, dataSchema, samplerConfig);
+    return firehoseSampler.sample(
+        new FirehoseFactory()
+        {
+          @Override
+          public Firehose connect(InputRowParser parser, @Nullable File temporaryDirectory)
+          {
+            return getFirehose(parser);
+          }
+        },
+        dataSchema,
+        samplerConfig
+    );
   }
 
   protected abstract Firehose getFirehose(InputRowParser parser);
@@ -94,7 +98,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     private final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
 
     private Iterator<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> recordIterator;
-    private Iterator<byte[]> interRecordIterator;
+    private Iterator<byte[]> recordDataIterator;
 
     private volatile boolean closed = false;
 
@@ -137,7 +141,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     @Override
     public InputRowPlusRaw nextRowWithRaw()
     {
-      if (interRecordIterator == null || !interRecordIterator.hasNext()) {
+      if (recordDataIterator == null || !recordDataIterator.hasNext()) {
         if (recordIterator == null || !recordIterator.hasNext()) {
           recordIterator = recordSupplier.poll(POLL_TIMEOUT_MS).iterator();
 
@@ -146,14 +150,14 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           }
         }
 
-        interRecordIterator = recordIterator.next().getData().iterator();
+        recordDataIterator = recordIterator.next().getData().iterator();
 
-        if (!interRecordIterator.hasNext()) {
+        if (!recordDataIterator.hasNext()) {
           return InputRowPlusRaw.of((InputRow) null, null);
         }
       }
 
-      byte[] raw = interRecordIterator.next();
+      byte[] raw = recordDataIterator.next();
 
       try {
         List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(raw));
@@ -184,7 +188,8 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     private void assignAndSeek() throws InterruptedException
     {
       final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
-          .getPartitionIds(ioConfig.getStream()).stream()
+          .getPartitionIds(ioConfig.getStream())
+          .stream()
           .map(x -> StreamPartition.of(ioConfig.getStream(), x))
           .collect(Collectors.toSet());
 

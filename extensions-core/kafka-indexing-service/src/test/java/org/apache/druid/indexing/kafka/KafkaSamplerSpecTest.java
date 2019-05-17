@@ -134,20 +134,34 @@ public class KafkaSamplerSpecTest
   {
     insertData(generateRecords(TOPIC));
 
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(DATA_SCHEMA, null, new KafkaSupervisorIOConfig(
-        TOPIC,
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        DATA_SCHEMA,
+        null,
+        new KafkaSupervisorIOConfig(
+            TOPIC,
+            null,
+            null,
+            null,
+            kafkaServer.consumerProperties(),
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null
+        ),
         null,
         null,
         null,
-        kafkaServer.consumerProperties(),
         null,
         null,
         null,
-        true,
+        null,
         null,
         null,
         null
-    ), null, null, null, null, null, null, null, null, null, null);
+    );
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
