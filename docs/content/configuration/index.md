@@ -541,8 +541,6 @@ The below table shows some important configurations for S3. See [S3 Deep Storage
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.s3.accessKey`|The access key to use to access S3.|none|
-|`druid.s3.secretKey`|The secret key to use to access S3.|none|
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.baseKey`|S3 object key prefix for storage.|none|
 |`druid.storage.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. This may require to set additional permissions. See [S3 permissions settings](../development/extensions-core/s3.html#s3-permissions-settings).|false|
