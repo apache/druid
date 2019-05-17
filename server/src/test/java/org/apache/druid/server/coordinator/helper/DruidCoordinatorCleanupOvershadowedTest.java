@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuleRunnerTest;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -115,6 +116,9 @@ public class DruidCoordinatorCleanupOvershadowedTest
         .withUsedSegmentsInTest(usedSegments)
         .withCoordinatorStats(new CoordinatorStats())
         .withDruidCluster(druidCluster)
+        .withDynamicConfigs(
+            DruidCoordinatorRuleRunnerTest.COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
+        )
         .build();
     druidCoordinatorMarkAsUnusedOvershadowedSegments.run(params);
     EasyMock.verify(coordinator, druidDataSource, druidServer);

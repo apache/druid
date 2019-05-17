@@ -179,7 +179,7 @@ public class DruidCoordinatorRuntimeParams
     return balancerStrategy;
   }
 
-  public boolean lagSinceCoordinatorStartElapsedBeforeCanMarkAsUnusedOvershadowedSegements()
+  public boolean coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()
   {
     long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
     long lagNanos = TimeUnit.MILLISECONDS.toNanos(

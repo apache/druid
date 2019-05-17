@@ -47,7 +47,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
-    if (!params.lagSinceCoordinatorStartElapsedBeforeCanMarkAsUnusedOvershadowedSegements()) {
+    if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
       return params;
     }
 

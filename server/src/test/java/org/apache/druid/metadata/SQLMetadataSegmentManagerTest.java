@@ -35,6 +35,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,9 +116,11 @@ public class SQLMetadataSegmentManagerTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataSegmentManagerConfig config = new MetadataSegmentManagerConfig();
+    config.setPollDuration(Period.seconds(1));
     sqlSegmentsMetadata = new SQLMetadataSegmentManager(
         jsonMapper,
-        Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
+        Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
@@ -282,8 +285,8 @@ public class SQLMetadataSegmentManagerTest
     );
   }
 
-  @Test
-  public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException
+  @Test(timeout = 60_000)
+  public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException, InterruptedException
   {
     sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
@@ -294,9 +297,10 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    awaitPollingNewDataSource(newDataSource);
     int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource(newDataSource);
     Assert.assertEquals(1, numChangedSegments);
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
   }
 
   private static DataSegment createNewSegment1(String newDataSource)
@@ -321,8 +325,8 @@ public class SQLMetadataSegmentManagerTest
     );
   }
 
-  @Test
-  public void testMarkSegmentAsUnused() throws IOException
+  @Test(timeout = 60_000)
+  public void testMarkSegmentAsUnused() throws IOException, InterruptedException
   {
     sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
@@ -339,8 +343,16 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    awaitPollingNewDataSource(newDataSource);
     Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId()));
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+  }
+
+  private void awaitPollingNewDataSource(String newDataSource) throws InterruptedException
+  {
+    while (sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource) == null) {
+      Thread.sleep(1000);
+    }
   }
 
   @Test
