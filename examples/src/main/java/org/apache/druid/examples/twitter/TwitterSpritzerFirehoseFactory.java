@@ -142,9 +142,9 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 
     final TwitterStream twitterStream;
     final StatusListener statusListener;
-    final int QUEUE_SIZE = 2000;
+    final int queueSize = 2000;
     /** This queue is used to move twitter events from the twitter4j thread to the druid ingest thread.   */
-    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(QUEUE_SIZE);
+    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(queueSize);
     final long startMsec = System.currentTimeMillis();
 
     //

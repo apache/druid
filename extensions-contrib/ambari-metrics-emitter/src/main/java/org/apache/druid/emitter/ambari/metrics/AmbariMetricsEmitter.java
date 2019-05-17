@@ -230,7 +230,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
 
   protected static String sanitize(String namespace)
   {
-    Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    return DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    Pattern dotOrWhitespace = Pattern.compile("[\\s]+|[.]+");
+    return dotOrWhitespace.matcher(namespace).replaceAll("_");
   }
 }

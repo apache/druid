@@ -302,5 +302,13 @@ codestyle/checkstyle.xml.&#10;"/>
 	 <module name="MethodName">
 	   <property name = "format" value = "^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
 	 </module>
+
+    <!-- Added as per the issue #7609 - Local variable names shouldn't start with capital -->
+    <module name="LocalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+    </module>
+    <module name="LocalFinalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+    </module>
   </module>
 </module>

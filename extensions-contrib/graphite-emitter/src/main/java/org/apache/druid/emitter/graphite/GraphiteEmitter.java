@@ -249,8 +249,8 @@ public class GraphiteEmitter implements Emitter
 
   protected static String sanitize(String namespace, Boolean replaceSlashToDot)
   {
-    Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    String sanitizedNamespace = DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    Pattern dotOrWhitespace = Pattern.compile("[\\s]+|[.]+");
+    String sanitizedNamespace = dotOrWhitespace.matcher(namespace).replaceAll("_");
     if (replaceSlashToDot) {
       sanitizedNamespace = sanitizedNamespace.replace('/', '.');
     }
