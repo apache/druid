@@ -40,6 +40,7 @@ import java.util.Locale;
 public class StringUtils
 {
   public static final byte[] EMPTY_BYTES = new byte[0];
+  public static final String LINE_SEPARATOR = System.lineSeparator();
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
   public static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
   public static final String UTF8_STRING = StandardCharsets.UTF_8.toString();

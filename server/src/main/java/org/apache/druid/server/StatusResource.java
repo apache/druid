@@ -134,18 +134,17 @@ public class StatusResource
     @Override
     public String toString()
     {
-      final String lineSeparator = System.getProperty("line.separator");
       StringBuilder output = new StringBuilder();
-      output.append(StringUtils.format("Druid version - %s", version)).append(lineSeparator).append(lineSeparator);
+      output.append(StringUtils.format("Druid version - %s", version)).append(StringUtils.LINE_SEPARATOR).append(StringUtils.LINE_SEPARATOR);
 
       if (modules.size() > 0) {
-        output.append("Registered Druid Modules").append(lineSeparator);
+        output.append("Registered Druid Modules").append(StringUtils.LINE_SEPARATOR);
       } else {
         output.append("No Druid Modules loaded !");
       }
 
       for (ModuleVersion moduleVersion : modules) {
-        output.append(moduleVersion).append(lineSeparator);
+        output.append(moduleVersion).append(StringUtils.LINE_SEPARATOR);
       }
       return output.toString();
     }

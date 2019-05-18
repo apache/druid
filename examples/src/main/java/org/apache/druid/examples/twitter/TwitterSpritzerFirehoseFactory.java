@@ -86,6 +86,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 {
   private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
   private static final Pattern sourcePattern = Pattern.compile("<a[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE);
+  private static final int DEFAULT_QUEUE_SIZE = 2000;
 
   /**
    * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
@@ -142,9 +143,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 
     final TwitterStream twitterStream;
     final StatusListener statusListener;
-    final int queueSize = 2000;
     /** This queue is used to move twitter events from the twitter4j thread to the druid ingest thread.   */
-    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(queueSize);
+    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(DEFAULT_QUEUE_SIZE);
     final long startMsec = System.currentTimeMillis();
 
     //
