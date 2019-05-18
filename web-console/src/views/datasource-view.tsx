@@ -132,7 +132,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
       showChart: true,
       chartWidth: window.innerWidth * 0.85,
-      chartHeight: window.innerHeight * 0.4
+      chartHeight: window.innerHeight * 0.4,
 
       dropReloadDatasource: null,
       dropReloadAction: 'drop',
@@ -429,6 +429,7 @@ GROUP BY 1`);
     }, () => this.setState({
       showChart: !this.state.showChart
     }));
+  }
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
     const { goToSql } = this.props;
