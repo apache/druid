@@ -84,11 +84,8 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
       metric = Metric.parseFrom(ByteString.copyFrom(input));
     }
     catch (InvalidProtocolBufferException e) {
-      LOG.info("Protobuf message could not be parsed" + e);
       throw new ParseException(e, "Protobuf message could not be parsed");
     }
-
-    LOG.info("proto=" + metric);
 
     final List<String> dimensions;
 
@@ -196,9 +193,6 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
         }
       }
     }
-
-    LOG.trace("json=" + rows);
-
     return rows;
   }
 
