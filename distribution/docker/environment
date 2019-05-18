@@ -26,7 +26,7 @@ DRUID_MAXDIRECTMEMORYSIZE=6172m
 
 druid_emitter_logging_logLevel=debug
 
-druid_extensions_loadList=["druid-histogram", "druid-datasketches", "druid-lookups-cached-global", "druid-azure-extensions", "postgresql-metadata-storage", "protobuf-opencensus"]
+druid_extensions_loadList=["druid-histogram", "druid-datasketches", "druid-lookups-cached-global", "druid-azure-extensions", "postgresql-metadata-storage"]
 
 druid_zk_service_host=zookeeper
 

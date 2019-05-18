@@ -45,7 +45,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: druid:0.15.0-opencensus
+    image: druid
     container_name: coordinator
     volumes:
       - coordinator_var:/opt/druid/var
@@ -60,7 +60,7 @@ services:
       - environment
 
   broker:
-    image: druid:0.15.0-opencensus
+    image: druid
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
@@ -76,7 +76,7 @@ services:
       - environment
 
   historical:
-    image: druid:0.15.0-opencensus
+    image: druid
     container_name: historical
     volumes:
       - historical_var:/opt/druid/var
@@ -92,7 +92,7 @@ services:
       - environment
 
   overlord:
-    image: druid:0.15.0-opencensus
+    image: druid
     container_name: overlord
     volumes:
       - overlord_var:/opt/druid/var
@@ -107,7 +107,7 @@ services:
       - environment
 
   middlemanager:
-    image: druid:0.15.0-opencensus
+    image: druid
     container_name: middlemanager
     volumes:
       - middle_var:/opt/druid/var
