@@ -38,7 +38,7 @@
 # - DRUID_CONFIG -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
-set -e
+set -ex
 SERVICE="$1"
 
 echo "$(date -Is) startup service $SERVICE"

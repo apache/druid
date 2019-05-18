@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.protobuf.opencensus;
+package org.apache.druid.data.input.opencensus.protobuf;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.DoubleValue;

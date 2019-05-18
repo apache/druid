@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.protobuf.opencensus;
+package org.apache.druid.data.input.opencensus.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -32,8 +32,8 @@ import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ParseSpec;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -44,12 +44,13 @@ import java.util.stream.Collectors;
 
 public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParser
 {
+  private static final Logger LOG = new Logger(OpenCensusProtobufInputRowParser.class);
+
   private static final String SEPERATOR = "-";
   public static final String NAME = "name";
   public static final String VALUE = "value";
   public static final String TIMESTAMP_COLUMN = "timestamp";
   private final ParseSpec parseSpec;
-  private Parser<String, Object> parser;
   private final List<String> dimensions;
 
   @JsonCreator
@@ -59,6 +60,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
   {
     this.parseSpec = parseSpec;
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
+    LOG.info("Creating Open Census Protobuf parser with spec:" + parseSpec);
   }
 
   @Override
@@ -76,18 +78,17 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
-    if (parser == null) {
-      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
-      // parseSpec.
-      parser = parseSpec.makeParser();
-    }
+
     Metric metric;
     try {
       metric = Metric.parseFrom(ByteString.copyFrom(input));
     }
     catch (InvalidProtocolBufferException e) {
+      LOG.info("Protobuf message could not be parsed" + e);
       throw new ParseException(e, "Protobuf message could not be parsed");
     }
+
+    LOG.info("proto=" + metric);
 
     final List<String> dimensions;
 
@@ -195,6 +196,9 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
         }
       }
     }
+
+    LOG.trace("json=" + rows);
+
     return rows;
   }
 

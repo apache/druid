@@ -45,11 +45,11 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: druid
+    image: druid:0.15.0-opencensus
     container_name: coordinator
     volumes:
       - coordinator_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
     ports:
@@ -60,11 +60,11 @@ services:
       - environment
 
   broker:
-    image: druid
+    image: druid:0.15.0-opencensus
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -76,11 +76,11 @@ services:
       - environment
 
   historical:
-    image: druid
+    image: druid:0.15.0-opencensus
     container_name: historical
     volumes:
       - historical_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -92,11 +92,11 @@ services:
       - environment
 
   overlord:
-    image: druid
+    image: druid:0.15.0-opencensus
     container_name: overlord
     volumes:
       - overlord_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
     ports:
@@ -107,7 +107,7 @@ services:
       - environment
 
   middlemanager:
-    image: druid
+    image: druid:0.15.0-opencensus
     container_name: middlemanager
     volumes:
       - middle_var:/opt/druid/var
