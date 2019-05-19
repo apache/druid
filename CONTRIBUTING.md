@@ -33,6 +33,7 @@ When submitting a pull request (PR), please use the following guidelines:
   using "Feature/Change" template. Non-trivial features should include unit tests covering the new functionality. Open
   a "Proposal" issue for large changes.
 - Bugfixes should include a unit test or integration test reproducing the issue.
+- Do not use author tags/information in the code.
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
