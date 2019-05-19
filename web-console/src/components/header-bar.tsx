@@ -160,15 +160,15 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
           minimal={!loadDataPrimary}
           intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
         />
-        <AnchorButton minimal active={active === 'query'} icon={IconNames.APPLICATION} text="Query" href="#query" />
 
         <NavbarDivider/>
         <AnchorButton minimal active={active === 'datasources'} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" />
         <AnchorButton minimal active={active === 'segments'} icon={IconNames.STACKED_CHART} text="Segments" href="#segments" />
         <AnchorButton minimal active={active === 'tasks'} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
+        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Data servers" href="#servers" />
 
         <NavbarDivider/>
-        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Data servers" href="#servers" />
+        <AnchorButton minimal active={active === 'query'} icon={IconNames.APPLICATION} text="Query" href="#query" />
 
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
@@ -179,7 +179,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
           </Popover>
         }
         <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button minimal icon={IconNames.COG}/>
+          <Button minimal active={active === 'lookups'} icon={IconNames.COG}/>
         </Popover>
         <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.HELP}/>
