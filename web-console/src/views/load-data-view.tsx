@@ -137,7 +137,7 @@ const VIEW_TITLE: Record<Stage, string> = {
 
 export interface LoadDataViewProps extends React.Props<any> {
   seed: LoadDataViewSeed | null;
-  goToTask: (taskId: string | null) => void;
+  goToTask: (taskId: string | null, openDialog?: string | null) => void;
 }
 
 export interface LoadDataViewState {
@@ -370,6 +370,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderInitStage() {
+    const { goToTask } = this.props;
     const showStreaming = false;
 
     return <>
@@ -378,8 +379,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
 
       <Callout intent={Intent.SUCCESS} icon={IconNames.INFO_SIGN}>
-        Welcome to the Druid data loader.
-        This project is under active development and we plan to support many other sources of raw data, including stream hubs such as Apache Kafka and AWS Kinesis, in the next few releases.
+        Welcome to the Apache Druid graphical data loader.
+        This feature is under active development and currently only supports Druid's native batch ingestion.
+        We plan to continue building this out, including support for Druid's Apache Kafka, Apache Hadoop, and AWS Kinesis based ingestion methods, over the next few releases.
+        Until then, you can load from these and any other Druid ingestion source by clicking on <Code>Other</Code>.
       </Callout>
 
       {
@@ -398,8 +401,16 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         <div className="cards">
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'http' })}>HTTP(s)</Card>
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-s3' })}>AWS S3</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Blobstore</Card>
+          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Cloud Storage</Card>
           <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'local' })}>Local disk</Card>
+        </div>
+      </div>
+
+      <div className="section">
+        <div className="section-title">Raw spec</div>
+        <div className="cards">
+          <Card interactive onClick={() => goToTask(null, 'supervisor')}>Other (streaming)</Card>
+          <Card interactive onClick={() => goToTask(null, 'task')}>Other (batch)</Card>
         </div>
       </div>
     </>;
@@ -1179,6 +1190,22 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Click "Preview" to see the result of any specified transforms.
           </p>
         </Callout>
+        {
+          Boolean(transformQueryState.error && transforms.length) &&
+          <FormGroup>
+            <Button
+              icon={IconNames.EDIT}
+              text="Edit last added transform"
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                this.setState({
+                  selectedTransformIndex: transforms.length - 1,
+                  selectedTransform: transforms[transforms.length - 1]
+                });
+              }}
+            />
+          </FormGroup>
+        }
         {this.renderTransformControls()}
         <Button
           text="Preview"
@@ -1729,7 +1756,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               <Switch
                 checked={dimensionMode === 'specific'}
                 onChange={() => this.setState({ newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific' })}
-                label="Set dimensions and metrics"
+                label="Explicitly specify dimension list"
               />
               <Popover
                 content={
@@ -1864,8 +1891,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <p>
         {
           autoDetect ?
-          'Are you sure you don’t want to set the dimensions and metrics explicitly?' :
-          'Are you sure you want to set dimensions and metrics explicitly?'
+          `Are you sure you don't want to explicitly specify a dimension list?` :
+          `Are you sure you want to explicitly specify a dimension list?`
         }
       </p>
       <p>
