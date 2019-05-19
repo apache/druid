@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
