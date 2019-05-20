@@ -105,7 +105,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${queryString.trim().replace(/;+$/, '')}) LIMIT 5000` :
+            `SELECT * FROM (${queryString.replace(/;+(\s*)$/, '$1')}) LIMIT 2000` :
             queryString;
 
           const queryPayload: Record<string, any> = {

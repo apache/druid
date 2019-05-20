@@ -17,7 +17,7 @@
  */
 
 
-import { InputGroup, ITagInputProps } from '@blueprintjs/core';
+import { ITagInputProps, TextArea } from '@blueprintjs/core';
 import * as React from 'react';
 
 export interface ArrayInputProps extends ITagInputProps {
@@ -46,13 +46,14 @@ export class ArrayInput extends React.Component<ArrayInputProps, { stringValue: 
   render() {
     const { className, placeholder, large, disabled } = this.props;
     const { stringValue } = this.state;
-    return <InputGroup
+    return <TextArea
       className={className}
       value={stringValue}
       onChange={this.handleChange}
       placeholder={placeholder}
       large={large}
       disabled={disabled}
+      fill
     />;
   }
 }

@@ -113,6 +113,7 @@ export interface ParseSpec {
 }
 
 export function hasParallelAbility(spec: IngestionSpec): boolean {
+  const specType = getSpecType(spec);
   return spec.type === 'index' || spec.type === 'index_parallel';
 }
 
@@ -130,6 +131,10 @@ export function getDimensionMode(spec: IngestionSpec): DimensionMode {
 export function getRollup(spec: IngestionSpec): boolean {
   const specRollup = deepGet(spec, 'dataSchema.granularitySpec.rollup');
   return typeof specRollup === 'boolean' ? specRollup : true;
+}
+
+export function getSpecType(spec: IngestionSpec): IngestionType | undefined {
+  return deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type');
 }
 
 export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
@@ -561,7 +566,7 @@ export interface IoConfig {
   period?: string;
   useEarliestOffset?: boolean;
   stream?: string;
-  region?: string;
+  endpoint?: string;
   useEarliestSequenceNumber?: boolean;
 }
 
@@ -597,7 +602,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.uris',
           label: 'URIs',
           type: 'string-array',
-          placeholder: 'https://example.com/path/to/file.ext',
+          placeholder: 'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
           info: <>
             <p>The full URI of your file. To ingest from multiple URIs, use commas to separate each individual URI.</p>
           </>
@@ -636,7 +641,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.uris',
           label: 'S3 URIs',
           type: 'string-array',
-          placeholder: 's3://your-bucket/some-file.extension',
+          placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.prefixes'),
           info: <>
             <p>The full S3 URI of your file. To ingest from multiple URIs, use commas to separate each individual URI.</p>
@@ -647,7 +652,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.prefixes',
           label: 'S3 prefixes',
           type: 'string-array',
-          placeholder: 's3://your-bucket/some-path',
+          placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
           isDefined: (ioConfig) => !deepGet(ioConfig, 'firehose.uris'),
           info: <>
             <p>A list of paths (with bucket) where your files are stored.</p>
@@ -700,22 +705,62 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
       return [
         {
           name: 'stream',
-          type: 'string'
+          type: 'string',
+          placeholder: 'your-kinesis-stream',
+          info: <>
+            The Kinesis stream to read.
+          </>
         },
         {
-          name: 'region',
-          type: 'string'
+          name: 'endpoint',
+          type: 'string',
+          defaultValue: 'kinesis.us-east-1.amazonaws.com',
+          suggestions: [
+            'kinesis.us-east-2.amazonaws.com',
+            'kinesis.us-east-1.amazonaws.com',
+            'kinesis.us-west-1.amazonaws.com',
+            'kinesis.us-west-2.amazonaws.com',
+            'kinesis.ap-east-1.amazonaws.com',
+            'kinesis.ap-south-1.amazonaws.com',
+            'kinesis.ap-northeast-3.amazonaws.com',
+            'kinesis.ap-northeast-2.amazonaws.com',
+            'kinesis.ap-southeast-1.amazonaws.com',
+            'kinesis.ap-southeast-2.amazonaws.com',
+            'kinesis.ap-northeast-1.amazonaws.com',
+            'kinesis.ca-central-1.amazonaws.com',
+            'kinesis.cn-north-1.amazonaws.com.com',
+            'kinesis.cn-northwest-1.amazonaws.com.com',
+            'kinesis.eu-central-1.amazonaws.com',
+            'kinesis.eu-west-1.amazonaws.com',
+            'kinesis.eu-west-2.amazonaws.com',
+            'kinesis.eu-west-3.amazonaws.com',
+            'kinesis.eu-north-1.amazonaws.com',
+            'kinesis.sa-east-1.amazonaws.com',
+            'kinesis.us-gov-east-1.amazonaws.com',
+            'kinesis.us-gov-west-1.amazonaws.com'
+          ],
+          info: <>
+            The AWS Kinesis stream endpoint for a region.
+            You can find a list of endpoints <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">here</ExternalLink>.
+          </>
         },
         {
-          name: 'useEarliestOffset',
-          type: 'boolean',
-          defaultValue: true,
-          isDefined: (i: IoConfig) => i.type === 'kafka' || i.type === 'kinesis'
+          name: 'awsAssumedRoleArn',
+          label: 'AWS assumed role ARN',
+          type: 'string',
+          placeholder: 'optional',
+          info: <>
+            The AWS assumed role to use for additional permissions.
+          </>
         },
         {
-          name: 'useEarliestSequenceNumber',
-          type: 'boolean',
-          isDefined: (i: IoConfig) => i.type === 'kinesis'
+          name: 'awsExternalId',
+          label: 'AWS external ID',
+          type: 'string',
+          placeholder: 'optional',
+          info: <>
+            The AWS external id to use for additional permissions.
+          </>
         }
       ];
   }
@@ -765,7 +810,7 @@ export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null
       break;
 
     case 'kinesis':
-      // if (!ioConfig.stream) return "must have a stream";
+      if (!ioConfig.stream) return 'must have a stream';
       break;
   }
 
@@ -830,17 +875,174 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
       return [];
 
     case 'kafka':
-      return [
-        // ToDo: fill this in
-      ];
-
     case 'kinesis':
       return [
-        // ToDo: fill this in
+        {
+          name: 'useEarliestOffset',
+          type: 'boolean',
+          defaultValue: false,
+          isDefined: (i: IoConfig) => i.type === 'kafka',
+          info: <>
+            <p>
+              If a supervisor is managing a dataSource for the first time, it will obtain a set of starting offsets from Kafka.
+              This flag determines whether it retrieves the earliest or latest offsets in Kafka.
+              Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.
+            </p>
+          </>
+        },
+        {
+          name: 'skipOffsetGaps',
+          type: 'boolean',
+          defaultValue: false,
+          isDefined: (i: IoConfig) => i.type === 'kafka',
+          info: <>
+            <p>
+              Whether or not to allow gaps of missing offsets in the Kafka stream.
+              This is required for compatibility with implementations such as MapR Streams which does not guarantee consecutive offsets.
+              If this is false, an exception will be thrown if offsets are not consecutive.
+            </p>
+          </>
+        },
+        {
+          name: 'pollTimeout',
+          type: 'number',
+          defaultValue: 100,
+          isDefined: (i: IoConfig) => i.type === 'kafka',
+          info: <>
+            <p>The length of time to wait for the kafka consumer to poll records, in milliseconds.</p>
+          </>
+        },
+
+        {
+          name: 'useEarliestSequenceNumber',
+          type: 'boolean',
+          defaultValue: false,
+          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          info: <>
+            If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis.
+            This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis.
+            Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.
+          </>
+        },
+        {
+          name: 'recordsPerFetch',
+          type: 'number',
+          defaultValue: 2000,
+          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          info: <>
+            The number of records to request per GetRecords call to Kinesis.
+          </>
+        },
+        {
+          name: 'fetchDelayMillis',
+          type: 'number',
+          defaultValue: 1000,
+          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          info: <>
+            Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.
+          </>
+        },
+        {
+          name: 'deaggregate',
+          type: 'boolean',
+          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          info: <>
+            Whether to use the de-aggregate function of the KCL.
+          </>
+        },
+
+        {
+          name: 'replicas',
+          type: 'number',
+          defaultValue: 1,
+          info: <>
+            <p>The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.</p>
+          </>
+        },
+        {
+          name: 'taskCount',
+          type: 'number',
+          defaultValue: 1,
+          info: <>
+            <p>
+              The maximum number of reading tasks in a replica set.
+              This means that the maximum number of reading tasks will be <Code>taskCount * replicas</Code> and the total number of tasks (reading + publishing) will be higher than this. See 'Capacity Planning' below for more details.
+            </p>
+          </>
+        },
+        {
+          name: 'taskDuration',
+          type: 'duration',
+          defaultValue: 'PT1H',
+          info: <>
+            <p>
+              The length of time before tasks stop reading and begin publishing their segment.
+            </p>
+          </>
+        },
+        {
+          name: 'startDelay',
+          type: 'duration',
+          defaultValue: 'PT5S',
+          info: <>
+            <p>
+              The period to wait before the supervisor starts managing tasks.
+            </p>
+          </>
+        },
+        {
+          name: 'period',
+          type: 'duration',
+          defaultValue: 'PT30S',
+          info: <>
+            <p>
+              How often the supervisor will execute its management logic.
+            </p>
+            <p>
+              Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.
+            </p>
+          </>
+        },
+        {
+          name: 'completionTimeout',
+          type: 'duration',
+          defaultValue: 'PT30M',
+          info: <>
+            <p>
+              The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish.
+              The publishing clock for a task begins roughly after taskDuration elapses.
+            </p>
+          </>
+        },
+        {
+          name: 'lateMessageRejectionPeriod',
+          type: 'string',
+          placeholder: '(none)',
+          info: <>
+            <p>
+              Configure tasks to reject messages with timestamps earlier than this period before the task was created;
+              for example if this is set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with timestamps earlier than 2016-01-01T11:00Z will be dropped.
+            </p>
+            <p>
+              This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).
+            </p>
+          </>
+        },
+        {
+          name: 'earlyMessageRejectionPeriod',
+          type: 'string',
+          placeholder: '(none)',
+          info: <>
+            <p>
+              Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration;
+              for example if this is set to PT1H, the taskDuration is set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with timestamps later than 2016-01-01T14:00Z will be dropped.
+            </p>
+          </>
+        }
       ];
   }
 
-  throw new Error(`unknown input type ${ingestionComboType}`);
+  throw new Error(`unknown ingestion combo type ${ingestionComboType}`);
 }
 
 // ---------------------------------------
@@ -906,9 +1108,116 @@ export interface TuningConfig {
   reportParseExceptions?: boolean;
   pushTimeout?: number;
   segmentWriteOutMediumFactory?: any;
-  // ...
+  intermediateHandoffPeriod?: string;
+  handoffConditionTimeout?: number;
+  resetOffsetAutomatically?: boolean;
+  workerThreads?: number;
+  chatThreads?: number;
+  chatRetries?: number;
+  httpTimeout?: string;
+  shutdownTimeout?: string;
+  offsetFetchPeriod?: string;
   maxParseExceptions?: number;
   maxSavedParseExceptions?: number;
+  recordBufferSize?: number;
+  recordBufferOfferTimeout?: number;
+  recordBufferFullWait?: number;
+  fetchSequenceNumberTimeout?: number;
+  fetchThreads?: number;
+}
+
+export function getPartitionRelatedTuningSpecFormFields(specType: IngestionType): Field<TuningConfig>[] {
+  switch (specType) {
+    case 'index':
+    case 'index_parallel':
+      const myIsParallel = specType === 'index_parallel';
+      return [
+        {
+          name: 'partitionDimensions',
+          type: 'string-array',
+          disabled: myIsParallel,
+          info: <>
+            <p>
+              Does not currently work with parallel ingestion
+            </p>
+            <p>
+              The dimensions to partition on.
+              Leave blank to select all dimensions. Only used with forceGuaranteedRollup = true, will be ignored otherwise.
+            </p>
+          </>
+        },
+        {
+          name: 'forceGuaranteedRollup',
+          type: 'boolean',
+          disabled: myIsParallel,
+          info: <>
+            <p>
+              Does not currently work with parallel ingestion
+            </p>
+            <p>
+              Forces guaranteeing the perfect rollup.
+              The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased.
+              If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments.
+            </p>
+          </>
+        },
+        {
+          name: 'targetPartitionSize',
+          type: 'number',
+          info: <>
+            Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+          </>
+        },
+        {
+          name: 'numShards',
+          type: 'number',
+          info: <>
+            Directly specify the number of shards to create.
+            If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.
+          </>
+        },
+        {
+          name: 'maxRowsPerSegment',
+          type: 'number',
+          defaultValue: 5000000,
+          info: <>
+            Determines how many rows are in each segment.
+          </>
+        },
+        {
+          name: 'maxTotalRows',
+          type: 'number',
+          defaultValue: 20000000,
+          info: <>
+            Total number of rows in segments waiting for being pushed.
+          </>
+        }
+      ];
+
+    case 'kafka':
+    case 'kinesis':
+      return [
+        {
+          name: 'maxRowsPerSegment',
+          type: 'number',
+          defaultValue: 5000000,
+          info: <>
+            Determines how many rows are in each segment.
+          </>
+        },
+        {
+          name: 'maxTotalRows',
+          type: 'number',
+          defaultValue: 20000000,
+          info: <>
+            Total number of rows in segments waiting for being pushed.
+          </>
+        }
+      ];
+
+  }
+
+  throw new Error(`unknown spec type ${specType}`);
 }
 
 const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
@@ -929,15 +1238,34 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     </>
   },
   {
+    name: 'intermediatePersistPeriod',
+    type: 'duration',
+    defaultValue: 'PT10M',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      The period that determines the rate at which intermediate persists occur.
+    </>
+  },
+  {
+    name: 'intermediateHandoffPeriod',
+    type: 'duration',
+    defaultValue: 'P2147483647D',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      How often the tasks should hand off segments.
+      Handoff will happen either if maxRowsPerSegment or maxTotalRows is hit or every intermediateHandoffPeriod, whichever happens earlier.
+    </>
+  },
+  {
     name: 'maxPendingPersists',
-    type: 'number'
+    type: 'number',
+    info: <>
+      Maximum number of persists that can be pending but not started.
+      If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes.
+    </>
   },
   {
     name: 'forceExtendableShardSpecs',
-    type: 'boolean'
-  },
-  {
-    name: 'reportParseExceptions',
     type: 'boolean'
   },
   {
@@ -978,7 +1306,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   },
   {
     name: 'chatHandlerTimeout',
-    type: 'string',
+    type: 'duration',
     defaultValue: 'PT10S',
     info: <>
       Timeout for reporting the pushed segments in worker tasks.
@@ -990,6 +1318,136 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     defaultValue: 5,
     info: <>
       Retries for reporting the pushed segments in worker tasks.
+    </>
+  },
+  {
+    name: 'handoffConditionTimeout',
+    type: 'number',
+    defaultValue: 0,
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      Milliseconds to wait for segment handoff.
+      0 means to wait forever.
+    </>
+  },
+  {
+    name: 'resetOffsetAutomatically',
+    type: 'boolean',
+    defaultValue: false,
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      Whether to reset the consumer offset if the next offset that it is trying to fetch is less than the earliest available offset for that particular partition.
+    </>
+  },
+  {
+    name: 'workerThreads',
+    type: 'number',
+    placeholder: 'min(10, taskCount)',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      The number of threads that will be used by the supervisor for asynchronous operations.
+    </>
+  },
+  {
+    name: 'chatThreads',
+    type: 'number',
+    placeholder: 'min(10, taskCount * replicas)',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      The number of threads that will be used for communicating with indexing tasks.
+    </>
+  },
+  {
+    name: 'chatRetries',
+    type: 'number',
+    defaultValue: 8,
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.
+    </>
+  },
+  {
+    name: 'httpTimeout',
+    type: 'duration',
+    defaultValue: 'PT10S',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      How long to wait for a HTTP response from an indexing task.
+    </>
+  },
+  {
+    name: 'shutdownTimeout',
+    type: 'duration',
+    defaultValue: 'PT80S',
+    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    info: <>
+      How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
+    </>
+  },
+  {
+    name: 'offsetFetchPeriod',
+    type: 'duration',
+    defaultValue: 'PT30S',
+    isDefined: (t: TuningConfig) => t.type === 'kafka',
+    info: <>
+      How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.
+    </>
+  },
+  {
+    name: 'recordBufferSize',
+    type: 'number',
+    defaultValue: 10000,
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      Size of the buffer (number of events) used between the Kinesis fetch threads and the main ingestion thread.
+    </>
+  },
+  {
+    name: 'recordBufferOfferTimeout',
+    type: 'number',
+    defaultValue: 5000,
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      Length of time in milliseconds to wait for space to become available in the buffer before timing out.
+    </>
+  },
+  {
+    name: 'recordBufferFullWait',
+    type: 'number',
+    defaultValue: 5000,
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      Length of time in milliseconds to wait for the buffer to drain before attempting to fetch records from Kinesis again.
+    </>
+  },
+  {
+    name: 'fetchSequenceNumberTimeout',
+    type: 'number',
+    defaultValue: 60000,
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence number for a shard. Kinesis will not return the latest sequence number if no data is actively being written to that shard.
+      In this case, this fetch call will repeatedly timeout and retry until fresh data is written to the stream.
+    </>
+  },
+  {
+    name: 'fetchThreads',
+    type: 'number',
+    placeholder: 'max(1, {numProcessors} - 1)',
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      Size of the pool of threads fetching data from Kinesis.
+      There is no benefit in having more threads than Kinesis shards.
+    </>
+  },
+  {
+    name: 'maxRecordsPerPoll',
+    type: 'number',
+    defaultValue: 100,
+    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    info: <>
+      The maximum number of records/events to be fetched from buffer per poll.
+      The actual maximum will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
     </>
   }
 ];
@@ -1012,12 +1470,14 @@ export interface Bitmap {
 
 // --------------
 
-export function getBlankSpec(ingestionType: IngestionType = 'index', firehoseType: string | null = null): IngestionSpec {
-  const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(ingestionType);
+export function getBlankSpec(comboType: IngestionComboType): IngestionSpec {
+  let [ingestionType, firehoseType] = comboType.split(':');
+  if (ingestionType === 'index') ingestionType = 'index_parallel';
+  const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(ingestionType as IngestionType);
 
   const granularitySpec: GranularitySpec = {
     type: 'uniform',
-    segmentGranularity: ['index', 'index_parallel'].includes(ingestionType) ? 'DAY' : 'HOUR',
+    segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
     queryGranularity: 'HOUR'
   };
 

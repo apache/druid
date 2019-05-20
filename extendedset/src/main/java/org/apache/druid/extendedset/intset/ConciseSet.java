@@ -49,7 +49,6 @@ import java.util.NoSuchElementException;
  * depended on this exception for its correctness: <i>the fail-fast behavior of
  * iterators should be used only to detect bugs.</i>
  *
- * @author Alessandro Colantonio
  * @version $Id$
  */
 public class ConciseSet extends AbstractIntSet implements Serializable
@@ -2090,9 +2089,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
     }
   }
 
-  /**
-   * @author alessandrocolantonio
-   */
   private class ReverseBitIterator implements IntIterator
   {
     /**
