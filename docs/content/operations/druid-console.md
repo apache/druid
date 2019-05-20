@@ -97,11 +97,12 @@ The data servers tab lets you see the current status of the historical nodes and
 
 ## Query
 
-The SQL view lets you issue direct DruidSQL queries and display the results as a simple table.
+The query view lets you issue direct DruidSQL queries and display the results as a simple table.
 
 ![query-sql](./img/11-query-sql.png)
 
-The SQL view can also issue queries in Druid's native query format, which is JSON over HTTP. To send a native Druid query, you must start your query with { and in the format of JSON.
+The query view can also issue queries in Druid's native query format, which is JSON over HTTP.
+To send a native Druid query, you must start your query with `{` and format it as JSON.
 
 ![query-rune](./img/12-query-rune.png)
 
