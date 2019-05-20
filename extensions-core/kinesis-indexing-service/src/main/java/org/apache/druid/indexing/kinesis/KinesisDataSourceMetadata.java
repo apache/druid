@@ -30,6 +30,14 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
 {
   @JsonCreator
   public KinesisDataSourceMetadata(
+      @JsonProperty("partitions") SeekableStreamEndSequenceNumbers<String, String> kinesisPartitions
+  )
+  {
+    super(kinesisPartitions);
+  }
+
+  @JsonCreator
+  public KinesisDataSourceMetadata(
       @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> kinesisPartitions
   )
   {
