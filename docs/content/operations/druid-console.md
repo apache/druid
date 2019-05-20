@@ -52,8 +52,10 @@ The data loader view allows you to load data by building an ingestion spec with 
 ![data-loader-1](./img/02-data-loader-1.png)
 
 After picking the source of your data just follow the series for steps that will show you incremental previews of the data as it will be ingested.
-After filling in the requried details on every step you can navigate to the next step by clicking the `Next` button.
+After filling in the required details on every step you can navigate to the next step by clicking the `Next` button.
 You can also freely navigate between the steps from the top navigation.
+
+Navigating with the top navigation will leave the underlying spec unmodified while clicking the `Next` button will attempt to fill in the subsequent steps with appropriate defaults.
 
 ![data-loader-2](./img/03-data-loader-2.png)
 
@@ -97,11 +99,11 @@ The data servers tab lets you see the current status of the historical nodes and
 
 ## Query
 
-The query view lets you issue direct DruidSQL queries and display the results as a simple table.
+The query view lets you issue [DruidSQL](../querying/sql.html) queries and display the results as a simple table.
 
 ![query-sql](./img/11-query-sql.png)
 
-The query view can also issue queries in Druid's native query format, which is JSON over HTTP.
+The query view can also issue queries in Druid's [native query format](../querying/querying.html), which is JSON over HTTP.
 To send a native Druid query, you must start your query with `{` and format it as JSON.
 
 ![query-rune](./img/12-query-rune.png)
