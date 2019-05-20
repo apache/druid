@@ -1424,4 +1424,31 @@ interface Function
     }
   }
 
+  class SubMonthFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "subtract_months";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+
+      Long left = args.get(0).eval(bindings).asLong();
+      Long right = args.get(1).eval(bindings).asLong();
+
+      if (left == null || right == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(DateTimes.subMonths(right, left));
+      }
+
+    }
+  }
+
 }

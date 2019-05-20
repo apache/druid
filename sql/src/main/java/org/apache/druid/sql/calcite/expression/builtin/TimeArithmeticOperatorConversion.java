@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -70,44 +71,67 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       throw new IAE("Expected 2 args, got %s", operands.size());
     }
 
-    final RexNode timeRexNode = operands.get(0);
-    final RexNode shiftRexNode = operands.get(1);
+    final RexNode leftRexNode = operands.get(0);
+    final RexNode rightRexNode = operands.get(1);
 
-    final DruidExpression timeExpr = Expressions.toDruidExpression(plannerContext, rowSignature, timeRexNode);
-    final DruidExpression shiftExpr = Expressions.toDruidExpression(plannerContext, rowSignature, shiftRexNode);
+    final DruidExpression leftExpr = Expressions.toDruidExpression(plannerContext, rowSignature, leftRexNode);
+    final DruidExpression rightExpr = Expressions.toDruidExpression(plannerContext, rowSignature, rightRexNode);
 
-    if (timeExpr == null || shiftExpr == null) {
+    if (leftExpr == null || rightExpr == null) {
       return null;
     }
 
-    if (shiftRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+    if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
       // timestamp_expr { + | - } <interval_expr> (year-month interval)
       // Period is a value in months.
       return DruidExpression.fromExpression(
           DruidExpression.functionCall(
               "timestamp_shift",
-              timeExpr,
-              shiftExpr.map(
+              leftExpr,
+              rightExpr.map(
                   simpleExtraction -> null,
                   expression -> StringUtils.format("concat('P', %s, 'M')", expression)
               ),
               DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1))
           )
       );
-    } else if (shiftRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
+    } else if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
       // timestamp_expr { + | - } <interval_expr> (day-time interval)
       // Period is a value in milliseconds. Ignore time zone.
       return DruidExpression.fromExpression(
           StringUtils.format(
               "(%s %s %s)",
-              timeExpr.getExpression(),
+              leftExpr.getExpression(),
               direction > 0 ? "+" : "-",
-              shiftExpr.getExpression()
+              rightExpr.getExpression()
           )
       );
+    } else if ((leftRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        leftRexNode.getType().getFamily() == SqlTypeFamily.DATE) &&
+        (rightRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        rightRexNode.getType().getFamily() == SqlTypeFamily.DATE)) {
+      final String exprstr;
+      if (call.getType().getSqlTypeName() == SqlTypeName.INTERVAL_MONTH ||
+          call.getType().getSqlTypeName() == SqlTypeName.INTERVAL_YEAR) {
+        exprstr = StringUtils.format(
+            "subtract_months(%s, %s)",
+            leftExpr.getExpression(),
+            rightExpr.getExpression()
+        );
+      } else {
+        exprstr = StringUtils.format(
+            "(%s %s %s)",
+            leftExpr.getExpression(),
+            "-",
+            rightExpr.getExpression()
+        );
+      }
+
+      DruidExpression expr = DruidExpression.fromExpression(exprstr);
+      return expr;
     } else {
       // Shouldn't happen if subclasses are behaving.
-      throw new ISE("Got unexpected type period type family[%s]", shiftRexNode.getType().getFamily());
+      throw new ISE("Got unexpected type period type family[%s]", rightRexNode.getType().getFamily());
     }
   }
 

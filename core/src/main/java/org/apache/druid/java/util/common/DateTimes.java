@@ -23,6 +23,8 @@ import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Instant;
+import org.joda.time.Months;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -144,6 +146,13 @@ public final class DateTimes
   public static DateTime min(DateTime dt1, DateTime dt2)
   {
     return dt1.compareTo(dt2) < 0 ? dt1 : dt2;
+  }
+
+  public static int subMonths(long timestamp1, long timestamp2)
+  {
+    Instant ins1 = new Instant(timestamp1);
+    Instant ins2 = new Instant(timestamp2);
+    return Months.monthsBetween(ins1, ins2).getMonths();
   }
 
   private DateTimes()
