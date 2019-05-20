@@ -167,6 +167,14 @@ public class RowBasedGrouperHelper
         columnSelectorRow,
         rawInputRowSignature
     );
+
+    // Although queries would work fine if we always wrap the columnSelectorFactory into a
+    // VirtualizedColumnSelectorFactory. However, VirtualizedColumnSelectorFactory is incapable of using
+    // ColumnSelector based variants of makeXXX methods which are more efficient.
+    // this flag is set to true when it is essential to wrap e.g. a nested groupBy query with virtual columns in
+    // the outer query. Without this flag, groupBy query processing would never use more efficient ColumnSelector
+    // based methods in VirtualColumn interface.
+    // For more details, See https://github.com/apache/incubator-druid/issues/7574
     if (useVirtualizedColumnSelectorFactory) {
       columnSelectorFactory = query.getVirtualColumns().wrap(columnSelectorFactory);
     }
