@@ -523,7 +523,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
         title: 'Open in json spec editor',
-        intent: Intent.DANGER,
         onAction: () => this.props.goToLoadDataView(id)
       });
     }
