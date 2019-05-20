@@ -5927,8 +5927,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_LOS_ANGELES,
         QUERY_CONTEXT_DEFAULT,
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
-        + "  cnt FROM druid.foo\n"
+        + "  SELECT\n"
+        + "    FLOOR(__time TO MONTH) AS gran,\n"
+        + "    cnt\n"
+        + "  FROM druid.foo\n"
+        + "  WHERE __time >= TIME_PARSE('1999-12-01 00:00:00') AND __time < TIME_PARSE('2002-01-01 00:00:00')\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
@@ -5936,7 +5939,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Intervals.of("1999-12-01T00-08:00/2002-01-01T00-08:00")))
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -5982,7 +5985,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOOR(TIME_SHIFt(__time, 'P1D', -1), 'P1M') AS gran,\n"
+        + "  SELECT TIME_FLOOR(TIME_SHIFT(__time, 'P1D', -1), 'P1M') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -5995,7 +5998,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "timestamp_floor(timestamp_shift(\"__time\",'P1D',-1),'P1M',null,'UTC')",
+                                "timestamp_floor(timestamp_shift(\"__time\",'P1D',-1,'UTC'),'P1M',null,'UTC')",
                                 ValueType.LONG
                             )
                         )

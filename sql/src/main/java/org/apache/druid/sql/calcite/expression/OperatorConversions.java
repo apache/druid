@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -103,6 +104,24 @@ public class OperatorConversions
     }
 
     return expressionFunction.apply(druidExpressions);
+  }
+
+  /**
+   * Gets operand "i" from "operands", or returns a default value if it doesn't exist (operands is too short)
+   * or is null.
+   */
+  public static <T> T getOperandWithDefault(
+      final List<RexNode> operands,
+      final int i,
+      final Function<RexNode, T> f,
+      final T defaultReturnValue
+  )
+  {
+    if (operands.size() > i && !RexLiteral.isNullLiteral(operands.get(i))) {
+      return f.apply(operands.get(i));
+    } else {
+      return defaultReturnValue;
+    }
   }
 
   public static OperatorBuilder operatorBuilder(final String name)

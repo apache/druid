@@ -91,7 +91,8 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
                   simpleExtraction -> null,
                   expression -> StringUtils.format("concat('P', %s, 'M')", expression)
               ),
-              DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1))
+              DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1)),
+              DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
           )
       );
     } else if (shiftRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
