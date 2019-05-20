@@ -77,10 +77,11 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
       this.getLogInfo().then(() => {
         if (this.state.tail) {
           if (this.log.current) {
-            this.log.current.scrollTo(0, this.log.current.scrollHeight); }
-          setTimeout(function() {
+            this.log.current.scrollTo(0, this.log.current.scrollHeight);
+          }
+          setTimeout(() => {
             this.tail();
-          }.bind(this), 2000);
+          }, 2000);
         }
       });
     }
