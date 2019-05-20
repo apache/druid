@@ -214,6 +214,10 @@ context parameter "sqlTimeZone" to the name of another time zone, like "America/
 the connection time zone, some functions also accept time zones as parameters. These parameters always take precedence
 over the connection time zone.
 
+Literal timestamps in the connection time zone can be written using `TIMESTAMP '2000-01-01 00:00:00'` syntax. The
+simplest way to write literal timestamps in other time zones is to use TIME_PARSE, like
+`TIME_PARSE('2000-02-01 00:00:00', NULL, 'America/Los_Angeles')`.
+
 |Function|Notes|
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
@@ -290,11 +294,12 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
 float) "string" (UTF-8 encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and
-approxHistogram columns). Timestamps (including the `__time` column) are stored as longs, with the value being the
-number of milliseconds since 1 January 1970 UTC.
+approxHistogram columns).
 
-At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators. The reverse will not
-happen: 64-bit floats are not be narrowed to 32-bit.
+Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
+milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
+timezone information, but only carry information about the exact moment in time they represent. See the
+[Time functions](#time-functions) section for more information about timestamp handling.
 
 Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
 Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
@@ -306,7 +311,7 @@ datasource, then it will be treated as zero for rows from those segments.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
 Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
-to FLOAT.
+to FLOAT. At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators.
 
 The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
 that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
