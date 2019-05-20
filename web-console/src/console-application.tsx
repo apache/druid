@@ -227,12 +227,12 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedServersView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedLookupsView = () => {

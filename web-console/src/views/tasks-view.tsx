@@ -20,6 +20,7 @@ import { Alert, Button, ButtonGroup, Icon, Intent, Label, Menu, MenuDivider, Men
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
+import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
@@ -36,12 +37,13 @@ import {
   booleanCustomTableFilter,
   countBy,
   formatDuration,
-  getDruidErrorMessage, LocalStorageKeys,
+  getDruidErrorMessage, localStorageGet, LocalStorageKeys, localStorageSet,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../utils';
 import { BasicAction, basicActionsToMenu } from '../utils/basic-action';
 
+import 'react-splitter-layout/lib/index.css';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
@@ -119,7 +121,6 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
   static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
-
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
     this.state = {
@@ -158,6 +159,9 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
+    if (!localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE)) {
+      localStorageSet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE, '60');
+    }
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -174,6 +178,10 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
         type: d.typTasksView
       };
     });
+  }
+
+  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+    localStorageSet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
   componentDidMount(): void {
@@ -702,102 +710,104 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       />
     </Menu>;
 
-    return <div className="tasks-view app-view">
-      <ViewControlBar label="Supervisors">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.supervisorQueryManager.rerunLastQuery()}
-        />
-        <Button
-          icon={IconNames.PLUS}
-          text="Submit supervisor"
-          onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-        />
-        <TableColumnSelection
-          columns={supervisorTableColumns}
-          onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderSupervisorTable()}
-
-      <div className="control-separator"/>
-
-      <ViewControlBar label="Tasks">
-        <Label>Group by</Label>
-        <ButtonGroup>
-          <Button active={groupTasksBy === null} onClick={() => this.setState({ groupTasksBy: null })}>None</Button>
-          <Button active={groupTasksBy === 'type'} onClick={() => this.setState({ groupTasksBy: 'type' })}>Type</Button>
-          <Button active={groupTasksBy === 'datasource'} onClick={() => this.setState({ groupTasksBy: 'datasource' })}>Datasource</Button>
-          <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
-        </ButtonGroup>
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.taskQueryManager.rerunLastQuery()}
-        />
-        {
-          !noSqlMode &&
+    // tslint:disable-next-line:radix
+    return <SplitterLayout customClassName={'tasks-view app-view'} vertical percentage secondaryInitialSize={parseInt(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string)} primaryMinSize={25} secondaryMinSize={25} onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}>
+      <div>
+        <ViewControlBar label="Supervisors">
           <Button
-            icon={IconNames.APPLICATION}
-            text="Go to SQL"
-            onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.supervisorQueryManager.rerunLastQuery()}
+          />
+          <Button
+            icon={IconNames.PLUS}
+            text="Submit supervisor"
+            onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+          />
+          <TableColumnSelection
+            columns={supervisorTableColumns}
+            onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+        {this.renderSupervisorTable()}
+      </div>
+      <div className={'pane2'}>
+        <ViewControlBar label="Tasks">
+          <Label>Group by</Label>
+          <ButtonGroup>
+            <Button active={groupTasksBy === null} onClick={() => this.setState({ groupTasksBy: null })}>None</Button>
+            <Button active={groupTasksBy === 'type'} onClick={() => this.setState({ groupTasksBy: 'type' })}>Type</Button>
+            <Button active={groupTasksBy === 'datasource'} onClick={() => this.setState({ groupTasksBy: 'datasource' })}>Datasource</Button>
+            <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
+          </ButtonGroup>
+          <Button
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.taskQueryManager.rerunLastQuery()}
+          />
+          {
+            !noSqlMode &&
+            <Button
+              icon={IconNames.APPLICATION}
+              text="Go to SQL"
+              onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+            />
+          }
+          <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
+            <Button icon={IconNames.PLUS} text="Submit task"/>
+          </Popover>
+          <TableColumnSelection
+            columns={taskTableColumns}
+            onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+        {this.renderTaskTable()}
+        {
+          supervisorSpecDialogOpen &&
+          <SpecDialog
+            onClose={this.closeSpecDialogs}
+            onSubmit={this.submitSupervisor}
+            title="Submit supervisor"
           />
         }
-        <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.PLUS} text="Submit task"/>
-        </Popover>
-        <TableColumnSelection
-          columns={taskTableColumns}
-          onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderTaskTable()}
-      {
-        supervisorSpecDialogOpen &&
-        <SpecDialog
-          onClose={this.closeSpecDialogs}
-          onSubmit={this.submitSupervisor}
-          title="Submit supervisor"
-        />
-      }
-      {
-        taskSpecDialogOpen &&
-        <SpecDialog
-          onClose={this.closeSpecDialogs}
-          onSubmit={this.submitTask}
-          title="Submit task"
-        />
-      }
-      <Alert
-        icon={IconNames.ERROR}
-        intent={Intent.PRIMARY}
-        isOpen={Boolean(alertErrorMsg)}
-        confirmButtonText="OK"
-        onConfirm={() => this.setState({ alertErrorMsg: null })}
-      >
-        <p>{alertErrorMsg}</p>
-      </Alert>
-      {
-        supervisorTableActionDialogId &&
-        <SupervisorTableActionDialog
-          isOpen
-          supervisorId={supervisorTableActionDialogId}
-          actions={supervisorTableActionDialogActions}
-          onClose={() => this.setState({supervisorTableActionDialogId: null})}
-        />
-      }
-      {
-        taskTableActionDialogId &&
-        <TaskTableActionDialog
-          isOpen
-          taskId={taskTableActionDialogId}
-          actions={taskTableActionDialogActions}
-          onClose={() => this.setState({taskTableActionDialogId: null})}
-        />
-      }
-    </div>;
+        {
+          taskSpecDialogOpen &&
+          <SpecDialog
+            onClose={this.closeSpecDialogs}
+            onSubmit={this.submitTask}
+            title="Submit task"
+          />
+        }
+        <Alert
+          icon={IconNames.ERROR}
+          intent={Intent.PRIMARY}
+          isOpen={Boolean(alertErrorMsg)}
+          confirmButtonText="OK"
+          onConfirm={() => this.setState({ alertErrorMsg: null })}
+        >
+          <p>{alertErrorMsg}</p>
+        </Alert>
+        {
+          supervisorTableActionDialogId &&
+          <SupervisorTableActionDialog
+            isOpen
+            supervisorId={supervisorTableActionDialogId}
+            actions={supervisorTableActionDialogActions}
+            onClose={() => this.setState({supervisorTableActionDialogId: null})}
+          />
+        }
+        {
+          taskTableActionDialogId &&
+          <TaskTableActionDialog
+            isOpen
+            taskId={taskTableActionDialogId}
+            actions={taskTableActionDialogActions}
+            onClose={() => this.setState({taskTableActionDialogId: null})}
+          />
+        }
+      </div>
+    </SplitterLayout>;
   }
 }

@@ -19,11 +19,22 @@
 @import "../variables";
 
 .servers-view {
-  padding-bottom: 50px;
+  height: 100%;
+  width: 100%;
 
-  .view-control-bar,
-  .ReactTable {
+  .view-control-bar{
     margin-bottom: $standard-padding;
+  }
+
+  .ReactTable{
+    position: absolute;
+    top: 50px;
+    bottom: 0;
+    width: 100%;
+  }
+
+  .pane2 {
+    padding-top: 15px;
   }
 
   ul {
