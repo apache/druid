@@ -39,7 +39,6 @@ import java.util.Set;
 
 /**
  * Returns a union of a given list of sketches.
- * @author Alexander Saydakov
  */
 public class HllSketchUnionPostAggregator implements PostAggregator
 {

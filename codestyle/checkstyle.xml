@@ -32,6 +32,15 @@
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
+  <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
+  <module name="RegexpSingleline">
+    <property name="format" value="^\s*\*\s*@author" />
+    <property name="minimum" value="0" />
+    <property name="maximum" value="0" />
+    <property name="message" value="Prohibit @author tags in Javadoc" />
+    <property name="fileExtensions" value="java" />
+  </module>
+
   <module name="TreeWalker">
     <module name="SuppressionCommentFilter">
       <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
