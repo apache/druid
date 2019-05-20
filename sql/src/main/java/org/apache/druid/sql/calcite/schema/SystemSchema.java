@@ -43,7 +43,9 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -184,6 +186,7 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
+      final InventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -201,7 +204,7 @@ public class SystemSchema extends AbstractSchema
     );
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, segmentsTable,
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
@@ -441,14 +444,17 @@ public class SystemSchema extends AbstractSchema
   {
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+    private final InventoryView serverInventoryView;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+        InventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
+      this.serverInventoryView = serverInventoryView;
     }
 
     @Override
@@ -477,7 +483,10 @@ public class SystemSchema extends AbstractSchema
           .transform(val -> {
             boolean isDataNode = false;
             final DruidNode node = val.getDruidNode();
+            long currHistoricalSize = 0;
             if (val.getNodeType().equals(NodeType.HISTORICAL)) {
+              final DruidServer server = serverInventoryView.getInventoryValue(val.toDruidServer().getName());
+              currHistoricalSize = server.getCurrSize();
               isDataNode = true;
             }
             return new Object[]{
@@ -487,7 +496,7 @@ public class SystemSchema extends AbstractSchema
                 (long) extractPort(node.getHostAndTlsPort()),
                 StringUtils.toLowerCase(toStringOrNull(val.getNodeType())),
                 isDataNode ? val.toDruidServer().getTier() : null,
-                isDataNode ? val.toDruidServer().getCurrSize() : CURRENT_SERVER_SIZE,
+                isDataNode ? currHistoricalSize : CURRENT_SERVER_SIZE,
                 isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
             };
           });
