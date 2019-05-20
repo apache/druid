@@ -46,7 +46,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
 {
   private static final Logger LOG = new Logger(OpenCensusProtobufInputRowParser.class);
 
-  private static final String SEPERATOR = "-";
+  private static final String SEPARATOR = "-";
   public static final String NAME = "name";
   public static final String VALUE = "value";
   public static final String TIMESTAMP_COLUMN = "timestamp";
@@ -147,7 +147,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
             // count
             HashMap<String, Object> summaryCount = new HashMap<>();
             summaryCount.putAll(labels);
-            summaryCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
+            summaryCount.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "count");
             summaryCount.put(VALUE, point.getSummaryValue().getCount().getValue());
             rows.add(new MapBasedInputRow(
                 parseSpec.getTimestampSpec().extractTimestamp(summaryCount),
@@ -158,7 +158,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
             // sum
             HashMap<String, Object> summarySum = new HashMap<>();
             summarySum.putAll(labels);
-            summarySum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
+            summarySum.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "sum");
             summarySum.put(VALUE, point.getSummaryValue().getSnapshot().getSum().getValue());
             rows.add(new MapBasedInputRow(
                 parseSpec.getTimestampSpec().extractTimestamp(summarySum),
@@ -171,7 +171,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
           case DISTRIBUTION_VALUE:
             // count
             HashMap<String, Object> distCount = new HashMap<>();
-            distCount.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "count");
+            distCount.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "count");
             distCount.put(VALUE, point.getDistributionValue().getCount());
             rows.add(new MapBasedInputRow(
                 parseSpec.getTimestampSpec().extractTimestamp(distCount),
@@ -181,7 +181,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
 
             // sum
             HashMap<String, Object> distSum = new HashMap<>();
-            distSum.put(NAME, metric.getMetricDescriptor().getName() + SEPERATOR + "sum");
+            distSum.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "sum");
             distSum.put(VALUE, point.getDistributionValue().getSum());
             rows.add(new MapBasedInputRow(
                 parseSpec.getTimestampSpec().extractTimestamp(distSum),
