@@ -33,12 +33,7 @@
     }
   }
 
-  .config-popover .bp3-popover-content,
-  .legacy-popover .bp3-popover-content {
-    width: 240px;
-  }
-
-  .help-popover .bp3-popover-content {
-    width: 180px;
+  * {
+    white-space: nowrap;
   }
 }

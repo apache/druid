@@ -32,6 +32,8 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -77,7 +79,8 @@ public class TimeseriesQueryQueryToolChestTest
                 Granularities.ALL,
                 ImmutableList.of(
                     new CountAggregatorFactory("metric1"),
-                    new LongSumAggregatorFactory("metric0", "metric0")
+                    new LongSumAggregatorFactory("metric0", "metric0"),
+                    new StringLastAggregatorFactory("complexMetric", "test", null)
                 ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 0,
@@ -89,7 +92,11 @@ public class TimeseriesQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TimeseriesResultValue(
-            ImmutableMap.of("metric1", 2, "metric0", 3)
+            ImmutableMap.of(
+                "metric1", 2,
+                "metric0", 3,
+                "complexMetric", new SerializablePairLongString(123L, "val1")
+            )
         )
     );
 
@@ -109,7 +116,12 @@ public class TimeseriesQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TimeseriesResultValue(
-            ImmutableMap.of("metric1", 2, "metric0", 3, "post", 10)
+            ImmutableMap.of(
+                "metric1", 2,
+                "metric0", 3,
+                "complexMetric", "val1",
+                "post", 10
+            )
         )
     );
 
@@ -121,6 +133,23 @@ public class TimeseriesQueryQueryToolChestTest
 
     Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
     Assert.assertEquals(result2, fromResultLevelCacheRes);
+
+    final Result<TimeseriesResultValue> result3 = new Result<>(
+        // null timestamp similar to grandTotal
+        null,
+        new TimeseriesResultValue(
+            ImmutableMap.of("metric1", 2, "metric0", 3, "complexMetric", "val1", "post", 10)
+        )
+    );
+
+    preparedResultLevelCacheValue = strategy.prepareForCache(true).apply(result3);
+    fromResultLevelCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
+    Assert.assertEquals(result3, fromResultLevelCacheRes);
   }
 
   @Test

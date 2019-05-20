@@ -75,6 +75,12 @@ public abstract class DruidCoordinatorConfig
     return "curator";
   }
 
+  @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")
+  public int getNumCuratorCallBackThreads()
+  {
+    return 2;
+  }
+
   @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
   public Duration getHttpLoadQueuePeonRepeatDelay()
   {
