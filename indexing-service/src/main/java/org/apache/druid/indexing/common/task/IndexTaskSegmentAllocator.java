@@ -19,12 +19,14 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.task.IndexTask.SequenceNameGenerator;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.joda.time.Interval;
 
 /**
- * Segment allocator interface for {@link IndexTask}
+ * Segment allocator interface for {@link IndexTask}. It has 3 different modes for allocating segments.
  */
-interface IndexTaskSegmentAllocator extends SegmentAllocator, SequenceNameGenerator
+interface IndexTaskSegmentAllocator extends SegmentAllocator
 {
+  String getSequenceName(Interval interval, InputRow inputRow);
 }

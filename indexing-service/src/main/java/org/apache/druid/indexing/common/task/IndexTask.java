@@ -614,11 +614,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return metrics;
   }
 
-  public interface SequenceNameGenerator
-  {
-    String getSequenceName(Interval interval, InputRow inputRow);
-  }
-
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
     Preconditions.checkState(

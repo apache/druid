@@ -36,6 +36,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Allocates all necessary segments at the beginning and reuse them.
+ */
 public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final TaskToolbox toolbox;

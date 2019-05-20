@@ -29,6 +29,9 @@ import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
 import org.joda.time.Interval;
 
+/**
+ * TaskAction to acquire a task lock for a segment. Used by stream ingestion tasks.
+ */
 public class SegmentLockAquireAction implements TaskAction<LockResult>
 {
   private final TaskLockType lockType;

@@ -53,10 +53,11 @@ import java.util.stream.Collectors;
  * segments for the given timestamp, or if the prior segments for the given timestamp are already at the
  * preferredSegmentGranularity. Otherwise, the prior segments will take precedence.
  * <p/>
- * This action implicitly acquires segment locks when it allocates segments. You do not have to acquire them beforehand,
- * although you *do* have to release them yourself.
+ * This action implicitly acquires some task locks when it allocates segments. You do not have to acquire them
+ * beforehand, although you *do* have to release them yourself. (Note that task locks are automatically released when
+ * the task is finished.)
  * <p/>
- * If this action cannot acquire an appropriate segment lock, or if it cannot expand an existing segment set, it returns
+ * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
  * null.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>

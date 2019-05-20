@@ -52,10 +52,16 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
+ * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details of
+ * the possible state.
+ * Note that an AtomicUpdateGroup can consist of {@link Overshadowable}s of the same majorVersion, minorVersion,
+ * rootPartition range, and atomicUpdateGroupSize.
+ * In {@link org.apache.druid.timeline.VersionedIntervalTimeline}, this class is used to manage segments in the same
+ * timeChunk.
  *
- * Not thread-safe
+ * This class is not thread-safe.
  */
-public class OvershadowableManager<T extends Overshadowable<T>>
+class OvershadowableManager<T extends Overshadowable<T>>
 {
   private enum State
   {
@@ -71,7 +77,7 @@ public class OvershadowableManager<T extends Overshadowable<T>>
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroup;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> overshadowedGroups;
 
-  public OvershadowableManager()
+  OvershadowableManager()
   {
     this.knownPartitionChunks = new HashMap<>();
     this.standbyGroups = new TreeMap<>();
@@ -79,7 +85,7 @@ public class OvershadowableManager<T extends Overshadowable<T>>
     this.overshadowedGroups = new TreeMap<>();
   }
 
-  public OvershadowableManager(OvershadowableManager<T> other)
+  OvershadowableManager(OvershadowableManager<T> other)
   {
     this.knownPartitionChunks = new HashMap<>(other.knownPartitionChunks);
     this.standbyGroups = new TreeMap<>(other.standbyGroups);
@@ -575,6 +581,11 @@ public class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
+  /**
+   * Map can store at most a single entry.
+   * Comparing to{@link it.unimi.dsi.fastutil.shorts.Short2ObjectSortedMaps.Singleton}, it's different from the
+   * perspective of that this class supports update.
+   */
   private static class SingleEntryShort2ObjectSortedMap<V> extends AbstractShort2ObjectSortedMap<V>
   {
     private short key;

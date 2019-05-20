@@ -85,7 +85,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   @JsonCreator
   private SegmentTransactionalInsertAction(
-      @JsonProperty("segmentsToBeOverwritten") Set<DataSegment> segmentsToBeOverwritten,
+      @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
@@ -98,6 +98,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   }
 
   @JsonProperty
+  @Nullable
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;

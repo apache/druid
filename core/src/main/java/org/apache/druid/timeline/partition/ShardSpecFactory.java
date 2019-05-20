@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
+/**
+ * Factory to be used to allocate segments remotely in the overlord.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpecFactory.class),
@@ -33,9 +36,19 @@ import javax.annotation.Nullable;
 })
 public interface ShardSpecFactory
 {
+  /**
+   * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
+   * first call for the timeChunk where the new segment is created.
+   */
   ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
+  /**
+   * Create a new shardSpec having the given partitionId.
+   */
   ShardSpec create(ObjectMapper objectMapper, int partitionId);
 
+  /**
+   * Return the class of the shardSpec created by this factory.
+   */
   Class<? extends ShardSpec> getShardSpecClass();
 }

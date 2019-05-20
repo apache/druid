@@ -37,9 +37,12 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class CachingLocalSegmentAllocator extends CachingSegmentAllocator
+/**
+ * CachingSegmentAllocator which allocates segments locally.
+ */
+class CachingLocalSegmentAllocator extends CachingSegmentAllocator
 {
-  public CachingLocalSegmentAllocator(
+  CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
       String dataSource,

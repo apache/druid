@@ -33,6 +33,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * TaskAction to try to acquire a {@link org.apache.druid.indexing.common.SegmentLock}.
+ */
 public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
 {
   private final TaskLockType type;

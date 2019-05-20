@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * ShardSpec for segments which overshadow others with their minorVersion.
+ */
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
   private final int partitionId;
@@ -216,7 +219,7 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   public String toString()
   {
     return "NumberedOverwriteShardSpec{" +
-           "partitionNum=" + partitionId +
+           "partitionId=" + partitionId +
            ", startRootPartitionId=" + startRootPartitionId +
            ", endRootPartitionId=" + endRootPartitionId +
            ", minorVersion=" + minorVersion +

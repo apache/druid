@@ -20,7 +20,7 @@
 package org.apache.druid.timeline;
 
 /**
- * Interface to check the overshadowing relation between objeccts.
+ * Interface to represent a class which can have overshadow relation between its instances.
  * In {@link VersionedIntervalTimeline}, Overshadowable is used to represent each {@link DataSegment}
  * which has the same major version in the same time chunk.
  *
@@ -29,9 +29,17 @@ package org.apache.druid.timeline;
  */
 public interface Overshadowable<T extends Overshadowable>
 {
+  /**
+   * Returns true this overshadows the given other.
+   */
   default boolean isOvershadow(T other)
   {
-    return containsRootPartition(other) && getMinorVersion() > other.getMinorVersion();
+    final int majorVersionCompare = getMajorVersion().compareTo(other.getMajorVersion());
+    if (majorVersionCompare == 0) {
+      return containsRootPartition(other) && getMinorVersion() > other.getMinorVersion();
+    } else {
+      return majorVersionCompare > 0;
+    }
   }
 
   default boolean containsRootPartition(T other)

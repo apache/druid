@@ -25,6 +25,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.Interval;
 
+/**
+ * TaskAction to release a {@link org.apache.druid.indexing.common.SegmentLock}.
+ * Used by batch tasks when they fail to acquire all necessary locks.
+ */
 public class SegmentLockReleaseAction implements TaskAction<Void>
 {
   private final Interval interval;

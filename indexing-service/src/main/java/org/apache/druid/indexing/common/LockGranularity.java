@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.common;
 
+/**
+ * Granularity for {@link TaskLock}.
+ */
 public enum LockGranularity
 {
   TIME_CHUNK,

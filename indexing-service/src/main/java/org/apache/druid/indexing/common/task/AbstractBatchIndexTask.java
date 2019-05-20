@@ -52,6 +52,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/**
+ * Abstract class for batch tasks like {@link IndexTask}.
+ * Provides some methods ({@link #tryLockWithIntervals} and {@link #tryLockWithSegments}) for easily acquiring task
+ * locks.
+ */
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   @Nullable
@@ -151,7 +156,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  private boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
     allInputSegments = Collections.emptySet();
     overwritingRootGenPartitions = Collections.emptyMap();

@@ -24,6 +24,9 @@ import org.apache.druid.java.util.common.IAE;
 
 import java.util.Objects;
 
+/**
+ * PartitionChunk corresponding to {@link NumberedOverwriteShardSpec}
+ */
 public class NumberedOverwritingPartitionChunk<T> implements PartitionChunk<T>
 {
   private final int chunkId;

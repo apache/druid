@@ -83,5 +83,8 @@ public interface ShardSpec
    */
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
+  /**
+   * Returns true if two segments of this and other shardSpecs can exist in the same timeChunk.
+   */
   boolean isCompatible(Class<? extends ShardSpec> other);
 }
