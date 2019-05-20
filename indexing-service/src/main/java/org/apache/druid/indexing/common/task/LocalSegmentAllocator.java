@@ -39,13 +39,16 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class LocalSegmentAllocator implements IndexTaskSegmentAllocator
+/**
+ * Segment allocator which allocates new segments locally per request.
+ */
+class LocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final String taskId;
 
   private final SegmentAllocator internalAllocator;
 
-  public LocalSegmentAllocator(TaskToolbox toolbox, String taskId, String dataSource, GranularitySpec granularitySpec)
+  LocalSegmentAllocator(TaskToolbox toolbox, String taskId, String dataSource, GranularitySpec granularitySpec)
       throws IOException
   {
     this.taskId = taskId;

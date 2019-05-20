@@ -178,15 +178,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
-    // Non-overwriting tasks should release locks as early as possible, so that other tasks can lock same segments.
-    final List<TaskLock> locks = TaskLocks.findLocksForSegments(task, toolbox.getTaskLockbox(), segments);
-    for (TaskLock lock : locks) {
-      if (lock.getGranularity() == LockGranularity.SEGMENT) {
-        final SegmentLock segmentLock = (SegmentLock) lock;
-        toolbox.getTaskLockbox().unlock(task, segmentLock.getInterval(), segmentLock.getPartitionId());
-      }
-    }
-
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);

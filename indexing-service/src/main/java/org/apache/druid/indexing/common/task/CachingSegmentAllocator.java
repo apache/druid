@@ -39,7 +39,7 @@ import java.util.Map;
 /**
  * Allocates all necessary segments at the beginning and reuse them.
  */
-public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocator
+abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final TaskToolbox toolbox;
   private final String taskId;
@@ -51,7 +51,7 @@ public abstract class CachingSegmentAllocator implements IndexTaskSegmentAllocat
   // sequenceName -> segmentId
   private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
 
-  public CachingSegmentAllocator(
+  CachingSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
       String dataSource,

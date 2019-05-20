@@ -36,12 +36,15 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.Map;
 
-public class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
+/**
+ * Segment allocator which allocates new segments using the overlord per request.
+ */
+class RemoteSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final String taskId;
   private final ActionBasedSegmentAllocator internalAllocator;
 
-  public RemoteSegmentAllocator(
+  RemoteSegmentAllocator(
       final TaskToolbox toolbox,
       final String taskId,
       final DataSchema dataSchema,

@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-public interface SegmentLocker
+/**
+ * Lock helper for {@link StreamAppenderatorDriver}. It's only used to lock segments on restart of the driver.
+ */
+public interface StreamAppenderatorDriverSegmentLockHelper
 {
   boolean lock(SegmentIdWithShardSpec segmentId);
 }

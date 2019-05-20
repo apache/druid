@@ -107,7 +107,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   @Override
   @Nullable
-  public Object startJob(SegmentLocker segmentLocker)
+  public Object startJob(StreamAppenderatorDriverSegmentLockHelper lockHelper)
   {
     handoffNotifier.start();
 
@@ -133,10 +133,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
           final SegmentsForSequenceBuilder builder = new SegmentsForSequenceBuilder(lastSegmentIds.get(sequenceName));
           builders.put(sequenceName, builder);
           entry.getValue().forEach(builder::add);
-          if (segmentLocker != null) {
+          if (lockHelper != null) {
             for (SegmentWithState segmentWithState : entry.getValue()) {
               if (segmentWithState.getState() != SegmentState.PUSHED_AND_DROPPED
-                  && !segmentLocker.lock(segmentWithState.getSegmentIdentifier())) {
+                  && !lockHelper.lock(segmentWithState.getSegmentIdentifier())) {
                 throw new ISE("Failed to lock segment[%s]", segmentWithState.getSegmentIdentifier());
               }
             }
