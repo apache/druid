@@ -101,6 +101,11 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
 
     return <div className="show-log">
       <div className="top-actions">
+        <Checkbox
+          label="Tail Log"
+          checked={this.state.tail}
+          onChange={this.handleCheckboxChange}
+        />
         <ButtonGroup className="right-buttons">
           {
             downloadFilename &&
@@ -127,11 +132,6 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
             minimal
             onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
           />
-            <Checkbox
-              label="Tail Log"
-              checked={this.state.tail}
-              onChange={this.handleCheckboxChange}
-            />
         </ButtonGroup>
       </div>
       <div className="main-area">
