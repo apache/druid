@@ -2833,7 +2833,7 @@ public class CachingClusteredClientTest
       @JsonProperty
       public String getMajorVersion()
       {
-        return baseSegment.getMajorVersion();
+        return "version";
       }
 
       @Override
