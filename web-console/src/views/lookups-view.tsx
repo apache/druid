@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from '@blueprintjs/core';
+import {Button, Icon, Intent, Popover, Position} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
+import {ActionCell} from '../components/action-cell';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { LookupEditDialog } from '../dialogs/lookup-edit-dialog';
+import { LookupTableActionDialog } from '../dialogs/lookup-table-action-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
   TableColumnSelectionHandler
 } from '../utils';
+import {BasicAction, basicActionsToMenu} from '../utils/basic-action';
 
 import './lookups-view.scss';
 
@@ -56,9 +59,11 @@ export interface LookupsViewState {
   lookupEditSpec: string;
   isEdit: boolean;
   allLookupTiers: string[];
+  lookupActionDialogId: string | null;
+  lookupActionDialogActions: BasicAction[];
 
-  deleteLookupTier: string | null;
   deleteLookupName: string | null;
+  deleteLookupTier: string | null;
 }
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
@@ -79,6 +84,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       lookupEditSpec: '',
       isEdit: false,
       allLookupTiers: [],
+      lookupActionDialogId: null,
+      lookupActionDialogActions: [],
 
       deleteLookupTier: null,
       deleteLookupName: null
@@ -214,6 +221,22 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     }
   }
 
+  private getlookupActions(lookupTier: string, lookupId: string): BasicAction[] {
+    return [
+      {
+        icon: IconNames.CROSS,
+        title: 'Delete',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })
+      },
+      {
+        icon: IconNames.WRENCH,
+        title: 'Edit',
+        onAction: () => this.openLookupEditDialog(lookupTier, lookupId)
+      }
+    ];
+  }
+
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
 
@@ -290,16 +313,30 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           {
             Header: 'Actions',
             id: 'actions',
+            width: 70,
             accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
               const lookupId = row.value.id;
               const lookupTier = row.value.tier;
-              return <div>
-                <a onClick={() => this.openLookupEditDialog(lookupTier, lookupId)}>Edit</a>
-                &nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })}>Delete</a>
-              </div>;
+              const lookupActions = this.getlookupActions(lookupId, lookupTier);
+              const lookupMenu = basicActionsToMenu(lookupActions);
+
+              return <ActionCell>
+                <Icon
+                  icon={IconNames.SEARCH_TEMPLATE}
+                  onClick={() => this.setState({
+                    lookupActionDialogId: lookupId,
+                    lookupActionDialogActions: lookupActions
+                  })}
+                />
+                {
+                  lookupMenu &&
+                  <Popover content={lookupMenu} position={Position.BOTTOM_RIGHT}>
+                      <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: tableColumnSelectionHandler.showColumn('Actions')
           }
@@ -311,7 +348,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   renderLookupEditDialog() {
-    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit } = this.state;
+    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit} = this.state;
 
     return <LookupEditDialog
       isOpen={lookupEditDialogOpen}
@@ -328,33 +365,44 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   render() {
-    const { lookupsError } = this.state;
+    const { lookupsError, lookupActionDialogActions, lookupActionDialogId } = this.state;
     const { tableColumnSelectionHandler } = this;
 
-    return <div className="lookups-view app-view">
-      <ViewControlBar label="Lookups">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
-        />
-        {
-          !lookupsError &&
+    return<>
+      <div className="lookups-view app-view">
+        <ViewControlBar label="Lookups">
           <Button
-            icon={IconNames.PLUS}
-            text="Add"
-            onClick={() => this.openLookupEditDialog('', '')}
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
           />
-        }
-        <TableColumnSelection
-          columns={tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+          {
+            !lookupsError &&
+            <Button
+              icon={IconNames.PLUS}
+              text="Add"
+              onClick={() => this.openLookupEditDialog('', '')}
+            />
+          }
+          <TableColumnSelection
+            columns={tableColumns}
+            onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+        {this.renderLookupsTable()}
+        {this.renderLookupEditDialog()}
+        {this.renderDeleteLookupAction()}
+      </div>;
+      {
+        lookupActionDialogId &&
+        <LookupTableActionDialog
+            isOpen
+            lookupId={lookupActionDialogId}
+            actions={lookupActionDialogActions}
+            onClose={() => this.setState({lookupActionDialogId: null})}
         />
-      </ViewControlBar>
-      {this.renderLookupsTable()}
-      {this.renderLookupEditDialog()}
-      {this.renderDeleteLookupAction()}
-    </div>;
+      }
+    </>;
   }
 }
