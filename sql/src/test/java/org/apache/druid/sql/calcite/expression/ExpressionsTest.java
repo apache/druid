@@ -701,6 +701,18 @@ public class ExpressionsTest extends CalciteTestBase
         DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new TimeShiftOperatorConversion().calciteOperator(),
+            inputRef("t"),
+            rexBuilder.makeLiteral("PT2H"),
+            rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("America/Los_Angeles")
+        ),
+        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
+        DateTimes.of("2000-02-02T22:05:06").getMillis()
+    );
   }
 
   @Test
