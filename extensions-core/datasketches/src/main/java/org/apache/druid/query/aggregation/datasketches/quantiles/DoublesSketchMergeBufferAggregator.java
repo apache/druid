@@ -34,14 +34,14 @@ import java.util.IdentityHashMap;
 public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  private final ColumnValueSelector<DoublesSketch> selector;
+  private final ColumnValueSelector selector;
   private final int k;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<DoublesUnion>> unions = new IdentityHashMap<>();
 
   public DoublesSketchMergeBufferAggregator(
-      final ColumnValueSelector<DoublesSketch> selector,
+      final ColumnValueSelector selector,
       final int k,
       final int maxIntermediateSize)
   {
@@ -62,12 +62,16 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public synchronized void aggregate(final ByteBuffer buffer, final int position)
   {
-    final DoublesSketch sketch = selector.getObject();
-    if (sketch == null) {
+    final Object object = selector.getObject();
+    if (object == null) {
       return;
     }
     final DoublesUnion union = unions.get(buffer).get(position);
-    union.update(sketch);
+    if (object instanceof DoublesSketch) {
+      union.update((DoublesSketch) object);
+    } else {
+      union.update(selector.getDouble());
+    }
   }
 
   @Override
