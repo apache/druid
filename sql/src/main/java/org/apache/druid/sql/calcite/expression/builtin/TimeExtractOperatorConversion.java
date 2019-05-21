@@ -88,9 +88,12 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toUpperCase(RexLiteral.stringValue(call.getOperands().get(1)))
     );
 
-    final DateTimeZone timeZone = call.getOperands().size() > 2 && !RexLiteral.isNullLiteral(call.getOperands().get(2))
-                                  ? DateTimes.inferTzFromString(RexLiteral.stringValue(call.getOperands().get(2)))
-                                  : plannerContext.getTimeZone();
+    final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
+        call.getOperands(),
+        2,
+        operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
+        plannerContext.getTimeZone()
+    );
 
     return applyTimeExtract(timeExpression, unit, timeZone);
   }
