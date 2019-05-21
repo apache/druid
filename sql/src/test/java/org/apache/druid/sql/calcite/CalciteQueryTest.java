@@ -5289,7 +5289,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Intervals.of("2000-01-01T00-08:00/2000-03-01T00-08:00")))
-                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimeZone.forID(LOS_ANGELES)))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -5297,7 +5297,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 Calcites.jodaToCalciteTimestamp(
-                    new DateTime("2000-01-01", DateTimeZone.forID(LOS_ANGELES)),
+                    new DateTime("2000-01-01", DateTimes.inferTzFromString(LOS_ANGELES)),
                     DateTimeZone.UTC
                 ),
                 2L
