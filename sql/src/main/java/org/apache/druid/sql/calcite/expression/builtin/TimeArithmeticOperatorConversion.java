@@ -25,7 +25,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -110,25 +109,29 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
         leftRexNode.getType().getFamily() == SqlTypeFamily.DATE) &&
         (rightRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
         rightRexNode.getType().getFamily() == SqlTypeFamily.DATE)) {
-      final String exprstr;
-      if (call.getType().getSqlTypeName() == SqlTypeName.INTERVAL_MONTH ||
-          call.getType().getSqlTypeName() == SqlTypeName.INTERVAL_YEAR) {
-        exprstr = StringUtils.format(
-            "subtract_months(%s, %s)",
-            leftExpr.getExpression(),
-            rightExpr.getExpression()
+      // Calcite represents both TIMESTAMP - INTERVAL and TIMESTAMPDIFF (TIMESTAMP - TIMESTAMP)
+      // with a MINUS_DATE operator, so we must tell which case we're in by checking the type of
+      // the second argument.
+      Preconditions.checkState(direction < 0, "Time arithmetic require direction < 0");
+      if (call.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+        return DruidExpression.fromExpression(
+            DruidExpression.functionCall(
+                "subtract_months",
+                leftExpr,
+                rightExpr,
+                DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+            )
         );
       } else {
-        exprstr = StringUtils.format(
-            "(%s %s %s)",
-            leftExpr.getExpression(),
-            "-",
-            rightExpr.getExpression()
+        return DruidExpression.fromExpression(
+          StringUtils.format(
+              "(%s %s %s)",
+              leftExpr.getExpression(),
+              "-",
+              rightExpr.getExpression()
+          )
         );
       }
-
-      DruidExpression expr = DruidExpression.fromExpression(exprstr);
-      return expr;
     } else {
       // Shouldn't happen if subclasses are behaving.
       throw new ISE("Got unexpected type period type family[%s]", rightRexNode.getType().getFamily());

@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -1435,17 +1436,18 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
       Long left = args.get(0).eval(bindings).asLong();
       Long right = args.get(1).eval(bindings).asLong();
+      DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
 
       if (left == null || right == null) {
         return ExprEval.of(null);
       } else {
-        return ExprEval.of(DateTimes.subMonths(right, left));
+        return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
       }
 
     }

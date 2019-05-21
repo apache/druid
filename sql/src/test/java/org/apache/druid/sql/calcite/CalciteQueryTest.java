@@ -7710,9 +7710,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v2", "div((\"__time\" - 946602000000),3600000)", ValueType.LONG),
                     expressionVirtualColumn("v3", "div((\"__time\" - 946684683000),60000)", ValueType.LONG),
                     expressionVirtualColumn("v4", "div((\"__time\" - 946684743000),1000)", ValueType.LONG),
-                    expressionVirtualColumn("v5", "subtract_months(\"__time\", 941414400000)", ValueType.LONG),
-                    expressionVirtualColumn("v6", "div(subtract_months(\"__time\", 846806400000),12)", ValueType.LONG),
-                    expressionVirtualColumn("v7", "div(subtract_months(\"__time\", 844128000000),3)", ValueType.LONG),
+                    expressionVirtualColumn("v5", "subtract_months(\"__time\",941414400000,'UTC')", ValueType.LONG),
+                    expressionVirtualColumn("v6", "div(subtract_months(\"__time\",846806400000,'UTC'),12)", ValueType.LONG),
+                    expressionVirtualColumn("v7", "div(subtract_months(\"__time\",844128000000,'UTC'),3)", ValueType.LONG),
                     expressionVirtualColumn("v8", "div(div((\"__time\" - 907200000000),1000),604800)", ValueType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8")
