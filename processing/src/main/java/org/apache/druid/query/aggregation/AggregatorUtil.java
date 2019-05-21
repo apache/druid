@@ -19,7 +19,11 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
@@ -42,7 +46,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 @PublicApi
 public class AggregatorUtil
@@ -126,6 +133,30 @@ public class AggregatorUtil
   public static final byte TDIGEST_MERGE_SKETCH_CACHE_TYPE_ID = 0x39;
   public static final byte TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 0x40;
 
+  public static final String DRUID_PARSED_EXPR_CACHE_MAX_SIZE_KEY = "druid.parsed.expr.cache.max.size";
+  public static final String DRUID_PARSED_EXPR_CACHE_EXPIRED_TIME_KEY = "druid.parsed.expr.cache.expired.time";
+
+  @Inject
+  private static Properties props = new Properties();
+  // ValueColumnSelector cache
+  private static final LoadingCache<Pair<String, ExprMacroTable>, Expr> EXPRS;
+
+  static {
+    long maxSize = Long.valueOf(props.getProperty(DRUID_PARSED_EXPR_CACHE_MAX_SIZE_KEY, "10000"));
+    long expiredTime = Long.valueOf(props.getProperty(DRUID_PARSED_EXPR_CACHE_EXPIRED_TIME_KEY, "60000"));
+    EXPRS = CacheBuilder.newBuilder()
+                .maximumSize(maxSize)
+                .expireAfterAccess(expiredTime, TimeUnit.MILLISECONDS)
+                .build(new CacheLoader<Pair<String, ExprMacroTable>, Expr>()
+                {
+                  @Override
+                  public Expr load(Pair<String, ExprMacroTable> k) throws Exception
+                  {
+                    return Parser.parse(k.lhs, k.rhs);
+                  }
+                });
+  }
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
@@ -180,6 +211,25 @@ public class AggregatorUtil
   }
 
   /**
+   * Caching parsed expressions by fieldExpression, compute if not found.
+   */
+  public static Expr parseIfAbsent(final String fieldExpression, final ExprMacroTable macroTable)
+  {
+    Pair<String, ExprMacroTable> key = new Pair<String, ExprMacroTable>(fieldExpression, macroTable);
+    Expr expr = null;
+
+    try {
+      expr = EXPRS.get(key);
+    }
+    catch (ExecutionException e) {
+      // fall back to the old manner!
+      expr = Parser.parse(fieldExpression, macroTable);
+    }
+
+    return expr;
+  }
+
+  /**
    * Only one of fieldName and fieldExpression should be non-null
    */
   static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
@@ -196,7 +246,7 @@ public class AggregatorUtil
     if (fieldName != null) {
       return metricFactory.makeColumnValueSelector(fieldName);
     } else {
-      final Expr expr = Parser.parse(fieldExpression, macroTable);
+      final Expr expr = parseIfAbsent(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionFloatColumnSelector implements FloatColumnSelector
       {
@@ -243,7 +293,7 @@ public class AggregatorUtil
     if (fieldName != null) {
       return metricFactory.makeColumnValueSelector(fieldName);
     } else {
-      final Expr expr = Parser.parse(fieldExpression, macroTable);
+      final Expr expr = parseIfAbsent(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionLongColumnSelector implements LongColumnSelector
       {
@@ -288,7 +338,7 @@ public class AggregatorUtil
     if (fieldName != null) {
       return metricFactory.makeColumnValueSelector(fieldName);
     } else {
-      final Expr expr = Parser.parse(fieldExpression, macroTable);
+      final Expr expr = parseIfAbsent(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionDoubleColumnSelector implements DoubleColumnSelector
       {

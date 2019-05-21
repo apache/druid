@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -85,6 +86,14 @@ public class BenchmarkSchemas
     basicSchemaIngestAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "metFloatZipf"));
     basicSchemaIngestAggs.add(new HyperUniquesAggregatorFactory("hyper", "dimHyperUnique"));
 
+    List<AggregatorFactory> basicSchemaIngestAggsExpression = new ArrayList<>();
+    basicSchemaIngestAggsExpression.add(new CountAggregatorFactory("rows"));
+    basicSchemaIngestAggsExpression.add(new LongSumAggregatorFactory("sumLongSequential", null, "if(sumLongSequential>0 && dimSequential>100 || dimSequential<10 || metLongSequential>3000,sumLongSequential,0)", ExprMacroTable.nil()));
+    basicSchemaIngestAggsExpression.add(new LongMaxAggregatorFactory("maxLongUniform", "metLongUniform"));
+    basicSchemaIngestAggsExpression.add(new DoubleSumAggregatorFactory("sumFloatNormal", null, "if(sumFloatNormal>0 && dimSequential>100 || dimSequential<10 || metLongSequential>3000,sumFloatNormal,0)", ExprMacroTable.nil()));
+    basicSchemaIngestAggsExpression.add(new DoubleMinAggregatorFactory("minFloatZipf", "metFloatZipf"));
+    basicSchemaIngestAggsExpression.add(new HyperUniquesAggregatorFactory("hyper", "dimHyperUnique"));
+
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
@@ -93,7 +102,16 @@ public class BenchmarkSchemas
         basicSchemaDataInterval,
         true
     );
+
+    BenchmarkSchemaInfo basicSchemaExpression = new BenchmarkSchemaInfo(
+        basicSchemaColumns,
+        basicSchemaIngestAggsExpression,
+        basicSchemaDataInterval,
+        true
+    );
+
     SCHEMA_MAP.put("basic", basicSchema);
+    SCHEMA_MAP.put("expression", basicSchemaExpression);
   }
 
   static { // simple single string column and count agg schema, no rollup

@@ -22,6 +22,9 @@ package org.apache.druid.query.aggregation;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
@@ -199,6 +202,25 @@ public class AggregatorUtilTest
             "postAgg"
         )
     );
+  }
+
+  @Test
+  public void testParseIfAbsent()
+  {
+    String fieldExpression1 = "if(a>0,1,0)";
+    String fieldExpression2 = "if(a>0,1,0)";
+    String fieldExpression3 = "if(b>0,0,1)";
+    ExprMacroTable macroTable = ExprMacroTable.nil();
+
+    Expr expr1 = AggregatorUtil.parseIfAbsent(fieldExpression1, macroTable);
+    Expr expr2 = AggregatorUtil.parseIfAbsent(fieldExpression2, macroTable);
+    Expr expr3 = AggregatorUtil.parseIfAbsent(fieldExpression3, macroTable);
+
+    Expr expr4 = Parser.parse(fieldExpression1, macroTable);
+
+    Assert.assertEquals(expr1, expr2);
+    Assert.assertNotEquals(expr1, expr3);
+    Assert.assertNotEquals(expr1, expr4);
   }
 
 }
