@@ -48,6 +48,7 @@ export interface ShowLogState {
 
 export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
   log = React.createRef<HTMLTextAreaElement>();
+
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
     this.state = {
