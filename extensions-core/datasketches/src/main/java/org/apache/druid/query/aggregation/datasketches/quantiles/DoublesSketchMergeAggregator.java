@@ -39,16 +39,9 @@ public class DoublesSketchMergeAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    final Object object = selector.getObject();
-    if (object == null) {
-      return;
-    }
-    if (object instanceof DoublesSketch) {
-      union.update((DoublesSketch) object);
-    } else {
-      union.update(selector.getDouble());
-    }
+    updateUnion(selector, union);
   }
+
 
   @Override
   public synchronized Object get()
@@ -74,4 +67,16 @@ public class DoublesSketchMergeAggregator implements Aggregator
     union = null;
   }
 
+  static void updateUnion(ColumnValueSelector selector, DoublesUnion union)
+  {
+    final Object object = selector.getObject();
+    if (object == null) {
+      return;
+    }
+    if (object instanceof DoublesSketch) {
+      union.update((DoublesSketch) object);
+    } else {
+      union.update(selector.getDouble());
+    }
+  }
 }

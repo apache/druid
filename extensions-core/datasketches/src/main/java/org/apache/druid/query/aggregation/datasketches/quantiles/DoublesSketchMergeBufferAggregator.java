@@ -62,16 +62,8 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public synchronized void aggregate(final ByteBuffer buffer, final int position)
   {
-    final Object object = selector.getObject();
-    if (object == null) {
-      return;
-    }
     final DoublesUnion union = unions.get(buffer).get(position);
-    if (object instanceof DoublesSketch) {
-      union.update((DoublesSketch) object);
-    } else {
-      union.update(selector.getDouble());
-    }
+    DoublesSketchMergeAggregator.updateUnion(selector, union);
   }
 
   @Override
