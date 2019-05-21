@@ -425,9 +425,16 @@ WHERE "server_type" = 'historical'`);
     const { groupByTier } = this.state;
     const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
-    // tslint:disable-next-line:radix
-    return <SplitterLayout customClassName={'servers-view app-view'} vertical percentage secondaryInitialSize={parseInt(localStorageGet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE) as string)} primaryMinSize={25} secondaryMinSize={25} onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}>
-      <div>
+    return <SplitterLayout
+      customClassName={'servers-view app-view'}
+      vertical
+      percentage
+      secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE) as string)}
+      primaryMinSize={25}
+      secondaryMinSize={25}
+      onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+    >
+      <div className={'topPane'}>
         <ViewControlBar label="Historicals">
           <Button
             icon={IconNames.REFRESH}
@@ -455,7 +462,7 @@ WHERE "server_type" = 'historical'`);
         </ViewControlBar>
         {this.renderServersTable()}
       </div>
-      <div className={'pane2'}>
+      <div className={'bottomPane'}>
         <ViewControlBar label="MiddleManagers">
           <Button
             icon={IconNames.REFRESH}

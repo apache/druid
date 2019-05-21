@@ -193,7 +193,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.resetInitialsWithDelay();
   }
 
-  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'scrollable' | 'narrow-pad' = 'normal') => {
+  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'narrow-pad' = 'normal') => {
     const { hideLegacy } = this.props;
 
     return <>
