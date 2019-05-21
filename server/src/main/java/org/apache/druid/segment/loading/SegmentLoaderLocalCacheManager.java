@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -162,6 +163,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         StorageLocation loc = findStorageLocationIfLoaded(segment);
         String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
 
+
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
@@ -181,8 +183,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    for (StorageLocation loc : locations) {
+    ArrayList<Integer> indexList = new ArrayList<>();
+    for(int i=0; i<locations.size(); i++){
+      indexList.add(i);
+    }
+    Collections.shuffle(indexList);
+
+    for(int index : indexList){
+      StorageLocation loc = locations.get(index);
       if (loc.canHandle(segment)) {
+        log.info("loadSegmentWithRetry,%s--%s--%s", segment, storageDirStr, loc.getPath());
         File storageDir = new File(loc.getPath(), storageDirStr);
 
         try {
