@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -46,11 +47,14 @@ public class HllSketchModule implements DruidModule
   public static final String TO_STRING_TYPE_NAME = "HLLSketchToString";
   public static final String UNION_TYPE_NAME = "HLLSketchUnion";
   public static final String ESTIMATE_WITH_BOUNDS_TYPE_NAME = "HLLSketchEstimateWithBounds";
+  public static final String ESTIMATE_TYPE_NAME = "HLLSketchEstimate";
+
 
   @Override
   public void configure(final Binder binder)
   {
     registerSerde();
+    SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctSqlAggregator.class);
     SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
   }
 
@@ -64,7 +68,8 @@ public class HllSketchModule implements DruidModule
             new NamedType(HllSketchMergeAggregatorFactory.class, TYPE_NAME),
             new NamedType(HllSketchToStringPostAggregator.class, TO_STRING_TYPE_NAME),
             new NamedType(HllSketchUnionPostAggregator.class, UNION_TYPE_NAME),
-            new NamedType(HllSketchToEstimateWithBoundsPostAggregator.class, ESTIMATE_WITH_BOUNDS_TYPE_NAME)
+            new NamedType(HllSketchToEstimateWithBoundsPostAggregator.class, ESTIMATE_WITH_BOUNDS_TYPE_NAME),
+            new NamedType(HllSketchToEstimatePostAggregator.class, ESTIMATE_TYPE_NAME)
         ).addSerializer(HllSketch.class, new HllSketchJsonSerializer())
     );
   }

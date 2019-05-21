@@ -35,7 +35,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -48,10 +51,10 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DoublesSketchSqlAggregator implements SqlAggregator
+public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchSqlAggFunction();
-  private static final String NAME = "DS_QUANTILES_SKETCH";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchApproxQuantileSqlAggFunction();
+  private static final String NAME = "APPROX_QUANTILE_DS";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -88,13 +91,25 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
 
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
+    final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rowSignature,
+        project,
+        aggregateCall.getArgList().get(1)
+    );
+
+    if (!probabilityArg.isA(SqlKind.LITERAL)) {
+      // Probability must be a literal in order to plan.
+      return null;
+    }
+
+    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
     final int k;
 
-    if (aggregateCall.getArgList().size() >= 2) {
+    if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
           rowSignature,
           project,
-          aggregateCall.getArgList().get(1)
+          aggregateCall.getArgList().get(2)
       );
 
       if (!resolutionArg.isA(SqlKind.LITERAL)) {
@@ -105,6 +120,53 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
       k = ((Number) RexLiteral.value(resolutionArg)).intValue();
     } else {
       k = DoublesSketchAggregatorFactory.DEFAULT_K;
+    }
+
+    // Look for existing matching aggregatorFactory.
+    for (final Aggregation existing : existingAggregations) {
+      for (AggregatorFactory factory : existing.getAggregatorFactories()) {
+        if (factory instanceof DoublesSketchAggregatorFactory) {
+          final DoublesSketchAggregatorFactory theFactory = (DoublesSketchAggregatorFactory) factory;
+
+          // Check input for equivalence.
+          final boolean inputMatches;
+          final VirtualColumn virtualInput = existing.getVirtualColumns()
+                                                     .stream()
+                                                     .filter(
+                                                         virtualColumn ->
+                                                             virtualColumn.getOutputName()
+                                                                          .equals(theFactory.getFieldName())
+                                                     )
+                                                     .findFirst()
+                                                     .orElse(null);
+
+          if (virtualInput == null) {
+            inputMatches = input.isDirectColumnAccess()
+                           && input.getDirectColumn().equals(theFactory.getFieldName());
+          } else {
+            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
+                                                                   .equals(input.getExpression());
+          }
+
+          final boolean matches = inputMatches
+                                  && theFactory.getK() == k;
+
+          if (matches) {
+            // Found existing one. Use this.
+            return Aggregation.create(
+                ImmutableList.of(),
+                new DoublesSketchToQuantilePostAggregator(
+                    name,
+                    new FieldAccessPostAggregator(
+                        factory.getName(),
+                        factory.getName()
+                    ),
+                    probability
+                )
+            );
+          }
+        }
+      }
     }
 
     // No existing match found. Create a new one.
@@ -133,31 +195,41 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
     return Aggregation.create(
         virtualColumns,
         ImmutableList.of(aggregatorFactory),
-        null
+        new DoublesSketchToQuantilePostAggregator(
+            name,
+            new FieldAccessPostAggregator(
+                histogramName,
+                histogramName
+            ),
+            probability
+        )
     );
   }
 
-  private static class DoublesSketchSqlAggFunction extends SqlAggFunction
+  private static class DoublesSketchApproxQuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, k)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, k)'\n";
 
-    DoublesSketchSqlAggFunction()
+    DoublesSketchApproxQuantileSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.DOUBLE),
           null,
           OperandTypes.or(
-              OperandTypes.ANY,
               OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
+                  OperandTypes.sequence(SIGNATURE1, OperandTypes.ANY, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              ),
+              OperandTypes.and(
+                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
               )
           ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          SqlFunctionCategory.NUMERIC,
           false,
           false
       );

@@ -26,6 +26,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchQuantileOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -50,7 +52,10 @@ public class DoublesSketchModule implements DruidModule
   public void configure(final Binder binder)
   {
     registerSerde();
+    SqlBindings.addAggregator(binder, DoublesSketchApproxQuantileSqlAggregator.class);
     SqlBindings.addAggregator(binder, DoublesSketchSqlAggregator.class);
+
+    SqlBindings.addOperatorConversion(binder, DoublesSketchQuantileOperatorConversion.class);
   }
 
   @Override

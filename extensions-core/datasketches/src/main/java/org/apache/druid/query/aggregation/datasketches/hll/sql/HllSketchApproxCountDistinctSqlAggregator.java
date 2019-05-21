@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -55,10 +56,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class HllSketchSqlAggregator implements SqlAggregator
+public class HllSketchApproxCountDistinctSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
-  private static final String NAME = "DS_HLL";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchApproxCountDistinctSqlAggFunction();
+  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
   private static final boolean ROUND = true;
 
   @Override
@@ -134,8 +135,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+    if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
@@ -176,21 +176,24 @@ public class HllSketchSqlAggregator implements SqlAggregator
     return Aggregation.create(
         virtualColumns,
         Collections.singletonList(aggregatorFactory),
-        null
+        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
+            name,
+            aggregatorFactory.getName()
+        ) : null
     );
   }
 
-  private static class HllSketchSqlAggFunction extends SqlAggFunction
+  private static class HllSketchApproxCountDistinctSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
 
-    HllSketchSqlAggFunction()
+    HllSketchApproxCountDistinctSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,
@@ -199,7 +202,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
               )
           ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          SqlFunctionCategory.NUMERIC,
           false,
           false
       );

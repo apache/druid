@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.hll.sql;
+package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -34,9 +34,9 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -55,11 +55,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class HllSketchSqlAggregator implements SqlAggregator
+public class ThetaSketchApproxCountDistinctSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
-  private static final String NAME = "DS_HLL";
-  private static final boolean ROUND = true;
+  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
+  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -94,54 +93,36 @@ public class HllSketchSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final int logK;
+    final int sketchSize;
     if (aggregateCall.getArgList().size() >= 2) {
-      final RexNode logKarg = Expressions.fromFieldAccess(
+      final RexNode sketchSizeArg = Expressions.fromFieldAccess(
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
       );
 
-      if (!logKarg.isA(SqlKind.LITERAL)) {
+      if (!sketchSizeArg.isA(SqlKind.LITERAL)) {
         // logK must be a literal in order to plan.
         return null;
       }
 
-      logK = ((Number) RexLiteral.value(logKarg)).intValue();
+      sketchSize = ((Number) RexLiteral.value(sketchSizeArg)).intValue();
     } else {
-      logK = HllSketchAggregatorFactory.DEFAULT_LG_K;
-    }
-
-    final String tgtHllType;
-    if (aggregateCall.getArgList().size() >= 3) {
-      final RexNode tgtHllTypeArg = Expressions.fromFieldAccess(
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
-      );
-
-      if (!tgtHllTypeArg.isA(SqlKind.LITERAL)) {
-        // tgtHllType must be a literal in order to plan.
-        return null;
-      }
-
-      tgtHllType = RexLiteral.stringValue(tgtHllTypeArg);
-    } else {
-      tgtHllType = HllSketchAggregatorFactory.DEFAULT_TGT_HLL_TYPE.name();
+      sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
 
     final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HllSketchMergeAggregatorFactory(
+    if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+      aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
-          logK,
-          tgtHllType,
-          ROUND
+          sketchSize,
+          null,
+          null,
+          null
       );
     } else {
       final SqlTypeName sqlTypeName = columnRexNode.getType().getSqlTypeName();
@@ -164,42 +145,46 @@ public class HllSketchSqlAggregator implements SqlAggregator
         virtualColumns.add(virtualColumn);
       }
 
-      aggregatorFactory = new HllSketchBuildAggregatorFactory(
+      aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           dimensionSpec.getDimension(),
-          logK,
-          tgtHllType,
-          ROUND
+          sketchSize,
+          null,
+          null,
+          null
       );
     }
 
     return Aggregation.create(
         virtualColumns,
         Collections.singletonList(aggregatorFactory),
-        null
+        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
+            name,
+            aggregatorFactory.getName()
+        ) : null
     );
   }
 
-  private static class HllSketchSqlAggFunction extends SqlAggFunction
+  private static class ThetaSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
+    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
 
-    HllSketchSqlAggFunction()
+    ThetaSketchSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,
               OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
+                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
               )
           ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          SqlFunctionCategory.NUMERIC,
           false,
           false
       );
