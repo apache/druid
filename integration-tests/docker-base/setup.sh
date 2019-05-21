@@ -34,13 +34,7 @@ apt-get install -y mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
-wget -q -O /tmp/zookeeper-3.4.14.tar.gz "http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz"
-if [ "$(sha256sum /tmp/zookeeper-3.4.14.tar.gz | awk '{print $1}')" != "b14f7a0fece8bd34c7fffa46039e563ac5367607c612517aa7bd37306afbd1cd" ]
-then
-  echo "Checksum mismatch for ZooKeeper download!" >&2
-  exit 1
-fi
-
+wget -q -O /tmp/zookeeper-3.4.14.tar.gz "https://apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz"
 tar -xzf /tmp/zookeeper-3.4.14.tar.gz -C /usr/local
 cp /usr/local/zookeeper-3.4.14/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.14/conf/zoo.cfg
 ln -s /usr/local/zookeeper-3.4.14 /usr/local/zookeeper
@@ -48,13 +42,7 @@ rm /tmp/zookeeper-3.4.14.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
-wget -q -O /tmp/kafka_2.12-2.1.1.tgz "http://www.us.apache.org/dist/kafka/2.1.1/kafka_2.12-2.1.1.tgz"
-if [ "$(sha512sum /tmp/kafka_2.12-2.1.1.tgz | awk '{print $1}')" != "a2e8168e8de6b45e8fca1f2883f0744d3c5a939b70d8a47a5428b72188501d4c2fc11bc35759f2392680d4e8ecf2fa9d0e518e77fd28393afba22194ad018b10" ]
-then
-  echo "Checksum mismatch for Kafka download!" >&2
-  exit 1
-fi
-
+wget -q -O /tmp/kafka_2.12-2.1.1.tgz "https://apache.org/dist/kafka/2.1.1/kafka_2.12-2.1.1.tgz"
 tar -xzf /tmp/kafka_2.12-2.1.1.tgz -C /usr/local
 ln -s /usr/local/kafka_2.12-2.1.1 /usr/local/kafka
 rm /tmp/kafka_2.12-2.1.1.tgz
