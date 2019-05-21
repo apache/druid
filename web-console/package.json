@@ -35,7 +35,6 @@
   },
   "dependencies": {
     "@blueprintjs/core": "^3.15.1",
-    "@types/react-splitter-layout": "^3.0.0",
     "axios": "^0.18.0",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
@@ -69,6 +68,7 @@
     "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-router-dom": "^4.3.2",
+    "@types/react-splitter-layout": "^3.0.0",
     "@types/react-table": "^6.8.1",
     "autoprefixer": "^9.5.1",
     "awesome-code-style": "^1.2.2",
