@@ -40,14 +40,14 @@
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
 
     <developers>
         <developer>
-            <name>Druid Committers</name>
-            <url>http://druid.io/community/index.html#committers</url>
+            <name>Apache Druid Committers</name>
+            <url>https://druid.apache.org/community/#committers</url>
         </developer>
     </developers>
 
