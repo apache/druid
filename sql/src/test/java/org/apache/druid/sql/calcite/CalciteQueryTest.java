@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.runtime.CalciteContextException;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -6693,6 +6695,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             + "group by dim1, dim2 ORDER BY dim2";
 
     assertQueryIsUnplannable(theQuery);
+  }
+
+  @Test
+  public void testTimeExtractWithTooFewArguments() throws Exception
+  {
+    // Regression test for https://github.com/apache/incubator-druid/pull/7710.
+    expectedException.expect(ValidationException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(CalciteContextException.class));
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments"
+            )
+        )
+    );
+    testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
   }
 
   @Test
