@@ -73,9 +73,9 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
     }
   }
 
-  private tail() {
-      this.getLogInfo().then(() => {
-        if (this.state.tail) {
+  async tail() {
+      await this.getLogInfo();
+      if (this.state.tail) {
           if (this.log.current) {
             this.log.current.scrollTo(0, this.log.current.scrollHeight);
           }
@@ -83,7 +83,6 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
             this.tail();
           }, 2000);
         }
-      });
     }
 
   private handleCheckboxChange = () => {
