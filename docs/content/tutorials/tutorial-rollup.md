@@ -117,7 +117,7 @@ We will see how these definitions are used after we load this data.
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/rollup-index.json 
+bin/post-index-task --file quickstart/tutorial/rollup-index.json --url http://localhost:8081
 ```
 
 After the script completes, we will query the data.

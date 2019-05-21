@@ -36,7 +36,6 @@ import java.util.List;
 /**
  * This module is to support count-distinct operations using {@link HllSketch}.
  * See <a href="https://datasketches.github.io/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
- * @author Alexander Saydakov
  */
 public class HllSketchModule implements DruidModule
 {

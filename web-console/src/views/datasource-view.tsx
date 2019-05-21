@@ -402,6 +402,8 @@ GROUP BY 1`);
   }
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
+    const { goToSql } = this.props;
+
     if (disabled) {
       return [
         {
@@ -418,6 +420,11 @@ GROUP BY 1`);
       ];
     } else {
       return [
+        {
+          icon: IconNames.APPLICATION,
+          title: 'Query with SQL',
+          onAction: () => goToSql(`SELECT * FROM "${datasource}"`)
+        },
         {
           icon: IconNames.EXPORT,
           title: 'Reload data by interval',

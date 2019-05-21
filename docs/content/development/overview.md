@@ -73,4 +73,4 @@ At some point in the future, we will likely move the internal UI code out of cor
 ## Client Libraries
 
 We welcome contributions for new client libraries to interact with Druid. See client 
-[libraries](../development/libraries.html) for existing client libraries.
+[libraries](/libraries.html) for existing client libraries.

@@ -61,8 +61,49 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public CloseableIndexed<String> getDimensionValues(String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      // Virtual columns don't have dictionaries or indexes.
-      return null;
+      BitmapIndex bitmapIndex = virtualColumns.getBitmapIndex(dimension, index);
+      if (bitmapIndex == null) {
+        return null;
+      }
+
+      return new CloseableIndexed<String>()
+      {
+        @Override
+        public int size()
+        {
+          return bitmapIndex.getCardinality();
+        }
+
+        @Override
+        public String get(int index)
+        {
+          return bitmapIndex.getValue(index);
+        }
+
+        @Override
+        public int indexOf(String value)
+        {
+          return bitmapIndex.getIndex(value);
+        }
+
+        @Override
+        public Iterator<String> iterator()
+        {
+          return IndexedIterable.create(this).iterator();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("column", bitmapIndex);
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+
+        }
+      };
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -144,8 +185,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public BitmapIndex getBitmapIndex(String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      // Virtual columns don't have dictionaries or indexes.
-      return null;
+      return virtualColumns.getBitmapIndex(dimension, index);
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -214,8 +254,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public ImmutableBitmap getBitmapIndex(String dimension, String value)
   {
     if (isVirtualColumn(dimension)) {
-      // Virtual columns don't have dictionaries or indexes.
-      return null;
+      BitmapIndex idx = virtualColumns.getBitmapIndex(dimension, index);
+      if (idx == null) {
+        return null;
+      }
+      return idx.getBitmap(idx.getIndex(value));
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
