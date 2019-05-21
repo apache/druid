@@ -1026,7 +1026,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           </ButtonGroup>
         </FormGroup>
         <AutoForm
-          fields={getTimestampSpecFormFields()}
+          fields={getTimestampSpecFormFields(timestampSpec)}
           model={timestampSpec}
           onChange={(timestampSpec) => {
             this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec));
