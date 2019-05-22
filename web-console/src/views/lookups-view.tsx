@@ -28,7 +28,6 @@ import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { LookupEditDialog } from '../dialogs/lookup-edit-dialog';
-import { LookupTableActionDialog } from '../dialogs/lookup-table-action-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
@@ -323,13 +322,6 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
               const lookupMenu = basicActionsToMenu(lookupActions);
 
               return <ActionCell>
-                <Icon
-                  icon={IconNames.SEARCH_TEMPLATE}
-                  onClick={() => this.setState({
-                    lookupActionDialogId: lookupId,
-                    lookupActionDialogActions: lookupActions
-                  })}
-                />
                 {
                   lookupMenu &&
                   <Popover content={lookupMenu} position={Position.BOTTOM_RIGHT}>
@@ -394,15 +386,6 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         {this.renderLookupEditDialog()}
         {this.renderDeleteLookupAction()}
       </div>;
-      {
-        lookupActionDialogId &&
-        <LookupTableActionDialog
-            isOpen
-            lookupId={lookupActionDialogId}
-            actions={lookupActionDialogActions}
-            onClose={() => this.setState({lookupActionDialogId: null})}
-        />
-      }
     </>;
   }
 }
