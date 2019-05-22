@@ -78,8 +78,6 @@ import java.util.regex.Pattern;
  * can have number format exceptions), so it might be necessary to extract raw json and process it
  * separately.  If so, set twitter4.jsonStoreEnabled=true and look at DataObjectFactory#getRawJSON();
  * com.fasterxml.jackson.databind.ObjectMapper should be used to parse.
- *
- * @author pbaclace
  */
 @JsonTypeName("twitzer")
 public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowParser>

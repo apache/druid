@@ -22,7 +22,7 @@ import {
   Button,
   ButtonGroup, Callout, Card,
   Classes, Code,
-  FormGroup, H5,
+  FormGroup, H5, HTMLSelect,
   Icon, Intent, Popover, Switch, TextArea
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -54,24 +54,58 @@ import { escapeColumnName } from '../utils/druid-expression';
 import { possibleDruidFormatForValues } from '../utils/druid-time';
 import { updateSchemaWithSample } from '../utils/druid-type';
 import {
-  changeParallel, DimensionMode,
-  DimensionSpec, DimensionsSpec, DruidFilter,
+  changeParallel,
+  DimensionMode,
+  DimensionSpec,
+  DimensionsSpec,
+  DruidFilter,
   fillDataSourceName,
   fillParser,
-  FlattenField, getBlankSpec, getDimensionMode,
+  FlattenField,
+  getBlankSpec,
+  getDimensionMode,
   getDimensionSpecFormFields,
-  getDimensionSpecName, getDimensionSpecType, getEmptyTimestampSpec, getFilterFormFields, getFlattenFieldFormFields,
-  getIngestionComboType, getIoConfigFormFields, getIoConfigTuningFormFields, getMetricSpecFormFields,
-  getMetricSpecName, getParseSpecFormFields, getRollup, getTimestampSpecColumn, getTimestampSpecFormFields,
+  getDimensionSpecName,
+  getDimensionSpecType,
+  getEmptyTimestampSpec,
+  getFilterFormFields,
+  getFlattenFieldFormFields,
+  getIngestionComboType,
+  getIoConfigFormFields,
+  getIoConfigTuningFormFields,
+  getMetricSpecFormFields,
+  getMetricSpecName,
+  getParseSpecFormFields,
+  getPartitionRelatedTuningSpecFormFields,
+  getRollup,
+  getSpecType,
+  getTimestampSpecColumn,
+  getTimestampSpecFormFields,
   getTransformFormFields,
-  getTuningSpecFormFields, GranularitySpec, hasParallelAbility, inflateDimensionSpec, IngestionSpec,
-  IngestionType, IoConfig,
-  isColumnTimestampSpec, isParallel, issueWithIoConfig, issueWithParser, joinFilter,
-  MetricSpec, Parser, ParseSpec,
-  parseSpecHasFlatten, splitFilter, TimestampSpec, Transform, TuningConfig
+  getTuningSpecFormFields,
+  GranularitySpec,
+  hasParallelAbility,
+  inflateDimensionSpec, IngestionComboType,
+  IngestionSpec,
+  IngestionType,
+  IoConfig,
+  isColumnTimestampSpec,
+  isParallel,
+  issueWithIoConfig,
+  issueWithParser,
+  joinFilter,
+  MetricSpec,
+  Parser,
+  ParseSpec,
+  parseSpecHasFlatten,
+  splitFilter,
+  TimestampSpec,
+  Transform,
+  TuningConfig
 } from '../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../utils/object-change';
 import {
+  getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
@@ -80,16 +114,20 @@ import {
   sampleForParser, sampleForSchema,
   sampleForTimestamp,
   sampleForTransform,
-  SampleResponse
+  SampleResponse, SampleStrategy
 } from '../utils/sampler';
 import { computeFlattenPathsForData } from '../utils/spec-utils';
 
 import './load-data-view.scss';
 
-export interface LoadDataViewSeed {
-  type?: IngestionType;
-  firehoseType?: string;
-  initSpec?: IngestionSpec;
+function showRawLine(line: string): string {
+  if (line.includes('\n')) {
+    return `<Multi-line row, length: ${line.length}>`;
+  }
+  if (line.length > 1000) {
+    return line.substr(0, 1000) + '...';
+  }
+  return line;
 }
 
 function filterMatch(testString: string, searchString: string): boolean {
@@ -136,8 +174,8 @@ const VIEW_TITLE: Record<Stage, string> = {
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
-  seed: LoadDataViewSeed | null;
-  goToTask: (taskId: string | null) => void;
+  initSpec: IngestionSpec | null;
+  goToTask: (taskId: string | null, openDialog?: string) => void;
 }
 
 export interface LoadDataViewState {
@@ -151,6 +189,9 @@ export interface LoadDataViewState {
   newDimensionMode: DimensionMode | null;
 
   // general
+  overlordModules: string[] | null;
+  overlordModuleNeededMessage: string | null;
+  sampleStrategy: SampleStrategy;
   columnFilter: string;
   specialColumnsOnly: boolean;
 
@@ -191,7 +232,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   constructor(props: LoadDataViewProps) {
     super(props);
 
-    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    let spec = props.initSpec || parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
 
     this.state = {
@@ -205,6 +246,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       newDimensionMode: null,
 
       // general
+      overlordModules: null,
+      overlordModuleNeededMessage: null,
+      sampleStrategy: 'start',
       columnFilter: '',
       specialColumnsOnly: false,
 
@@ -243,7 +287,24 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   componentDidMount(): void {
+    this.getOverlordModules();
     this.updateStage('connect');
+  }
+
+  async getOverlordModules() {
+    let overlordModules: string[];
+    try {
+      overlordModules = await getOverlordModules();
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to get overlord modules: ${e.message}`,
+        intent: Intent.DANGER
+      });
+      this.setState({ overlordModules: [] });
+      return;
+    }
+
+    this.setState({ overlordModules });
   }
 
   private updateStage = (newStage: Stage) => {
@@ -360,48 +421,70 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
 
-  initWith(seed: LoadDataViewSeed) {
+  initWith(comboType: IngestionComboType) {
     this.setState({
-      spec: getBlankSpec(seed.type, seed.firehoseType)
+      spec: getBlankSpec(comboType)
     });
     setTimeout(() => {
       this.updateStage('connect');
     }, 10);
   }
 
+  renderIngestionCard(title: string, comboType: IngestionComboType, requiredModule?: string) {
+    const { overlordModules } = this.state;
+    if (!overlordModules) return null;
+    const goodToGo = !requiredModule || overlordModules.includes(requiredModule);
+
+    return <Card
+      className={classNames({ disabled: !goodToGo })}
+      interactive
+      onClick={() => {
+        if (goodToGo) {
+          this.initWith(comboType);
+        } else {
+          this.setState({
+            overlordModuleNeededMessage: `${title} ingestion requires the '${requiredModule}' to be loaded.`
+          });
+        }
+      }}
+    >
+      {title}
+    </Card>;
+  }
+
   renderInitStage() {
-    const showStreaming = false;
+    const { goToTask } = this.props;
+    const { overlordModuleNeededMessage } = this.state;
 
     return <>
       <div className="intro">
         Please specify where your raw data is located
       </div>
 
-      <Callout intent={Intent.SUCCESS} icon={IconNames.INFO_SIGN}>
-        Welcome to the Druid data loader.
-        This project is under active development and we plan to support many other sources of raw data, including stream hubs such as Apache Kafka and AWS Kinesis, in the next few releases.
-      </Callout>
-
-      {
-        showStreaming &&
-        <div className="section">
-          <div className="section-title">Stream hub</div>
-          <div className="cards">
-            <Card interactive onClick={() => this.initWith({ type: 'kafka' })}>Apache Kafka</Card>
-            <Card interactive onClick={() => this.initWith({ type: 'kinesis' })}>AWS Kinesis</Card>
-          </div>
-        </div>
-      }
-
-      <div className="section">
-        <div className="section-title">Batch load</div>
-        <div className="cards">
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'http' })}>HTTP(s)</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-s3' })}>AWS S3</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'static-google-blobstore' })}>Google Blobstore</Card>
-          <Card interactive onClick={() => this.initWith({ type: 'index_parallel', firehoseType: 'local' })}>Local disk</Card>
-        </div>
+      <div className="cards">
+        {this.renderIngestionCard('Apache Kafka', 'kafka', 'druid-kafka-indexing-service')}
+        {this.renderIngestionCard('AWS Kinesis', 'kinesis', 'druid-kinesis-indexing-service')}
+        {this.renderIngestionCard('HTTP(s)', 'index:http')}
+        {this.renderIngestionCard('AWS S3', 'index:static-s3', 'druid-s3-extensions')}
+        {this.renderIngestionCard('Google Cloud Storage', 'index:static-google-blobstore', 'druid-google-extensions')}
+        {this.renderIngestionCard('Local disk', 'index:local')}
+        <Card interactive onClick={() => goToTask(null, 'supervisor')}>
+          Other (streaming)
+        </Card>
+        <Card interactive onClick={() => goToTask(null, 'task')}>
+          Other (batch)
+        </Card>
       </div>
+
+      <Alert
+        icon={IconNames.WARNING_SIGN}
+        intent={Intent.WARNING}
+        isOpen={Boolean(overlordModuleNeededMessage)}
+        confirmButtonText="Close"
+        onConfirm={() => this.setState({ overlordModuleNeededMessage: null })}
+      >
+        <p>{overlordModuleNeededMessage}</p>
+      </Alert>
     </>;
   }
 
@@ -430,7 +513,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForConnect(initRun = false) {
-    const { spec } = this.state;
+    const { spec, sampleStrategy } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
 
     let issue: string | undefined;
@@ -451,7 +534,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForConnect(spec);
+      sampleResponse = await sampleForConnect(spec, sampleStrategy);
     } catch (e) {
       this.setState({
         inputQueryState: new QueryState({ error: e.message })
@@ -466,7 +549,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderConnectStage() {
-    const { spec, inputQueryState } = this.state;
+    const { spec, inputQueryState, sampleStrategy } = this.state;
+    const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const isBlank = !ioConfig.type;
 
@@ -488,7 +572,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       const inputData = inputQueryState.data;
       mainFill = <TextArea
         className="raw-lines"
-        value={(inputData.every(l => !l) ? inputData.map(_ => '[Binary data]') : inputData).join('\n')}
+        value={
+          inputData.length ?
+          (inputData.every(l => !l) ? inputData.map(_ => '<Binary data>') : inputData.map(showRawLine)).join('\n') :
+          'No data returned from sampler'
+        }
         readOnly
       />;
     }
@@ -531,6 +619,15 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             </Callout>
           </FormGroup>
         }
+        {
+          (specType === 'kafka' || specType === 'kinesis') &&
+          <FormGroup label="Where should the data be sampled from?">
+            <HTMLSelect value={sampleStrategy} onChange={e => this.setState({ sampleStrategy: e.target.value as any })}>
+              <option value="start">Start of stream</option>
+              <option value="end">End of the stream</option>
+            </HTMLSelect>
+          </FormGroup>
+        }
         <Button
           text="Preview"
           disabled={isBlank}
@@ -552,7 +649,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForParser(initRun = false) {
-    const { spec, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -576,7 +673,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForParser(spec, cacheKey);
+      sampleResponse = await sampleForParser(spec, sampleStrategy, cacheKey);
     } catch (e) {
       this.setState({
         parserQueryState: new QueryState({ error: e.message })
@@ -834,7 +931,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForTimestamp(initRun = false) {
-    const { spec, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -858,7 +955,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTimestamp(spec, cacheKey);
+      sampleResponse = await sampleForTimestamp(spec, sampleStrategy, cacheKey);
     } catch (e) {
       this.setState({
         timestampQueryState: new QueryState({ error: e.message })
@@ -1015,7 +1112,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           </ButtonGroup>
         </FormGroup>
         <AutoForm
-          fields={getTimestampSpecFormFields()}
+          fields={getTimestampSpecFormFields(timestampSpec)}
           model={timestampSpec}
           onChange={(timestampSpec) => {
             this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec));
@@ -1036,7 +1133,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForTransform(initRun = false) {
-    const { spec, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -1060,7 +1157,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTransform(spec, cacheKey);
+      sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
     } catch (e) {
       this.setState({
         transformQueryState: new QueryState({ error: e.message })
@@ -1179,6 +1276,22 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Click "Preview" to see the result of any specified transforms.
           </p>
         </Callout>
+        {
+          Boolean(transformQueryState.error && transforms.length) &&
+          <FormGroup>
+            <Button
+              icon={IconNames.EDIT}
+              text="Edit last added transform"
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                this.setState({
+                  selectedTransformIndex: transforms.length - 1,
+                  selectedTransform: transforms[transforms.length - 1]
+                });
+              }}
+            />
+          </FormGroup>
+        }
         {this.renderTransformControls()}
         <Button
           text="Preview"
@@ -1262,7 +1375,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForFilter(initRun = false) {
-    const { spec, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -1286,7 +1399,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForFilter(spec, cacheKey);
+      sampleResponse = await sampleForFilter(spec, sampleStrategy, cacheKey);
     } catch (e) {
       this.setState({
         filterQueryState: new QueryState({ error: e.message })
@@ -1545,7 +1658,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   // ==================================================================
 
   async queryForSchema(initRun = false) {
-    const { spec, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -1569,7 +1682,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForSchema(spec, cacheKey);
+      sampleResponse = await sampleForSchema(spec, sampleStrategy, cacheKey);
     } catch (e) {
       this.setState({
         schemaQueryState: new QueryState({ error: e.message })
@@ -1729,7 +1842,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               <Switch
                 checked={dimensionMode === 'specific'}
                 onChange={() => this.setState({ newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific' })}
-                label="Set dimensions and metrics"
+                label="Explicitly specify dimension list"
               />
               <Popover
                 content={
@@ -1816,12 +1929,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderChangeRollupAction() {
-    const { newRollup, spec, cacheKey } = this.state;
+    const { newRollup, spec, sampleStrategy, cacheKey } = this.state;
     if (newRollup === null) return;
 
     return <AsyncActionDialog
       action={async () => {
-        const sampleResponse = await sampleForTransform(spec, cacheKey);
+        const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
         this.updateSpec(updateSchemaWithSample(spec, headerAndRowsFromSampleResponse(sampleResponse), getDimensionMode(spec), newRollup));
         setTimeout(() => {
           this.queryForSchema();
@@ -1843,13 +1956,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderChangeDimensionModeAction() {
-    const { newDimensionMode, spec, cacheKey } = this.state;
+    const { newDimensionMode, spec, sampleStrategy, cacheKey } = this.state;
     if (newDimensionMode === null) return;
     const autoDetect = newDimensionMode === 'auto-detect';
 
     return <AsyncActionDialog
       action={async () => {
-        const sampleResponse = await sampleForTransform(spec, cacheKey);
+        const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
         this.updateSpec(updateSchemaWithSample(spec, headerAndRowsFromSampleResponse(sampleResponse), newDimensionMode, getRollup(spec)));
         setTimeout(() => {
           this.queryForSchema();
@@ -1864,8 +1977,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <p>
         {
           autoDetect ?
-          'Are you sure you don’t want to set the dimensions and metrics explicitly?' :
-          'Are you sure you want to set dimensions and metrics explicitly?'
+          `Are you sure you don't want to explicitly specify a dimension list?` :
+          `Are you sure you want to explicitly specify a dimension list?`
         }
       </p>
       <p>
@@ -2019,7 +2132,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     const { spec } = this.state;
     const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || {};
     const granularitySpec: GranularitySpec = deepGet(spec, 'dataSchema.granularitySpec') || {};
-    const myIsParallel = isParallel(spec);
 
     return <>
       <div className="main">
@@ -2053,68 +2165,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="other">
         <H5>Secondary partitioning</H5>
         <AutoForm
-          fields={[
-            {
-              name: 'partitionDimensions',
-              type: 'string-array',
-              disabled: myIsParallel,
-              info: <>
-                <p>
-                  Does not currently work with parallel ingestion
-                </p>
-                <p>
-                  The dimensions to partition on.
-                  Leave blank to select all dimensions. Only used with forceGuaranteedRollup = true, will be ignored otherwise.
-                </p>
-              </>
-            },
-            {
-              name: 'forceGuaranteedRollup',
-              type: 'boolean',
-              disabled: myIsParallel,
-              info: <>
-                <p>
-                  Does not currently work with parallel ingestion
-                </p>
-                <p>
-                  Forces guaranteeing the perfect rollup.
-                  The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased.
-                  If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments.
-                </p>
-              </>
-            },
-            {
-              name: 'targetPartitionSize',
-              type: 'number',
-              info: <>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </>
-            },
-            {
-              name: 'numShards',
-              type: 'number',
-              info: <>
-                Directly specify the number of shards to create.
-                If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.
-              </>
-            },
-            {
-              name: 'maxRowsPerSegment',
-              type: 'number',
-              defaultValue: 5000000,
-              info: <>
-                Determines how many rows are in each segment.
-              </>
-            },
-            {
-              name: 'maxTotalRows',
-              type: 'number',
-              defaultValue: 20000000,
-              info: <>
-                Total number of rows in segments waiting for being pushed.
-              </>
-            }
-          ]}
+          fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
           model={tuningConfig}
           onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
         />
@@ -2250,7 +2301,48 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           onChange={s => this.updateSpec(s)}
         />
       </div>
-      <div className="other"/>
+      <div className="other">
+        <H5>Parse error reporting</H5>
+        <AutoForm
+          fields={[
+            {
+              name: 'tuningConfig.logParseExceptions',
+              label: 'Log parse exceptions',
+              type: 'boolean',
+              defaultValue: false,
+              info: <>
+                If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.
+              </>
+            },
+            {
+              name: 'tuningConfig.maxParseExceptions',
+              label: 'Max parse exceptions',
+              type: 'number',
+              placeholder: '(unlimited)',
+              info: <>
+                The maximum number of parse exceptions that can occur before the task halts ingestion and fails.
+              </>
+            },
+            {
+              name: 'tuningConfig.maxSavedParseExceptions',
+              label: 'Max saved parse exceptions',
+              type: 'number',
+              defaultValue: 0,
+              info: <>
+                <p>
+                  When a parse exception occurs, Druid can keep track of the most recent parse exceptions.
+                </p>
+                <p>
+                  This property limits how many exception instances will be saved.
+                  These saved exceptions will be made available after the task finishes in the task view.
+                </p>
+              </>
+            }
+          ]}
+          model={spec}
+          onChange={s => this.updateSpec(s)}
+        />
+      </div>
       <div className="control">
         <Callout className="intro">
           <p>

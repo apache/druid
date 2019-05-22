@@ -47,7 +47,7 @@ export interface Field<T> {
   name: string;
   label?: string;
   info?: React.ReactNode;
-  type: 'number' | 'size-bytes' | 'string' | 'boolean' | 'string-array' | 'json';
+  type: 'number' | 'size-bytes' | 'string' | 'duration' | 'boolean' | 'string-array' | 'json';
   defaultValue?: any;
   isDefined?: (model: T) => boolean;
   disabled?: boolean;
@@ -140,7 +140,7 @@ export class AutoForm<T extends Record<string, any>> extends React.Component<Aut
     />;
   }
 
-  private renderStringInput(field: Field<T>): JSX.Element {
+  private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
     const { model, large } = this.props;
 
     const suggestionsMenu = field.suggestions ?
@@ -178,7 +178,7 @@ export class AutoForm<T extends Record<string, any>> extends React.Component<Aut
       value={deepGet(model as any, field.name) || field.defaultValue || ''}
       onChange={(e: any) => {
         const v = e.target.value;
-        this.fieldChange(field, v === '' ? undefined : v);
+        this.fieldChange(field, v === '' ? undefined : (sanitize ? sanitize(v) : v));
       }}
       placeholder={field.placeholder}
       rightElement={
@@ -252,6 +252,7 @@ export class AutoForm<T extends Record<string, any>> extends React.Component<Aut
       case 'number': return this.renderNumberInput(field);
       case 'size-bytes': return this.renderSizeBytesInput(field);
       case 'string': return this.renderStringInput(field);
+      case 'duration': return this.renderStringInput(field, (str: string) => str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, ''));
       case 'boolean': return this.renderBooleanInput(field);
       case 'string-array': return this.renderStringArrayInput(field);
       case 'json': return this.renderJSONInput(field);
