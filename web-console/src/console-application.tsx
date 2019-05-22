@@ -107,7 +107,6 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   private onlyUnavailable: boolean | null;
   private initSql: string | null;
   private middleManager: string | null;
-  private edit: boolean | null;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -159,7 +158,6 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       this.onlyUnavailable = null;
       this.initSql = null;
       this.middleManager = null;
-      this.edit = null;
     }, 50);
   }
 
@@ -167,7 +165,6 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     if (initSpec) this.initSpec = initSpec;
     if (taskId) {
       this.taskId = taskId;
-      this.edit = true;
     }
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();

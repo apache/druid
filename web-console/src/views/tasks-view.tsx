@@ -307,7 +307,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
      actions.push(
        {
          icon: IconNames.WRENCH,
-         title: 'Open in json spec editor',
+         title: 'Open in data loader',
          onAction: () => this.props.goToLoadDataView(id)
        });
     }
@@ -522,7 +522,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     const actions = [];
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
-        title: 'Open in json spec editor',
+        title: 'Open in data loader',
         onAction: () => this.props.goToLoadDataView(id)
       });
     }

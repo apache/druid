@@ -27,7 +27,6 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import {edit} from 'brace';
 import 'brace/mode/json';
 import 'brace/theme/solarized_dark';
 import * as classNames from 'classnames';
