@@ -540,6 +540,74 @@ public class MultiValuedDimensionTest
 
 
   @Test
+  public void testGroupByExpressionMultiConflicting()
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(
+        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); identifier [tags] used as both scalar and array"
+    );
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "concat(map((x) -> concat(x, othertags), tags), tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(5)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    ).toList();
+  }
+
+  @Test
+  public void testGroupByExpressionMultiConflictingAlso()
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(
+        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); identifier [tags] used as both scalar and array"
+    );
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "array_concat(tags, (array_append(othertags, tags)))",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(5)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .build();
+
+    helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    ).toList();
+  }
+
+  @Test
   public void testTopNWithDimFilterAndWithFilteredDimSpec()
   {
     TopNQuery query = new TopNQueryBuilder()

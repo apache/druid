@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -195,16 +194,8 @@ public class ParserTest
   public void testApplyFunctions()
   {
     final Expr parsed = Parser.parse("map((x) -> x + 1, [1, 2, 3])", ExprMacroTable.nil());
-    Expr.ObjectBinding binding = new Expr.ObjectBinding()
-    {
-      @Nullable
-      @Override
-      public Object get(String name)
-      {
-        return null;
-      }
-    };
-    ExprEval eval = parsed.eval(binding);
+    Assert.assertEquals("(map ([x] -> (+ x 1)), [1, 2, 3])", parsed.toString());
+    ExprEval eval = parsed.eval(Parser.withMap(ImmutableMap.of()));
     Assert.assertArrayEquals(new Long[]{2L, 3L, 4L}, (Long[]) eval.value());
   }
 

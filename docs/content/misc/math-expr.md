@@ -25,7 +25,8 @@ title: "Apache Druid (incubating) Expressions"
 # Apache Druid (incubating) Expressions
 
 <div class="note info">
-This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to have significant inefficiencies.
+This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to
+ have significant inefficiencies.
 </div>
  
 This expression language supports the following operators (listed in decreasing order of precedence).
@@ -39,14 +40,23 @@ This expression language supports the following operators (listed in decreasing 
 |<, <=, >, >=, ==, !=|Binary Comparison|
 |&&, &#124;|Binary Logical AND, OR|
 
-Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
+Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise
+it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value.
+String literals should be quoted by single quotation marks.
 
-Multi-value types are not fully supported yet. Expressions may behave inconsistently on multi-value types, and you
-should not rely on the behavior in this case to stay the same in future releases.
+Additionally, the expression language supports long, double, and string arrays. Array literals are created by wrapping
+square brackets around a list of scalar literals values delimited by a comma or space character. All values in an array
+literal must be the same type.
 
-Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit. To escape other special characters, you can quote it with double quotation marks.
+Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not
+begin with a digit. To escape other special characters, you can quote it with double quotation marks.
 
-For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
+For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string
+type, it's the evaluation result of 'Boolean.valueOf(string)'.
+
+Multi-value string dimensions are supported and may be treated as either scalar or array typed values. When treated as
+a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the 
+multi-valued type, to mimic Druid's native behavior.
 
 The following built-in functions are available.
 
@@ -146,3 +156,33 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |todegrees|todegrees(x) converts an angle measured in radians to an approximately equivalent angle measured in degrees|
 |toradians|toradians(x) converts an angle measured in degrees to an approximately equivalent angle measured in radians|
 |ulp|ulp(x) would return the size of an ulp of the argument x|
+
+
+## Array Functions 
+
+| function | description |
+| --- | --- |
+| `array_length(arr)` | returns length of array expression |
+| `array_offset(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
+| `array_ordinal(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
+| `array_contains(arr,expr)` | returns true if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array |
+| `array_overlap(arr1,arr2)` | returns true if arr1 and arr2 have any elements in common |
+| `array_offset_of(expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| `array_ordinal_of(expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| `array_append(arr1,expr)` | appends expr to arr
+| `array_concat(arr1,arr2)` | concatenates 2 arrays |
+| `array_to_string(arr,str)` | joins all elements of arr by the delimiter specified by str |
+| `string_to_array(str1,str2)` | splits str1 into an array on the delimiter specified by str2 |
+
+
+## Apply Functions
+
+| function | description |
+| --- | --- |
+| `map(lambda,arr)` | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
+| `cartesian_map(lambda,arr1,arr2,...)` | applies a transform specified by a multi argument lambda expression to all elements of the cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
+| `filter(lambda,arr)` | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
+| `foldr(lambda,arr)` | right folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
+| `cartesian_foldr(lambda,arr1,arr2,...)` | right folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| `any(lambda,arr)` | returns true if any element in the array matches the lambda expression |
+| `all(lambda,arr)` | returns true if all elements in the array matches the lambda expression |

@@ -1467,14 +1467,62 @@ interface Function
     }
   }
 
+  class StringToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "string_to_array";
+    }
+
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      final String arrayString = expr.asString();
+      if (arrayString == null) {
+        return ExprEval.of(null);
+      }
+
+      final String split = args.get(1).eval(bindings).asString();
+      return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
+    }
+
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
   abstract class ArrayFunction implements Function
   {
-    public Set<Expr> getArrayInputs(List<Expr> args)
+    void validateArguments(List<Expr> args)
     {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
 
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      validateArguments(args);
       return ImmutableSet.of(args.get(0));
     }
 
@@ -1483,6 +1531,79 @@ interface Function
     {
       return Collections.emptySet();
     }
+  }
+
+  abstract class ArrayScalarFunction extends ArrayFunction
+  {
+    @Override
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.of(args.get(1));
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+      final ExprEval arrayExpr = args.get(0).eval(bindings);
+      final ExprEval scalarExpr = args.get(1).eval(bindings);
+      if (arrayExpr.asArray() == null) {
+        return ExprEval.of(null);
+      }
+      return doApply(arrayExpr, scalarExpr);
+    }
+
+    abstract ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr);
+
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
+  abstract class ArraysFunction extends ArrayFunction
+  {
+    @Override
+    void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      validateArguments(args);
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      validateArguments(args);
+      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+
+      if (arrayExpr1.asArray() == null || arrayExpr2.asArray() == null) {
+        return ExprEval.of(null);
+      }
+
+      return doApply(arrayExpr1, arrayExpr2);
+    }
+
+    abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
   }
 
   class ArrayLengthFunction extends ArrayFunction
@@ -1496,10 +1617,7 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-
+      validateArguments(args);
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
       if (array == null) {
@@ -1510,7 +1628,7 @@ interface Function
     }
   }
 
-  class ArrayOffsetFunction extends ArrayFunction
+  class ArrayOffsetFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1519,19 +1637,10 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final Object[] array = expr.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      final int position = args.get(1).eval(bindings).asInt();
+      final Object[] array = arrayExpr.asArray();
+      final int position = scalarExpr.asInt();
 
       if (array.length > position) {
         return ExprEval.bestEffortOf(array[position]);
@@ -1540,7 +1649,7 @@ interface Function
     }
   }
 
-  class ArrayOrdinalFunction extends ArrayFunction
+  class ArrayOrdinalFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1549,19 +1658,10 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final Object[] array = expr.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      final int position = args.get(1).eval(bindings).asInt() - 1;
+      final Object[] array = arrayExpr.asArray();
+      final int position = scalarExpr.asInt() - 1;
 
       if (array.length > position) {
         return ExprEval.bestEffortOf(array[position]);
@@ -1570,7 +1670,7 @@ interface Function
     }
   }
 
-  class ArrayContainsFunction extends ArrayFunction
+  class ArrayContainsFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -1579,27 +1679,15 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final ExprEval toCheck = args.get(1).eval(bindings);
-
-      final Object[] array1 = expr.asArray();
-      final Object[] array2 = toCheck.asArray();
-
-      if (array1 == null || array2 == null) {
-        return ExprEval.of(null);
-      }
-
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
       return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
     }
   }
 
-  class ArrayOverlapFunction extends ArrayFunction
+  class ArrayOverlapFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -1608,33 +1696,19 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final ExprEval toCheck = args.get(1).eval(bindings);
-
-      final Object[] array1 = expr.asArray();
-      final Object[] array2 = toCheck.asArray();
-
-      if (array1 == null || array2 == null) {
-        return ExprEval.of(null);
-      }
-
-      List<Object> olst = Arrays.asList(array1);
-      List<Object> o2lst = Arrays.asList(array2);
+      final Object[] array1 = lhsExpr.asArray();
+      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
       boolean any = false;
-      for (Object check : olst) {
-        any |= o2lst.contains(check);
+      for (Object check : array1) {
+        any |= array2.contains(check);
       }
       return ExprEval.bestEffortOf(any);
     }
   }
 
-  class ArrayOffsetOfFunction extends ArrayFunction
+  class ArrayOffsetOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1643,38 +1717,29 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
+      final Object[] array = arrayExpr.asArray();
 
-      final ExprEval expr = args.get(0).eval(bindings);
-      final ExprEval toCheck = args.get(1).eval(bindings);
-
-      final Object[] array = expr.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-      switch (toCheck.type()) {
+      switch (scalarExpr.type()) {
         case STRING:
         case LONG:
         case DOUBLE:
           int index = -1;
           for (int i = 0; i < array.length; i++) {
-            if (Objects.equals(array[i], toCheck.value())) {
+            if (Objects.equals(array[i], scalarExpr.value())) {
               index = i;
               break;
             }
           }
           return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
         default:
-          throw new IAE("Function[%s] argument must be a a scalar type", name());
+          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
     }
   }
 
-  class ArrayOrdinalOfFunction extends ArrayFunction
+  class ArrayOrdinalOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1683,38 +1748,28 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final ExprEval toCheck = args.get(1).eval(bindings);
-      final Object[] array = expr.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      switch (toCheck.type()) {
+      final Object[] array = arrayExpr.asArray();
+      switch (scalarExpr.type()) {
         case STRING:
         case LONG:
         case DOUBLE:
           int index = -1;
           for (int i = 0; i < array.length; i++) {
-            if (Objects.equals(array[i], toCheck.value())) {
+            if (Objects.equals(array[i], scalarExpr.value())) {
               index = i;
               break;
             }
           }
           return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
         default:
-          throw new IAE("Function[%s] argument must be a a scalar type", name());
+          throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
     }
   }
 
-  class ArrayAppendFunction extends ArrayFunction
+  class ArrayAppendFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1723,43 +1778,31 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
-
-      final ExprEval lhs = args.get(0).eval(bindings);
-      final ExprEval rhs = args.get(1).eval(bindings);
-
-      final Object[] array = lhs.asArray();
-
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      switch (lhs.type()) {
+      switch (arrayExpr.type()) {
         case STRING:
         case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.append(lhs.asStringArray(), rhs.asString()).toArray(String[]::new));
+          return ExprEval.ofStringArray(this.append(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
         case LONG:
         case LONG_ARRAY:
           return ExprEval.ofLongArray(
               this.append(
-                  lhs.asLongArray(),
-                  rhs.isNumericNull() ? null : rhs.asLong()).toArray(Long[]::new
+                  arrayExpr.asLongArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
               )
           );
         case DOUBLE:
         case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(
               this.append(
-                  lhs.asDoubleArray(),
-                  rhs.isNumericNull() ? null : rhs.asDouble()).toArray(Double[]::new
+                  arrayExpr.asDoubleArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
               )
           );
       }
-      throw new RuntimeException("impossible");
+
+      throw new RE("Unable to append to unknown type %s", arrayExpr.type());
     }
 
     private <T> Stream<T> append(T[] array, T val)
@@ -1768,15 +1811,9 @@ interface Function
       l.add(val);
       return l.stream();
     }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
   }
 
-  class ArrayConcatFunction extends ArrayFunction
+  class ArrayConcatFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -1785,37 +1822,36 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
-      }
-
-      final ExprEval lhs = args.get(0).eval(bindings);
-      final ExprEval rhs = args.get(1).eval(bindings);
-
-      final Object[] array1 = lhs.asArray();
-      final Object[] array2 = rhs.asArray();
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
 
       if (array1 == null) {
         return ExprEval.of(null);
       }
       if (array2 == null) {
-        return lhs;
+        return lhsExpr;
       }
 
-      switch (lhs.type()) {
+      switch (lhsExpr.type()) {
         case STRING:
         case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.cat(lhs.asStringArray(), rhs.asStringArray()).toArray(String[]::new));
+          return ExprEval.ofStringArray(
+              cat(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
+          );
         case LONG:
         case LONG_ARRAY:
-          return ExprEval.ofLongArray(this.cat(lhs.asLongArray(), rhs.asLongArray()).toArray(Long[]::new));
+          return ExprEval.ofLongArray(
+              cat(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
+          );
         case DOUBLE:
         case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(this.cat(lhs.asDoubleArray(), rhs.asDoubleArray()).toArray(Double[]::new));
+          return ExprEval.ofDoubleArray(
+              cat(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
+          );
       }
-      throw new RE("Unable to concatenate unknown type %s", lhs.type());
+      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
     }
 
     private <T> Stream<T> cat(T[] array1, T[] array2)
@@ -1832,7 +1868,7 @@ interface Function
     }
   }
 
-  class ArrayToStringFunction extends ArrayFunction
+  class ArrayToStringFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -1841,48 +1877,12 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final Object[] array = expr.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      final String join = args.get(1).eval(bindings).asString();
+      final String join = scalarExpr.asString();
       return ExprEval.of(
-          Arrays.stream(array).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
       );
-    }
-  }
-
-  class StringToArrayFunction extends ArrayFunction
-  {
-    @Override
-    public String name()
-    {
-      return "string_to_array";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
-      }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      final String arrayString = expr.asString();
-      if (arrayString == null) {
-        return ExprEval.of(null);
-      }
-
-      final String split = args.get(1).eval(bindings).asString();
-      return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
     }
   }
 }

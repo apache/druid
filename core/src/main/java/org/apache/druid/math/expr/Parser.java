@@ -41,6 +41,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -312,6 +313,11 @@ public class Parser
           {
             if (expr instanceof IdentifierExpr) {
               found.add(expr.toString());
+            } else if (expr instanceof LambdaExpr) {
+              LambdaExpr lambda = (LambdaExpr) expr;
+              for (String identifier : lambda.getIdentifiers()) {
+                found.remove(identifier);
+              }
             }
           }
         }
@@ -349,6 +355,64 @@ public class Parser
     return arrayFnBindings;
   }
 
+  public static BindingDetails examineBindings(Expr expr)
+  {
+    final Set<String> freeVariables = new HashSet<>();
+    final Set<String> scalarVariables = new HashSet<>();
+    final Set<String> arrayVariables = new HashSet<>();
+    expr.visit(childExpr -> {
+      if (childExpr instanceof IdentifierExpr) {
+        freeVariables.add(childExpr.toString());
+      } else if (childExpr instanceof LambdaExpr) {
+        LambdaExpr lambda = (LambdaExpr) childExpr;
+        for (String identifier : lambda.getIdentifiers()) {
+          freeVariables.remove(identifier);
+          scalarVariables.remove(identifier);
+          arrayVariables.remove(identifier);
+        }
+      } else {
+        final Set<Expr> scalarArgs;
+        final Set<Expr> arrayArgs;
+        if (childExpr instanceof FunctionExpr) {
+          FunctionExpr fnExpr = (FunctionExpr) childExpr;
+          scalarArgs = fnExpr.function.getScalarInputs(fnExpr.args);
+
+          if (fnExpr.function instanceof Function.ArraysFunction) {
+            Function.ArrayFunction fn = (Function.ArrayFunction) fnExpr.function;
+            arrayArgs = fn.getArrayInputs(fnExpr.args);
+          } else {
+            arrayArgs = Collections.emptySet();
+          }
+        } else if (childExpr instanceof ApplyFunctionExpr) {
+          ApplyFunctionExpr applyExpr = (ApplyFunctionExpr) childExpr;
+          scalarArgs = Collections.emptySet();
+          arrayArgs = applyExpr.function.getArrayInputs(applyExpr.argsExpr);
+        } else {
+          scalarArgs = Collections.emptySet();
+          arrayArgs = Collections.emptySet();
+        }
+        for (Expr arg : scalarArgs) {
+          String s = getIdentifierIfIdentifier(arg);
+          if (s != null) {
+            scalarVariables.add(s);
+          }
+        }
+        for (Expr arg : arrayArgs) {
+          String s = getIdentifierOrCastIdentifier(arg);
+          if (s != null) {
+            arrayVariables.add(s);
+          }
+        }
+      }
+    });
+    for (String identifier : scalarVariables) {
+      if (arrayVariables.contains(identifier)) {
+        throw new RE("Invalid expression: %s; identifier [%s] used as both scalar and array", expr, identifier);
+      }
+    }
+    return new BindingDetails(freeVariables, scalarVariables, arrayVariables);
+  }
+
   @Nullable
   public static String getIdentifierOrCastIdentifier(Expr expr)
   {
@@ -382,5 +446,39 @@ public class Parser
       Supplier<Object> supplier = bindings.get(name);
       return supplier == null ? null : supplier.get();
     };
+  }
+
+  public static class BindingDetails
+  {
+    private final Set<String> freeVariables;
+    private final Set<String> scalarVariables;
+    private final Set<String> arrayVariables;
+
+    BindingDetails(Set<String> freeVariables, Set<String> scalarVariables, Set<String> arrayVariables)
+    {
+      this.freeVariables = freeVariables;
+      this.scalarVariables = scalarVariables;
+      this.arrayVariables = arrayVariables;
+    }
+
+    public List<String> getRequiredColumns()
+    {
+      return new ArrayList<>(freeVariables);
+    }
+
+    public Set<String> getFreeVariables()
+    {
+      return freeVariables;
+    }
+
+    public Set<String> getScalarVariables()
+    {
+      return scalarVariables;
+    }
+
+    public Set<String> getArrayVariables()
+    {
+      return arrayVariables;
+    }
   }
 }

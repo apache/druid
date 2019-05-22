@@ -135,10 +135,8 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final List<String> columns = Parser.findRequiredBindings(expression);
-    final Set<String> expectedArrays = Parser.findArrayFnBindings(expression);
-    final Set<String> actualArrays = new HashSet<>();
-    final Set<String> unknownIfArrays = new HashSet<>();
+    final Parser.BindingDetails exprDetails = Parser.examineBindings(expression);
+    final List<String> columns = exprDetails.getRequiredColumns();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -156,7 +154,7 @@ public class ExpressionSelectors
                  && capabilities.isDictionaryEncoded()
                  && capabilities.isComplete()
                  && !capabilities.hasMultipleValues()
-                 && !expectedArrays.contains(column)) {
+                 && !exprDetails.getArrayVariables().contains(column)) {
         // Optimization for expressions that hit one string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -165,12 +163,18 @@ public class ExpressionSelectors
       }
     }
 
+    final Set<String> actualArrays = new HashSet<>();
+    final Set<String> unknownIfArrays = new HashSet<>();
     for (String column : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
       if (capabilities != null) {
         if (capabilities.hasMultipleValues()) {
           actualArrays.add(column);
-        } else if (!capabilities.isComplete() && capabilities.getType().equals(ValueType.STRING) && (actualArrays.contains(column) || !expectedArrays.contains(column))) {
+        } else if (
+            !capabilities.isComplete() &&
+            capabilities.getType().equals(ValueType.STRING) &&
+            !exprDetails.getArrayVariables().contains(column)
+        ) {
           unknownIfArrays.add(column);
         }
       } else {
@@ -178,7 +182,10 @@ public class ExpressionSelectors
       }
     }
 
-    final List<String> needsApplied = columns.stream().filter(c -> actualArrays.contains(c) && !expectedArrays.contains(c)).collect(Collectors.toList());
+    final List<String> needsApplied =
+        columns.stream()
+               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayVariables().contains(c))
+               .collect(Collectors.toList());
     final Expr finalExpr;
     if (needsApplied.size() > 0) {
       finalExpr = Parser.applyUnappliedIdentifiers(expression, needsApplied);
@@ -207,10 +214,9 @@ public class ExpressionSelectors
       final ExtractionFn extractionFn
   )
   {
-    final List<String> columns = Parser.findRequiredBindings(expression);
-    final Set<String> expectedArrays = Parser.findArrayFnBindings(expression);
-    final Set<String> actualArrays = Parser.findArrayFnBindings(expression);
-    final Set<String> unknownIfArrays = new HashSet<>();
+    final Parser.BindingDetails exprDetails = Parser.examineBindings(expression);
+    final List<String> columns = exprDetails.getRequiredColumns();
+
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -221,7 +227,7 @@ public class ExpressionSelectors
           && capabilities.isDictionaryEncoded()
           && capabilities.isComplete()
           && !capabilities.hasMultipleValues()
-          && !expectedArrays.contains(column)
+          && !exprDetails.getArrayVariables().contains(column)
       ) {
         // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
@@ -231,12 +237,18 @@ public class ExpressionSelectors
       }
     }
 
+    final Set<String> actualArrays = new HashSet<>();
+    final Set<String> unknownIfArrays = new HashSet<>();
     for (String column : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
       if (capabilities != null) {
         if (capabilities.hasMultipleValues()) {
           actualArrays.add(column);
-        } else if (!capabilities.isComplete() && capabilities.getType().equals(ValueType.STRING) && (actualArrays.contains(column) || !expectedArrays.contains(column))) {
+        } else if (
+            !capabilities.isComplete() &&
+            capabilities.getType().equals(ValueType.STRING) &&
+            !exprDetails.getArrayVariables().contains(column)
+        ) {
           unknownIfArrays.add(column);
         }
       } else {
@@ -245,7 +257,9 @@ public class ExpressionSelectors
     }
 
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
-    final boolean multiVal = actualArrays.size() > 0 || expectedArrays.size() > 0 || unknownIfArrays.size() > 0;
+    final boolean multiVal = actualArrays.size() > 0 ||
+                             exprDetails.getArrayVariables().size() > 0 ||
+                             unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.

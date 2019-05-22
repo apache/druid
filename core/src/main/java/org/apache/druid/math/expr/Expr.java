@@ -73,18 +73,6 @@ public interface Expr
   ExprEval eval(ObjectBinding bindings);
 
   /**
-   * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
-   */
-  interface ObjectBinding
-  {
-    /**
-     * Get value binding for string identifier of {@link IdentifierExpr}
-     */
-    @Nullable
-    Object get(String name);
-  }
-
-  /**
    * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
    * ensuring the {@link Visitor} can reach all of it's {@link Expr} children.
    */
@@ -96,6 +84,18 @@ public interface Expr
    * {@link Expr} with the results from the {@link Shuttle}.
    */
   Expr visit(Shuttle shuttle);
+
+  /**
+   * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
+   */
+  interface ObjectBinding
+  {
+    /**
+     * Get value binding for string identifier of {@link IdentifierExpr}
+     */
+    @Nullable
+    Object get(String name);
+  }
 
   /**
    * Mechanism to inspect an {@link Expr}, implementing a {@link Visitor} allows visiting all children of an
@@ -156,7 +156,7 @@ class LongExpr extends ConstantExpr
 {
   private final Long value;
 
-  public LongExpr(Long value)
+  LongExpr(Long value)
   {
     this.value = Preconditions.checkNotNull(value, "value");
   }
@@ -186,7 +186,7 @@ class LongArrayExpr extends ConstantArrayExpr
 {
   private final Long[] value;
 
-  public LongArrayExpr(Long[] value)
+  LongArrayExpr(Long[] value)
   {
     this.value = Preconditions.checkNotNull(value, "value");
   }
@@ -216,7 +216,7 @@ class StringExpr extends ConstantExpr
 {
   private final String value;
 
-  public StringExpr(String value)
+  StringExpr(String value)
   {
     this.value = NullHandling.emptyToNullIfNeeded(value);
   }
@@ -246,7 +246,7 @@ class StringArrayExpr extends ConstantArrayExpr
 {
   private final String[] value;
 
-  public StringArrayExpr(String[] value)
+  StringArrayExpr(String[] value)
   {
     this.value = Preconditions.checkNotNull(value, "value");
   }
@@ -276,7 +276,7 @@ class DoubleExpr extends ConstantExpr
 {
   private final Double value;
 
-  public DoubleExpr(Double value)
+  DoubleExpr(Double value)
   {
     this.value = Preconditions.checkNotNull(value, "value");
   }
@@ -306,7 +306,7 @@ class DoubleArrayExpr extends ConstantArrayExpr
 {
   private final Double[] value;
 
-  public DoubleArrayExpr(Double[] value)
+  DoubleArrayExpr(Double[] value)
   {
     this.value = Preconditions.checkNotNull(value, "value");
   }
@@ -336,7 +336,7 @@ class IdentifierExpr implements Expr
 {
   private final String value;
 
-  public IdentifierExpr(String value)
+  IdentifierExpr(String value)
   {
     this.value = value;
   }
@@ -372,7 +372,7 @@ class LambdaExpr implements Expr
   private final List<IdentifierExpr> args;
   private final Expr expr;
 
-  public LambdaExpr(List<IdentifierExpr> args, Expr expr)
+  LambdaExpr(List<IdentifierExpr> args, Expr expr)
   {
     this.args = args;
     this.expr = expr;
@@ -415,16 +415,7 @@ class LambdaExpr implements Expr
   @Override
   public void visit(Visitor visitor)
   {
-    // return free variables only
-    expr.visit(
-        _expr -> {
-          if (_expr instanceof IdentifierExpr) {
-            if (args.stream().noneMatch(x -> _expr.toString().equals(x.toString()))) {
-              visitor.visit(_expr);
-            }
-          }
-        }
-    );
+    expr.visit(visitor);
     visitor.visit(this);
   }
 
@@ -444,7 +435,7 @@ class FunctionExpr implements Expr
   final String name;
   final List<Expr> args;
 
-  public FunctionExpr(Function function, String name, List<Expr> args)
+  FunctionExpr(Function function, String name, List<Expr> args)
   {
     this.function = function;
     this.name = name;
@@ -488,7 +479,7 @@ class ApplyFunctionExpr implements Expr
   final LambdaExpr lambdaExpr;
   final List<Expr> argsExpr;
 
-  public ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
+  ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
     this.function = function;
     this.name = name;
@@ -499,7 +490,7 @@ class ApplyFunctionExpr implements Expr
   @Override
   public String toString()
   {
-    return "(" + name + " " + lambdaExpr + " " + argsExpr + ")";
+    return "(" + name + " " + lambdaExpr + ", " + argsExpr + ")";
   }
 
   @Nonnull
@@ -635,7 +626,7 @@ abstract class BinaryOpExprBase implements Expr
   protected Expr left;
   protected Expr right;
 
-  public BinaryOpExprBase(String op, Expr left, Expr right)
+  BinaryOpExprBase(String op, Expr left, Expr right)
   {
     this.op = op;
     this.left = left;
@@ -673,7 +664,7 @@ abstract class BinaryOpExprBase implements Expr
 
 abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 {
-  public BinaryEvalOpExprBase(String op, Expr left, Expr right)
+  BinaryEvalOpExprBase(String op, Expr left, Expr right)
   {
     super(op, left, right);
   }
