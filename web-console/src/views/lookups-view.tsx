@@ -319,7 +319,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             Cell: (row: any) => {
               const lookupId = row.value.id;
               const lookupTier = row.value.tier;
-              const lookupActions = this.getlookupActions(lookupId, lookupTier);
+              const lookupActions = this.getlookupActions(lookupTier, lookupId);
               const lookupMenu = basicActionsToMenu(lookupActions);
 
               return <ActionCell>
