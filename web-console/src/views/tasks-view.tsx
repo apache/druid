@@ -52,7 +52,7 @@ export interface TasksViewProps extends React.Props<any> {
   openDialog: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: (taskId?: string) => void;
+  goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
 }
 
@@ -285,8 +285,16 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   private getSupervisorActions(id: string, supervisorSuspended: boolean, type: string): BasicAction[] {
-    const actions = [
-      {
+    const actions = [];
+    if (type === 'kafka' || type === 'kinesis') {
+      actions.push(
+        {
+          icon: IconNames.WRENCH,
+          title: 'Open in data loader',
+          onAction: () => this.props.goToLoadDataView(id)
+        });
+    }
+    actions.push({
         icon: IconNames.STEP_BACKWARD,
         title: 'Reset',
         onAction: () => this.setState({ resetSupervisorId: id })
@@ -302,15 +310,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
-    ];
-    if (type === 'kafka' || type === 'kinesis') {
-     actions.push(
-       {
-         icon: IconNames.WRENCH,
-         title: 'Open in data loader',
-         onAction: () => this.props.goToLoadDataView(id)
-       });
-    }
+      );
     // @ts-ignore
     return actions;
   }
@@ -523,7 +523,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
         title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(id)
+        onAction: () => this.props.goToLoadDataView(undefined, id)
       });
     }
     if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {

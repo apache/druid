@@ -175,7 +175,8 @@ const VIEW_TITLE: Record<Stage, string> = {
 
 export interface LoadDataViewProps extends React.Props<any> {
   initSpec: IngestionSpec | null;
-  taskId?: string | null;
+  initSupervisorId?: string | null;
+  initTaskId?: string | null;
   goToTask: (taskId: string | null, supervisor?: string) => void;
 }
 
@@ -287,13 +288,17 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    if (this.props.taskId) {
-        this.getJsonInfo();
+    if (this.props.initTaskId) {
+        this.getJsonInfo(`/druid/indexer/v1/task/${this.props.initTaskId}`);
         this.updateStage('json-spec');
+    } else if (this.props.initSupervisorId) {
+      this.getJsonInfo(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
+      this.updateStage('json-spec');
     } else {
       this.updateStage('connect');
     }
   }
+
 
   async getOverlordModules() {
     let overlordModules: string[];
@@ -2357,18 +2362,14 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   // ==================================================================
-  private getJsonInfo = async (): Promise<void> => {
-    if (this.props.taskId) {
-      let endpoint = `/druid/indexer/v1/supervisor/${this.props.taskId}`;
-      if (!this.props.taskId.indexOf('index')) {
-        endpoint = `/druid/indexer/v1/task/${this.props.taskId}`;
-      }
-      try {
-        const resp = await axios.get(endpoint);
-        const data = resp.data;
-        this.updateSpec(this.props.taskId.indexOf('index') ? resp.data : resp.data.payload.spec);
-      } catch (e) {
-      }
+  private getJsonInfo = async (endpoint: string): Promise<void> =>  {
+    try {
+      console.log(endpoint);
+      const resp = await axios.get(endpoint);
+      let data = resp.data;
+      if (endpoint.indexOf('task') >= 0) data = resp.data.payload.spec;
+      this.updateSpec(data);
+    } catch (e) {
     }
   }
 
