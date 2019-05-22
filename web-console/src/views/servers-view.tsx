@@ -430,8 +430,8 @@ WHERE "server_type" = 'historical'`);
       vertical
       percentage
       secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE) as string)}
-      primaryMinSize={25}
-      secondaryMinSize={25}
+      primaryMinSize={30}
+      secondaryMinSize={30}
       onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
     >
       <div className={'topPane'}>

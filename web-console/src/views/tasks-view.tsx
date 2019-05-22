@@ -717,8 +717,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         vertical
         percentage
         secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string)}
-        primaryMinSize={25}
-        secondaryMinSize={25}
+        primaryMinSize={30}
+        secondaryMinSize={30}
         onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
       >
         <div className={'topPane'}>
