@@ -135,16 +135,17 @@ public class StatusResource
     public String toString()
     {
       StringBuilder output = new StringBuilder();
-      output.append(StringUtils.format("Druid version - %s", version)).append(StringUtils.LINE_SEPARATOR).append(StringUtils.LINE_SEPARATOR);
+      String lineSeparator = System.lineSeparator();
+      output.append(StringUtils.format("Druid version - %s", version)).append(lineSeparator).append(lineSeparator);
 
       if (modules.size() > 0) {
-        output.append("Registered Druid Modules").append(StringUtils.LINE_SEPARATOR);
+        output.append("Registered Druid Modules").append(lineSeparator);
       } else {
         output.append("No Druid Modules loaded !");
       }
 
       for (ModuleVersion moduleVersion : modules) {
-        output.append(moduleVersion).append(StringUtils.LINE_SEPARATOR);
+        output.append(moduleVersion).append(lineSeparator);
       }
       return output.toString();
     }
