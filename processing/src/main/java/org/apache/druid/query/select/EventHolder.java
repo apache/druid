@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class EventHolder
 {
-  public static final String timestampKey = "timestamp";
+  public static final String timestampKey = "__time";
 
   private final String segmentId;
   private final int offset;
