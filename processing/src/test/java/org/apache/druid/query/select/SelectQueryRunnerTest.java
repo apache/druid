@@ -732,7 +732,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         0,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -743,7 +742,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         1,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -754,7 +752,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         2,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -778,7 +775,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -1,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1564.6177f)
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
@@ -789,7 +785,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -2,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 826.0602f)
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
@@ -800,7 +795,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -3,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1689.0128f)
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
@@ -847,7 +841,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         0,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -858,7 +851,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         1,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -869,7 +861,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         2,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
@@ -893,7 +884,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -1,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1564.617729")
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
@@ -904,7 +894,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -2,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-826.060182")
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
@@ -915,7 +904,6 @@ public class SelectQueryRunnerTest
                         segmentIdString,
                         -3,
                         new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, DateTimes.of("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1689.012875")
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
