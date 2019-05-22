@@ -75,9 +75,6 @@ public class Parser
   @VisibleForTesting
   static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
   {
-    if (log.isDebugEnabled()) {
-      log.debug("parse expression [" + in + "]");
-    }
     ExprLexer lexer = new ExprLexer(new ANTLRInputStream(in));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     ExprParser parser = new ExprParser(tokens);
