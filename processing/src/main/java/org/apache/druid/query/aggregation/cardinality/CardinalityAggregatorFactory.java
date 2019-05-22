@@ -239,7 +239,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : HyperUniquesAggregatorFactory.estimateCardinality(object, round);
+    return HyperUniquesAggregatorFactory.estimateCardinality(object, round);
   }
 
   @Override

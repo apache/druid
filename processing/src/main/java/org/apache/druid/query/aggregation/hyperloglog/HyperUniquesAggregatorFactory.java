@@ -50,7 +50,7 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
-  public static Object estimateCardinality(Object object, boolean round)
+  public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
     if (object == null) {
       return 0;
@@ -197,7 +197,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : estimateCardinality(object, round);
+    return estimateCardinality(object, round);
   }
 
   @Override
