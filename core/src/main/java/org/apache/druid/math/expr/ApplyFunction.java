@@ -113,6 +113,9 @@ public interface ApplyFunction
       if (array == null) {
         return ExprEval.of(null);
       }
+      if (array.length == 0) {
+        return arrayEval;
+      }
 
       MapLambdaBinding lambdaBinding = new MapLambdaBinding(array, lambdaExpr, bindings);
       return applyMap(lambdaExpr, array.length, lambdaBinding);
@@ -179,7 +182,7 @@ public interface ApplyFunction
 
   abstract class BaseFoldrFunction implements ApplyFunction
   {
-    public ExprEval applyFoldr(LambdaExpr lambdaExpr, Object accumulator, int length, IndexableFoldLambdaBinding bindings)
+    ExprEval applyFoldr(LambdaExpr lambdaExpr, Object accumulator, int length, IndexableFoldLambdaBinding bindings)
     {
       for (int i = 0; i < length; i++) {
         ExprEval evaluated = lambdaExpr.eval(bindings.accumulateWithIndex(i, accumulator));
@@ -222,7 +225,7 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      // accumulator argument cannot be inferred, so ignore it until think of something better to do
+      // accumulator argument cannot be inferred, so ignore it until we think of something better to do
       return ImmutableSet.of(args.get(0));
     }
   }
@@ -279,7 +282,8 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      return ImmutableSet.copyOf(args);
+      // accumulator argument cannot be inferred, so ignore it until we think of something better to do
+      return ImmutableSet.copyOf(args.subList(0, args.size() - 1));
     }
   }
 

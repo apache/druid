@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -355,6 +356,9 @@ public class Parser
     return arrayFnBindings;
   }
 
+  /**
+   * Visits all nodes of an {@link Expr}, collecting information about how {@link IdentifierExpr} are used
+   */
   public static BindingDetails examineBindings(Expr expr)
   {
     final Set<String> freeVariables = new HashSet<>();
@@ -362,8 +366,11 @@ public class Parser
     final Set<String> arrayVariables = new HashSet<>();
     expr.visit(childExpr -> {
       if (childExpr instanceof IdentifierExpr) {
+        // all identifiers are free variables ...
         freeVariables.add(childExpr.toString());
       } else if (childExpr instanceof LambdaExpr) {
+        // ... unless they are erased by appearing in a lambda expression's arguments because they will be bound by
+        // the apply expression that wraps the lambda
         LambdaExpr lambda = (LambdaExpr) childExpr;
         for (String identifier : lambda.getIdentifiers()) {
           freeVariables.remove(identifier);
@@ -371,6 +378,9 @@ public class Parser
           arrayVariables.remove(identifier);
         }
       } else {
+        // shallowly examining function expressions and apply function expressions can give us some context about if
+        // identifiers are used as scalar or array arguments to these functions. all identifiers should be encountered
+        // at some point, so we can use this to validate that identifiers are not used in inconsistent ways
         final Set<Expr> scalarArgs;
         final Set<Expr> arrayArgs;
         if (childExpr instanceof FunctionExpr) {
@@ -387,9 +397,17 @@ public class Parser
           ApplyFunctionExpr applyExpr = (ApplyFunctionExpr) childExpr;
           scalarArgs = Collections.emptySet();
           arrayArgs = applyExpr.function.getArrayInputs(applyExpr.argsExpr);
-        } else {
-          scalarArgs = Collections.emptySet();
+        } else if (childExpr instanceof BinaryOpExprBase) {
+          BinaryOpExprBase binExpr = (BinaryOpExprBase) childExpr;
+          scalarArgs = ImmutableSet.of(binExpr.left, binExpr.right);
           arrayArgs = Collections.emptySet();
+        } else if (childExpr instanceof UnaryExpr) {
+          UnaryExpr unaryExpr = (UnaryExpr) childExpr;
+          scalarArgs = ImmutableSet.of(unaryExpr.expr);
+          arrayArgs = Collections.emptySet();
+        } else {
+          // bail, child expression is not a function, apply function, or operator, nothing for us here
+          return;
         }
         for (Expr arg : scalarArgs) {
           String s = getIdentifierIfIdentifier(arg);

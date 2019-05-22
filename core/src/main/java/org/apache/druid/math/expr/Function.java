@@ -50,6 +50,9 @@ interface Function
 
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
+  /**
+   * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to a scalar value
+   */
   default Set<Expr> getScalarInputs(List<Expr> args)
   {
     return ImmutableSet.copyOf(args);
@@ -1497,12 +1500,6 @@ interface Function
       return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
     }
 
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      validateArguments(args);
-      return Collections.emptySet();
-    }
-
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
@@ -1511,6 +1508,9 @@ interface Function
     }
   }
 
+  /**
+   * Function that operates on array typed operands
+   */
   abstract class ArrayFunction implements Function
   {
     void validateArguments(List<Expr> args)
@@ -1520,6 +1520,10 @@ interface Function
       }
     }
 
+    /**
+     * Given a list of arguments to this {@link ArrayFunction}, get the set of arguments that must evaluate to an array
+     * value
+     */
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       validateArguments(args);
@@ -1533,6 +1537,9 @@ interface Function
     }
   }
 
+  /**
+   * {@link ArraysFunction} that takes 1 array operand and 1 scalar operand
+   */
   abstract class ArrayScalarFunction extends ArrayFunction
   {
     @Override
@@ -1572,6 +1579,9 @@ interface Function
     }
   }
 
+  /**
+   * {@link ArraysFunction} that takes 2 array operands
+   */
   abstract class ArraysFunction extends ArrayFunction
   {
     @Override
@@ -1628,6 +1638,24 @@ interface Function
     }
   }
 
+  class ArrayToStringFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_to_string";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final String join = scalarExpr.asString();
+      return ExprEval.of(
+          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+      );
+    }
+  }
+
   class ArrayOffsetFunction extends ArrayScalarFunction
   {
     @Override
@@ -1667,44 +1695,6 @@ interface Function
         return ExprEval.bestEffortOf(array[position]);
       }
       return ExprEval.of(null);
-    }
-  }
-
-  class ArrayContainsFunction extends ArraysFunction
-  {
-    @Override
-    public String name()
-    {
-      return "array_contains";
-    }
-
-    @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
-    {
-      final Object[] array1 = lhsExpr.asArray();
-      final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
-    }
-  }
-
-  class ArrayOverlapFunction extends ArraysFunction
-  {
-    @Override
-    public String name()
-    {
-      return "array_overlap";
-    }
-
-    @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
-    {
-      final Object[] array1 = lhsExpr.asArray();
-      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
-      boolean any = false;
-      for (Object check : array1) {
-        any |= array2.contains(check);
-      }
-      return ExprEval.bestEffortOf(any);
     }
   }
 
@@ -1868,21 +1858,41 @@ interface Function
     }
   }
 
-  class ArrayToStringFunction extends ArrayScalarFunction
+  class ArrayContainsFunction extends ArraysFunction
   {
     @Override
     public String name()
     {
-      return "array_to_string";
+      return "array_contains";
     }
 
     @Override
-    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
-      final String join = scalarExpr.asString();
-      return ExprEval.of(
-          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
-      );
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+    }
+  }
+
+  class ArrayOverlapFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_overlap";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
+      boolean any = false;
+      for (Object check : array1) {
+        any |= array2.contains(check);
+      }
+      return ExprEval.bestEffortOf(any);
     }
   }
 }
