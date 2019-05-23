@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -118,8 +119,9 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.deserialize(object);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return delegate.finalizeComputation(object);
   }

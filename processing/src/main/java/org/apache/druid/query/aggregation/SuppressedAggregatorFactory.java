@@ -104,8 +104,9 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
     return delegate.deserialize(object);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return delegate.finalizeComputation(object);
   }
