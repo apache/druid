@@ -21,12 +21,14 @@ package org.apache.druid.emitter.influxdb;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class InfluxdbEmitterConfigTest
 {
@@ -49,7 +51,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
-        "password"
+        "password",
+        null
     );
   }
 
@@ -64,7 +67,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
-        "password"
+        "password",
+        null
     );
     Assert.assertNotEquals(influxdbEmitterConfig, influxdbEmitterConfigComparison);
   }
@@ -80,7 +84,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
-        "password"
+        "password",
+        null
     );
   }
 
@@ -95,7 +100,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
-        "password"
+        "password",
+        null
     );
     int expectedPort = 8086;
     Assert.assertEquals(expectedPort, influxdbEmitterConfig.getPort());
@@ -112,7 +118,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
-        "password"
+        "password",
+        null
     );
     Assert.assertTrue(influxdbEmitterConfig.equals(influxdbEmitterConfigComparison));
   }
@@ -128,7 +135,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         10000,
         "adam",
-        "password"
+        "password",
+        null
     );
     Assert.assertFalse(influxdbEmitterConfig.equals(influxdbEmitterConfigComparison));
   }
@@ -144,7 +152,8 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         null,
-        "password"
+        "password",
+        null
     );
   }
 
@@ -159,7 +168,45 @@ public class InfluxdbEmitterConfigTest
         15000,
         30000,
         "adam",
+        null,
         null
     );
   }
+
+  @Test
+  public void testConfigWithNullDimensionWhitelist()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfig = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    ImmutableSet<String> expected = ImmutableSet.copyOf(Arrays.asList("dataSource", "type", "numMetrics", "numDimensions", "threshold", "dimension", "taskType", "taskStatus", "tier"));
+    Assert.assertEquals(expected, influxdbEmitterConfig.getDimensionWhitelist());
+  }
+
+  @Test
+  public void testConfigWithDimensionWhitelist()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfig = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        ImmutableSet.of("dataSource", "taskType")
+    );
+    ImmutableSet<String> expected = ImmutableSet.copyOf(Arrays.asList("dataSource", "taskType"));
+    Assert.assertEquals(expected, influxdbEmitterConfig.getDimensionWhitelist());
+  }
+
 }

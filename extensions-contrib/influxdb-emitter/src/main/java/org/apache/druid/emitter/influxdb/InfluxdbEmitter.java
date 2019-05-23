@@ -20,7 +20,8 @@
 package org.apache.druid.emitter.influxdb;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -33,7 +34,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,37 +45,21 @@ public class InfluxdbEmitter implements Emitter
 {
 
   private static final Logger log = new Logger(InfluxdbEmitter.class);
-  private HttpClient influxdbClient;
+  private final HttpClient influxdbClient;
   private final InfluxdbEmitterConfig influxdbEmitterConfig;
   private final AtomicBoolean started = new AtomicBoolean(false);
-  private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
-      .setDaemon(true)
-      .setNameFormat("InfluxdbEmitter-%s")
-      .build());
-
+  private final ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "InfluxdbEmitter-%s");
   private final ImmutableSet dimensionWhiteList;
-
   private final LinkedBlockingQueue<ServiceMetricEvent> eventsQueue;
+  private static final Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
 
   public InfluxdbEmitter(InfluxdbEmitterConfig influxdbEmitterConfig)
   {
     this.influxdbEmitterConfig = influxdbEmitterConfig;
     this.influxdbClient = HttpClientBuilder.create().build();
     this.eventsQueue = new LinkedBlockingQueue<>(influxdbEmitterConfig.getMaxQueueSize());
-
-    this.dimensionWhiteList = ImmutableSet.of(
-        "dataSource",
-        "type",
-        "numMetrics",
-        "numDimensions",
-        "threshold",
-        "dimension",
-        "taskType",
-        "taskStatus",
-        "tier"
-    );
-
-    log.info("constructing influxdb emitter");
+    this.dimensionWhiteList = influxdbEmitterConfig.getDimensionWhitelist();
+    log.info("constructed influxdb emitter");
   }
 
   @Override
@@ -84,7 +68,7 @@ public class InfluxdbEmitter implements Emitter
     synchronized (started) {
       if (!started.get()) {
         exec.scheduleAtFixedRate(
-            new ConsumerRunnable(),
+            () -> transformAndSendToInfluxdb(eventsQueue),
             influxdbEmitterConfig.getFlushDelay(),
             influxdbEmitterConfig.getFlushPeriod(),
             TimeUnit.MILLISECONDS
@@ -103,7 +87,7 @@ public class InfluxdbEmitter implements Emitter
         eventsQueue.put(metricEvent);
       }
       catch (InterruptedException exception) {
-        log.error(exception.toString());
+        log.error(exception, "Failed to add metricEvent to events queue.");
         Thread.currentThread().interrupt();
       }
     }
@@ -126,7 +110,7 @@ public class InfluxdbEmitter implements Emitter
       influxdbClient.execute(post);
     }
     catch (IOException ex) {
-      log.info(ex.toString());
+      log.info(ex, "Failed to post events to InfluxDB.");
     }
     finally {
       post.releaseConnection();
@@ -148,28 +132,35 @@ public class InfluxdbEmitter implements Emitter
         )
     );
 
-    String payload = "druid_" + parts[0] + ",";
+    // measurement
+    StringBuilder payload = new StringBuilder("druid_");
+    payload.append(parts[0]);
 
-    payload += "service=" + getValue("service", event)
-               + ((parts.length == 2) ? "" : ",metric=druid_" + metric)
-               + ",hostname=" + getValue("host", event).split(":")[0];
-
-
+    // tags
+    StringBuilder tag = new StringBuilder(",service=");
+    tag.append(getValue("service", event));
+    String metricTag = parts.length == 2 ? "" : ",metric=druid_" + metric;
+    tag.append(metricTag);
+    tag.append(StringUtils.format(",hostname=%s", getValue("host", event).split(":")[0]));
     ImmutableSet<String> dimNames = ImmutableSet.copyOf(event.getUserDims().keySet());
     for (String dimName : dimNames) {
       if (this.dimensionWhiteList.contains(dimName)) {
-        payload += "," + dimName + "=" + sanitize(String.valueOf(event.getUserDims().get(dimName)));
+        tag.append(StringUtils.format(",%1$s=%2$s", dimName, sanitize(String.valueOf(event.getUserDims().get(dimName)))));
       }
     }
+    payload.append(tag);
 
-    payload += " druid_" + parts[parts.length - 1] + "=" + getValue("value", event);
+    // fields
+    payload.append(StringUtils.format(" druid_%1$s=%2$s", parts[parts.length - 1], getValue("value", event)));
 
-    return payload + " " + event.getCreatedTime().getMillis() * 1000000 + '\n';
+    // timestamp
+    payload.append(StringUtils.format(" %d\n", event.getCreatedTime().getMillis() * 1000000));
+
+    return payload.toString();
   }
 
-  protected static String sanitize(String namespace)
+  private static String sanitize(String namespace)
   {
-    Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
     return DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
   }
 
@@ -205,9 +196,9 @@ public class InfluxdbEmitter implements Emitter
   public void close() throws IOException
   {
     flush();
-    log.info("Closing emitter org.apache.druid.emitter.influxdb.InfluxdbEmitter");
+    log.info("Closing [%s]", this.getClass().getName());
     started.set(false);
-    exec.shutdown();
+    exec.shutdownNow();
   }
 
   public void transformAndSendToInfluxdb(LinkedBlockingQueue<ServiceMetricEvent> eventsQueue)
@@ -220,12 +211,4 @@ public class InfluxdbEmitter implements Emitter
     postToInflux(payload.toString());
   }
 
-  private class ConsumerRunnable implements Runnable
-  {
-    @Override
-    public void run()
-    {
-      transformAndSendToInfluxdb(eventsQueue);
-    }
-  }
 }

@@ -22,7 +22,12 @@ package org.apache.druid.emitter.influxdb;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.logger.Logger;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 public class InfluxdbEmitterConfig
 {
@@ -30,6 +35,7 @@ public class InfluxdbEmitterConfig
   private static final int DEFAULT_PORT = 8086;
   private static final int DEFAULT_QUEUE_SIZE = Integer.MAX_VALUE;
   private static final int DEFAULT_FLUSH_PERIOD = 60000; // milliseconds
+  private static final List<String> DEFAULT_DIMENSION_WHITELIST = Arrays.asList("dataSource", "type", "numMetrics", "numDimensions", "threshold", "dimension", "taskType", "taskStatus", "tier");
 
   @JsonProperty
   private final String hostname;
@@ -47,7 +53,8 @@ public class InfluxdbEmitterConfig
   private final String influxdbUserName;
   @JsonProperty
   private final String influxdbPassword;
-
+  @JsonProperty
+  private final ImmutableSet<String> dimensionWhitelist;
 
   private static Logger log = new Logger(InfluxdbEmitterConfig.class);
 
@@ -60,7 +67,8 @@ public class InfluxdbEmitterConfig
       @JsonProperty("flushPeriod") Integer flushPeriod,
       @JsonProperty("flushDelay") Integer flushDelay,
       @JsonProperty("influxdbUserName") String influxdbUserName,
-      @JsonProperty("influxdbPassword") String influxdbPassword
+      @JsonProperty("influxdbPassword") String influxdbPassword,
+      @JsonProperty("dimensionWhitelist") Set<String> dimensionWhitelist
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "hostname can not be null");
@@ -71,6 +79,7 @@ public class InfluxdbEmitterConfig
     this.flushDelay = flushDelay == null ? DEFAULT_FLUSH_PERIOD : flushDelay;
     this.influxdbUserName = Preconditions.checkNotNull(influxdbUserName, "influxdbUserName can not be null");
     this.influxdbPassword = Preconditions.checkNotNull(influxdbPassword, "influxdbPassword can not be null");
+    this.dimensionWhitelist = dimensionWhitelist == null ? ImmutableSet.copyOf(DEFAULT_DIMENSION_WHITELIST) : ImmutableSet.copyOf(dimensionWhitelist);
   }
 
   @Override
@@ -109,6 +118,9 @@ public class InfluxdbEmitterConfig
     if (!getInfluxdbPassword().equals(that.getInfluxdbPassword())) {
       return false;
     }
+    if (!getDimensionWhitelist().equals(that.getDimensionWhitelist())) {
+      return false;
+    }
     return true;
 
   }
@@ -124,6 +136,7 @@ public class InfluxdbEmitterConfig
     result = 31 * result + getFlushDelay();
     result = 31 * result + getInfluxdbUserName().hashCode();
     result = 31 * result + getInfluxdbPassword().hashCode();
+    result = 31 * result + getDimensionWhitelist().hashCode();
     return result;
   }
 
@@ -175,4 +188,9 @@ public class InfluxdbEmitterConfig
     return influxdbPassword;
   }
 
+  @JsonProperty
+  public ImmutableSet<String> getDimensionWhitelist()
+  {
+    return dimensionWhitelist;
+  }
 }

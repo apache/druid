@@ -48,6 +48,7 @@ All the configuration parameters for the influxdb emitter are under `druid.emitt
 |`druid.emitter.influxdb.flushDelay`|How long (in milliseconds) the scheduled method will wait until it first runs.|No|60000|
 |`druid.emitter.influxdb.influxdbUserName`|The username for authenticating with the InfluxDB database.|Yes|N/A|
 |`druid.emitter.influxdb.influxdbPassword`|The password of the database authorized user|Yes|N/A|
+|`druid.emitter.influxdb.dimensionWhitelist`|A whitelist of metric dimensions to include as tags|No|`["dataSource","type","numMetrics","numDimensions","threshold","dimension","taskType","taskStatus","tier"]`|
 
 ## InfluxDB Line Protocol
 
@@ -69,15 +70,6 @@ This event is parsed into line protocol according to these rules:
 
 This gives the following String which can be POSTed to InfluxDB: `"druid_query,service=druid/historical,hostname=historical001,metric=druid_cache_total druid_hits=34787256 1509440946857000000"`
 
-The InfluxDB emitter has a white list of dimensions (
-        `"dataSource",
-        "type",
-        "numMetrics",
-        "numDimensions",
-        "threshold",
-        "dimension",
-        "taskType",
-        "taskStatus",
-        "tier"`) 
+The InfluxDB emitter has a white list of dimensions
 which will be added as a tag to the line protocol string if the metric has a dimension from the white list.
 The value of the dimension is sanitized such that every occurence of a dot or whitespace is replaced with a `_` .
