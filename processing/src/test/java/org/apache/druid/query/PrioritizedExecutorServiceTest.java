@@ -242,12 +242,12 @@ public class PrioritizedExecutorServiceTest
   @Test
   public void testOrderedExecutionMultiplePriorityMix() throws ExecutionException, InterruptedException
   {
-    final int DEFAULT = 0;
-    final int MIN = -1;
-    final int MAX = 1;
-    exec = new PrioritizedExecutorService(exec.threadPoolExecutor, true, DEFAULT, config);
+    final int _default = 0;
+    final int min = -1;
+    final int max = 1;
+    exec = new PrioritizedExecutorService(exec.threadPoolExecutor, true, _default, config);
     final int numTasks = 999;
-    final int[] priorities = new int[]{MAX, DEFAULT, MIN};
+    final int[] priorities = new int[]{max, _default, min};
     final int tasksPerPriority = numTasks / priorities.length;
     final int[] priorityOffsets = new int[]{0, tasksPerPriority, tasksPerPriority * 2};
     final List<ListenableFuture<?>> futures = Lists.newArrayListWithExpectedSize(numTasks);

@@ -285,10 +285,11 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return new ArrayOfDoublesSketchAggregatorFactory(name, name, nominalEntries, null, numberOfValues);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((ArrayOfDoublesSketch) object).getEstimate();
+    return object == null ? null : ((ArrayOfDoublesSketch) object).getEstimate();
   }
 
   @Override
