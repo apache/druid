@@ -175,6 +175,7 @@
         <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
+        <module>extensions-contrib/influxdb-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1563,6 +1564,7 @@
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
+                                <exclude>src/**/*.snap</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

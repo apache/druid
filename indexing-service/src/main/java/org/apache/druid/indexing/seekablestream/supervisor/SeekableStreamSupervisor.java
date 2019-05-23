@@ -124,7 +124,6 @@ import java.util.stream.Stream;
  */
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType> implements Supervisor
 {
-  public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
@@ -2790,7 +2789,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected Map<String, Object> createBaseTaskContexts()
   {
     final Map<String, Object> contexts = new HashMap<>();
-    contexts.put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
     if (spec.getContext() != null) {
       contexts.putAll(spec.getContext());
     }
