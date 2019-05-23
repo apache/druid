@@ -31,12 +31,12 @@ title: "SQL"
 
 # SQL
 
-<div class="note caution">
-Built-in SQL is an <a href="../development/experimental.html">experimental</a> feature. The API described here is
-subject to change.
+<div class="note info">
+Apache Druid (incubating) supports two query languages: Druid SQL and [native queries](querying.html), which SQL queries
+are planned into, and which end users can also issue directly. This document describes the SQL language.
 </div>
 
-Apache Druid (incubating) SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
+Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
 parser and planner based on [Apache Calcite](https://calcite.apache.org/). Druid SQL translates SQL into native Druid
 queries on the query Broker (the first process you query), which are then passed down to data processes as native Druid
 queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
@@ -125,13 +125,15 @@ Only the COUNT aggregation can accept DISTINCT.
 |`MIN(expr)`|Takes the minimum of numbers.|
 |`MAX(expr)`|Takes the maximum of numbers.|
 |`AVG(expr)`|Averages numbers.|
-|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`.|
+|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's builtin "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|
 |`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
 |`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.html) column. The `size` parameter is described in the Theta sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
 |`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.html#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
 |`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
 |`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
 |`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positve rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+
+For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
 
 ### Numeric functions
 
@@ -212,6 +214,10 @@ context parameter "sqlTimeZone" to the name of another time zone, like "America/
 the connection time zone, some functions also accept time zones as parameters. These parameters always take precedence
 over the connection time zone.
 
+Literal timestamps in the connection time zone can be written using `TIMESTAMP '2000-01-01 00:00:00'` syntax. The
+simplest way to write literal timestamps in other time zones is to use TIME_PARSE, like
+`TIME_PARSE('2000-02-01 00:00:00', NULL, 'America/Los_Angeles')`.
+
 |Function|Notes|
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
@@ -228,6 +234,7 @@ over the connection time zone.
 |`FLOOR(timestamp_expr TO <unit>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`CEIL(timestamp_expr TO <unit>)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
+|`TIMESTAMPDIFF(<unit>, <timestamp1>, <timestamp2>)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`timestamp_expr { + &#124; - } <interval_expr>`|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
 
 ### Comparison operators
@@ -288,11 +295,12 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
 float) "string" (UTF-8 encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and
-approxHistogram columns). Timestamps (including the `__time` column) are stored as longs, with the value being the
-number of milliseconds since 1 January 1970 UTC.
+approxHistogram columns).
 
-At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators. The reverse will not
-happen: 64-bit floats are not be narrowed to 32-bit.
+Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
+milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
+timezone information, but only carry information about the exact moment in time they represent. See the
+[Time functions](#time-functions) section for more information about timestamp handling.
 
 Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
 Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
@@ -304,7 +312,7 @@ datasource, then it will be treated as zero for rows from those segments.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
 Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
-to FLOAT.
+to FLOAT. At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators.
 
 The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
 that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
@@ -636,7 +644,7 @@ ORDER BY 2 DESC
 ```
 
 ### SERVERS table
-Servers table lists all data servers(any server that hosts a segment). It includes both Historicals and Peons.
+Servers table lists all discovered servers in the cluster.
 
 |Column|Type|Notes|
 |------|-----|-----|
@@ -644,10 +652,10 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |host|STRING|Hostname of the server|
 |plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
 |tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
-|server_type|STRING|Type of Druid service. Possible values include: Historical, realtime and indexer_executor(Peon).|
-|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
-|current_size|LONG|Current size of segments in bytes on this server|
-|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+|server_type|STRING|Type of Druid service. Possible values include: COORDINATOR, OVERLORD,  BROKER, ROUTER, HISTORICAL, MIDDLE_MANAGER or PEON.|
+|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's null|
+|current_size|LONG|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's 0|
 
 To retrieve information about all servers, use the query:
 
@@ -742,4 +750,4 @@ Broker will emit the following metrics for SQL.
 
 ## Authorization Permissions
 
-Please see [Defining SQL permissions](../../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.
+Please see [Defining SQL permissions](../development/extensions-core/druid-basic-security.html#sql-permissions) for information on what permissions are needed for making SQL queries in a secured cluster.

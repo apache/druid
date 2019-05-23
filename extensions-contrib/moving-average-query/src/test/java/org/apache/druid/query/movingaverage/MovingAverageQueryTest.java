@@ -30,8 +30,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import mockit.Mock;
-import mockit.MockUp;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -62,6 +60,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -70,6 +69,7 @@ import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
+import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -132,7 +132,33 @@ public class MovingAverageQueryTest
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("queryTest");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(1);
-          binder.bind(QuerySegmentWalker.class).toProvider(Providers.of(null));
+          binder.bind(QuerySegmentWalker.class).toProvider(Providers.of(new QuerySegmentWalker()
+          {
+            @Override
+            public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+            {
+              return new QueryRunner<T>()
+              {
+                @Override
+                @SuppressWarnings("unchecked")
+                public Sequence<T> run(QueryPlus queryPlus, Map responseContext)
+                {
+                  if (query instanceof GroupByQuery) {
+                    return (Sequence<T>) Sequences.simple(groupByResults);
+                  } else if (query instanceof TimeseriesQuery) {
+                    return (Sequence<T>) Sequences.simple(timeseriesResults);
+                  }
+                  throw new UnsupportedOperationException("unexpected query type " + query.getType());
+                }
+              };
+            }
+
+            @Override
+            public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+            {
+              return getQueryRunnerForIntervals(query, null);
+            }
+          }));
         }
     );
 
@@ -293,46 +319,6 @@ public class MovingAverageQueryTest
   @Test
   public void testQuery() throws IOException
   {
-
-
-    // create mocks for nested queries
-    @SuppressWarnings("unused")
-
-    MockUp<GroupByQuery> groupByQuery = new MockUp<GroupByQuery>()
-    {
-      @Mock
-      public QueryRunner getRunner(QuerySegmentWalker walker)
-      {
-        return new QueryRunner()
-        {
-          @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
-          {
-            return Sequences.simple(groupByResults);
-          }
-        };
-      }
-    };
-
-
-    @SuppressWarnings("unused")
-    MockUp<TimeseriesQuery> timeseriesQuery = new MockUp<TimeseriesQuery>()
-    {
-      @Mock
-      public QueryRunner getRunner(QuerySegmentWalker walker)
-      {
-        return new QueryRunner()
-        {
-          @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
-          {
-            return Sequences.simple(timeseriesResults);
-          }
-        };
-      }
-    };
-
-
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
     assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
 
@@ -398,7 +384,9 @@ public class MovingAverageQueryTest
         new ServiceEmitter("", "", null)
         {
           @Override
-          public void emit(Event event) {}
+          public void emit(Event event)
+          {
+          }
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );

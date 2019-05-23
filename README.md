@@ -68,7 +68,7 @@ We also have a couple people hanging out on IRC in `#druid-dev` on
 
 Please note that JDK 8 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/content/development/build.md](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md)
+For instructions on building Druid from source, see [docs/content/development/build.md](docs/content/development/build.md)
 
 ### Contributing
 

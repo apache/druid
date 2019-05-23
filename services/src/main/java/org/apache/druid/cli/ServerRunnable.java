@@ -96,7 +96,9 @@ public abstract class ServerRunnable extends GuiceRunnable
    */
   protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
-    public static class Child {}
+    public static class Child
+    {
+    }
 
     public static class Builder
     {

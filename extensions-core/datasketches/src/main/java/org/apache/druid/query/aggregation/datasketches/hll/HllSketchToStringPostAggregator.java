@@ -36,7 +36,6 @@ import java.util.Set;
  * Returns a human-readable summary of a given {@link HllSketch}.
  * This is a string returned by toString() method of the sketch.
  * This can be useful for debugging.
- * @author Alexander Saydakov
  */
 public class HllSketchToStringPostAggregator implements PostAggregator
 {

@@ -26,6 +26,7 @@
     "lib/sql-function-doc.ts"
   ],
   "exclude": [
-    "**/*.test.ts"
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }

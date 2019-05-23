@@ -20,6 +20,7 @@ import * as Hjson from 'hjson';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
+import { NullTableCell } from '../components/null-table-cell';
 import { SqlControl } from '../components/sql-control';
 import { QueryPlanDialog } from '../dialogs/query-plan-dialog';
 import {
@@ -104,7 +105,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${queryString.trim().replace(/;+$/, '')}) LIMIT 5000` :
+            `SELECT * FROM (${queryString.replace(/;+(\s*)$/, '$1')}) LIMIT 2000` :
             queryString;
 
           const queryPayload: Record<string, any> = {
@@ -200,11 +201,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           return {
             Header: h,
             accessor: String(i),
-            Cell: row => {
-              const value = row.value;
-              if (value === '' || value === null) return <span className="null-table-cell">null</span>;
-              return value;
-            }
+            Cell: row => <NullTableCell value={row.value}/>
           };
         })
       }
