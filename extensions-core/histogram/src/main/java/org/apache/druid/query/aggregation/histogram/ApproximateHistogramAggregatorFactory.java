@@ -214,10 +214,11 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((ApproximateHistogram) object).toHistogram(numBuckets);
+    return object == null ? null : ((ApproximateHistogram) object).toHistogram(numBuckets);
   }
 
   @JsonProperty
