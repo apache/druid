@@ -20,8 +20,8 @@ import { Code } from '@blueprintjs/core';
 import { number } from 'prop-types';
 import * as React from 'react';
 
-import { Field } from '../components/auto-form';
-import { ExternalLink } from '../components/external-link';
+import { Field } from '../components/auto-form/auto-form';
+import { ExternalLink } from '../components/external-link/external-link';
 
 import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
@@ -255,11 +255,12 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
   {
     name: 'column',
     type: 'string',
-    isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec)
+    defaultValue: 'timestamp'
   },
   {
     name: 'format',
     type: 'string',
+    defaultValue: 'auto',
     suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: <p>
@@ -269,12 +270,30 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
   {
     name: 'missingValue',
     type: 'string',
-    isDefined: (timestampSpec: TimestampSpec) => !isColumnTimestampSpec(timestampSpec)
+    placeholder: '(optional)',
+    info: <p>
+      This value will be used if the specified column can not be found.
+    </p>
   }
 ];
 
-export function getTimestampSpecFormFields() {
-  return TIMESTAMP_SPEC_FORM_FIELDS;
+const CONSTANT_TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
+  {
+    name: 'missingValue',
+    label: 'Constant value',
+    type: 'string',
+    info: <p>
+      The dummy value that will be used as the timestamp.
+    </p>
+  }
+];
+
+export function getTimestampSpecFormFields(timestampSpec: TimestampSpec) {
+  if (isColumnTimestampSpec(timestampSpec)) {
+    return TIMESTAMP_SPEC_FORM_FIELDS;
+  } else {
+    return CONSTANT_TIMESTAMP_SPEC_FORM_FIELDS;
+  }
 }
 
 export function issueWithTimestampSpec(timestampSpec: TimestampSpec | undefined): string | null {

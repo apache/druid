@@ -23,21 +23,21 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink } from './components/external-link';
-import { HeaderActiveTab, HeaderBar } from './components/header-bar';
-import { Loader } from './components/loader';
+import { ExternalLink } from './components/external-link/external-link';
+import { HeaderActiveTab, HeaderBar } from './components/header-bar/header-bar';
+import { Loader } from './components/loader/loader';
 import { AppToaster } from './singletons/toaster';
 import { UrlBaser } from './singletons/url-baser';
 import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
-import { DatasourcesView } from './views/datasource-view';
-import { HomeView } from './views/home-view';
-import { LoadDataView } from './views/load-data-view';
-import { LookupsView } from './views/lookups-view';
-import { SegmentsView } from './views/segments-view';
-import { ServersView } from './views/servers-view';
-import { SqlView } from './views/sql-view';
-import { TasksView } from './views/tasks-view';
+import { DatasourcesView } from './views/datasource-view/datasource-view';
+import { HomeView } from './views/home-view/home-view';
+import { LoadDataView } from './views/load-data-view/load-data-view';
+import { LookupsView } from './views/lookups-view/lookups-view';
+import { SegmentsView } from './views/segments-view/segments-view';
+import { ServersView } from './views/servers-view/servers-view';
+import { SqlView } from './views/sql-view/sql-view';
+import { TasksView } from './views/task-view/tasks-view';
 
 import './console-application.scss';
 

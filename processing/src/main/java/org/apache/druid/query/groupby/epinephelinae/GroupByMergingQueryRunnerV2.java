@@ -201,7 +201,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize
+                      mergeBufferSize,
+                      false
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
