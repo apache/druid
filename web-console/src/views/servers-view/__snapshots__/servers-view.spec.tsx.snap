@@ -263,6 +263,8 @@ exports[`describe servers view action servers view 1`] = `
           "Availability groups",
           "Last completed task time",
           "Blacklisted until",
+          "Status",
+          "Actions",
         ]
       }
       onChange={[Function]}
@@ -358,6 +360,21 @@ exports[`describe servers view action servers view 1`] = `
           "accessor": "blacklistedUntil",
           "show": true,
         },
+        Object {
+          "Header": "Status",
+          "accessor": [Function],
+          "id": "status",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Actions",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "actions",
+          "show": true,
+          "width": 70,
+        },
       ]
     }
     data={Array []}
@@ -448,5 +465,29 @@ exports[`describe servers view action servers view 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Disable worker"
+    failText="Could not disable worker"
+    intent="danger"
+    onClose={[Function]}
+    successText="Worker has been disabled"
+  >
+    <p>
+      Are you sure you want to disable worker 'null'?
+    </p>
+  </AsyncActionDialog>
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Enable worker"
+    failText="Could not enable worker"
+    intent="primary"
+    onClose={[Function]}
+    successText="Worker has been enabled"
+  >
+    <p>
+      Are you sure you want to enable worker 'null'?
+    </p>
+  </AsyncActionDialog>
 </div>
 `;
