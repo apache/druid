@@ -23,18 +23,15 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import {TableColumnSelection, ActionCell, ViewControlBar} from "../../components";
+import {ActionCell, TableColumnSelection, ViewControlBar} from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
-
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
   TableColumnSelectionHandler
 } from '../../utils';
-
 import {BasicAction, basicActionsToMenu} from '../../utils/basic-action';
-
 
 import './lookups-view.scss';
 
