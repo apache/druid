@@ -201,7 +201,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     const { hideLegacy } = this.props;
 
     return <>
-      <HeaderBar active={active} hideLegacy={hideLegacy} goToLoadDataView={this.goToLoadDataView}/>
+      <HeaderBar active={active} hideLegacy={hideLegacy}/>
       <div className={classNames('view-container', classType)}>{el}</div>
     </>;
   }
