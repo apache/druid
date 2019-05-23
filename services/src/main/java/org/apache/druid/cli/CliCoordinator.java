@@ -46,6 +46,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -90,7 +91,7 @@ import org.eclipse.jetty.server.Server;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -249,11 +250,19 @@ public class CliCoordinator extends ServerRunnable
               ZkPathsConfig zkPaths
           )
           {
+            boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
+            ExecutorService callBackExec;
+            if (useHttpLoadQueuePeon) {
+              callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
+            } else {
+              callBackExec = Execs.multiThreaded(config.getNumCuratorCallBackThreads(), "LoadQueuePeon"
+                                                                                        + "-callbackexec--%d");
+            }
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,
                 factory.create(1, "Master-PeonExec--%d"),
-                Executors.newSingleThreadExecutor(),
+                callBackExec,
                 config,
                 httpClient,
                 zkPaths

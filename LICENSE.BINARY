@@ -502,8 +502,8 @@ BINARY/JAVA-CORE
     This product bundles JDBI version 2.63.1.
       * org.jdbi:jdbi
 
-    This product bundles LZ4 Java version 1.5.0.
-      * org.lz4:lz4-java
+    This product bundles LZ4 Java version 1.6.0.
+      * org.lz4:java
 
     This product bundles MapDB version 1.0.8.
       * org.mapdb:mapdb
@@ -649,7 +649,7 @@ BINARY/EXTENSIONS/druid-bloom-filter
 
 BINARY/EXTENSIONS/druid-datasketches
 
-    This product bundles DataSketches version 0.12.0.
+    This product bundles DataSketches version 0.13.3.
       * com.yahoo.datasketches:datasketches-core
       * com.yahoo.datasketches:memory
 

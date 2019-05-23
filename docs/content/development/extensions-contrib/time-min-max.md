@@ -24,7 +24,7 @@ title: "Timestamp Min/Max aggregators"
 
 # Timestamp Min/Max aggregators
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-time-min-max`.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-time-min-max`.
 
 These aggregators enable more precise calculation of min and max time of given events than `__time` column whose granularity is sparse, the same as query granularity.
 To use this feature, a "timeMin" or "timeMax" aggregator must be included at indexing time. 

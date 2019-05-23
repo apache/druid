@@ -40,14 +40,14 @@
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
 
     <developers>
         <developer>
-            <name>Druid Committers</name>
-            <url>http://druid.io/community/index.html#committers</url>
+            <name>Apache Druid Committers</name>
+            <url>https://druid.apache.org/community/#committers</url>
         </developer>
     </developers>
 
@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <avatica.version>1.10.0</avatica.version>
+        <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.1.0</fastutil.version>
@@ -94,7 +94,7 @@
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
-        <powermock.version>1.6.6</powermock.version>
+        <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
@@ -173,6 +173,9 @@
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
         <module>extensions-contrib/momentsketch</module>
+        <module>extensions-contrib/moving-average-query</module>
+        <module>extensions-contrib/tdigestsketch</module>
+        <module>extensions-contrib/influxdb-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -433,6 +436,11 @@
                 <version>3.0.0</version>
             </dependency>
             <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.0</version>
+            </dependency>
+            <dependency>
                 <groupId>org.glassfish</groupId>
                 <artifactId>javax.el</artifactId>
                 <version>3.0.0</version>
@@ -594,7 +602,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.5.0</version>
+                <version>1.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -710,12 +718,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>5.2</version>
+                <version>7.1</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>5.2</version>
+                <version>7.1</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
@@ -726,7 +734,7 @@
             <dependency>
                 <groupId>org.gridkit.lab</groupId>
                 <artifactId>jvm-attach-api</artifactId>
-                <version>1.2</version>
+                <version>1.5</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -789,7 +797,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>3.4</version>
+                <version>4.0.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -987,7 +995,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.14</version>
+                        <version>8.20</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -1535,7 +1543,7 @@
                             <excludes>
                                 <exclude>publications/**</exclude>
                                 <exclude>codestyle/*-forbidden-apis.txt</exclude>
-                                <exclude>quickstart/tutorial/conf/**</exclude>
+                                <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
@@ -1551,11 +1559,12 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS.md</exclude>
+                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
+                                <exclude>src/**/*.snap</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

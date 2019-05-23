@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Parquet Extension"
+title: "Apache Parquet Extension"
 ---
 
 <!--
@@ -22,9 +22,9 @@ title: "Druid Parquet Extension"
   ~ under the License.
   -->
   
-# Druid Parquet Extension
+# Apache Parquet Extension
 
-This module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 
+This Apache Druid (incubating) module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 
 Apache Parquet files. 
 
 Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
@@ -33,17 +33,20 @@ Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, 
 ## Parquet Hadoop Parser
 
 This extension provides two ways to parse Parquet files:
+
 * `parquet` - using a simple conversion contained within this extension 
 * `parquet-avro` - conversion to avro records with the `parquet-avro` library and using the `druid-avro-extensions`
  module to parse the avro data
 
 Selection of conversion method is controlled by parser type, and the correct hadoop input format must also be set in 
-the `ioConfig`,  `org.apache.druid.data.input.parquet.DruidParquetInputFormat` for `parquet` and 
-`org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat` for `parquet-avro`.
+the `ioConfig`:
+
+* `org.apache.druid.data.input.parquet.DruidParquetInputFormat` for `parquet`
+* `org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat` for `parquet-avro`
  
 
 Both parse options support auto field discovery and flattening if provided with a 
-[flattenSpec](../../ingestion/flatten-json.html) with `parquet` or `avro` as the `format`. Parquet nested list and map 
+[flattenSpec](../../ingestion/flatten-json.html) with `parquet` or `avro` as the format. Parquet nested list and map 
 [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) _should_ operate correctly with 
 json path expressions for all supported types. `parquet-avro` sets a hadoop job property 
 `parquet.avro.add-list-element-records` to `false` (which normally defaults to `true`), in order to 'unwrap' primitive 

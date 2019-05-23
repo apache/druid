@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-This module provides druid aggregators based on http://datasketches.github.io/ .
+This module provides Druid aggregators based on https://datasketches.github.io/.
 
 Credits: This module is a result of feedback and work done by following people.
 

@@ -22,7 +22,6 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidDataSource;
@@ -30,7 +29,9 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -38,9 +39,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -48,19 +47,18 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -219,83 +217,200 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  private Pair<DataSegment, Boolean> usedPayloadMapper(
+      final int index,
+      final ResultSet resultSet,
+      final StatementContext context
+  ) throws SQLException
+  {
+    try {
+      return new Pair<>(
+          jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class),
+          resultSet.getBoolean("used")
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Gets a list of all datasegments that overlap the provided interval along with thier used status.
+   */
+  private List<Pair<DataSegment, Boolean>> getDataSegmentsOverlappingInterval(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> handle.createQuery(
+            StringUtils.format(
+                "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start",
+                getSegmentsTable(),
+                connector.getQuoteString()
+            )
+        )
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("dataSource", dataSource)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString())
+        .map(this::usedPayloadMapper)
+        .list()
+    );
+  }
+
+  private List<Pair<DataSegment, Boolean>> getDataSegments(
+      final String dataSource,
+      final Collection<String> segmentIds,
+      final Handle handle
+  )
+  {
+    return segmentIds.stream().map(
+        segmentId -> Optional.ofNullable(
+            handle.createQuery(
+                StringUtils.format(
+                    "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
+                    getSegmentsTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("id", segmentId)
+            .map(this::usedPayloadMapper)
+            .first()
+        )
+        .orElseThrow(() -> new UnknownSegmentIdException(StringUtils.format("Cannot find segment id [%s]", segmentId)))
+    )
+    .collect(Collectors.toList());
+  }
+
+  /**
+   * Builds a VersionedIntervalTimeline containing used segments that overlap the intervals passed.
+   */
+  private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final Handle handle
+  )
+  {
+    return VersionedIntervalTimeline.forSegments(intervals
+        .stream()
+        .flatMap(interval -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start AND used = true",
+                    getSegmentsTable(),
+                    connector.getQuoteString()
+                )
+            )
+            .setFetchSize(connector.getStreamingFetchSize())
+            .bind("dataSource", dataSource)
+            .bind("start", interval.getStart().toString())
+            .bind("end", interval.getEnd().toString())
+            .map((i, resultSet, context) -> {
+              try {
+                return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            })
+            .list()
+            .stream()
+        )
+        .iterator()
+    );
+  }
+
   @Override
   public boolean enableDataSource(final String dataSource)
   {
     try {
-      final IDBI dbi = connector.getDBI();
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          (handle, status) -> VersionedIntervalTimeline.forSegments(
-              Iterators.transform(
-                  handle
-                      .createQuery(
-                          StringUtils.format(
-                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                              getSegmentsTable()
-                          )
-                      )
-                      .setFetchSize(connector.getStreamingFetchSize())
-                      .bind("dataSource", dataSource)
-                      .map(ByteArrayMapper.FIRST)
-                      .iterator(),
-                  payload -> {
-                    try {
-                      return jsonMapper.readValue(payload, DataSegment.class);
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-              )
-
-          )
-      );
-
-      final List<DataSegment> segments = new ArrayList<>();
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
-          Intervals.of("0000-01-01/3000-01-01")
-      );
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
-        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
-          segments.add(partitionChunk.getObject());
-        }
-      }
-
-      if (segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return false;
-      }
-
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              Batch batch = handle.createBatch();
-
-              for (DataSegment segment : segments) {
-                batch.add(
-                    StringUtils.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
-                        getSegmentsTable(),
-                        segment.getId()
-                    )
-                );
-              }
-              batch.execute();
-
-              return null;
-            }
-          }
-      );
+      return enableSegments(dataSource, Intervals.ETERNITY) != 0;
     }
     catch (Exception e) {
       log.error(e, "Exception enabling datasource %s", dataSource);
       return false;
     }
+  }
 
-    return true;
+  @Override
+  public int enableSegments(final String dataSource, final Interval interval)
+  {
+    List<Pair<DataSegment, Boolean>> segments = getDataSegmentsOverlappingInterval(dataSource, interval);
+    List<DataSegment> segmentsToEnable = segments.stream()
+        .filter(segment -> !segment.rhs && interval.contains(segment.lhs.getInterval()))
+        .map(segment -> segment.lhs)
+        .collect(Collectors.toList());
+
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = VersionedIntervalTimeline.forSegments(
+        segments.stream().filter(segment -> segment.rhs).map(segment -> segment.lhs).iterator()
+    );
+    VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segmentsToEnable.iterator());
+
+    return enableSegments(
+        segmentsToEnable,
+        versionedIntervalTimeline
+    );
+  }
+
+  @Override
+  public int enableSegments(final String dataSource, final Collection<String> segmentIds)
+  {
+    Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> data = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          List<DataSegment> segments = getDataSegments(dataSource, segmentIds, handle)
+              .stream()
+              .filter(pair -> !pair.rhs)
+              .map(pair -> pair.lhs)
+              .collect(Collectors.toList());
+
+          VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(
+              dataSource,
+              JodaUtils.condenseIntervals(segments.stream().map(segment -> segment.getInterval()).collect(Collectors.toList())),
+              handle
+          );
+          VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segments.iterator());
+
+          return new Pair<>(
+              segments,
+              versionedIntervalTimeline
+          );
+        }
+    );
+
+    return enableSegments(
+        data.lhs,
+        data.rhs
+    );
+  }
+
+  private int enableSegments(
+      final Collection<DataSegment> segments,
+      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline
+  )
+  {
+    if (segments.isEmpty()) {
+      log.warn("No segments found to update!");
+      return 0;
+    }
+
+    return connector.getDBI().withHandle(handle -> {
+      Batch batch = handle.createBatch();
+      segments
+          .stream()
+          .map(segment -> segment.getId())
+          .filter(segmentId -> !versionedIntervalTimeline.isOvershadowed(
+              segmentId.getInterval(),
+              segmentId.getVersion()
+          ))
+          .forEach(segmentId -> batch.add(
+              StringUtils.format(
+                  "UPDATE %s SET used=true WHERE id = '%s'",
+                  getSegmentsTable(),
+                  segmentId
+              )
+          ));
+      return batch.execute().length;
+    });
   }
 
   @Override
@@ -404,6 +519,61 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     catch (Exception e) {
       log.error(e, e.toString());
       return false;
+    }
+  }
+
+  @Override
+  public long disableSegments(String dataSource, Collection<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      return 0;
+    }
+    final long[] result = new long[1];
+    try {
+      connector.getDBI().withHandle(handle -> {
+        Batch batch = handle.createBatch();
+        segmentIds
+            .forEach(segmentId -> batch.add(
+                StringUtils.format(
+                    "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s' ",
+                    getSegmentsTable(),
+                    dataSource,
+                    segmentId
+                )
+            ));
+        final int[] resultArr = batch.execute();
+        result[0] = Arrays.stream(resultArr).filter(x -> x > 0).count();
+        return result[0];
+      });
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return result[0];
+  }
+
+  @Override
+  public int disableSegments(String dataSource, Interval interval)
+  {
+    try {
+      return connector.getDBI().withHandle(
+          handle -> handle
+              .createStatement(
+                  StringUtils
+                      .format(
+                          "UPDATE %s SET used=false WHERE datasource = :datasource "
+                          + "AND start >= :start AND %2$send%2$s <= :end",
+                          getSegmentsTable(),
+                          connector.getQuoteString()
+                      ))
+              .bind("datasource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 

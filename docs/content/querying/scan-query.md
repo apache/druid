@@ -24,7 +24,7 @@ title: "Scan query"
 
 # Scan query
 
-The Scan query returns raw Druid rows in streaming mode.  The biggest difference between the Select query and the Scan
+The Scan query returns raw Apache Druid (incubating) rows in streaming mode.  The biggest difference between the Select query and the Scan
 query is that the Scan query does not retain all the returned rows in memory before they are returned to the client.  
 The Select query _will_ retain the rows in memory, causing memory pressure if too many rows are returned.  
 The Scan query can return all the rows without issuing another pagination query.
@@ -188,9 +188,9 @@ the query context (see the Query Context Properties section).
 The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
 In legacy mode you can expect the following behavior changes:
 
-- The __time column is returned as "timestamp" rather than "__time". This will take precedence over any other column
-you may have that is named "timestamp".
-- The __time column is included in the list of columns even if you do not specifically ask for it.
+- The `__time` column is returned as `"timestamp"` rather than `"__time"`. This will take precedence over any other column
+you may have that is named `"timestamp"`.
+- The `__time` column is included in the list of columns even if you do not specifically ask for it.
 - Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
 
 Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting

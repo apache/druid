@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.Map;
@@ -97,5 +98,13 @@ public class NotHavingSpec extends BaseHavingSpec
   public int hashCode()
   {
     return havingSpec != null ? havingSpec.hashCode() : 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_NOT)
+        .appendCacheable(havingSpec)
+        .build();
   }
 }

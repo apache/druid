@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -40,6 +43,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.UnknownSegmentIdException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -686,6 +690,55 @@ public class DataSourcesResource
     }
   }
 
+  @POST
+  @Path("/{dataSourceName}/markUnused")
+  @ResourceFilters(DatasourceResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response markDatasourceUnused(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDatasourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      log.warn("datasource not found [%s]", dataSourceName);
+      return Response.noContent().build();
+    }
+
+    long markedSegmentCount = 0;
+    try {
+      final Interval interval = payload.getInterval();
+      final Set<String> segmentIds = payload.getSegmentIds();
+      if (interval != null) {
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, interval);
+      } else if (segmentIds != null) {
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
+      }
+    }
+    catch (Exception e) {
+      return Response.serverError().entity(
+          ImmutableMap.of(
+              "error",
+              "Exception occurred.",
+              "message",
+              e.toString()
+          )
+      ).build();
+
+    }
+    if (markedSegmentCount == 0) {
+      return Response.noContent().build();
+    }
+    return Response.ok().build();
+  }
+
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
@@ -699,5 +752,93 @@ public class DataSourcesResource
       }
     }
     return false;
+  }
+
+  @POST
+  @Path("/{dataSourceName}/markUsed")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response enableDatasourceSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      MarkDatasourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      return Response.noContent().build();
+    }
+
+    int modified;
+    try {
+      if (payload.getInterval() != null) {
+        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getInterval());
+      } else {
+        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getSegmentIds());
+      }
+    }
+    catch (Exception e) {
+      if (e.getCause() instanceof UnknownSegmentIdException) {
+        return Response.status(Response.Status.NOT_FOUND).entity(
+            ImmutableMap.of(
+                "message",
+                e.getCause().getMessage()
+            )
+        ).build();
+      }
+      return Response.serverError().entity(
+          ImmutableMap.of(
+              "error",
+              "Exception occurred.",
+              "message",
+              e.getMessage()
+          )
+      ).build();
+    }
+
+    if (modified == 0) {
+      return Response.noContent().build();
+    }
+
+    return Response.ok().build();
+  }
+
+  @VisibleForTesting
+  protected static class MarkDatasourceSegmentsPayload
+  {
+    private final Interval interval;
+    private final Set<String> segmentIds;
+
+    @JsonCreator
+    public MarkDatasourceSegmentsPayload(
+        @JsonProperty("interval") Interval interval,
+        @JsonProperty("segmentIds") Set<String> segmentIds
+    )
+    {
+      this.interval = interval;
+      this.segmentIds = segmentIds;
+    }
+
+    @JsonProperty
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @JsonProperty
+    public Set<String> getSegmentIds()
+    {
+      return segmentIds;
+    }
+
+    public boolean isValid()
+    {
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+    }
   }
 }

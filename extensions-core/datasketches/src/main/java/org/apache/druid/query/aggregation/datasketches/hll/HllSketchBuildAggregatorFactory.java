@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 /**
  * This aggregator factory is for building sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
- * @author Alexander Saydakov
  */
 public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {

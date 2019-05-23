@@ -135,14 +135,21 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
                && (operands.size() <= 3 || operands.get(3).isA(SqlKind.LITERAL))) {
       // Granularity is a literal. Special case since we can use an extractionFn here.
       final Period period = new Period(RexLiteral.stringValue(operands.get(1)));
-      final DateTime origin =
-          operands.size() > 2 && !RexLiteral.isNullLiteral(operands.get(2))
-          ? Calcites.calciteDateTimeLiteralToJoda(operands.get(2), plannerContext.getTimeZone())
-          : null;
-      final DateTimeZone timeZone =
-          operands.size() > 3 && !RexLiteral.isNullLiteral(operands.get(3))
-          ? DateTimes.inferTzFromString(RexLiteral.stringValue(operands.get(3)))
-          : plannerContext.getTimeZone();
+
+      final DateTime origin = OperatorConversions.getOperandWithDefault(
+          call.getOperands(),
+          2,
+          operand -> Calcites.calciteDateTimeLiteralToJoda(operands.get(2), plannerContext.getTimeZone()),
+          null
+      );
+
+      final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
+          call.getOperands(),
+          3,
+          operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
+          plannerContext.getTimeZone()
+      );
+
       final PeriodGranularity granularity = new PeriodGranularity(period, origin, timeZone);
       return applyTimestampFloor(druidExpressions.get(0), granularity, plannerContext.getExprMacroTable());
     } else {

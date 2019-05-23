@@ -5369,6 +5369,12 @@ public class GroupByQueryRunnerTest
             new BaseHavingSpec()
             {
               @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
+              @Override
               public boolean eval(Row row)
               {
                 return (row.getMetric("idx_subpostagg").floatValue() < 3800);
@@ -5629,6 +5635,12 @@ public class GroupByQueryRunnerTest
         .setHavingSpec(
             new BaseHavingSpec()
             {
+              @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
               @Override
               public boolean eval(Row row)
               {
@@ -6304,9 +6316,11 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("market", "market")
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("alias", "alias")
         ))
         .setAggregatorSpecs(
             Arrays.asList(

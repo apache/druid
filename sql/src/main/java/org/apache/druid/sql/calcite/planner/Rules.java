@@ -72,7 +72,6 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
-import org.apache.druid.sql.calcite.rule.DruidRelToBindableRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
@@ -187,7 +186,7 @@ public class Rules
         );
     return ImmutableList.of(
         Programs.sequence(hepProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
-        Programs.sequence(hepProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext, queryMaker)))
+        Programs.sequence(hepProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
 
@@ -196,28 +195,29 @@ public class Rules
       final QueryMaker queryMaker
   )
   {
-    return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext, queryMaker))
+    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList.<RelOptRule>builder()
+        .addAll(baseRuleSet(plannerContext))
         .add(DruidRelToDruidRule.instance())
-        .build();
+        .add(new DruidTableScanRule(queryMaker))
+        .addAll(DruidRules.rules());
+
+    if (plannerContext.getPlannerConfig().getMaxSemiJoinRowsInMemory() > 0) {
+      retVal.add(DruidSemiJoinRule.instance());
+    }
+
+    return retVal.build();
   }
 
-  private static List<RelOptRule> bindableConventionRuleSet(
-      final PlannerContext plannerContext,
-      final QueryMaker queryMaker
-  )
+  private static List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext, queryMaker))
+        .addAll(baseRuleSet(plannerContext))
         .addAll(Bindables.RULES)
         .add(AggregateReduceFunctionsRule.INSTANCE)
         .build();
   }
 
-  private static List<RelOptRule> baseRuleSet(
-      final PlannerContext plannerContext,
-      final QueryMaker queryMaker
-  )
+  private static List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
   {
     final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
@@ -236,21 +236,9 @@ public class Rules
       rules.add(AggregateExpandDistinctAggregatesRule.JOIN);
     }
 
-    if (plannerConfig.isUseFallback()) {
-      rules.add(DruidRelToBindableRule.instance());
-    }
-
     rules.add(SortCollapseRule.instance());
     rules.add(CaseFilteredAggregatorRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
-
-    // Druid-specific rules.
-    rules.add(new DruidTableScanRule(queryMaker));
-    rules.addAll(DruidRules.rules());
-
-    if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
-      rules.add(DruidSemiJoinRule.instance());
-    }
 
     return rules.build();
   }

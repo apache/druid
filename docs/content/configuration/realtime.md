@@ -24,7 +24,7 @@ title: "Realtime Process Configuration"
 
 # Realtime Process Configuration
 
-For general Realtime Process information, see [here](../design/realtime.html).
+For general Apache Druid (incubating) Realtime Process information, see [here](../design/realtime.html).
 
 Runtime Configuration
 ---------------------
@@ -95,4 +95,4 @@ You can optionally configure caching to be enabled on the realtime process by se
 |`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`["select"]`|
 |`druid.realtime.cache.maxEntrySize`|positive integer or -1|Maximum size of an individual cache entry (processed results for one segment), in bytes, or -1 for unlimited.|`1000000` (1MB)|
 
-See [cache configuration](caching.html) for how to configure cache settings.
+See [cache configuration](index.html#cache-configuration) for how to configure cache settings.

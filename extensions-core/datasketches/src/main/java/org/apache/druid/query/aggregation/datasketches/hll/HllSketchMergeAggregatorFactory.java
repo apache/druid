@@ -25,6 +25,8 @@ import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -35,7 +37,6 @@ import javax.annotation.Nullable;
 /**
  * This aggregator factory is for merging existing sketches.
  * The input column must contain {@link HllSketch}
- * @author Alexander Saydakov
  */
 public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 {
@@ -49,6 +50,23 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   )
   {
     super(name, fieldName, lgK, tgtHllType);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && other instanceof HllSketchMergeAggregatorFactory) {
+      HllSketchMergeAggregatorFactory castedOther = (HllSketchMergeAggregatorFactory) other;
+
+      return new HllSketchMergeAggregatorFactory(
+              getName(),
+              getName(),
+              Math.max(getLgK(), castedOther.getLgK()),
+              getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType()
+      );
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @Override

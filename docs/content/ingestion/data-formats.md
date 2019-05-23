@@ -24,7 +24,7 @@ title: "Data Formats for Ingestion"
 
 # Data Formats for Ingestion
 
-Druid can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
+Apache Druid (incubating) can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
 We welcome any contributions to new formats.
 
 For additional data formats, please see our [extensions list](../development/extensions.html).

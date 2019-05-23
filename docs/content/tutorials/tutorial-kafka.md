@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Tutorial: Load streaming data from Kafka"
+title: "Tutorial: Load streaming data from Apache Kafka"
 ---
 
 <!--
@@ -26,7 +26,7 @@ title: "Tutorial: Load streaming data from Kafka"
 
 ## Getting started
 
-This tutorial demonstrates how to load data from a Kafka stream, using the Druid Kafka indexing service.
+This tutorial demonstrates how to load data into Apache Druid (incubating) from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. You 
@@ -35,13 +35,13 @@ don't need to have loaded any data yet.
 ## Download and start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 0.10.2.2. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 2.1.0. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
-tar -xzf kafka_2.12-0.10.2.2.tgz
-cd kafka_2.12-0.10.2.2
+curl -O https://archive.apache.org/dist/kafka/2.1.0/kafka_2.12-2.1.0.tgz
+tar -xzf kafka_2.12-2.1.0.tgz
+cd kafka_2.12-2.1.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -65,7 +65,7 @@ service, we will need to submit a supervisor spec to the Druid overlord by runni
 curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8090/druid/indexer/v1/supervisor
 ```
 
-If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia-kafka"}`.
+If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia"}`.
 
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).

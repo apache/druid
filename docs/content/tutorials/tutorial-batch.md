@@ -26,7 +26,7 @@ title: "Tutorial: Loading a file"
 
 ## Getting started
 
-This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
+This tutorial demonstrates how to perform a batch file load, using Apache Druid (incubating)'s native batch ingestion.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. You 
@@ -121,7 +121,7 @@ This script will POST an ingestion task to the Druid Overlord and poll Druid unt
 Run the following command from Druid package root:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/wikipedia-index.json 
+bin/post-index-task --file quickstart/tutorial/wikipedia-index.json --url http://localhost:8081
 ```
 
 You should see output like the following:
@@ -129,8 +129,8 @@ You should see output like the following:
 ```bash
 Beginning indexing data for wikipedia
 Task started: index_wikipedia_2018-07-27T06:37:44.323Z
-Task log:     http://localhost:8090/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/log
-Task status:  http://localhost:8090/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/status
+Task log:     http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/log
+Task status:  http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/status
 Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
 Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
 Task finished with status: SUCCESS
@@ -153,7 +153,7 @@ Let's briefly discuss how we would've submitted the ingestion task without using
 To submit the task, POST it to Druid in a new terminal window from the apache-druid-#{DRUIDVERSION} directory:
 
 ```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8090/druid/indexer/v1/task
+curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task
 ```
 
 Which will print the ID of the task if the submission was successful:

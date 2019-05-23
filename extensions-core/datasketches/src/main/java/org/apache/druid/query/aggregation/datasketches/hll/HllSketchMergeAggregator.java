@@ -28,7 +28,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 /**
  * This aggregator merges existing sketches.
  * The input column must contain {@link HllSketch}
- * @author Alexander Saydakov
  */
 public class HllSketchMergeAggregator implements Aggregator
 {

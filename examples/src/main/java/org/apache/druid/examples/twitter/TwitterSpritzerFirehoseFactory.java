@@ -78,14 +78,13 @@ import java.util.regex.Pattern;
  * can have number format exceptions), so it might be necessary to extract raw json and process it
  * separately.  If so, set twitter4.jsonStoreEnabled=true and look at DataObjectFactory#getRawJSON();
  * com.fasterxml.jackson.databind.ObjectMapper should be used to parse.
- *
- * @author pbaclace
  */
 @JsonTypeName("twitzer")
 public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
   private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
   private static final Pattern sourcePattern = Pattern.compile("<a[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE);
+  private static final int DEFAULT_QUEUE_SIZE = 2000;
 
   /**
    * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
@@ -142,9 +141,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 
     final TwitterStream twitterStream;
     final StatusListener statusListener;
-    final int QUEUE_SIZE = 2000;
     /** This queue is used to move twitter events from the twitter4j thread to the druid ingest thread.   */
-    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(QUEUE_SIZE);
+    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(DEFAULT_QUEUE_SIZE);
     final long startMsec = System.currentTimeMillis();
 
     //

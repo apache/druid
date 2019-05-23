@@ -71,6 +71,7 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -95,6 +96,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final List<String> allowedHadoopPrefix;
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
+  private final boolean useYarnRMJobStatusFallback;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -121,7 +123,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions
+      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
   )
   {
     this.workingPath = workingPath;
@@ -162,6 +165,8 @@ public class HadoopTuningConfig implements TuningConfig
       }
     }
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+
+    this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
   }
 
   @JsonProperty
@@ -295,6 +300,12 @@ public class HadoopTuningConfig implements TuningConfig
     return maxParseExceptions;
   }
 
+  @JsonProperty
+  public boolean isUseYarnRMJobStatusFallback()
+  {
+    return useYarnRMJobStatusFallback;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -319,7 +330,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 
@@ -347,7 +359,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 
@@ -375,7 +388,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 }
