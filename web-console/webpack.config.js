@@ -55,7 +55,8 @@ module.exports = (env) => {
       port: 18081,
       proxy: {
         '/status': proxyTarget,
-        '/druid': proxyTarget
+        '/druid': proxyTarget,
+        '/proxy': proxyTarget
       }
     },
     module: {

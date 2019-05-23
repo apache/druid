@@ -195,7 +195,7 @@ import static org.apache.druid.query.QueryPlus.wrap;
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
   private static final long POLL_RETRY_MS = 100;
 
   private static TestingCluster zkServer;
@@ -203,6 +203,10 @@ public class KafkaIndexTaskTest
   private static ServiceEmitter emitter;
   private static ListeningExecutorService taskExec;
   private static int topicPostfix;
+
+  static {
+    new KafkaIndexTaskModule().getJacksonModules().forEach(OBJECT_MAPPER::registerModule);
+  }
 
   private final List<Task> runningTasks = new ArrayList<>();
 
@@ -244,7 +248,7 @@ public class KafkaIndexTaskTest
 
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
-      objectMapper.convertValue(
+      OBJECT_MAPPER.convertValue(
           new StringInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("timestamp", "iso", null),
@@ -272,7 +276,7 @@ public class KafkaIndexTaskTest
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
       null,
-      objectMapper
+      OBJECT_MAPPER
   );
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
@@ -730,10 +734,11 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc7 = sd(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
-          new KafkaDataSourceMetadata(
-              new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
-          ),
-          metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
+        ),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
 
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
@@ -2011,7 +2016,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
-    Map<Integer, Long> currentOffsets = objectMapper.readValue(
+    Map<Integer, Long> currentOffsets = OBJECT_MAPPER.readValue(
         task.getRunner().pause().getEntity().toString(),
         new TypeReference<Map<Integer, Long>>()
         {
@@ -2147,7 +2152,7 @@ public class KafkaIndexTaskTest
     final Map<String, Object> context = new HashMap<>();
     context.put(
         SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY,
-        objectMapper.writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF).writeValueAsString(sequences)
+        OBJECT_MAPPER.writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF).writeValueAsString(sequences)
     );
 
     final KafkaIndexTask task = createTask(
@@ -2267,7 +2272,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
     //verify the 2 indexed records
-    final QuerySegmentSpec firstInterval = objectMapper.readValue(
+    final QuerySegmentSpec firstInterval = OBJECT_MAPPER.readValue(
         "\"2008/2010\"", QuerySegmentSpec.class
     );
     Iterable<ScanResultValue> scanResultValues = scanData(task, firstInterval);
@@ -2287,7 +2292,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
-    final QuerySegmentSpec rollbackedInterval = objectMapper.readValue(
+    final QuerySegmentSpec rollbackedInterval = OBJECT_MAPPER.readValue(
         "\"2010/2012\"", QuerySegmentSpec.class
     );
     scanResultValues = scanData(task, rollbackedInterval);
@@ -2304,7 +2309,7 @@ public class KafkaIndexTaskTest
       kafkaProducer.commitTransaction();
     }
 
-    final QuerySegmentSpec endInterval = objectMapper.readValue(
+    final QuerySegmentSpec endInterval = OBJECT_MAPPER.readValue(
         "\"2008/2049\"", QuerySegmentSpec.class
     );
     Iterable<ScanResultValue> scanResultValues1 = scanData(task, endInterval);
@@ -2386,6 +2391,36 @@ public class KafkaIndexTaskTest
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    // This is both a serde test and a regression test for https://github.com/apache/incubator-druid/issues/7724.
+
+    final KafkaIndexTask task = createTask(
+        "taskid",
+        DATA_SCHEMA.withTransformSpec(
+            new TransformSpec(
+                null,
+                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of()),
+            ImmutableMap.of(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
+    );
+
+    final Task task1 = OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsBytes(task), Task.class);
+    Assert.assertEquals(task, task1);
   }
 
   private List<ScanResultValue> scanData(final Task task, QuerySegmentSpec spec)
@@ -2513,7 +2548,7 @@ public class KafkaIndexTaskTest
       if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
         final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
         checkpoints.put(0, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-        final String checkpointsJson = objectMapper
+        final String checkpointsJson = OBJECT_MAPPER
             .writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF)
             .writeValueAsString(checkpoints);
         context.put(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY, checkpointsJson);
@@ -2530,7 +2565,7 @@ public class KafkaIndexTaskTest
         null,
         null,
         rowIngestionMetersFactory,
-        objectMapper
+        OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
@@ -2544,7 +2579,7 @@ public class KafkaIndexTaskTest
         dataSchema.getAggregators(),
         dataSchema.getGranularitySpec(),
         dataSchema.getTransformSpec(),
-        objectMapper
+        OBJECT_MAPPER
     );
   }
 
@@ -2861,7 +2896,7 @@ public class KafkaIndexTaskTest
 
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = objectMapper.readValue(
+    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
         new TypeReference<Map<String, TaskReport>>()
         {
