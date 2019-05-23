@@ -15,7 +15,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
     vertical={true}
   >
     <div
-      className="topPane"
+      className="top-pane"
     >
       <ViewControlBar
         label="Supervisors"
@@ -268,7 +268,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
       </AsyncActionDialog>
     </div>
     <div
-      className="bottomPane"
+      className="bottom-pane"
     >
       <ViewControlBar
         label="Tasks"

@@ -38,7 +38,6 @@ import {
 } from '../../utils';
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
-import 'react-splitter-layout/lib/index.css';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
@@ -705,8 +704,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       />
     </Menu>;
 
-    // tslint:disable-next-line:radix
-    return<>
+    return <>
       <SplitterLayout
         customClassName={'tasks-view app-view'}
         vertical
@@ -716,7 +714,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         secondaryMinSize={30}
         onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
       >
-        <div className={'topPane'}>
+        <div className={'top-pane'}>
           <ViewControlBar label="Supervisors">
             <Button
               icon={IconNames.REFRESH}
@@ -736,7 +734,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           </ViewControlBar>
           {this.renderSupervisorTable()}
         </div>
-        <div className={'bottomPane'}>
+        <div className={'bottom-pane'}>
           <ViewControlBar label="Tasks">
             <Label>Group by</Label>
             <ButtonGroup>

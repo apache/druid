@@ -14,7 +14,7 @@ exports[`describe segments-view segments view snapshot 1`] = `
   vertical={true}
 >
   <div
-    className="topPane"
+    className="top-pane"
   >
     <ViewControlBar
       label="Historicals"
@@ -258,7 +258,7 @@ exports[`describe segments-view segments view snapshot 1`] = `
     />
   </div>
   <div
-    className="bottomPane"
+    className="bottom-pane"
   >
     <ViewControlBar
       label="MiddleManagers"

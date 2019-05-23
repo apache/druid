@@ -34,7 +34,6 @@ import {
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 
-import 'react-splitter-layout/lib/index.css';
 import './servers-view.scss';
 
 const serverTableColumns: string[] = ['Server', 'Tier', 'Curr size', 'Max size', 'Usage', 'Load/drop queues', 'Host', 'Port'];
@@ -433,7 +432,7 @@ WHERE "server_type" = 'historical'`);
       secondaryMinSize={30}
       onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
     >
-      <div className={'topPane'}>
+      <div className={'top-pane'}>
         <ViewControlBar label="Historicals">
           <Button
             icon={IconNames.REFRESH}
@@ -461,7 +460,7 @@ WHERE "server_type" = 'historical'`);
         </ViewControlBar>
         {this.renderServersTable()}
       </div>
-      <div className={'bottomPane'}>
+      <div className={'bottom-pane'}>
         <ViewControlBar label="MiddleManagers">
           <Button
             icon={IconNames.REFRESH}
