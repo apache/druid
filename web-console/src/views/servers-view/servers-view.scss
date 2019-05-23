@@ -26,6 +26,12 @@
     margin-bottom: $standard-padding;
   }
 
+  .splitter-layout.splitter-layout-vertical > .layout-splitter{
+    height: 2px;
+    background-color: #6d8ea9;
+    padding-top: 5px;
+  }
+
   .ReactTable{
     position: absolute;
     top: 50px;

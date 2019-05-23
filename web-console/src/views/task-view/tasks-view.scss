@@ -35,6 +35,12 @@
   }
 
 }
+
 .bottomPane {
   padding-top: 15px;
+}
+
+.splitter-layout.splitter-layout-vertical > .layout-splitter{
+  height: 2px;
+  background-color: #6d8ea9;
 }
