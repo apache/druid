@@ -30,6 +30,12 @@ import java.util.Collection;
 @PublicApi
 public interface WorkerTaskRunner extends TaskRunner
 {
+  enum ActionType
+  {
+    ENABLE,
+    DISABLE
+  }
+
   /**
    * List of known workers who can accept tasks for running
    */
@@ -49,7 +55,4 @@ public interface WorkerTaskRunner extends TaskRunner
 
   Collection<Task> getPendingTaskPayloads();
 
-  void enableWorker(String host);
-
-  void disableWorker(String host);
 }

@@ -47,7 +47,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.zookeeper.CreateMode;
-import org.easymock.EasyMock;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -66,7 +65,6 @@ public class RemoteTaskRunnerTestUtils
 
   private CuratorFramework cf;
   private ObjectMapper jsonMapper;
-  private HttpClient httpClient;
 
   RemoteTaskRunnerTestUtils()
   {
@@ -84,11 +82,6 @@ public class RemoteTaskRunnerTestUtils
     return jsonMapper;
   }
 
-  HttpClient getHttpClient()
-  {
-    return httpClient;
-  }
-
   void setUp() throws Exception
   {
     testingCluster = new TestingCluster(1);
@@ -103,8 +96,6 @@ public class RemoteTaskRunnerTestUtils
     cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
     cf.create().creatingParentsIfNeeded().forPath(tasksPath);
-
-    httpClient = EasyMock.createMock(HttpClient.class);
   }
 
   void tearDown() throws Exception
@@ -139,7 +130,7 @@ public class RemoteTaskRunnerTestUtils
         ),
         cf,
         new PathChildrenCacheFactory.Builder(),
-        httpClient,
+        null,
         DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
         provisioningStrategy
     );

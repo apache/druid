@@ -50,6 +50,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
+import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -118,6 +119,7 @@ public class OverlordResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
+  private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -130,7 +132,8 @@ public class OverlordResource
       TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       AuditManager auditManager,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
   )
   {
     this.taskMaster = taskMaster;
@@ -140,6 +143,7 @@ public class OverlordResource
     this.configManager = configManager;
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
+    this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
   }
 
   @POST
@@ -733,7 +737,7 @@ public class OverlordResource
   @ResourceFilters(StateResourceFilter.class)
   public Response enableWorker(@PathParam("host") final String host)
   {
-    return changeWorkerStatus(host, "enable");
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.ENABLE);
   }
 
   @POST
@@ -742,50 +746,30 @@ public class OverlordResource
   @ResourceFilters(StateResourceFilter.class)
   public Response disableWorker(@PathParam("host") final String host)
   {
-    return changeWorkerStatus(host, "disable");
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
   }
 
-  private Response changeWorkerStatus(String host, String action)
+  private Response changeWorkerStatus(String host, WorkerTaskRunner.ActionType action)
   {
-    return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        taskRunner -> {
-          if (taskRunner instanceof WorkerTaskRunner) {
-            try {
-              if ("disable".equals(action)) {
-                ((WorkerTaskRunner) taskRunner).disableWorker(host);
-                return Response.ok(ImmutableMap.of(host, "disabled")).build();
-              } else if ("enable".equals(action)) {
-                ((WorkerTaskRunner) taskRunner).enableWorker(host);
-                return Response.ok(ImmutableMap.of(host, "enabled")).build();
-              } else {
-                return Response.serverError()
-                               .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
-                               .build();
-              }
-            }
-            catch (Exception e) {
-              log.error(e, "Error in posting [%s] action to [%s]", action, host);
-              return Response.serverError()
-                             .entity(ImmutableMap.of("error", e.getMessage()))
-                             .build();
-            }
-          } else {
-            log.debug(
-                "Task runner [%s] of type [%s] does not support worker %s action",
-                taskRunner,
-                taskRunner.getClass().getCanonicalName(),
-                action
-            );
-            return Response.serverError()
-                           .entity(ImmutableMap.of(
-                               "error",
-                               "Task Runner does not support worker " + action + " action"
-                           ))
-                           .build();
-          }
-        }
-    );
+    try {
+      if (WorkerTaskRunner.ActionType.DISABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.disableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "disabled")).build();
+      } else if (WorkerTaskRunner.ActionType.ENABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.enableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "enabled")).build();
+      } else {
+        return Response.serverError()
+                       .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Error in posting [%s] action to [%s]", action, host);
+      return Response.serverError()
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
+    }
   }
 
   @GET
