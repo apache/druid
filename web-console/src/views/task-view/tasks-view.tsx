@@ -40,7 +40,7 @@ import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
-const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Duration', 'Actions'];
+const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Host', 'Duration', 'Actions'];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -176,6 +176,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        console.log(resp.data);
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -219,12 +220,12 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     //   FAILED => 1
 
     this.taskQueryManager.runQuery(`SELECT
-  "task_id", "type", "datasource", "created_time",
+  "task_id", "type", "datasource", "created_time", "location",
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   CASE WHEN "status" = 'RUNNING' THEN
    (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
   ELSE 1 END AS "rank",
-  "location", "duration", "error_msg"
+  "duration", "error_msg"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
@@ -634,6 +635,13 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
           {
+            Header: 'Host',
+            accessor: 'location',
+            width: 120,
+            Aggregated: () => '',
+            show: taskTableColumnSelectionHandler.showColumn('Host')
+          },
+          {
             Header: 'Duration',
             accessor: 'duration',
             filterable: false,
@@ -648,6 +656,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             width: 70,
             filterable: false,
             Cell: row => {
+              console.log(row);
               if (row.aggregated) return '';
               const id = row.value;
               const { status } = row.original;
