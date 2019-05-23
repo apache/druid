@@ -66,19 +66,16 @@ import java.io.IOException;
 import java.net.HttpCookie;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -86,15 +83,11 @@ import java.util.stream.Collectors;
 public class KerberosAuthenticator implements Authenticator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
-  private static final Pattern HADOOP_AUTH_COOKIE_REGEX = Pattern.compile(".*p=(\\S+)&t=.*");
-  public static final List<String> DEFAULT_EXCLUDED_PATHS = Collections.emptyList();
   public static final String SIGNED_TOKEN_ATTRIBUTE = "signedToken";
 
-  private final DruidNode node;
   private final String serverPrincipal;
   private final String serverKeytab;
   private final String authToLocal;
-  private final List<String> excludedPaths;
   private final String cookieSignatureSecret;
   private final String authorizerName;
   private final String name;
@@ -105,17 +98,14 @@ public class KerberosAuthenticator implements Authenticator
       @JsonProperty("serverPrincipal") String serverPrincipal,
       @JsonProperty("serverKeytab") String serverKeytab,
       @JsonProperty("authToLocal") String authToLocal,
-      @JsonProperty("excludedPaths") List<String> excludedPaths,
       @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
       @JsonProperty("authorizerName") String authorizerName,
       @JsonProperty("name") String name,
       @JacksonInject @Self DruidNode node
   )
   {
-    this.node = node;
     this.serverKeytab = serverKeytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
-    this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
     this.name = Preconditions.checkNotNull(name);
@@ -232,14 +222,8 @@ public class KerberosAuthenticator implements Authenticator
           initializeKerberosLogin();
         }
 
-        // Checking for excluded paths is Druid-specific, not from hadoop-auth
-        String path = ((HttpServletRequest) request).getRequestURI();
-        if (isExcluded(path)) {
-          filterChain.doFilter(request, response);
-        } else {
-          // Run the original doFilter method, but with modifications to error handling
-          doFilterSuper(request, response, filterChain);
-        }
+        // Run the original doFilter method, but with modifications to error handling
+        doFilterSuper(request, response, filterChain);
       }
 
 
@@ -425,16 +409,6 @@ public class KerberosAuthenticator implements Authenticator
   public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
   {
     throw new UnsupportedOperationException("JDBC Kerberos auth not supported yet");
-  }
-
-  private boolean isExcluded(String path)
-  {
-    for (String excluded : excludedPaths) {
-      if (path.startsWith(excluded)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   @Override
