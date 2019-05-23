@@ -294,8 +294,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
           query.getPostAggregatorSpecs(),
-          query.getTopNMetricSpec()
-               .getMetricName(query.getDimensionSpec())
+          query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
       );
 
       @Override
@@ -419,13 +418,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   }
               );
 
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
-              }
               if (isResultLevelCache) {
                 Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
                 while (postItr.hasNext() && resultIter.hasNext()) {
                   vals.put(postItr.next().getName(), resultIter.next());
+                }
+              } else {
+                for (PostAggregator postAgg : postAggs) {
+                  vals.put(postAgg.getName(), postAgg.compute(vals));
                 }
               }
               retVal.add(vals);

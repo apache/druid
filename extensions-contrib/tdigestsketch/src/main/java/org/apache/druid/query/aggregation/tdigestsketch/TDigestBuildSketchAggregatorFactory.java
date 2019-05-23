@@ -190,8 +190,9 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
     return TDigestSketchUtils.deserialize(serializedSketch);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }
