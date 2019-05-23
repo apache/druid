@@ -131,18 +131,20 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   {
     if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
+      //noinspection unchecked
       return new IncrementalPublishingKafkaIndexTaskRunner(
           this,
-          parser,
+          dataSchema.getParser(),
           authorizerMapper,
           chatHandlerProvider,
           savedParseExceptions,
           rowIngestionMetersFactory
       );
     } else {
+      //noinspection unchecked
       return new LegacyKafkaIndexTaskRunner(
           this,
-          parser,
+          dataSchema.getParser(),
           authorizerMapper,
           chatHandlerProvider,
           savedParseExceptions,
