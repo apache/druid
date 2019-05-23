@@ -193,6 +193,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents()
     );
@@ -383,5 +384,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return spec.getIoConfig();
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
   }
 }

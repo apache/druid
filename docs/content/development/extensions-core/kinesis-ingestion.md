@@ -229,16 +229,16 @@ managed by the given supervisor. This includes the latest sequence numbers as re
 Indexing Service, stats about lag are not yet supported.
 
 The status report also contains the supervisor's state and a list of recently thrown exceptions (whose max size can be 
-controlled using the `druid.supervisor.stream.maxStoredExceptionEvents` config parameter).  The list of states is as
+controlled using the `druid.supervisor.maxStoredExceptionEvents` config parameter).  The list of states is as
 follows:
 
 |State|Description|
 |-----|-----------|
-|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.stream.unhealthinessThreshold` iterations|
-|UNHEALTHY_TASKS|The last `druid.supervisor.stream.taskUnhealthinessThreshold` tasks have all failed|
+|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
 |UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past|
 |LOST_CONTACT_WITH_STREAM|The supervisor is encountering connectivity issues with Kinesis but has successfully connected in the past|
-|WAITING_TO_RUN (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream|
+|PENDING (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream|
 |CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|
 |DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|
 |CREATING_TASKS (first iteration only)|The supervisor is creating tasks and discovering state|
@@ -414,14 +414,3 @@ compatible with Apache projects.
 
 To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
 Then when submitting a supervisor-spec, set `deaggregate` to true.
-
-## Configuration Properties
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|druid.supervisor.stream.healthinessThreshold|The number of successful runs before an unhealthy supervisor is again considered healthy|3|
-|druid.supervisor.stream.unhealthinessThreshold|The number of failed runs before the supervisor is considered unhealthy|3|
-|druid.supervisor.stream.taskHealthinessThreshold|The number of consecutive task successes before an unhealthy supervisor is again considered healthy|3|
-|druid.supervisor.stream.taskUnhealthinessThreshold|The number of consecutive task failures before the supervisor is considered unhealthy|3|
-|druid.supervisor.stream.storingStackTraces|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint|false|
-|druid.supervisor.stream.maxStoredExceptionEvents|The maximum number of exception events that can be returned through the supervisor `/status` endpoint|`max(healthinessThreshold, unhealthinessThreshold)`|

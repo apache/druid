@@ -56,12 +56,13 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
@@ -139,7 +140,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private TaskQueue taskQueue;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private ExceptionCapturingServiceEmitter serviceEmitter;
-  private SeekableStreamSupervisorConfig supervisorConfig;
+  private SupervisorStateManagerConfig supervisorConfig;
 
   public KinesisSupervisorTest()
   {
@@ -197,7 +198,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
-    supervisorConfig = new SeekableStreamSupervisorConfig();
+    supervisorConfig = new SupervisorStateManagerConfig();
   }
 
   @After
@@ -1389,7 +1390,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -1532,7 +1533,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -1722,7 +1723,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(1, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
@@ -3781,7 +3782,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             null,
-            new SeekableStreamSupervisorConfig()
+            new SupervisorStateManagerConfig()
         ),
         rowIngestionMetersFactory
     );

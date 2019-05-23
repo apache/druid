@@ -181,12 +181,31 @@ public class SupervisorResource
                            .build();
           }
 
-          boolean healthyOrNotApplicable = !(spec.get().getPayload() instanceof HealthCheckableSupervisorReportPayload)
-                                           || ((HealthCheckableSupervisorReportPayload) spec.get()
-                                                                                            .getPayload()).isHealthy();
+          return Response.ok(spec.get()).build();
+        }
+    );
+  }
 
-          return Response.status(healthyOrNotApplicable ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
-                         .entity(spec.get())
+  @GET
+  @Path("/{id}/health")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response specGetHealth(@PathParam("id") final String id)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<Boolean> healthy = manager.isSupervisorHealthy(id);
+          if (!healthy.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format("[%s] does not exist or health check not implemented", id)
+                           ))
+                           .build();
+          }
+
+          return Response.status(healthy.get() ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
+                         .entity(ImmutableMap.of("healthy", healthy.get()))
                          .build();
         }
     );

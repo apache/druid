@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -41,8 +41,9 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       boolean healthy,
-      SeekableStreamSupervisorStateManager.State state,
-      List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
@@ -58,6 +59,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         suspended,
         healthy,
         state,
+        detailedState,
         recentErrors
     );
   }
@@ -80,6 +82,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            ", suspended=" + isSuspended() +
            ", healthy=" + isHealthy() +
            ", state=" + getState() +
+           ", detailedState=" + getDetailedState() +
            ", recentErrors=" + getRecentErrors() +
            '}';
   }

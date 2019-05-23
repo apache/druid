@@ -29,6 +29,7 @@ import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SQLMetadataSegmentManager;
@@ -74,6 +75,7 @@ public class MaterializedViewSupervisorSpecTest
             .addValue(MaterializedViewTaskConfig.class, new MaterializedViewTaskConfig())
             .addValue(AuthorizerMapper.class, createMock(AuthorizerMapper.class))
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(SupervisorStateManagerConfig.class, new SupervisorStateManagerConfig())
     );
   }
 
@@ -143,7 +145,8 @@ public class MaterializedViewSupervisorSpecTest
         null,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
     MaterializedViewSupervisorSpec spec = objectMapper.readValue(supervisorStr, MaterializedViewSupervisorSpec.class);
     Assert.assertEquals(expected.getBaseDataSource(), spec.getBaseDataSource());
@@ -239,7 +242,8 @@ public class MaterializedViewSupervisorSpecTest
         null,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
   }
 
@@ -284,7 +288,8 @@ public class MaterializedViewSupervisorSpecTest
         null,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
   }
 }

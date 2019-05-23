@@ -21,7 +21,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.overlord.supervisor.HealthCheckableSupervisorReportPayload;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 
@@ -31,8 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> implements
-    HealthCheckableSupervisorReportPayload
+public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>
 {
   private final String dataSource;
   private final String stream;
@@ -47,8 +46,9 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
   private final boolean healthy;
-  private final SeekableStreamSupervisorStateManager.State state;
-  private final List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors;
+  private final SupervisorStateManager.State state;
+  private final SupervisorStateManager.State detailedState;
+  private final List<SupervisorStateManager.ExceptionEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -62,8 +62,9 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       boolean healthy,
-      SeekableStreamSupervisorStateManager.State state,
-      List<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     this.dataSource = dataSource;
@@ -80,6 +81,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     this.suspended = suspended;
     this.healthy = healthy;
     this.state = state;
+    this.detailedState = detailedState;
     this.recentErrors = recentErrors;
   }
 
@@ -124,7 +126,6 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     return suspended;
   }
 
-  @Override
   @JsonProperty
   public boolean isHealthy()
   {
@@ -174,13 +175,19 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   }
 
   @JsonProperty
-  public SeekableStreamSupervisorStateManager.State getState()
+  public SupervisorStateManager.State getState()
   {
     return state;
   }
 
   @JsonProperty
-  public List<SeekableStreamSupervisorStateManager.ExceptionEvent> getRecentErrors()
+  public SupervisorStateManager.State getDetailedState()
+  {
+    return detailedState;
+  }
+
+  @JsonProperty
+  public List<SupervisorStateManager.ExceptionEvent> getRecentErrors()
   {
     return recentErrors;
   }

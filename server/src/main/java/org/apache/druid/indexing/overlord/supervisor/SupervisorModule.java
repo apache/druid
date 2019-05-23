@@ -17,9 +17,18 @@
  * under the License.
  */
 
+
 package org.apache.druid.indexing.overlord.supervisor;
 
-public interface HealthCheckableSupervisorReportPayload
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.JsonConfigProvider;
+
+public class SupervisorModule implements Module
 {
-  boolean isHealthy();
+  @Override
+  public void configure(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.supervisor", SupervisorStateManagerConfig.class);
+  }
 }

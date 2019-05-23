@@ -215,16 +215,16 @@ consumer lag per partition may be reported as negative values if the supervisor 
 response from Kafka. The aggregate lag value will always be >= 0.
 
 The status report also contains the supervisor's state and a list of recently thrown exceptions (whose max size can be 
-controlled using the `druid.supervisor.stream.maxStoredExceptionEvents` config parameter).  The list of states is as
+controlled using the `druid.supervisor.maxStoredExceptionEvents` config parameter).  The list of states is as
 follows:
 
 |State|Description|
 |-----|-----------|
-|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.stream.unhealthinessThreshold` iterations|
-|UNHEALTHY_TASKS|The last `druid.supervisor.stream.taskUnhealthinessThreshold` tasks have all failed|
+|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
 |UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kafka and has not successfully connected in the past|
 |LOST_CONTACT_WITH_STREAM|The supervisor is encountering connectivity issues with Kafka but has successfully connected in the past|
-|WAITING_TO_RUN (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream|
+|PENDING (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream|
 |CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|
 |DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|
 |CREATING_TASKS (first iteration only)|The supervisor is creating tasks and discovering state|
@@ -239,6 +239,12 @@ States marked with "first iteration only" only occur on the supervisor's first i
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
 See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+
+### Supervisor Health Check
+
+`GET /druid/indexer/v1/supervisor/<supervisorId>/health` returns `200 OK` if the supervisor is healthy and
+`503 Service Unavailable` if it is unhealthy. Healthiness is determined by the supervisor's `state` (as returned by the
+`/status` endpoint) and the `druid.supervisor.*` Overlord configuration thresholds.
 
 ### Updating Existing Supervisors
 
@@ -364,14 +370,3 @@ one can schedule re-indexing tasks be run to merge segments together into new se
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
 Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).
-
-## Configuration Properties
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|druid.supervisor.stream.healthinessThreshold|The number of successful runs before an unhealthy supervisor is again considered healthy|3|
-|druid.supervisor.stream.unhealthinessThreshold|The number of failed runs before the supervisor is considered unhealthy|3|
-|druid.supervisor.stream.taskHealthinessThreshold|The number of consecutive task successes before an unhealthy supervisor is again considered healthy|3|
-|druid.supervisor.stream.taskUnhealthinessThreshold|The number of consecutive task failures before the supervisor is considered unhealthy|3|
-|druid.supervisor.stream.storingStackTraces|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint|false|
-|druid.supervisor.stream.maxStoredExceptionEvents|The maximum number of exception events that can be returned through the supervisor `/status` endpoint|`max(healthinessThreshold, unhealthinessThreshold)`|

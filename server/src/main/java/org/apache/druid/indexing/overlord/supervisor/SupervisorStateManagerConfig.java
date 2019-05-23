@@ -17,15 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.supervisor;
+package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 
-public class SeekableStreamSupervisorConfig
+public class SupervisorStateManagerConfig
 {
   @JsonProperty
-  private boolean storingStackTraces = false;
+  private boolean storeStackTrace = false;
 
   // The number of failed runs before the supervisor is considered unhealthy
   @JsonProperty
@@ -47,9 +46,19 @@ public class SeekableStreamSupervisorConfig
   @JsonProperty
   private int maxStoredExceptionEvents = Math.max(unhealthinessThreshold, healthinessThreshold);
 
-  public boolean isStoringStackTraces()
+  public SupervisorStateManagerConfig()
   {
-    return storingStackTraces;
+
+  }
+
+  public SupervisorStateManagerConfig(int maxStoredExceptionEvents)
+  {
+    this.maxStoredExceptionEvents = maxStoredExceptionEvents;
+  }
+
+  public boolean isStoreStackTrace()
+  {
+    return storeStackTrace;
   }
 
   public int getUnhealthinessThreshold()
@@ -75,11 +84,5 @@ public class SeekableStreamSupervisorConfig
   public int getMaxStoredExceptionEvents()
   {
     return maxStoredExceptionEvents;
-  }
-
-  @VisibleForTesting
-  void setMaxStoredExceptionEvents(int maxStoredExceptionEvents)
-  {
-    this.maxStoredExceptionEvents = maxStoredExceptionEvents;
   }
 }

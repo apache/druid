@@ -54,6 +54,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
@@ -537,12 +538,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
-    this.stateManager = new SeekableStreamSupervisorStateManager(
-        SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        spec.isSuspended() ? SeekableStreamSupervisorStateManager.State.SUSPENDED
-                           : SeekableStreamSupervisorStateManager.State.RUNNING,
-        spec.getSupervisorConfig()
-    );
+    this.stateManager = new SeekableStreamSupervisorStateManager(spec.getSupervisorStateManagerConfig(), spec.isSuspended());
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -662,7 +658,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Preconditions.checkState(lifecycleStarted, "lifecycle not started");
 
       log.info("Beginning shutdown of [%s]", supervisorId);
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.STOPPING);
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.STOPPING);
 
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
@@ -1035,12 +1031,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       possiblyRegisterListener();
 
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
       if (!updatePartitionDataFromStream() && !stateManager.isAtLeastOneSuccessfulRun()) {
         return; // if we can't connect to the stream and this is the first run, stop and wait to retry the connection
       }
 
-      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
+      stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.DISCOVERING_INITIAL_TASKS);
       discoverTasks();
 
       updateTaskStatus();
@@ -1056,7 +1052,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (!spec.isSuspended()) {
         log.info("[%s] supervisor is running.", dataSource);
 
-        stateManager.maybeSetState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+        stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
         createNewTasks();
       } else {
         log.info("[%s] supervisor is suspended.", dataSource);
