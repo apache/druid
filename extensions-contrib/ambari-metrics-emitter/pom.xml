@@ -84,7 +84,7 @@
     <repository>
       <id>hortonworks</id>
       <name>hortonworks</name>
-      <url>http://repo.hortonworks.com/content/repositories/releases</url>
+      <url>https://repo.hortonworks.com/content/repositories/releases</url>
     </repository>
   </repositories>
 </project>

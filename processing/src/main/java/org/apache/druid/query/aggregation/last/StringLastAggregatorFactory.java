@@ -36,6 +36,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -129,10 +130,11 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
     return new SerializablePairLongString(((Number) map.get("lhs")).longValue(), ((String) map.get("rhs")));
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((SerializablePairLongString) object).rhs;
+    return object == null ? null : ((SerializablePairLongString) object).rhs;
   }
 
   @Override
