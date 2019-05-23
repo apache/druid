@@ -281,15 +281,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    if (this.props.initTaskId) {
-        this.getJsonInfo(`/druid/indexer/v1/task/${this.props.initTaskId}`);
-        this.updateStage('json-spec');
-    } else if (this.props.initSupervisorId) {
-      this.getJsonInfo(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
-      this.updateStage('json-spec');
-    } else {
-      this.updateStage('connect');
-    }
+    if (this.props.initTaskId) this.getTaskJson();
+    else if (this.props.initSupervisorId) this.getSupervisorJson();
+    else this.updateStage('connect');
   }
 
 
@@ -1059,7 +1053,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               },
               minWidth: timestamp ? 200 : 100,
               resizable: !timestamp
-          };
+            };
           })}
           defaultPageSize={50}
           showPagination={false}
@@ -2355,13 +2349,20 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   // ==================================================================
-  private getJsonInfo = async (endpoint: string): Promise<void> =>  {
+  private getSupervisorJson = async (): Promise<void> =>  {
     try {
-      console.log(endpoint);
-      const resp = await axios.get(endpoint);
-      let data = resp.data;
-      if (endpoint.indexOf('task') >= 0) data = resp.data.payload.spec;
-      this.updateSpec(data);
+      const resp = await axios.get(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
+      this.updateSpec(resp.data);
+      this.updateStage('json-spec');
+    } catch (e) {
+    }
+  }
+
+  private getTaskJson = async (): Promise<void> =>  {
+    try {
+      const resp = await axios.get(`/druid/indexer/v1/task/${this.props.initTaskId}`);
+      this.updateSpec(resp.data.payload.spec);
+      this.updateStage('json-spec');
     } catch (e) {
     }
   }
@@ -2370,7 +2371,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     const { goToTask } = this.props;
     const { spec } = this.state;
     return <>
-      <div className="main here">
+      <div className="main">
         <JSONInput
           value={spec}
           onChange={(s) => {
