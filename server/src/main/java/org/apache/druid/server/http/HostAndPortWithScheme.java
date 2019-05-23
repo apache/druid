@@ -43,7 +43,7 @@ public class HostAndPortWithScheme
   {
     if (hostPortMaybeSchemeString.startsWith("http")) {
       return HostAndPortWithScheme.fromString(
-          hostPortMaybeSchemeString.substring(0, hostPortMaybeSchemeString.indexOf(':')),
+          hostPortMaybeSchemeString.substring(0, hostPortMaybeSchemeString.indexOf(':')), //-V6009
           hostPortMaybeSchemeString.substring(hostPortMaybeSchemeString.indexOf(':') + 1)
       );
     }

@@ -241,6 +241,7 @@ public class CoordinatorResourceTestClient
       );
     }
 
+    @SuppressWarnings("unused") // It's unclear whether this call to readValue() has desirable side effects.
     Map<String, Object> results = jsonMapper.readValue(
         response.getContent(),
         new TypeReference<Map<String, Object>>(){}

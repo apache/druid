@@ -1285,7 +1285,7 @@ public class HttpRemoteTaskRunnerTest
   {
     return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker)
     {
-      private final String workerHost = worker.getHost().substring(0, worker.getHost().indexOf(':'));
+      private final String workerHost = worker.getHost().substring(0, worker.getHost().indexOf(':')); //-V6009
       private final int workerPort = Integer.parseInt(worker.getHost().substring(worker.getHost().indexOf(':') + 1));
 
       @Override

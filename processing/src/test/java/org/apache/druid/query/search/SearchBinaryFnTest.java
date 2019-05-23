@@ -306,7 +306,7 @@ public class SearchBinaryFnTest
     List<SearchHit> result = new ArrayList<>();
     for (String hit : hits) {
       int index = hit.indexOf(':');
-      result.add(new SearchHit(hit.substring(0, index), hit.substring(index + 1)));
+      result.add(new SearchHit(hit.substring(0, index), hit.substring(index + 1))); //-V6009
     }
     Collections.sort(result, comparator);
     return result;

@@ -70,7 +70,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
   private static String descriptorPathForSegmentPath(String s3Path)
   {
-    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json";
+    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json"; //-V6009
   }
 
   @Override
