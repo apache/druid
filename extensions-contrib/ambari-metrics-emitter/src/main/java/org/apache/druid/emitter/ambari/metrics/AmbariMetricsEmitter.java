@@ -55,6 +55,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   private final AmbariMetricsEmitterConfig config;
   private final String collectorURI;
   private static final long DEFAULT_FLUSH_TIMEOUT_MILLIS = 60000; // default flush wait 1 min
+  private static final Pattern DOT_OR_WHITESPACE_PATTERN = Pattern.compile("[\\s]+|[.]+");
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(
       2, // Thread pool of two in order to schedule flush runnable
       new ThreadFactoryBuilder().setDaemon(true).setNameFormat("AmbariMetricsEmitter-%s").build()
@@ -230,7 +231,6 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
 
   protected static String sanitize(String namespace)
   {
-    Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    return DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    return DOT_OR_WHITESPACE_PATTERN.matcher(namespace).replaceAll("_");
   }
 }
