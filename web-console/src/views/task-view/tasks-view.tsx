@@ -280,11 +280,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   private getSupervisorActions(id: string, supervisorSuspended: boolean, type: string): BasicAction[] {
-    const actions = [];
+    const actions: BasicAction[] = [];
     if (type === 'kafka' || type === 'kinesis') {
       actions.push(
         {
-          icon: IconNames.WRENCH,
+          icon: IconNames.CLOUD_UPLOAD,
           title: 'Open in data loader',
           onAction: () => this.props.goToLoadDataView(id)
         });
@@ -514,16 +514,17 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   private getTaskActions(id: string, status: string, type: string): BasicAction[] {
-    const actions = [];
+    const actions: BasicAction[] = [];
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
+        icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
         onAction: () => this.props.goToLoadDataView(undefined, id)
       });
     }
     if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
       actions.push({
-       // icon: IconNames.CROSS,
+        icon: IconNames.CROSS,
         title: 'Kill',
         intent: Intent.DANGER,
         onAction: () => this.setState({killTaskId: id})

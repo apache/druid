@@ -220,6 +220,7 @@ export interface LoadDataViewState {
   selectedDimensionSpec: DimensionSpec | null;
   selectedMetricSpecIndex: number;
   selectedMetricSpec: MetricSpec | null;
+  specLoading : boolean;
 }
 
 export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
@@ -2355,6 +2356,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       this.updateSpec(resp.data);
       this.updateStage('json-spec');
     } catch (e) {
+      AppToaster.show({
+        message: `Failed to get supervisor spec: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER
+      });
     }
   }
 
@@ -2364,12 +2369,17 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       this.updateSpec(resp.data.payload.spec);
       this.updateStage('json-spec');
     } catch (e) {
+      AppToaster.show({
+        message: `Failed to get task spec: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER
+      });
     }
   }
 
   renderJsonSpecStage() {
     const { goToTask } = this.props;
     const { spec } = this.state;
+
     return <>
       <div className="main">
         <JSONInput
