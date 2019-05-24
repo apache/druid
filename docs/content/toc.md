@@ -48,7 +48,7 @@ layout: toc
     * [Clustering](/docs/VERSION/tutorials/cluster.html)
     * Further examples
       * [Single-server deployment](/docs/VERSION/operations/single-server.html)
-      * [Clustered deployment](/docs/VERSION/operations/example-cluster.html)
+      * [Clustered deployment](/docs/VERSION/tutorials/cluster.html#fresh-deployment)
 
 ## Data Ingestion
   * [Ingestion overview](/docs/VERSION/ingestion/index.html)
