@@ -103,7 +103,7 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
     return <div className="show-log">
       <div className="top-actions">
         <Checkbox
-          label="Tail Log"
+          label="Tail log"
           checked={this.state.tail}
           onChange={this.handleCheckboxChange}
         />
