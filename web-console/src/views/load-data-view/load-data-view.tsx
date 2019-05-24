@@ -143,8 +143,8 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   return timestampSpecs[0] || getEmptyTimestampSpec();
 }
 
-type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec';
-const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec'];
+type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
+const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
 
 const SECTIONS: { name: string, stages: Stage[] }[] = [
   { name: 'Connect and parse raw data', stages: ['connect', 'parser', 'timestamp'] },
@@ -163,7 +163,7 @@ const VIEW_TITLE: Record<Stage, string> = {
   'partition': 'Partition',
   'tuning': 'Tune',
   'publish': 'Publish',
-  'json-spec': 'Edit JSON spec'
+  'json-spec': 'Edit JSON spec',
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
@@ -220,7 +220,7 @@ export interface LoadDataViewState {
   selectedDimensionSpec: DimensionSpec | null;
   selectedMetricSpecIndex: number;
   selectedMetricSpec: MetricSpec | null;
-  specLoading : boolean;
+  specLoading: boolean;
 }
 
 export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
@@ -282,7 +282,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    if (this.props.initTaskId) this.getTaskJson();
+    if (this.props.initTaskId) this.updateStage('loading') && this.getTaskJson();
     else if (this.props.initSupervisorId) this.getSupervisorJson();
     else this.updateStage('connect');
   }
@@ -353,6 +353,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       {stage === 'publish' && this.renderPublishStage()}
 
       {stage === 'json-spec' && this.renderJsonSpecStage()}
+      {stage === 'loading' && this.renderLoading()}
 
       {this.renderResetConfirm()}
     </div>;
@@ -2376,6 +2377,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     }
   }
 
+  renderLoading() {
+    return <Loader/>;
+  }
   renderJsonSpecStage() {
     const { goToTask } = this.props;
     const { spec } = this.state;
