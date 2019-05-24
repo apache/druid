@@ -40,7 +40,7 @@ import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
-const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Host', 'Duration', 'Actions'];
+const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Duration', 'Actions'];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -633,13 +633,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return booleanCustomTableFilter(filter, row.status.status);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
-          },
-          {
-            Header: 'Host',
-            accessor: 'location',
-            width: 120,
-            Aggregated: () => '',
-            show: taskTableColumnSelectionHandler.showColumn('Host')
           },
           {
             Header: 'Duration',
