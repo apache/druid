@@ -174,7 +174,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    * However, the guarantee explained above doesn't make any actual semantic difference, because on both periodic and
    * on-demand database polls the same invariant is maintained that the results not older than {@link
    * #periodicPollDelay} are used. The main difference is in performance: since on-demand polls are irregular and happen
-   * in the context of the thread wanting to access the {@link #dataSources}', that may cause a delay in the logic.
+   * in the context of the thread wanting to access the {@link #dataSources}, that may cause delays in the logic.
    * On the other hand, periodic polls are decoupled into {@link #exec} and {@link #dataSources}-accessing methods
    * should be generally "wait free" for database polls.
    *
