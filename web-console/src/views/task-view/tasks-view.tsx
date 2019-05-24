@@ -656,7 +656,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             width: 70,
             filterable: false,
             Cell: row => {
-              console.log(row);
               if (row.aggregated) return '';
               const id = row.value;
               const { status } = row.original;
