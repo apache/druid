@@ -164,6 +164,7 @@ const VIEW_TITLE: Record<Stage, string> = {
   'tuning': 'Tune',
   'publish': 'Publish',
   'json-spec': 'Edit JSON spec',
+  'loading': 'Loading'
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
@@ -220,7 +221,6 @@ export interface LoadDataViewState {
   selectedDimensionSpec: DimensionSpec | null;
   selectedMetricSpecIndex: number;
   selectedMetricSpec: MetricSpec | null;
-  specLoading: boolean;
 }
 
 export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
@@ -282,9 +282,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    if (this.props.initTaskId) this.updateStage('loading') && this.getTaskJson();
-    else if (this.props.initSupervisorId) this.getSupervisorJson();
-    else this.updateStage('connect');
+    if (this.props.initTaskId) {
+      this.updateStage('loading');
+      this.getTaskJson();
+    } else if (this.props.initSupervisorId) {
+      this.updateStage('loading');
+      this.getSupervisorJson(); } else this.updateStage('connect');
   }
 
 
@@ -330,6 +333,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   render() {
+    console.log('here');
     const { stage, spec } = this.state;
     if (!Object.keys(spec).length) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
