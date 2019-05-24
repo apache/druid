@@ -52,10 +52,10 @@ public interface SqlOperatorConversion
   DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode);
 
   /**
-   * Returns a Druid Aggregation corresponding to a SQL {@link SqlOperator} used to filter rows
+   * Returns a Druid filter corresponding to a Calcite {@code RexNode} used as a filter condition.
    *
    * @param plannerContext   SQL planner context
-   * @param querySignature   signature of the rows being aggregated and expression column references
+   * @param querySignature   signature of the rows being filtered, and any expression column references
    * @param rexNode          filter expression rex node
    *
    * @return filter, or null if the call cannot be translated

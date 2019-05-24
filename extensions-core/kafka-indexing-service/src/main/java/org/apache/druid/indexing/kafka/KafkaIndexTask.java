@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -129,26 +128,15 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   @Override
   protected SeekableStreamIndexTaskRunner<Integer, Long> createTaskRunner()
   {
-    if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
-        && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
-      return new IncrementalPublishingKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    } else {
-      return new LegacyKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    }
+    //noinspection unchecked
+    return new IncrementalPublishingKafkaIndexTaskRunner(
+        this,
+        dataSchema.getParser(),
+        authorizerMapper,
+        chatHandlerProvider,
+        savedParseExceptions,
+        rowIngestionMetersFactory
+    );
   }
 
   @Override

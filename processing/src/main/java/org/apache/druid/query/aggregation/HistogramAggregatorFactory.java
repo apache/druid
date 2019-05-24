@@ -154,10 +154,11 @@ public class HistogramAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((Histogram) object).asVisual();
+    return object == null ? null : ((Histogram) object).asVisual();
   }
 
   @Override

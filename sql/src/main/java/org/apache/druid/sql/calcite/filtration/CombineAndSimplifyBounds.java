@@ -118,48 +118,23 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
    * Simplify BoundDimFilters that are children of an OR or an AND.
    *
    * @param children    the filters
-   * @param disjunction true for disjunction, false for conjunction
+   * @param disjunction true for OR, false for AND
    *
    * @return simplified filters
    */
   private static DimFilter doSimplify(final List<DimFilter> children, boolean disjunction)
   {
-    // Copy children list
+    // Copy the list of child filters. We'll modify the copy and eventually return it.
     final List<DimFilter> newChildren = Lists.newArrayList(children);
 
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
     final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
 
-    final Iterator<DimFilter> iterator = newChildren.iterator();
-    while (iterator.hasNext()) {
-      final DimFilter child = iterator.next();
-
-      if (child.equals(Filtration.matchNothing())) {
-        // Child matches nothing, equivalent to FALSE
-        // OR with FALSE => ignore
-        // AND with FALSE => always false, short circuit
-        if (disjunction) {
-          iterator.remove();
-        } else {
-          return Filtration.matchNothing();
-        }
-      } else if (child.equals(Filtration.matchEverything())) {
-        // Child matches everything, equivalent to TRUE
-        // OR with TRUE => always true, short circuit
-        // AND with TRUE => ignore
-        if (disjunction) {
-          return Filtration.matchEverything();
-        } else {
-          iterator.remove();
-        }
-      } else if (child instanceof BoundDimFilter) {
+    for (final DimFilter child : newChildren) {
+      if (child instanceof BoundDimFilter) {
         final BoundDimFilter bound = (BoundDimFilter) child;
         final BoundRefKey boundRefKey = BoundRefKey.from(bound);
-        List<BoundDimFilter> filterList = bounds.get(boundRefKey);
-        if (filterList == null) {
-          filterList = new ArrayList<>();
-          bounds.put(boundRefKey, filterList);
-        }
+        final List<BoundDimFilter> filterList = bounds.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
         filterList.add(bound);
       }
     }
@@ -184,25 +159,13 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
 
         if (rangeSet.asRanges().isEmpty()) {
           // range set matches nothing, equivalent to FALSE
-          // OR with FALSE => ignore
-          // AND with FALSE => always false, short circuit
-          if (disjunction) {
-            newChildren.add(Filtration.matchNothing());
-          } else {
-            return Filtration.matchNothing();
-          }
+          newChildren.add(Filtration.matchNothing());
         }
 
         for (final Range<BoundValue> range : rangeSet.asRanges()) {
           if (!range.hasLowerBound() && !range.hasUpperBound()) {
             // range matches all, equivalent to TRUE
-            // AND with TRUE => ignore
-            // OR with TRUE => always true; short circuit
-            if (disjunction) {
-              return Filtration.matchEverything();
-            } else {
-              newChildren.add(Filtration.matchEverything());
-            }
+            newChildren.add(Filtration.matchEverything());
           } else {
             newChildren.add(Bounds.toFilter(boundRefKey, range));
           }
@@ -210,8 +173,44 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       }
     }
 
+    // Finally: Go through newChildren, removing or potentially exiting early based on TRUE / FALSE marker filters.
     Preconditions.checkState(newChildren.size() > 0, "newChildren.size > 0");
-    if (newChildren.size() == 1) {
+
+    final Iterator<DimFilter> iterator = newChildren.iterator();
+    while (iterator.hasNext()) {
+      final DimFilter newChild = iterator.next();
+
+      if (Filtration.matchNothing().equals(newChild)) {
+        // Child matches nothing, equivalent to FALSE
+        // OR with FALSE => ignore
+        // AND with FALSE => always false, short circuit
+        if (disjunction) {
+          iterator.remove();
+        } else {
+          return Filtration.matchNothing();
+        }
+      } else if (Filtration.matchEverything().equals(newChild)) {
+        // Child matches everything, equivalent to TRUE
+        // OR with TRUE => always true, short circuit
+        // AND with TRUE => ignore
+        if (disjunction) {
+          return Filtration.matchEverything();
+        } else {
+          iterator.remove();
+        }
+      }
+    }
+
+    if (newChildren.isEmpty()) {
+      // If "newChildren" is empty at this point, it must have consisted entirely of TRUE / FALSE marker filters.
+      if (disjunction) {
+        // Must have been all FALSE filters (the only kind we would have removed above).
+        return Filtration.matchNothing();
+      } else {
+        // Must have been all TRUE filters (the only kind we would have removed above).
+        return Filtration.matchEverything();
+      }
+    } else if (newChildren.size() == 1) {
       return newChildren.get(0);
     } else {
       return disjunction ? new OrDimFilter(newChildren) : new AndDimFilter(newChildren);
