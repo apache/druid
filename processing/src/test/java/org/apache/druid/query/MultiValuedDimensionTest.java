@@ -357,7 +357,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t7foo", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr");
   }
 
   @Test
@@ -401,7 +401,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
   }
 
   @Test
@@ -445,7 +445,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto");
   }
 
   @Test
@@ -489,7 +489,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto");
   }
 
   @Test
@@ -535,7 +535,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t7foo", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-auto");
   }
 
   @Test
@@ -577,7 +577,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot5, foot6, foot7", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-array-fn");
   }
 
   @Test
@@ -619,7 +619,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot5, foot6, foot7", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-arrayfn-auto");
   }
 
 
