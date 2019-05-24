@@ -80,32 +80,4 @@ public class ExprMacroTable
 
     Expr apply(List<Expr> args);
   }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ExprMacroTable that = (ExprMacroTable) o;
-    if (macroMap.size() != that.macroMap.size()) {
-      return false;
-    }
-    for (String macroName : macroMap.keySet()) {
-      if (!that.macroMap.containsKey(macroName)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    // only consider the keys of the field macroMap
-    return macroMap.keySet().hashCode();
-  }
 }
