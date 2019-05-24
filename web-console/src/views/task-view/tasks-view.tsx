@@ -231,7 +231,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   CASE WHEN "status" = 'RUNNING' THEN
    (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
   ELSE 1 END AS "rank",
-    "location", "duration", "error_msg"
+   "location", "duration", "error_msg"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
