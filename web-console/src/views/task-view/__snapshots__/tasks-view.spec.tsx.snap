@@ -350,6 +350,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
           "Datasource",
           "Created time",
           "Status",
+          "Host",
           "Duration",
           "Actions",
         ]
@@ -448,6 +449,13 @@ exports[`describe tasks view tasks view snapshot 1`] = `
           "show": true,
           "sortMethod": [Function],
           "width": 110,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Header": "Host",
+          "accessor": "location",
+          "show": true,
+          "width": 120,
         },
         Object {
           "Aggregated": [Function],
