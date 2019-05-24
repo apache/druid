@@ -176,7 +176,6 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-        console.log(resp.data);
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
