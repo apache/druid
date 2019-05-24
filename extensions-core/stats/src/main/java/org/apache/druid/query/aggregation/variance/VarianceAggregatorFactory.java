@@ -39,6 +39,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -202,10 +203,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return VarianceAggregatorCollector.COMPARATOR;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
+    return object == null ? null : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
   }
 
   @Override

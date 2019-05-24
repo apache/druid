@@ -240,10 +240,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((DoublesSketch) object).getN();
+    return object == null ? null : ((DoublesSketch) object).getN();
   }
 
   @Override
