@@ -37,6 +37,9 @@ import java.util.Set;
  * class resides in Coordinator's memory, while {@link org.apache.druid.sql.calcite.schema.MetadataSegmentView} resides
  * in Broker's memory.
  */
+// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
+// upgraded to IntelliJ 2018+.
+@SuppressWarnings("JavadocResource")
 public interface MetadataSegmentManager
 {
   void startPollingDatabasePeriodically();

@@ -24,10 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
- * Client representation of {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}. JSON searialization
+ * Client representation of {@link org.apache.druid.indexing.common.task.KillTask}. JSON searialization
  * fields of this class must correspond to those of {@link
- * org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}, except for "id" and "context" fields.
+ * org.apache.druid.indexing.common.task.KillTask}, except for "id" and "context" fields.
  */
+// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
+// upgraded to IntelliJ 2018+.
+@SuppressWarnings("JavadocResource")
 public class ClientKillQuery implements ClientQuery
 {
   private final String dataSource;

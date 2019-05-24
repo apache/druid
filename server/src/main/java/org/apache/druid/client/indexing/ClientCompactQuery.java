@@ -33,6 +33,9 @@ import java.util.Objects;
  * Client representation of {@link org.apache.druid.indexing.common.task.CompactionTask}. JSON serialization fields of
  * this class must correspond to those of {@link org.apache.druid.indexing.common.task.CompactionTask}.
  */
+// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
+// upgraded to IntelliJ 2018+.
+@SuppressWarnings("JavadocResource")
 public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;

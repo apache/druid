@@ -591,7 +591,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/indexer/v1/worker`
 
-Retreives current overlord dynamic configuration.
+Retrieves current overlord dynamic configuration.
 
 * `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
 

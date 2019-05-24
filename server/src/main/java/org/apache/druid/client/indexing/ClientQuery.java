@@ -31,6 +31,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * ClientTaskQuery objects must match with those of the corresponding {@link
  * org.apache.druid.indexing.common.task.Task} objects.
  */
+// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
+// upgraded to IntelliJ 2018+.
+@SuppressWarnings("JavadocResource")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "kill", value = ClientKillQuery.class),

@@ -164,6 +164,20 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    * accesses {@link #dataSources} state (such as {@link #prepareImmutableDataSourceWithUsedSegments}) is called when
    * the Coordinator is not the leader and therefore SqlSegmentsMetadata isn't polling the database periodically.
    *
+   * Note that if there is a happens-before relationship between a call to {@link #startPollingDatabasePeriodically()}
+   * (on Coordinators' leadership change) and one of the methods accessing the {@link #dataSources}'s state in this
+   * class the latter is guaranteed to await for the initiated periodic poll. This is because when the latter method
+   * calls to {@link #awaitLatestDatabasePoll()} via {@link #awaitOrPerformDatabasePoll}, they will
+   * see the latest {@link PeriodicDatabasePoll} value (stored in this field, latestDatabasePoll, in {@link
+   * #startPollingDatabasePeriodically()}) and to await on its {@link PeriodicDatabasePoll#firstPollCompletionFuture}.
+   *
+   * However, the guarantee explained above doesn't make any actual semantic difference, because on both periodic and
+   * on-demand database polls the same invariant is maintained that the results not older than {@link
+   * #periodicPollDelay} are used. The main difference is in performance: since on-demand polls are irregular and happen
+   * in the context of the thread wanting to access the {@link #dataSources}', that may cause a delay in the logic.
+   * On the other hand, periodic polls are decoupled into {@link #exec} and {@link #dataSources}-accessing methods
+   * should be generally "wait free" for database polls.
+   *
    * The notion and the complexity of "on demand" database polls was introduced to simplify the interface of {@link
    * MetadataSegmentManager} and guarantee that it always returns consistent and relatively up-to-date data from methods like
    * {@link #prepareImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive polls. The last part is
@@ -186,6 +200,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private @Nullable Future<?> periodicPollTaskFuture = null;
 
   /** The number of times {@link #startPollingDatabasePeriodically} was called. */
+  @GuardedBy("startStopPollLock")
   private long startPollingCount = 0;
 
   /**
@@ -200,9 +215,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    *
    * {@link SQLMetadataRuleManager} also has a similar issue.
    */
+  @GuardedBy("startStopPollLock")
   private long currentStartPollingOrder = -1;
 
-  private ScheduledExecutorService exec = null;
+  @GuardedBy("startStopPollLock")
+  private @Nullable ScheduledExecutorService exec = null;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -228,6 +245,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
+      if (exec != null) {
+        return; // Already started
+      }
       exec = Execs.scheduledSingleThreaded(getClass().getName() + "-Exec--%d");
     }
     finally {
@@ -304,7 +324,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
       }
       catch (Throwable t) {
-        log.makeAlert(t, "Uncaught exception in " + getClass().getName() + "'s polling thread").emit();
+        log.makeAlert(t, "Uncaught exception in %s's polling thread", SQLMetadataSegmentManager.class).emit();
         // Swallow the exception, so that scheduled polling goes on. Leave firstPollFutureSinceLastStart uncompleted
         // for now, so that it may be completed during the next poll.
         if (!(t instanceof Exception)) {
@@ -317,6 +337,22 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         lock.unlock();
       }
     };
+  }
+
+  @Override
+  public boolean isPollingDatabasePeriodically()
+  {
+    // isPollingDatabasePeriodically() is synchronized together with startPollingDatabasePeriodically(),
+    // stopPollingDatabasePeriodically() and poll() to ensure that the latest currentStartPollingOrder is always
+    // visible. readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
+    ReentrantReadWriteLock.ReadLock lock = startStopPollLock.readLock();
+    lock.lock();
+    try {
+      return currentStartPollingOrder >= 0;
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
   @Override
@@ -344,14 +380,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   private void awaitOrPerformDatabasePoll()
   {
-    // Double-checked locking with awaitPeriodicOrFreshOnDemandDatabasePoll() call playing the role of the "check".
-    if (awaitPeriodicOrFreshOnDemandDatabasePoll()) {
+    // Double-checked locking with awaitLatestDatabasePoll() call playing the role of the "check".
+    if (awaitLatestDatabasePoll()) {
       return;
     }
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
-      if (awaitPeriodicOrFreshOnDemandDatabasePoll()) {
+      if (awaitLatestDatabasePoll()) {
         return;
       }
       OnDemandDatabasePoll newOnDemandUpdate = new OnDemandDatabasePoll();
@@ -363,7 +399,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  private boolean awaitPeriodicOrFreshOnDemandDatabasePoll()
+  /**
+   * If the latest {@link DatabasePoll} is a {@link PeriodicDatabasePoll}, or an {@link OnDemandDatabasePoll} that is
+   * made not longer than {@link #periodicPollDelay} from now, awaits for it and returns true; returns false otherwise,
+   * meaning that a new on-demand database poll should be initiated.
+   */
+  private boolean awaitLatestDatabasePoll()
   {
     DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
     if (latestDatabasePoll instanceof PeriodicDatabasePoll) {
@@ -372,15 +413,16 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
     if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
       long periodicPollDelayNanos = TimeUnit.MILLISECONDS.toNanos(periodicPollDelay.getMillis());
-      OnDemandDatabasePoll latestOnDemandUpdate = (OnDemandDatabasePoll) latestDatabasePoll;
-      boolean latestUpdateIsFresh = latestOnDemandUpdate.nanosElapsedFromInitiation() < periodicPollDelayNanos;
+      OnDemandDatabasePoll latestOnDemandPoll = (OnDemandDatabasePoll) latestDatabasePoll;
+      boolean latestUpdateIsFresh = latestOnDemandPoll.nanosElapsedFromInitiation() < periodicPollDelayNanos;
       if (latestUpdateIsFresh) {
-        Futures.getUnchecked(latestOnDemandUpdate.pollCompletionFuture);
+        Futures.getUnchecked(latestOnDemandPoll.pollCompletionFuture);
         return true;
       }
       // Latest on-demand update is not fresh. Fall through to return false from this method.
     } else {
       assert latestDatabasePoll == null;
+      // No periodic updates and no on-demand database poll have been done yet, nothing to await for.
     }
     return false;
   }
@@ -534,12 +576,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> unusedSegmentsAndTimeline = connector
           .inReadOnlyTransaction(
               (handle, status) -> {
-                List<DataSegment> unusedSegments = retreiveUnusedSegments(dataSource, segmentIds, handle);
+                List<DataSegment> unusedSegments = retrieveUnusedSegments(dataSource, segmentIds, handle);
                 List<Interval> unusedSegmentsIntervals = JodaUtils.condenseIntervals(
                     unusedSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
                 );
                 Iterator<DataSegment> usedSegmentsOverlappingUnusedSegmentsIntervals =
-                    retreiveUsedSegmentsOverlappingIntervals(dataSource, unusedSegmentsIntervals, handle);
+                    retrieveUsedSegmentsOverlappingIntervals(dataSource, unusedSegmentsIntervals, handle);
                 VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
                     Iterators.concat(usedSegmentsOverlappingUnusedSegmentsIntervals, unusedSegments.iterator())
                 );
@@ -561,7 +603,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  private List<DataSegment> retreiveUnusedSegments(
+  private List<DataSegment> retrieveUnusedSegments(
       final String dataSource,
       final Set<String> segmentIds,
       final Handle handle
@@ -619,7 +661,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     return segments;
   }
 
-  private Iterator<DataSegment> retreiveUsedSegmentsOverlappingIntervals(
+  private Iterator<DataSegment> retrieveUsedSegmentsOverlappingIntervals(
       final String dataSource,
       final Collection<Interval> intervals,
       final Handle handle
@@ -880,22 +922,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       }
     }
     return numChangedSegments;
-  }
-
-  @Override
-  public boolean isPollingDatabasePeriodically()
-  {
-    // isPollingDatabasePeriodically() is synchronized together with startPollingDatabasePeriodically(),
-    // stopPollingDatabasePeriodically() and poll() to ensure that the latest currentStartPollingOrder is always
-    // visible. readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
-    ReentrantReadWriteLock.ReadLock lock = startStopPollLock.readLock();
-    lock.lock();
-    try {
-      return currentStartPollingOrder >= 0;
-    }
-    finally {
-      lock.unlock();
-    }
   }
 
   @Override

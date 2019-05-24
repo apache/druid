@@ -41,6 +41,9 @@ import java.util.List;
  *
  * @see org.apache.druid.indexing.common.task.KillTask
  */
+// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
+// upgraded to IntelliJ 2018+.
+@SuppressWarnings("JavadocResource")
 public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorSegmentKiller.class);
