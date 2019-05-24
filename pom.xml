@@ -1495,6 +1495,7 @@
                                     <licenseFamilyName>MIT JQuery</licenseFamilyName>
                                     <notes></notes>
                                     <patterns>
+                                        <pattern>Copyright 2005, 2014 jQuery Foundation, Inc. and other contributors</pattern>
                                         <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
                                         <pattern>jQuery Foundation, Inc. | jquery.org/license</pattern>
                                     </patterns>
