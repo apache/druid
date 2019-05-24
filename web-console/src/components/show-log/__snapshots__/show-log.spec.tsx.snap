@@ -16,7 +16,7 @@ exports[`describe show log describe show log 1`] = `
       <span
         class="bp3-control-indicator"
       />
-      Tail Log
+      Tail log
     </label>
     <div
       class="bp3-button-group right-buttons"
