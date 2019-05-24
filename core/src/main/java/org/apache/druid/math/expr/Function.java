@@ -1558,6 +1558,12 @@ interface Function
     }
 
     @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       validateArguments(args);
@@ -1570,13 +1576,6 @@ interface Function
     }
 
     abstract ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr);
-
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
   }
 
   /**

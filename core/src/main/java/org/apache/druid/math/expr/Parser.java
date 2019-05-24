@@ -180,7 +180,25 @@ public class Parser
           public Expr visit(Expr expr)
           {
             if (expr instanceof ApplyFunctionExpr) {
+              // try to lift unapplied arguments into the apply function lambda
               return liftApplyLambda((ApplyFunctionExpr) expr, unapplied);
+            } else if (expr instanceof FunctionExpr && ((FunctionExpr) expr).function instanceof Function.ArrayFunction) {
+              // check array function arguments for unapplied identifiers to transform if necessary
+              FunctionExpr fnExpr = (FunctionExpr) expr;
+              Function.ArrayFunction arrayFn = (Function.ArrayFunction) fnExpr.function;
+              Set<Expr> arrayInputs = arrayFn.getArrayInputs(fnExpr.args);
+              List<Expr> newArgs = new ArrayList<>();
+              for (Expr arg : fnExpr.args) {
+                if (Parser.getIdentifierOrCastIdentifier(arg) == null && arrayInputs.contains(arg)) {
+                  Expr newArg = applyUnappliedIdentifiers(arg, unapplied);
+                  newArgs.add(newArg);
+                } else {
+                  newArgs.add(arg);
+                }
+              }
+
+              FunctionExpr newFnExpr = new FunctionExpr(arrayFn, arrayFn.name(), newArgs);
+              return newFnExpr;
             }
             return expr;
           }
