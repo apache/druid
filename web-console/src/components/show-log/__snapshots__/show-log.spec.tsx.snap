@@ -7,6 +7,17 @@ exports[`describe show log describe show log 1`] = `
   <div
     class="top-actions"
   >
+    <label
+      class="bp3-control bp3-checkbox"
+    >
+      <input
+        type="checkbox"
+      />
+      <span
+        class="bp3-control-indicator"
+      />
+      Tail log
+    </label>
     <div
       class="bp3-button-group right-buttons"
     >
