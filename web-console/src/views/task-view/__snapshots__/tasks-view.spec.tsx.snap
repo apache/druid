@@ -352,7 +352,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
           "Status",
           "Duration",
           "Actions",
-          "Host",
+          "Location",
         ]
       }
       onChange={[Function]}
@@ -442,8 +442,8 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         },
         Object {
           "Aggregated": [Function],
-          "Header": "Host",
-          "accessor": "host",
+          "Header": "Location",
+          "accessor": "location",
           "filterMethod": [Function],
           "show": true,
         },
