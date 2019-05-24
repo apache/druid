@@ -40,7 +40,7 @@ import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
-const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Duration', 'Actions'];
+const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Duration', 'Actions', 'Host'];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -163,6 +163,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
         duration: d.duration ? d.duration : 0,
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        host: d.location.host,
         rank: (TasksView.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
         task_id: d.id,
@@ -219,7 +220,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     //   FAILED => 1
 
     this.taskQueryManager.runQuery(`SELECT
-  "task_id", "type", "datasource", "created_time",
+  "task_id", "type", "datasource", "created_time", "host",
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   CASE WHEN "status" = 'RUNNING' THEN
    (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
@@ -591,6 +592,15 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             width: 120,
             Aggregated: row => '',
             show: taskTableColumnSelectionHandler.showColumn('Created time')
+          },
+          {
+            Header: 'Host',
+            accessor: 'host',
+            Aggregated: row => '',
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.host);
+            },
+            show: taskTableColumnSelectionHandler.showColumn('Host')
           },
           {
             Header: 'Status',
