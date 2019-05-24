@@ -258,8 +258,8 @@ SOURCE/JAVA-CORE
       DirectExecutorService class:
       * core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
 
-    This product contains modified versions of the Dockerfile and related configuration files
-     from SequenceIQ's Hadoop Docker file, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
+    This product contains modified versions of the Dockerfile, scripts, and related configuration files
+     used for building SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
       * examples/quickstart/tutorial/hadoop/docker/
 
     This product contains fixed bins histogram percentile computation code adapted from Netflix Spectator,
