@@ -168,7 +168,6 @@ const VIEW_TITLE: Record<Stage, string> = {
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
-  initSpec: IngestionSpec | null;
   initSupervisorId?: string | null;
   initTaskId?: string | null;
   goToTask: (taskId: string | null, supervisor?: string) => void;
@@ -227,7 +226,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   constructor(props: LoadDataViewProps) {
     super(props);
 
-    let spec = props.initSpec || parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
       stage: 'connect',
