@@ -259,7 +259,7 @@ SOURCE/JAVA-CORE
       * core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
 
     This product contains modified versions of the Dockerfile and related configuration files
-     from SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
+     from SequenceIQ's Hadoop Docker file, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
       * examples/quickstart/tutorial/hadoop/docker/
 
     This product contains fixed bins histogram percentile computation code adapted from Netflix Spectator,
@@ -268,6 +268,12 @@ SOURCE/JAVA-CORE
 
     This product contains ByteBuffer unmapping code adapted from Apache Kafka
       * core/src/main/java/org/apache/druid/java/util/common/ByteBufferUtils.java
+
+    This product contains s3 directory place holder check code adapted from JetS3t (https://bitbucket.org/jmurty/jets3t/wiki/Home).
+      * extensions-core/s3-extensions/src/main/java/org/apache/druid/storage/s3/S3Utils.java
+
+    This product contains lpad and rpad methods adapted from Apache Flink.
+      * core/src/main/java/org/apache/druid/java/util/common/StringUtils.java
 
 
 MIT License
@@ -291,6 +297,10 @@ SOURCE/WEB-CONSOLE
     This product bundles demo_table.css and jquery.dataTables.js from DataTables version 1.8.2, copyright Allan Jardine.,
      which is available under a BSD-3-Clause License. For details, see licenses/src/datatables.BSD3.
 
+SOURCE/JAVA-CORE
+    This product contains Porter stemmer adapted from a Javascript Porter Stemmer (https://github.com/kristopolous/Porter-Stemmer)
+     which is available under a BSD-3-Clause License.
+      * processing/src/test/java/org/apache/druid/query/extraction/JavaScriptExtractionFnTest.java
 
 Public Domain
 ================================
