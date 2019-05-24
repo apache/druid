@@ -22,16 +22,16 @@ import { shallow } from 'enzyme';
 import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 import * as React from 'react';
 
-import {ServersView} from '../servers-view/servers-view';
+import {SegmentsView} from '../segments-view/segments-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
 describe('describe segments-view', () => {
   it('segments view snapshot', () => {
     const segmentsView = shallow(
-      <ServersView
-        middleManager={'test'}
+      <SegmentsView
+        datasource={'test'}
+        onlyUnavailable={false}
         goToSql={(initSql: string) => {}}
-        goToTask={(taskId: string) => {}}
         noSqlMode={false}
       />);
     expect(segmentsView).toMatchSnapshot();

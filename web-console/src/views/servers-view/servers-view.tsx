@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Switch } from '@blueprintjs/core';
+import { Button, Icon, Intent, Popover, Position, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
@@ -25,7 +25,12 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components/index';
+import {
+  ActionCell,
+  TableColumnSelection,
+  ViewControlBar
+} from '../../components/index';
+import { AsyncActionDialog } from '../../dialogs/index';
 import {
   addFilter,
   formatBytes,
@@ -33,11 +38,12 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
+import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './servers-view.scss';
 
 const serverTableColumns: string[] = ['Server', 'Tier', 'Curr size', 'Max size', 'Usage', 'Load/drop queues', 'Host', 'Port'];
-const middleManagerTableColumns: string[] = ['Host', 'Usage', 'Availability groups', 'Last completed task time', 'Blacklisted until'];
+const middleManagerTableColumns: string[] = ['Host', 'Usage', 'Availability groups', 'Last completed task time', 'Blacklisted until', 'Status', 'Actions'];
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
   const queueParts: string[] = [];
@@ -68,6 +74,9 @@ export interface ServersViewState {
   middleManagers: any[] | null;
   middleManagersError: string | null;
   middleManagerFilter: Filter[];
+
+  middleManagerDisableWorkerHost: string | null;
+  middleManagerEnableWorkerHost: string | null;
 }
 
 interface ServerQueryResultRow {
@@ -111,7 +120,10 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       middleManagersLoading: true,
       middleManagers: null,
       middleManagersError: null,
-      middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : []
+      middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : [],
+
+      middleManagerDisableWorkerHost: null,
+      middleManagerEnableWorkerHost: null
     };
 
     this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
@@ -353,69 +365,171 @@ WHERE "server_type" = 'historical'`);
     const { middleManagers, middleManagersLoading, middleManagersError, middleManagerFilter } = this.state;
     const { middleManagerTableColumnSelectionHandler } = this;
 
-    return <ReactTable
-      data={middleManagers || []}
-      loading={middleManagersLoading}
-      noDataText={!middleManagersLoading && middleManagers && !middleManagers.length ? 'No MiddleManagers' : (middleManagersError || '')}
-      filterable
-      filtered={middleManagerFilter}
-      onFilteredChange={(filtered, column) => {
-        this.setState({ middleManagerFilter: filtered });
-      }}
-      columns={[
-        {
-          Header: 'Host',
-          id: 'host',
-          accessor: (row) => row.worker.host,
-          Cell: row => {
-            const value = row.value;
-            return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
-          },
-          show: middleManagerTableColumnSelectionHandler.showColumn('Host')
-        },
-        {
-          Header: 'Usage',
-          id: 'usage',
-          width: 60,
-          accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
-          filterable: false,
-          show: middleManagerTableColumnSelectionHandler.showColumn('Usage')
-        },
-        {
-          Header: 'Availability groups',
-          id: 'availabilityGroups',
-          width: 60,
-          accessor: (row) => row.availabilityGroups.length,
-          filterable: false,
-          show: middleManagerTableColumnSelectionHandler.showColumn('Availability groups')
-        },
-        {
-          Header: 'Last completed task time',
-          accessor: 'lastCompletedTaskTime',
-          show: middleManagerTableColumnSelectionHandler.showColumn('Last completed task time')
-        },
-        {
-          Header: 'Blacklisted until',
-          accessor: 'blacklistedUntil',
-          show: middleManagerTableColumnSelectionHandler.showColumn('Blacklisted until')
-        }
-      ]}
-      defaultPageSize={10}
-      className="-striped -highlight"
-      SubComponent={rowInfo => {
-        const runningTasks = rowInfo.original.runningTasks;
-        return <div style={{ padding: '20px' }}>
+    return <>
+      <ReactTable
+        data={middleManagers || []}
+        loading={middleManagersLoading}
+        noDataText={!middleManagersLoading && middleManagers && !middleManagers.length ? 'No MiddleManagers' : (middleManagersError || '')}
+        filterable
+        filtered={middleManagerFilter}
+        onFilteredChange={(filtered, column) => {
+          this.setState({ middleManagerFilter: filtered });
+        }}
+        columns={[
           {
-            runningTasks.length ?
-              <>
-                <span>Running tasks:</span>
-                <ul>{runningTasks.map((t: string) => <li key={t}>{t}&nbsp;<a onClick={() => goToTask(t)}>&#x279A;</a></li>)}</ul>
-              </> :
-              <span>No running tasks</span>
+            Header: 'Host',
+            id: 'host',
+            accessor: (row) => row.worker.host,
+            Cell: row => {
+              const value = row.value;
+              return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
+            },
+            show: middleManagerTableColumnSelectionHandler.showColumn('Host')
+          },
+          {
+            Header: 'Usage',
+            id: 'usage',
+            width: 60,
+            accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
+            filterable: false,
+            show: middleManagerTableColumnSelectionHandler.showColumn('Usage')
+          },
+          {
+            Header: 'Availability groups',
+            id: 'availabilityGroups',
+            width: 60,
+            accessor: (row) => row.availabilityGroups.length,
+            filterable: false,
+            show: middleManagerTableColumnSelectionHandler.showColumn('Availability groups')
+          },
+          {
+            Header: 'Last completed task time',
+            accessor: 'lastCompletedTaskTime',
+            show: middleManagerTableColumnSelectionHandler.showColumn('Last completed task time')
+          },
+          {
+            Header: 'Blacklisted until',
+            accessor: 'blacklistedUntil',
+            show: middleManagerTableColumnSelectionHandler.showColumn('Blacklisted until')
+          },
+          {
+            Header: 'Status',
+            id: 'status',
+            accessor: (row) => row.worker.version === '' ? 'Disabled' : 'Enabled',
+            show: middleManagerTableColumnSelectionHandler.showColumn('Status')
+          },
+          {
+            Header: 'Actions',
+            id: 'actions',
+            width: 70,
+            accessor: (row) => row.worker,
+            filterable: false,
+            Cell: row => {
+              const disabled = row.value.version === '';
+              const workerActions = this.getWorkerActions(row.value.host, disabled);
+              const workerMenu = basicActionsToMenu(workerActions);
+
+              return <ActionCell>
+                {
+                   workerMenu &&
+                   <Popover content={workerMenu} position={Position.BOTTOM_RIGHT}>
+                     <Icon icon={IconNames.WRENCH}/>
+                   </Popover>
+                }
+              </ActionCell>;
+            },
+            show: middleManagerTableColumnSelectionHandler.showColumn('Actions')
           }
-        </div>;
+        ]}
+        defaultPageSize={10}
+        className="-striped -highlight"
+        SubComponent={rowInfo => {
+          const runningTasks = rowInfo.original.runningTasks;
+          return <div style={{ padding: '20px' }}>
+            {
+              runningTasks.length ?
+                <>
+                  <span>Running tasks:</span>
+                  <ul>{runningTasks.map((t: string) => <li key={t}>{t}&nbsp;<a onClick={() => goToTask(t)}>&#x279A;</a></li>)}</ul>
+                </> :
+                <span>No running tasks</span>
+            }
+          </div>;
+        }}
+      />
+      {this.renderDisableWorkerAction()}
+      {this.renderEnableWorkerAction()}
+    </>;
+  }
+
+  private getWorkerActions(workerHost: string, disabled: boolean): BasicAction[] {
+    if (disabled) {
+      return [
+        {
+          icon: IconNames.TICK,
+          title: 'Enable',
+          onAction: () => this.setState({ middleManagerEnableWorkerHost: workerHost })
+        }
+      ];
+    } else {
+      return [
+        {
+          icon: IconNames.DISABLE,
+          title: 'Disable',
+          onAction: () => this.setState({ middleManagerDisableWorkerHost: workerHost })
+        }
+      ];
+    }
+  }
+
+  renderDisableWorkerAction() {
+    const { middleManagerDisableWorkerHost } = this.state;
+
+    return <AsyncActionDialog
+      action={
+        middleManagerDisableWorkerHost ? async () => {
+          const resp = await axios.post(`/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`, {});
+          return resp.data;
+        } : null
+      }
+      confirmButtonText="Disable worker"
+      successText="Worker has been disabled"
+      failText="Could not disable worker"
+      intent={Intent.DANGER}
+      onClose={(success) => {
+        this.setState({ middleManagerDisableWorkerHost: null });
+        if (success) this.middleManagerQueryManager.rerunLastQuery();
       }}
-    />;
+    >
+      <p>
+        {`Are you sure you want to disable worker '${middleManagerDisableWorkerHost}'?`}
+      </p>
+    </AsyncActionDialog>;
+  }
+
+  renderEnableWorkerAction() {
+    const { middleManagerEnableWorkerHost } = this.state;
+
+    return <AsyncActionDialog
+      action={
+        middleManagerEnableWorkerHost ? async () => {
+          const resp = await axios.post(`/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`, {});
+          return resp.data;
+        } : null
+      }
+      confirmButtonText="Enable worker"
+      successText="Worker has been enabled"
+      failText="Could not enable worker"
+      intent={Intent.PRIMARY}
+      onClose={(success) => {
+        this.setState({ middleManagerEnableWorkerHost: null });
+        if (success) this.middleManagerQueryManager.rerunLastQuery();
+      }}
+    >
+      <p>
+        {`Are you sure you want to enable worker '${middleManagerEnableWorkerHost}'?`}
+      </p>
+    </AsyncActionDialog>;
   }
 
   render() {

@@ -24,6 +24,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -77,8 +79,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/incubator-druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
-  private final Object runnerInitLock = new Object();
-  private volatile SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
+  private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
 
   public SeekableStreamIndexTask(
       final String id,
@@ -112,6 +113,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.context = context;
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.runnerSupplier = Suppliers.memoize(this::createTaskRunner);
   }
 
   private static String makeTaskId(String dataSource, String type)
@@ -288,14 +290,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   @VisibleForTesting
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> getRunner()
   {
-    if (runner == null) {
-      synchronized (runnerInitLock) {
-        if (runner == null) {
-          runner = createTaskRunner();
-        }
-      }
-    }
-
-    return runner;
+    return runnerSupplier.get();
   }
 }
