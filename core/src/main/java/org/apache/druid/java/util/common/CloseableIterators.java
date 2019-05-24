@@ -92,5 +92,7 @@ public class CloseableIterators
     return wrap(innerIterator, null);
   }
 
-  private CloseableIterators() {}
+  private CloseableIterators()
+  {
+  }
 }

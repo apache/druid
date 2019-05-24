@@ -40,6 +40,8 @@ The startup scripts for these example configurations run a single ZK instance al
 
 The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.html#coordinator-operation).
 
+While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
+
 ## Single Server Reference Configurations
 
 Micro-Quickstart: 4 CPU, 16GB RAM

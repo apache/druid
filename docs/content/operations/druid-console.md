@@ -41,53 +41,75 @@ Below is a description of the high-level features and functionality of the Druid
 
 ## Home
 
-The home view provide a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis#legacy-consoles) should you need them.
+The home view provides a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
 
 ![home-view](./img/01-home-view.png)
+
+## Data loader
+
+The data loader view allows you to load data by building an ingestion spec with a step-by-step wizard. 
+
+![data-loader-1](./img/02-data-loader-1.png)
+
+After picking the source of your data just follow the series for steps that will show you incremental previews of the data as it will be ingested.
+After filling in the required details on every step you can navigate to the next step by clicking the `Next` button.
+You can also freely navigate between the steps from the top navigation.
+
+Navigating with the top navigation will leave the underlying spec unmodified while clicking the `Next` button will attempt to fill in the subsequent steps with appropriate defaults.
+
+![data-loader-2](./img/03-data-loader-2.png)
 
 ## Datasources
 
 The datasources view shows all the currently enabled datasources. From this view you can see the sizes and availability of the different datasources. You can edit the retention rules and drop data (as well as issue kill tasks).
 Like any view that is powered by a DruidSQL query you can click “Go to SQL” to run the underlying SQL query directly.
 
-![datasources](./img/02-datasources.png)
+![datasources](./img/04-datasources.png)
 
 You can view and edit retention rules to determine the general availability of a datasource.
 
-![retention](./img/03-retention.png)
+![retention](./img/05-retention.png)
 
 ## Segments
 
 The segment view shows every single segment in the cluster. Each segment can be expanded to provide more information. The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
-![segments](./img/04-segments.png)
+![segments](./img/06-segments.png)
 
 ## Tasks and supervisors
 
 The task view is also the home of supervisors. From this view you can check the status of existing supervisors as well as suspend and resume them. You can also submit new supervisors by entering their JSON spec.
 
-![tasks-1](./img/05-tasks-1.png)
+![supervisors](./img/07-supervisors.png)
 
-The tasks table let’s you see the currently running and recently completed tasks. From this table you can monitor individual tasks and also submit new tasks by entering their JSON spec.
+The tasks table allows you see the currently running and recently completed tasks. From this table you can monitor individual tasks and also submit new tasks by entering their JSON spec.
+To make managing a lot of tasks more accessible, you can group the tasks by their type, datasource, or status to make navigation easier.
 
-![tasks-2](./img/06-tasks-2.png)
+![tasks](./img/08-tasks.png)
 
-Since there will likely be a lot of tasks you can group the tasks by their type, datasource, or status to make navigation easier.
+Click on the magnifying glass for any task to see more detail about it.
 
-![tasks-3](./img/07-tasks-3.png)
+![tasks-status](./img/09-task-status.png)
 
 ## Servers
 
 The data servers tab lets you see the current status of the historical nodes and MiddleManager (indexer) processes. Note that currently only historical nodes that are actively serving segments will be shown in this view.
 
-![servers](./img/08-servers.png)
+![servers](./img/10-servers.png)
 
-## SQL
+## Query
 
-The SQL view lets you issue direct DruidSQL queries and display the results as a simple table. Note that despite the name this view also allows you to enter native Druid queries in Hjson format.
+The query view lets you issue [DruidSQL](../querying/sql.html) queries and display the results as a simple table.
 
-![sql](./img/09-sql-1.png)
+![query-sql](./img/11-query-sql.png)
 
-The SQL view issues queries in Druid's native query format, which is JSON over HTTP. To send Druid's native query, you must start your query with { and in the format of JSON.
+The query view can also issue queries in Druid's [native query format](../querying/querying.html), which is JSON over HTTP.
+To send a native Druid query, you must start your query with `{` and format it as JSON.
 
-![sql](./img/10-sql-2.png)
+![query-rune](./img/12-query-rune.png)
+
+## Lookups
+
+You can create and edit query time lookups via the lookup view.
+
+![lookups](./img/13-lookups.png)

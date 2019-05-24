@@ -31,6 +31,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
@@ -761,9 +762,11 @@ public class CalciteTests
             plannerConfig
         ),
         new TestServerInventoryView(walker.getSegments()),
+        EasyMock.createMock(ServerInventoryView.class),
         TEST_AUTHORIZER_MAPPER,
         druidLeaderClient,
         druidLeaderClient,
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
         getJsonMapper()
     );
     return schema;

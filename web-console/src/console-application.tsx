@@ -23,21 +23,21 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink } from './components/external-link';
-import { HeaderActiveTab, HeaderBar } from './components/header-bar';
-import { Loader } from './components/loader';
+import { ExternalLink } from './components/external-link/external-link';
+import { HeaderActiveTab, HeaderBar } from './components/header-bar/header-bar';
+import { Loader } from './components/loader/loader';
 import { AppToaster } from './singletons/toaster';
 import { UrlBaser } from './singletons/url-baser';
 import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
-import { DatasourcesView } from './views/datasource-view';
-import { HomeView } from './views/home-view';
-import { LoadDataView, LoadDataViewSeed } from './views/load-data-view';
-import { LookupsView } from './views/lookups-view';
-import { SegmentsView } from './views/segments-view';
-import { ServersView } from './views/servers-view';
-import { SqlView } from './views/sql-view';
-import { TasksView } from './views/tasks-view';
+import { DatasourcesView } from './views/datasource-view/datasource-view';
+import { HomeView } from './views/home-view/home-view';
+import { LoadDataView } from './views/load-data-view/load-data-view';
+import { LookupsView } from './views/lookups-view/lookups-view';
+import { SegmentsView } from './views/segments-view/segments-view';
+import { ServersView } from './views/servers-view/servers-view';
+import { SqlView } from './views/sql-view/sql-view';
+import { TasksView } from './views/task-view/tasks-view';
 
 import './console-application.scss';
 
@@ -100,8 +100,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     });
   }
 
-  private loadDataViewSeed: LoadDataViewSeed | null;
+  private initSpec: any | null;
   private taskId: string | null;
+  private openDialog: string | null;
   private datasource: string | null;
   private onlyUnavailable: boolean | null;
   private initSql: string | null;
@@ -150,8 +151,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.loadDataViewSeed = null;
+      this.initSpec = null;
       this.taskId = null;
+      this.openDialog = null;
       this.datasource = null;
       this.onlyUnavailable = null;
       this.initSql = null;
@@ -159,14 +161,15 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     }, 50);
   }
 
-  private goToLoadDataView = (loadDataViewSeed?: LoadDataViewSeed) => {
-    if (loadDataViewSeed) this.loadDataViewSeed = loadDataViewSeed;
+  private goToLoadDataView = (initSpec?: any) => {
+    if (initSpec) this.initSpec = initSpec;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }
 
-  private goToTask = (taskId: string | null) => {
+  private goToTask = (taskId: string | null, openDialog?: string) => {
     this.taskId = taskId;
+    if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
   }
@@ -205,7 +208,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-    return this.wrapInViewContainer('load-data', <LoadDataView seed={this.loadDataViewSeed} goToTask={this.goToTask}/>, 'narrow-pad');
+    return this.wrapInViewContainer('load-data', <LoadDataView initSpec={this.initSpec} goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
   private wrappedSqlView = () => {
@@ -224,7 +227,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
   }
 
   private wrappedServersView = () => {

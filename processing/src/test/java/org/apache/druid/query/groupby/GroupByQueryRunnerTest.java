@@ -6316,9 +6316,11 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("market", "market")
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("alias", "alias")
         ))
         .setAggregatorSpecs(
             Arrays.asList(

@@ -31,8 +31,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -168,6 +170,36 @@ public class VirtualColumns implements Cacheable
       final DimensionSelector selector = virtualColumn.makeDimensionSelector(dimensionSpec, factory);
       Preconditions.checkNotNull(selector, "selector");
       return selector;
+    }
+  }
+
+  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(columnName, columnSelector) : null;
+    }
+  }
+
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      return virtualColumn.makeDimensionSelector(dimensionSpec, columnSelector, offset);
+    }
+  }
+
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
     }
   }
 

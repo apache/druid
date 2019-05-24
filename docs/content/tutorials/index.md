@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Apache Druid (incubating) Quickstart"
+title: "Apache Druid (incubating) Single-Server Quickstart"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) Quickstart"
   ~ under the License.
   -->
 
-# Apache Druid (incubating) Quickstart
+# Apache Druid (incubating) Single-Server Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
@@ -37,14 +37,6 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 You will need:
   * Java 8 (8u92+)
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
-  
-On Mac OS X, you can use [Oracle's JDK
-8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to install
-Java.
-
-On Linux, your OS package manager should be able to help for Java. If your Ubuntu-
-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
-OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
 
 
 ### Hardware
@@ -71,7 +63,7 @@ In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - template configurations for a clustered setup
+* `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid

@@ -218,7 +218,9 @@ public class HttpClientConfig
     private CompressionCodec compressionCodec = DEFAULT_COMPRESSION_CODEC;
     private Duration unusedConnectionTimeoutDuration = DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION;
 
-    private Builder() {}
+    private Builder()
+    {
+    }
 
     public Builder withNumConnections(int numConnections)
     {

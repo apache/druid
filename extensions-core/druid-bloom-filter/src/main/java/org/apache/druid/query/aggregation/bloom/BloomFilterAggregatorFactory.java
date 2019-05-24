@@ -227,8 +227,9 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

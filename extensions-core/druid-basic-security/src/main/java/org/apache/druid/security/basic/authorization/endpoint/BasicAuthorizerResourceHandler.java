@@ -34,7 +34,7 @@ public interface BasicAuthorizerResourceHandler
   // coordinator methods
   Response getAllUsers(String authorizerName);
 
-  Response getUser(String authorizerName, String userName, boolean isFull);
+  Response getUser(String authorizerName, String userName, boolean isFull, boolean simplifyPermissions);
 
   Response createUser(String authorizerName, String userName);
 
@@ -42,7 +42,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response getAllRoles(String authorizerName);
 
-  Response getRole(String authorizerName, String roleName, boolean isFull);
+  Response getRole(String authorizerName, String roleName, boolean isFull, boolean simplifyPermissions);
 
   Response createRole(String authorizerName, String roleName);
 
