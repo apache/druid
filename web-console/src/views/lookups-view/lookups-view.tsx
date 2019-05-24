@@ -56,8 +56,6 @@ export interface LookupsViewState {
   lookupEditSpec: string;
   isEdit: boolean;
   allLookupTiers: string[];
-  lookupActionDialogId: string | null;
-  lookupActionDialogActions: BasicAction[];
 
   deleteLookupName: string | null;
   deleteLookupTier: string | null;
@@ -81,8 +79,6 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       lookupEditSpec: '',
       isEdit: false,
       allLookupTiers: [],
-      lookupActionDialogId: null,
-      lookupActionDialogActions: [],
 
       deleteLookupTier: null,
       deleteLookupName: null
@@ -221,15 +217,15 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   private getlookupActions(lookupTier: string, lookupId: string): BasicAction[] {
     return [
       {
+        icon: IconNames.EDIT,
+        title: 'Edit',
+        onAction: () => this.openLookupEditDialog(lookupTier, lookupId)
+      },
+      {
         icon: IconNames.CROSS,
         title: 'Delete',
         intent: Intent.DANGER,
         onAction: () => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })
-      },
-      {
-        icon: IconNames.WRENCH,
-        title: 'Edit',
-        onAction: () => this.openLookupEditDialog(lookupTier, lookupId)
       }
     ];
   }
@@ -355,7 +351,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   render() {
-    const { lookupsError, lookupActionDialogActions, lookupActionDialogId } = this.state;
+    const { lookupsError} = this.state;
     const { tableColumnSelectionHandler } = this;
 
     return<>
