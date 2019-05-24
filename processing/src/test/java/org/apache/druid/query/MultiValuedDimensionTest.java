@@ -680,7 +680,7 @@ public class MultiValuedDimensionTest
         .setVirtualColumns(
             new ExpressionVirtualColumn(
                 "tt",
-                "foldr((tag, acc) -> concat('foo', concat(concat(acc, case_searched(acc == '', '', ', '), tag))), tags, '')",
+                "foldr((tag, acc) -> concat(concat(acc, case_searched(acc == '', '', ', '), concat('foo', tag)))), tags, '')",
                 ValueType.STRING,
                 TestExprMacroTable.INSTANCE
             )
