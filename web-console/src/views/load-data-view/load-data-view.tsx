@@ -333,9 +333,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   render() {
-    console.log('here');
     const { stage, spec } = this.state;
-    if (!Object.keys(spec).length) {
+    if (!Object.keys(spec).length && !this.props.initSupervisorId && !this.props.initTaskId) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
         {this.renderInitStage()}
       </div>;
@@ -2382,8 +2381,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   renderLoading() {
-    return <Loader/>;
+    return <Loader loading/>;
   }
+
   renderJsonSpecStage() {
     const { goToTask } = this.props;
     const { spec } = this.state;
