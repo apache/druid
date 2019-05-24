@@ -93,6 +93,7 @@ public class ApplyFunctionTest
   {
     assertExpr("foldr((x, y) -> x + y, [1, 1, 1, 1, 1], 0)", 5L);
     assertExpr("foldr((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
+    assertExpr("foldr((a, acc) -> concat(a, acc), a, '')", "foobarbazbarfoo");
   }
 
   @Test
