@@ -1,0 +1,70 @@
+# Druid CircleCI 2.0 configuration file
+#
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/openjdk:8-jdk
+
+    working_directory: ~/repo
+
+    parallelism: 1
+
+    environment:
+      # Customize the JVM maximum heap limit
+      MAVEN_OPTS: -Xmx14g
+      HADOOP_VERSION: 2.7.3
+
+    resource_class: xlarge
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "pom.xml" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      # Setup Nexus for Branch
+      - run:
+          name: Setup
+          command: |
+            cd && git clone git@github.com:branchmetrics/deploy.git
+            cp ~/deploy/maven/settings.xml $HOME/.m2/
+
+      # Create Package if not release!
+      - run:
+          name: Create Druid Package
+          command: |
+            if ! [[ $RELEASE ]]; then mvn -B clean package -DskipTests=true; fi
+
+      # Deploy if not release!
+      - run:
+          name: Deploy Druid Package
+          command: |
+            if ! [[ $RELEASE ]]; then mvn -B clean deploy -DskipTests=true; fi
+
+      # Create Package if release!
+      - run:
+          name: Create Druid Release Package
+          command: |
+            if [[ $GIT_USER_EMAIL ]]; then git config --global user.email "$GIT_USER_EMAIL" ; fi
+            if [[ $GIT_USER_NAME ]]; then git config --global user.name "$GIT_USER_NAME" ; fi
+            if [[ $RELEASE ]]; then ./release.sh $RELEASE $NEXT $HADOOP_VERSION; fi
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+
+      - store_artifacts:
+          path: distribution/target
+
+workflows:
+  version: 2
+  build_and_release:
+    jobs:
+      - build
