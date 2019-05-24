@@ -746,6 +746,9 @@ SOURCE/WEB-CONSOLE
     This product bundles jQuery version 1.11.0, copyright jQuery Foundation, Inc.,
      which is available under an MIT license. For details, see licenses/src/jquery.MIT.
 
+    This product bundles sizzle.js by way of jQuery version 1.11.0, copyright jQuery Foundation and other contributors
+     which is available under an MIT license. For details, see licenses/src/sizzle.MIT.
+
     This product bundles jQuery UI version 1.9.2, copyright jQuery Foundation and other contributors,
      which is available under an MIT license. For details, see licenses/src/jquery-ui.MIT.
 

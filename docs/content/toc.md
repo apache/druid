@@ -143,7 +143,6 @@ layout: toc
   * Tuning and Recommendations
     * [Basic Cluster Tuning](/docs/VERSION/operations/basic-cluster-tuning.html)  
     * [General Recommendations](/docs/VERSION/operations/recommendations.html)
-    * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
     * [JVM Best Practices](/docs/VERSION/configuration/index.html#jvm-configuration-best-practices)        
   * Tools
     * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
