@@ -219,12 +219,12 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     //   FAILED => 1
 
     this.taskQueryManager.runQuery(`SELECT
-  "task_id", "type", "datasource", "created_time", "location",
+  "task_id", "type", "datasource", "created_time",
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   CASE WHEN "status" = 'RUNNING' THEN
    (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
   ELSE 1 END AS "rank",
-  "duration", "error_msg"
+   "location", "duration", "error_msg"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 

@@ -354,32 +354,30 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     const { lookupsError} = this.state;
     const { tableColumnSelectionHandler } = this;
 
-    return<>
-      <div className="lookups-view app-view">
-        <ViewControlBar label="Lookups">
+    return<div className="lookups-view app-view">
+      <ViewControlBar label="Lookups">
+        <Button
+          icon={IconNames.REFRESH}
+          text="Refresh"
+          onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
+        />
+        {
+          !lookupsError &&
           <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
+            icon={IconNames.PLUS}
+            text="Add"
+            onClick={() => this.openLookupEditDialog('', '')}
           />
-          {
-            !lookupsError &&
-            <Button
-              icon={IconNames.PLUS}
-              text="Add"
-              onClick={() => this.openLookupEditDialog('', '')}
-            />
-          }
-          <TableColumnSelection
-            columns={tableColumns}
-            onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
-            tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
-          />
-        </ViewControlBar>
-        {this.renderLookupsTable()}
-        {this.renderLookupEditDialog()}
-        {this.renderDeleteLookupAction()}
-      </div>;
-    </>;
+        }
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+        />
+      </ViewControlBar>
+      {this.renderLookupsTable()}
+      {this.renderLookupEditDialog()}
+      {this.renderDeleteLookupAction()}
+    </div>;
   }
 }
