@@ -41,7 +41,7 @@ import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import './tasks-view.scss';
 
 const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
-const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Created time', 'Status', 'Duration', 'Actions'];
+const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', 'Actions'];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -231,7 +231,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   CASE WHEN "status" = 'RUNNING' THEN
    (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
   ELSE 1 END AS "rank",
-  "location", "duration", "error_msg"
+   "location", "duration", "error_msg"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
@@ -607,6 +607,16 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }); }}>{value}</a>;
             },
             show: taskTableColumnSelectionHandler.showColumn('Datasource')
+          },
+
+          {
+            Header: 'Location',
+            accessor: 'location',
+            Aggregated: row => '',
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.location);
+            },
+            show: taskTableColumnSelectionHandler.showColumn('Location')
           },
           {
             Header: 'Created time',

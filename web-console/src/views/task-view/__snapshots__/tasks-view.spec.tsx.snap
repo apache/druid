@@ -362,6 +362,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "Task ID",
               "Type",
               "Datasource",
+              "Location",
               "Created time",
               "Status",
               "Duration",
@@ -444,6 +445,13 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "Cell": [Function],
               "Header": "Datasource",
               "accessor": "datasource",
+              "show": true,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Header": "Location",
+              "accessor": "location",
+              "filterMethod": [Function],
               "show": true,
             },
             Object {
