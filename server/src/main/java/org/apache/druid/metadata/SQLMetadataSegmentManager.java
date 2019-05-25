@@ -214,6 +214,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       }
 
       dataSources = null;
+      overshadowedSegments = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -454,8 +455,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
           ).bind("dataSource", dataSource).execute()
       );
-
-      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
 
       if (removed == 0) {
         return false;
@@ -756,11 +755,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
     // Replace "dataSources" atomically.
     dataSources = newDataSources;
+    // the overshadowedSegments could become invalid if dataSources is updated outside of
+    // this method, currently both dataSources and overshadowedSegments are updated here
+    // and in stop()
     overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments(segments));
   }
 
   /**
-   * This method builds a timeline from given segments and finds the overshadowed segments
+   * This method builds timelines from given segments and finds the overshadowed segments list
    *
    * @return overshadowed segments list
    */

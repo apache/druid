@@ -36,8 +36,8 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -162,7 +162,7 @@ public class MetadataResource
     final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
     if (includeOvershadowedStatus != null) {
-      final Iterable<DataSegmentWithOvershadowedStatus> authorizedSegments =
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments =
           findAuthorizedSegmentWithOvershadowedStatus(
               req,
               metadataSegments
@@ -186,7 +186,7 @@ public class MetadataResource
     }
   }
 
-  private Iterable<DataSegmentWithOvershadowedStatus> findAuthorizedSegmentWithOvershadowedStatus(
+  private Iterable<SegmentWithOvershadowedStatus> findAuthorizedSegmentWithOvershadowedStatus(
       HttpServletRequest req,
       Stream<DataSegment> metadataSegments
   )
@@ -196,16 +196,16 @@ public class MetadataResource
         .ofNullable(metadataSegmentManager.getOvershadowedSegments())
         .orElse(Collections.emptyList());
 
-    final Stream<DataSegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
-        .map(segment -> new DataSegmentWithOvershadowedStatus(
+    final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
+        .map(segment -> new SegmentWithOvershadowedStatus(
             segment,
             overshadowedSegments.contains(segment)
         ));
 
-    final Function<DataSegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<DataSegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
         segmentsWithOvershadowedStatus::iterator,
         raGenerator,

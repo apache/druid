@@ -44,7 +44,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
@@ -80,7 +80,7 @@ public class MetadataSegmentView
    * from other threads.
    */
   @MonotonicNonNull
-  private volatile ImmutableSortedSet<DataSegmentWithOvershadowedStatus> publishedSegments = null;
+  private volatile ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -139,18 +139,18 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<DataSegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
+    final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         responseHandler,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final ImmutableSortedSet.Builder<DataSegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+    final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
-      final DataSegmentWithOvershadowedStatus segment = metadataSegments.next();
+      final SegmentWithOvershadowedStatus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      final DataSegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new DataSegmentWithOvershadowedStatus(
+      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
           interned,
           segment.isOvershadowed()
       );
@@ -160,7 +160,7 @@ public class MetadataSegmentView
     cachePopulated.countDown();
   }
 
-  public Iterator<DataSegmentWithOvershadowedStatus> getPublishedSegments()
+  public Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
@@ -176,7 +176,7 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<DataSegmentWithOvershadowedStatus> getMetadataSegments(
+  private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
@@ -210,7 +210,7 @@ public class MetadataSegmentView
         responseHandler
     );
 
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegmentWithOvershadowedStatus>()
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentWithOvershadowedStatus>()
     {
     });
     return new JsonParserIterator<>(

@@ -28,13 +28,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * DataSegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
  */
-public class DataSegmentWithOvershadowedStatus implements Comparable<DataSegmentWithOvershadowedStatus>
+public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {
   private final boolean overshadowed;
   private final DataSegment dataSegment;
 
   @JsonCreator
-  public DataSegmentWithOvershadowedStatus(
+  public SegmentWithOvershadowedStatus(
       @JsonProperty("dataSegment") DataSegment dataSegment,
       @JsonProperty("overshadowed") boolean overshadowed
   )
@@ -61,10 +61,10 @@ public class DataSegmentWithOvershadowedStatus implements Comparable<DataSegment
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DataSegmentWithOvershadowedStatus)) {
+    if (!(o instanceof SegmentWithOvershadowedStatus)) {
       return false;
     }
-    final DataSegmentWithOvershadowedStatus that = (DataSegmentWithOvershadowedStatus) o;
+    final SegmentWithOvershadowedStatus that = (SegmentWithOvershadowedStatus) o;
     if (!dataSegment.equals(that.dataSegment)) {
       return false;
     }
@@ -83,7 +83,7 @@ public class DataSegmentWithOvershadowedStatus implements Comparable<DataSegment
   }
 
   @Override
-  public int compareTo(DataSegmentWithOvershadowedStatus o)
+  public int compareTo(SegmentWithOvershadowedStatus o)
   {
     return dataSegment.getId().compareTo(o.dataSegment.getId());
   }

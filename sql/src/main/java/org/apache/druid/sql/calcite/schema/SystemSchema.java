@@ -73,8 +73,8 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -100,7 +100,7 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
-  private static final Function<DataSegmentWithOvershadowedStatus, Iterable<ResourceAction>>
+  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
       SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
@@ -269,7 +269,7 @@ public class SystemSchema extends AbstractSchema
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<DataSegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
@@ -354,15 +354,15 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<DataSegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
-        Iterator<DataSegmentWithOvershadowedStatus> it,
+    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
+        Iterator<SegmentWithOvershadowedStatus> it,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      final Iterable<DataSegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,
