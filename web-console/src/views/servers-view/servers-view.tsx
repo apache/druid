@@ -21,6 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
 import * as React from 'react';
+import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
@@ -33,7 +34,7 @@ import { AsyncActionDialog } from '../../dialogs/index';
 import {
   addFilter,
   formatBytes,
-  formatBytesCompact, LocalStorageKeys,
+  formatBytesCompact, localStorageGet, LocalStorageKeys, localStorageSet,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
@@ -132,6 +133,9 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     this.middleManagerTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.MIDDLEMANAGER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
+    if (!localStorageGet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE)) {
+      localStorageSet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE, '60');
+    }
   }
 
   static getServers = async (): Promise<ServerQueryResultRow[]> => {
@@ -208,6 +212,10 @@ WHERE "server_type" = 'historical'`);
   componentWillUnmount(): void {
     this.serverQueryManager.terminate();
     this.middleManagerQueryManager.terminate();
+  }
+
+  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+    localStorageSet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
   renderServersTable() {
@@ -529,49 +537,58 @@ WHERE "server_type" = 'historical'`);
     const { groupByTier } = this.state;
     const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
-    return <div className="servers-view app-view">
-      <ViewControlBar label="Historicals">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.serverQueryManager.rerunLastQuery()}
-        />
-        {
-          !noSqlMode &&
+    return <SplitterLayout
+      customClassName={'servers-view app-view'}
+      vertical
+      percentage
+      secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.SERVERS_VIEW_PANE_SIZE) as string)}
+      primaryMinSize={30}
+      secondaryMinSize={30}
+      onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+    >
+      <div className={'top-pane'}>
+        <ViewControlBar label="Historicals">
           <Button
-            icon={IconNames.APPLICATION}
-            text="Go to SQL"
-            onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.serverQueryManager.rerunLastQuery()}
           />
-        }
-        <Switch
-          checked={groupByTier}
-          label="Group by tier"
-          onChange={() => this.setState({ groupByTier: !groupByTier })}
-        />
-        <TableColumnSelection
-          columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderServersTable()}
-
-      <div className="control-separator"/>
-
-      <ViewControlBar label="MiddleManagers">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
-        />
-        <TableColumnSelection
-          columns={middleManagerTableColumns}
-          onChange={(column) => middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={middleManagerTableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderMiddleManagerTable()}
-    </div>;
+          {
+            !noSqlMode &&
+            <Button
+              icon={IconNames.APPLICATION}
+              text="Go to SQL"
+              onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
+            />
+          }
+          <Switch
+            checked={groupByTier}
+            label="Group by tier"
+            onChange={() => this.setState({ groupByTier: !groupByTier })}
+          />
+          <TableColumnSelection
+            columns={serverTableColumns}
+            onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+        {this.renderServersTable()}
+      </div>
+      <div className={'bottom-pane'}>
+        <ViewControlBar label="MiddleManagers">
+          <Button
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
+          />
+          <TableColumnSelection
+            columns={middleManagerTableColumns}
+            onChange={(column) => middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={middleManagerTableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+        {this.renderMiddleManagerTable()}
+      </div>
+    </SplitterLayout>;
   }
 }

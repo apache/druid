@@ -19,10 +19,30 @@
 @import "../../variables";
 
 .tasks-view {
-  padding-bottom: 50px;
+  height: 100%;
+  width: 100%;
 
-  .view-control-bar,
-  .ReactTable {
+
+  .view-control-bar{
     margin-bottom: $standard-padding;
   }
+
+  .ReactTable {
+    position: absolute;
+    top: 50px;
+    bottom: 0;
+    width: 100%;
+  }
+
+}
+
+.bottom-pane {
+  position: relative;
+  height: 100%;
+  padding-top: 15px;
+}
+
+.splitter-layout.splitter-layout-vertical > .layout-splitter{
+  height: 2px;
+  background-color: #6d8ea9;
 }

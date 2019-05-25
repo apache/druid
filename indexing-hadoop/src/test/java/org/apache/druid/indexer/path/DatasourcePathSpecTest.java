@@ -41,13 +41,11 @@ import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
 import org.apache.druid.indexer.hadoop.DatasourceInputFormat;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
@@ -182,7 +180,6 @@ public class DatasourcePathSpecTest
     ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
 
     DatasourcePathSpec expected = new DatasourcePathSpec(
-        jsonMapper,
         null,
         ingestionSpec1,
         Long.valueOf(10),
@@ -192,7 +189,6 @@ public class DatasourcePathSpecTest
     Assert.assertEquals(expected, actual);
 
     expected = new DatasourcePathSpec(
-        jsonMapper,
         null,
         ingestionSpec1,
         null,
@@ -202,7 +198,6 @@ public class DatasourcePathSpecTest
     Assert.assertEquals(expected, actual);
 
     expected = new DatasourcePathSpec(
-        jsonMapper,
         segments1,
         ingestionSpec1,
         null,
@@ -212,7 +207,6 @@ public class DatasourcePathSpecTest
     Assert.assertEquals(expected, actual);
 
     expected = new DatasourcePathSpec(
-        jsonMapper,
         segments1,
         ingestionSpec1,
         null,
@@ -227,10 +221,7 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
-
     DatasourcePathSpec pathSpec1 = new DatasourcePathSpec(
-        mapper,
         segments1,
         ingestionSpec1,
         null,
@@ -238,7 +229,6 @@ public class DatasourcePathSpecTest
     );
 
     DatasourcePathSpec pathSpec2 = new DatasourcePathSpec(
-        mapper,
         segments2,
         ingestionSpec2,
         null,
@@ -281,10 +271,7 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = new DefaultObjectMapper();
-
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
-        mapper,
         null,
         ingestionSpec1,
         null,
@@ -306,7 +293,6 @@ public class DatasourcePathSpecTest
 
     //now with ignoreWhenNoSegments flag set
     pathSpec = new DatasourcePathSpec(
-        mapper,
         null,
         ingestionSpec1.withIgnoreWhenNoSegments(true),
         null,

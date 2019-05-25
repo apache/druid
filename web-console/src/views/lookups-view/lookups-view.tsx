@@ -16,23 +16,25 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from '@blueprintjs/core';
+import {Button, Icon, Intent, Popover, Position} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components/index';
-import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/index';
+import {ActionCell, TableColumnSelection, ViewControlBar} from '../../components';
+import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
   TableColumnSelectionHandler
 } from '../../utils';
+import {BasicAction, basicActionsToMenu} from '../../utils/basic-action';
 
 import './lookups-view.scss';
+
 
 const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', 'Actions'];
 
@@ -55,8 +57,8 @@ export interface LookupsViewState {
   isEdit: boolean;
   allLookupTiers: string[];
 
-  deleteLookupTier: string | null;
   deleteLookupName: string | null;
+  deleteLookupTier: string | null;
 }
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
@@ -212,6 +214,22 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     }
   }
 
+  private getlookupActions(lookupTier: string, lookupId: string): BasicAction[] {
+    return [
+      {
+        icon: IconNames.EDIT,
+        title: 'Edit',
+        onAction: () => this.openLookupEditDialog(lookupTier, lookupId)
+      },
+      {
+        icon: IconNames.CROSS,
+        title: 'Delete',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })
+      }
+    ];
+  }
+
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
 
@@ -288,16 +306,23 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           {
             Header: 'Actions',
             id: 'actions',
+            width: 70,
             accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
               const lookupId = row.value.id;
               const lookupTier = row.value.tier;
-              return <div>
-                <a onClick={() => this.openLookupEditDialog(lookupTier, lookupId)}>Edit</a>
-                &nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })}>Delete</a>
-              </div>;
+              const lookupActions = this.getlookupActions(lookupTier, lookupId);
+              const lookupMenu = basicActionsToMenu(lookupActions);
+
+              return <ActionCell>
+                {
+                  lookupMenu &&
+                  <Popover content={lookupMenu} position={Position.BOTTOM_RIGHT}>
+                      <Icon icon={IconNames.WRENCH}/>
+                  </Popover>
+                }
+              </ActionCell>;
             },
             show: tableColumnSelectionHandler.showColumn('Actions')
           }
@@ -309,7 +334,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   renderLookupEditDialog() {
-    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit } = this.state;
+    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit} = this.state;
 
     return <LookupEditDialog
       isOpen={lookupEditDialogOpen}
@@ -326,10 +351,10 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   render() {
-    const { lookupsError } = this.state;
+    const { lookupsError} = this.state;
     const { tableColumnSelectionHandler } = this;
 
-    return <div className="lookups-view app-view">
+    return<div className="lookups-view app-view">
       <ViewControlBar label="Lookups">
         <Button
           icon={IconNames.REFRESH}
