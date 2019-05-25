@@ -121,6 +121,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
           "filterable": false,
           "id": "actions",
           "show": true,
+          "width": 70,
         },
       ]
     }
