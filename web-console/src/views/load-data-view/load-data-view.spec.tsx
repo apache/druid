@@ -29,7 +29,6 @@ describe('describe load data view', () => {
   it('load data view snapshot', () => {
     const loadDataView = shallow(
       <LoadDataView
-        initSpec={{dataSchema: {dataSource: 'test', parser:{parseSpec: {format: 'test',  dimensionsSpec: {}, timestampSpec: {column: 'test', format: 'test', missingValue: 'test'}, }}}, ioConfig: { type: 'test'}}}
         goToTask={(taskId: string | null) => {}}
       />);
     expect(loadDataView).toMatchSnapshot();

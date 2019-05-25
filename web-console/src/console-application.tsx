@@ -100,7 +100,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     });
   }
 
-  private initSpec: any | null;
+  private supervisorId: string | null;
   private taskId: string | null;
   private openDialog: string | null;
   private datasource: string | null;
@@ -151,8 +151,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.initSpec = null;
       this.taskId = null;
+      this.supervisorId = null;
       this.openDialog = null;
       this.datasource = null;
       this.onlyUnavailable = null;
@@ -161,8 +161,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     }, 50);
   }
 
-  private goToLoadDataView = (initSpec?: any) => {
-    if (initSpec) this.initSpec = initSpec;
+  private goToLoadDataView = (supervisorId?: string, taskId?: string ) => {
+    if (taskId) this.taskId = taskId;
+    if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }
@@ -197,7 +198,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     const { hideLegacy } = this.props;
 
     return <>
-      <HeaderBar active={active} hideLegacy={hideLegacy} goToLoadDataView={this.goToLoadDataView}/>
+      <HeaderBar active={active} hideLegacy={hideLegacy}/>
       <div className={classNames('view-container', classType)}>{el}</div>
     </>;
   }
@@ -208,7 +209,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-    return this.wrapInViewContainer('load-data', <LoadDataView initSpec={this.initSpec} goToTask={this.goToTask}/>, 'narrow-pad');
+
+    return this.wrapInViewContainer('load-data', <LoadDataView initSupervisorId={this.supervisorId} initTaskId={this.taskId} goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
   private wrappedSqlView = () => {

@@ -27,7 +27,6 @@ describe('describe header bar', () => {
       <HeaderBar
         active={'load-data'}
         hideLegacy={false}
-        goToLoadDataView={() => {}}
       />);
     expect(headerBar).toMatchSnapshot();
   });

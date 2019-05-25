@@ -48,7 +48,7 @@ export interface TasksViewProps extends React.Props<any> {
   openDialog: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: () => void;
+  goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
 }
 
@@ -286,9 +286,17 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     this.taskQueryManager.rerunLastQuery();
   }
 
-  private getSupervisorActions(id: string, supervisorSuspended: boolean): BasicAction[] {
-    return [
-      {
+  private getSupervisorActions(id: string, supervisorSuspended: boolean, type: string): BasicAction[] {
+    const actions: BasicAction[] = [];
+    if (type === 'kafka' || type === 'kinesis') {
+      actions.push(
+        {
+          icon: IconNames.CLOUD_UPLOAD,
+          title: 'Open in data loader',
+          onAction: () => this.props.goToLoadDataView(id)
+        });
+    }
+    actions.push({
         icon: IconNames.STEP_BACKWARD,
         title: 'Reset',
         onAction: () => this.setState({ resetSupervisorId: id })
@@ -304,7 +312,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
-    ];
+      );
+    // @ts-ignore
+    return actions;
   }
 
   renderResumeSupervisorAction() {
@@ -413,7 +423,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   renderSupervisorTable() {
     const { supervisors, supervisorsLoading, supervisorsError } = this.state;
     const { supervisorTableColumnSelectionHandler } = this;
-
     return <>
       <ReactTable
         data={supervisors || []}
@@ -477,8 +486,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             filterable: false,
             Cell: row => {
               const id = row.value;
+              const type = row.row.type;
               const supervisorSuspended = row.original.spec.suspended;
-              const supervisorActions = this.getSupervisorActions(id, supervisorSuspended);
+              const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
               const supervisorMenu = basicActionsToMenu(supervisorActions);
 
               return <ActionCell>
@@ -510,18 +520,24 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     </>;
   }
 
-  // --------------------------------------
-
-  private getTaskActions(id: string, status: string): BasicAction[] {
-    if (status !== 'RUNNING' && status !== 'WAITING' && status !== 'PENDING') return [];
-    return [
-      {
+  private getTaskActions(id: string, status: string, type: string): BasicAction[] {
+    const actions: BasicAction[] = [];
+    if (type === 'index' || type === 'index_parallel') {
+      actions.push({
+        icon: IconNames.CLOUD_UPLOAD,
+        title: 'Open in data loader',
+        onAction: () => this.props.goToLoadDataView(undefined, id)
+      });
+    }
+    if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
+      actions.push({
         icon: IconNames.CROSS,
         title: 'Kill',
         intent: Intent.DANGER,
-        onAction: () => this.setState({ killTaskId: id })
-      }
-    ];
+        onAction: () => this.setState({killTaskId: id})
+      });
+    }
+    return actions;
   }
 
   renderKillTaskAction() {
@@ -657,8 +673,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
+              const type = row.row.type;
               const { status } = row.original;
-              const taskActions = this.getTaskActions(id, status);
+              const taskActions = this.getTaskActions(id, status, type);
               const taskMenu = basicActionsToMenu(taskActions);
 
               return <ActionCell>
@@ -688,11 +705,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     </>;
   }
 
+
   render() {
     const { goToSql, goToLoadDataView, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
-
     const submitTaskMenu = <Menu>
       <MenuItem
         text="Raw JSON task"
