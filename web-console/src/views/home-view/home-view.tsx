@@ -65,9 +65,9 @@ export interface HomeViewState {
   waitingTaskCount: number;
   taskCountError: string | null;
 
-  dataServerCountLoading: boolean;
-  dataServerCount: number;
-  dataServerCountError: string | null;
+  historicalCountLoading: boolean;
+  historicalCount: number;
+  historicalCountError: string | null;
 
   middleManagerCountLoading: boolean;
   middleManagerCount: number;
@@ -111,9 +111,9 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
       waitingTaskCount: 0,
       taskCountError: null,
 
-      dataServerCountLoading: false,
-      dataServerCount: 0,
-      dataServerCountError: null,
+      historicalCountLoading: false,
+      historicalCount: 0,
+      historicalCountError: null,
 
       middleManagerCountLoading: false,
       middleManagerCount: 0,
@@ -280,8 +280,8 @@ GROUP BY 1`);
           return allServers.filter((s: any) => s.type === 'historical').length;
         };
         if (!noSqlMode) {
-          const dataServerCounts = await queryDruidSql({ query });
-          const serverNum = getHeadProp(dataServerCounts, 'count') || 0;
+          const historicalCounts = await queryDruidSql({ query });
+          const serverNum = getHeadProp(historicalCounts, 'count') || 0;
           if (serverNum === 0) return await getDataServerNum();
           return serverNum;
         } else {
@@ -290,9 +290,9 @@ GROUP BY 1`);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          dataServerCountLoading: loading,
-          dataServerCount: result,
-          dataServerCountError: error
+          historicalCountLoading: loading,
+          historicalCount: result,
+          historicalCountError: error
         });
       }
     });
@@ -403,13 +403,13 @@ GROUP BY 1`);
       {this.renderCard({
         href: '#servers',
         icon: IconNames.DATABASE,
-        title: 'Data servers',
-        loading: state.dataServerCountLoading || state.middleManagerCountLoading,
+        title: 'Servers',
+        loading: state.historicalCountLoading || state.middleManagerCountLoading,
         content: <>
-          <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>
+          <p>{pluralIfNeeded(state.historicalCount, 'historical')}</p>
           <p>{pluralIfNeeded(state.middleManagerCount, 'middlemanager')}</p>
         </>,
-        error: state.dataServerCountError
+        error: state.historicalCountError
       })}
     </div>;
   }

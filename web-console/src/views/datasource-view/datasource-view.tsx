@@ -22,8 +22,8 @@ import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { ActionCell, RuleEditor, TableColumnSelection, ViewControlBar} from '../../components/index';
-import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs/index';
+import { ActionCell, RuleEditor, TableColumnSelection, ViewControlBar} from '../../components';
+import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -36,12 +36,12 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
-import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
+import { BasicAction } from '../../utils/basic-action';
 
 import './datasource-view.scss';
 
-const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Num rows', 'Actions'];
-const tableColumnsNoSql: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Actions'];
+const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Num rows', ActionCell.COLUMN_LABEL];
+const tableColumnsNoSql: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', ActionCell.COLUMN_LABEL];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -609,31 +609,21 @@ GROUP BY 1`);
             show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
           },
           {
-            Header: 'Actions',
+            Header: ActionCell.COLUMN_LABEL,
             accessor: 'datasource',
-            id: 'actions',
-            width: 70,
+            id: ActionCell.COLUMN_ID,
+            width: ActionCell.COLUMN_WIDTH,
             filterable: false,
             Cell: row => {
               const datasource = row.value;
               const { disabled } = row.original;
               const datasourceActions = this.getDatasourceActions(datasource, disabled);
-              const datasourceMenu = basicActionsToMenu(datasourceActions);
-
-              return <ActionCell>
-                {
-                  datasourceMenu &&
-                  <Popover content={datasourceMenu} position={Position.BOTTOM_RIGHT}>
-                    <Icon icon={IconNames.WRENCH}/>
-                  </Popover>
-                }
-              </ActionCell>;
+              return <ActionCell actions={datasourceActions}/>;
             },
-            show: tableColumnSelectionHandler.showColumn('Actions')
+            show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
           }
         ]}
         defaultPageSize={50}
-        className="-striped -highlight"
       />
       {this.renderDropDataAction()}
       {this.renderEnableAction()}

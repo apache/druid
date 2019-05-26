@@ -31,7 +31,7 @@
     "run": "./script/run",
     "test": "jest --silent 2>&1",
     "coverage": "jest --coverage",
-    "update": "jest -u",
+    "update-snapshots": "jest -u",
     "tslint": "./node_modules/.bin/tslint -c tslint.json --project tsconfig.json --formatters-dir ./node_modules/awesome-code-style/formatter 'src/**/*.ts?(x)'",
     "tslint-fix": "npm run tslint -- --fix",
     "tslint-changed-only": "git diff --diff-filter=ACMR --cached --name-only | grep -E \\.tsx\\?$ | xargs ./node_modules/.bin/tslint -c tslint.json --project tsconfig.json --formatters-dir ./node_modules/awesome-code-style/formatter",

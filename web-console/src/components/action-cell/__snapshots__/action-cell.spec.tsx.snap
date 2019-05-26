@@ -3,9 +3,5 @@
 exports[`describe action cell action cell snapshot 1`] = `
 <div
   class="action-cell"
->
-  <div>
-    hello world
-  </div>
-</div>
+/>
 `;

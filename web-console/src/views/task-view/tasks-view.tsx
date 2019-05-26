@@ -24,8 +24,8 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelection, ViewControlBar} from '../../components/index';
-import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog, TaskTableActionDialog } from '../../dialogs/index';
+import { ActionCell, TableColumnSelection, ViewControlBar} from '../../components';
+import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog, TaskTableActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -40,8 +40,8 @@ import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
-const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', 'Actions'];
-const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', 'Actions'];
+const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', ActionCell.COLUMN_LABEL];
+const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', ActionCell.COLUMN_LABEL];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -87,10 +87,10 @@ interface TaskQueryResultRow {
   duration: number;
   error_msg: string | null;
   location: string | null;
-  rank: number;
   status: string;
   task_id: string;
   type: string;
+  rank: number;
 }
 
 interface SupervisorQueryResultRow {
@@ -166,10 +166,10 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
         duration: d.duration ? d.duration : 0,
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        rank: (TasksView.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
         task_id: d.id,
-        type: d.typTasksView
+        type: d.typTasksView,
+        rank: TasksView.statusRanking[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode]
       };
     });
   }
@@ -226,12 +226,14 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     //   FAILED => 1
 
     this.taskQueryManager.runQuery(`SELECT
-  "task_id", "type", "datasource", "created_time",
+  "task_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
-  CASE WHEN "status" = 'RUNNING' THEN
-   (CASE WHEN "runner_status" = 'RUNNING' THEN 4 WHEN "runner_status" = 'PENDING' THEN 3 ELSE 2 END)
-  ELSE 1 END AS "rank",
-   "location", "duration", "error_msg"
+  (
+    CASE WHEN "status" = 'RUNNING' THEN
+     (CASE "runner_status" WHEN 'RUNNING' THEN 4 WHEN 'PENDING' THEN 3 ELSE 2 END)
+    ELSE 1
+    END
+  ) AS "rank"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
@@ -479,39 +481,27 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: supervisorTableColumnSelectionHandler.showColumn('Status')
           },
           {
-            Header: 'Actions',
-            id: 'actions',
+            Header: ActionCell.COLUMN_LABEL,
+            id: ActionCell.COLUMN_ID,
             accessor: 'id',
-            width: 70,
+            width: ActionCell.COLUMN_WIDTH,
             filterable: false,
             Cell: row => {
               const id = row.value;
               const type = row.row.type;
               const supervisorSuspended = row.original.spec.suspended;
               const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
-              const supervisorMenu = basicActionsToMenu(supervisorActions);
-
-              return <ActionCell>
-                <Icon
-                  icon={IconNames.SEARCH_TEMPLATE}
-                  onClick={() => this.setState({
-                    supervisorTableActionDialogId: id,
-                    supervisorTableActionDialogActions: supervisorActions
-                  })}
-                />
-                {
-                  supervisorMenu &&
-                  <Popover content={supervisorMenu} position={Position.BOTTOM_RIGHT}>
-                    <Icon icon={IconNames.WRENCH}/>
-                  </Popover>
-                }
-              </ActionCell>;
+              return <ActionCell
+                onDetail={() => this.setState({
+                  supervisorTableActionDialogId: id,
+                  supervisorTableActionDialogActions: supervisorActions
+                })}
+                actions={supervisorActions}
+              />;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Actions')
+            show: supervisorTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
           }
         ]}
-        defaultPageSize={5}
-        className="-striped -highlight"
       />
       {this.renderResumeSupervisorAction()}
       {this.renderSuspendSupervisorAction()}
@@ -675,10 +665,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: taskTableColumnSelectionHandler.showColumn('Duration')
           },
           {
-            Header: 'Actions',
-            id: 'actions',
+            Header: ActionCell.COLUMN_LABEL,
+            id: ActionCell.COLUMN_ID,
             accessor: 'task_id',
-            width: 70,
+            width: ActionCell.COLUMN_WIDTH,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';
@@ -686,30 +676,18 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const type = row.row.type;
               const { status } = row.original;
               const taskActions = this.getTaskActions(id, status, type);
-              const taskMenu = basicActionsToMenu(taskActions);
-
-              return <ActionCell>
-                <Icon
-                  icon={IconNames.SEARCH_TEMPLATE}
-                  onClick={() => this.setState({
-                    taskTableActionDialogId: id,
-                    taskTableActionDialogActions: taskActions
-                  })}
-                />
-                {
-                  taskMenu &&
-                  <Popover content={taskMenu} position={Position.BOTTOM_RIGHT}>
-                    <Icon icon={IconNames.WRENCH}/>
-                  </Popover>
-                }
-              </ActionCell>;
+              return <ActionCell
+                onDetail={() => this.setState({
+                  taskTableActionDialogId: id,
+                  taskTableActionDialogActions: taskActions
+                })}
+                actions={taskActions}
+              />;
             },
             Aggregated: row => '',
-            show: taskTableColumnSelectionHandler.showColumn('Actions')
+            show: taskTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
           }
         ]}
-        defaultPageSize={20}
-        className="-striped -highlight"
       />
       {this.renderKillTaskAction()}
     </>;

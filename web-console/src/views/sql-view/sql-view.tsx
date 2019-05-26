@@ -20,8 +20,8 @@ import * as Hjson from 'hjson';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { NullTableCell, SqlControl } from '../../components/index';
-import { QueryPlanDialog } from '../../dialogs/index';
+import { NullTableCell, SqlControl } from '../../components';
+import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
   decodeRune,
@@ -204,8 +204,6 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           };
         })
       }
-      defaultPageSize={10}
-      className="-striped -highlight"
     />;
   }
 
