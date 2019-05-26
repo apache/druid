@@ -122,9 +122,7 @@ public class SqlLifecycle
     if (queryContext != null) {
       newContext.putAll(queryContext);
     }
-    if (!newContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID)) {
-      newContext.put(PlannerContext.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
-    }
+    newContext.putIfAbsent(PlannerContext.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     return newContext;
   }
 

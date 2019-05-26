@@ -214,8 +214,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
-      if (!tasks.containsKey(task.getId())) {
-        tasks.put(
+        tasks.putIfAbsent(
             task.getId(),
             new ForkingTaskRunnerWorkItem(
                 task,
@@ -516,7 +515,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                 )
             )
         );
-      }
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }

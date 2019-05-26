@@ -216,9 +216,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
           final DataSegment segment = chunk.getObject();
-          if (!segmentFileMap.containsKey(segment)) {
-            segmentFileMap.put(segment, segmentLoader.getSegmentFiles(segment));
-          }
+          segmentFileMap.putIfAbsent(segment, segmentLoader.getSegmentFiles(segment));
         }
       }
 
@@ -512,9 +510,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String metric : chunk.getObject().getMetrics()) {
-          if (!uniqueMetrics.containsKey(metric)) {
-            uniqueMetrics.put(metric, index++);
-          }
+          uniqueMetrics.putIfAbsent(metric, index++);
         }
       }
     }
