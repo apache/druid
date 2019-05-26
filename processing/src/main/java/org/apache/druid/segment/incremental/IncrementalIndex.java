@@ -75,7 +75,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -95,11 +94,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  private volatile DateTime maxIngestedEventTime;
+  private AtomicReference<DateTime> maxIngestedEventTime = new AtomicReference<>(null);
 
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
@@ -235,9 +235,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private final Map<String, MetricDesc> metricDescs;
 
-  private final Map<String, DimensionDesc> dimensionDescs;
-  private final List<DimensionDesc> dimensionDescsList;
-  private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
+  private final AtomicReference<DimensionData> dimensions;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
 
@@ -275,7 +273,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
 
-    this.columnCapabilities = new HashMap<>();
+    DimensionData dimensionData = new DimensionData();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -290,13 +288,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
-      columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+      dimensionData.putCapabilities(metricDesc.getName(), metricDesc.getCapabilities());
     }
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
-    this.dimensionDescs = Maps.newLinkedHashMap();
-
-    this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
@@ -311,21 +306,23 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             capabilities,
             dimSchema.getMultiValueHandling()
         );
-        addNewDimension(dimName, capabilities, handler);
+        dimensionData.addNewDimension(dimName, capabilities, handler);
       }
-      columnCapabilities.put(dimName, capabilities);
+      dimensionData.putCapabilities(dimName, capabilities);
     }
 
     //__time capabilities
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
+    dimensionData.putCapabilities(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+
+    this.dimensions = new AtomicReference<>(dimensionData);
   }
 
   public static class Builder
@@ -577,7 +574,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
   {
-    return columnCapabilities;
+    return dimensions.get().columnCapabilities;
   }
 
   /**
@@ -627,98 +624,96 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (row.getTimestampFromEpoch() < minTimestamp) {
       throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, DateTimes.utc(minTimestamp));
     }
-
     final List<String> rowDimensions = row.getDimensions();
 
-    Object[] dims;
-    List<Object> overflow = null;
+    Map<String, Object> rowDimKeys = new HashMap<>();
     long dimsKeySize = 0;
     List<String> parseExceptionMessages = new ArrayList<>();
-    synchronized (dimensionDescs) {
-      dims = new Object[dimensionDescs.size()];
-      for (String dimension : rowDimensions) {
-        if (Strings.isNullOrEmpty(dimension)) {
-          continue;
-        }
-        boolean wasNewDim = false;
-        ColumnCapabilitiesImpl capabilities;
-        DimensionDesc desc = dimensionDescs.get(dimension);
-        if (desc != null) {
-          capabilities = desc.getCapabilities();
-        } else {
-          wasNewDim = true;
-          capabilities = columnCapabilities.get(dimension);
-          if (capabilities == null) {
-            capabilities = new ColumnCapabilitiesImpl();
-            // For schemaless type discovery, assume everything is a String for now, can change later.
-            capabilities.setType(ValueType.STRING);
-            capabilities.setDictionaryEncoded(true);
-            capabilities.setHasBitmapIndexes(true);
-            columnCapabilities.put(dimension, capabilities);
-          }
-          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
-          desc = addNewDimension(dimension, capabilities, handler);
-        }
-        DimensionHandler handler = desc.getHandler();
-        DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = null;
-        try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
-              row.getRaw(dimension),
-              true
-          );
-        }
-        catch (ParseException pe) {
-          parseExceptionMessages.add(pe.getMessage());
-        }
-        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
-        // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues() &&
-            dimsKey != null &&
-            handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
-          capabilities.setHasMultipleValues(true);
-        }
 
-        if (wasNewDim) {
-          if (overflow == null) {
-            overflow = new ArrayList<>();
-          }
-          overflow.add(dimsKey);
-        } else if (desc.getIndex() > dims.length || dims[desc.getIndex()] != null) {
-          /*
-           * index > dims.length requires that we saw this dimension and added it to the dimensionOrder map,
-           * otherwise index is null. Since dims is initialized based on the size of dimensionOrder on each call to add,
-           * it must have been added to dimensionOrder during this InputRow.
-           *
-           * if we found an index for this dimension it means we've seen it already. If !(index > dims.length) then
-           * we saw it on a previous input row (this its safe to index into dims). If we found a value in
-           * the dims array for this index, it means we have seen this dimension already on this input row.
-           */
-          throw new ISE("Dimension[%s] occurred more than once in InputRow", dimension);
-        } else {
-          dims[desc.getIndex()] = dimsKey;
-        }
+    DimensionData prevDimensionData = this.dimensions.get();
+    DimensionData dimensionData = null;
+    for (String dimension : rowDimensions) {
+      if (Strings.isNullOrEmpty(dimension)) {
+        continue;
       }
+
+      if (rowDimKeys.containsKey(dimension)) {
+        // If the dims map already contains a mapping at this index, it means we have seen this dimension already on this input row.
+        throw new ISE("Dimension[%s] occurred more than once in InputRow", dimension);
+      }
+      ColumnCapabilitiesImpl capabilities;
+      DimensionDesc desc = prevDimensionData.getDimensionDesc(dimension);
+      if (desc != null) {
+        capabilities = desc.getCapabilities();
+      } else {
+        if (dimensionData == null) {
+          dimensionData = prevDimensionData.clone();
+        }
+        capabilities = dimensionData.getDimensionCapabilities(dimension);
+        if (capabilities == null) {
+          capabilities = new ColumnCapabilitiesImpl();
+          // For schemaless type discovery, assume everything is a String for now, can change later.
+          capabilities.setType(ValueType.STRING);
+          capabilities.setDictionaryEncoded(true);
+          capabilities.setHasBitmapIndexes(true);
+          dimensionData.putCapabilities(dimension, capabilities);
+        }
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
+        if (dimensionData == null) {
+          dimensionData = prevDimensionData.clone();
+        }
+        desc = dimensionData.addNewDimension(dimension, capabilities, handler);
+      }
+      DimensionHandler handler = desc.getHandler();
+      DimensionIndexer indexer = desc.getIndexer();
+      Object dimsKey = null;
+      try {
+        dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
+            row.getRaw(dimension),
+            true
+        );
+      }
+      catch (ParseException pe) {
+        parseExceptionMessages.add(pe.getMessage());
+      }
+      dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
+      // Set column capabilities as data is coming in
+      if (!capabilities.hasMultipleValues() &&
+          dimsKey != null &&
+          handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
+        if (dimensionData == null) {
+          dimensionData = prevDimensionData.clone();
+        }
+        capabilities = dimensionData.getDimensionCapabilities(dimension);
+        capabilities.setHasMultipleValues(true);
+      }
+      rowDimKeys.put(dimension, dimsKey);
     }
 
-    if (overflow != null) {
-      // Merge overflow and non-overflow
-      Object[] newDims = new Object[dims.length + overflow.size()];
-      System.arraycopy(dims, 0, newDims, 0, dims.length);
-      for (int i = 0; i < overflow.size(); ++i) {
-        newDims[dims.length + i] = overflow.get(i);
+
+    if (dimensionData != null) {
+      while (!dimensions.compareAndSet(prevDimensionData, dimensionData)) {
+        prevDimensionData = dimensions.get();
+        dimensionData.rebase(prevDimensionData);
       }
-      dims = newDims;
+    } else {
+      dimensionData = prevDimensionData;
+    }
+    Object[] dims = new Object[dimensionData.size()];
+    for (String dimension : rowDimKeys.keySet()) {
+      DimensionDesc desc = dimensionData.getDimensionDesc(dimension);
+      dims[desc.getIndex()] = rowDimKeys.get(dimension);
     }
 
     long truncated = 0;
     if (row.getTimestamp() != null) {
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
+
     IncrementalIndexRow incrementalIndexRow = IncrementalIndexRow.createTimeAndDimswithDimsKeySize(
         Math.max(truncated, minTimestamp),
         dims,
-        dimensionDescsList,
+        dimensionData.getDimensionDescsList(),
         dimsKeySize
     );
     return new IncrementalIndexRowResult(incrementalIndexRow, parseExceptionMessages);
@@ -760,10 +755,14 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return pe;
   }
 
-  private synchronized void updateMaxIngestedTime(DateTime eventTime)
+  private void updateMaxIngestedTime(DateTime eventTime)
   {
-    if (maxIngestedEventTime == null || maxIngestedEventTime.isBefore(eventTime)) {
-      maxIngestedEventTime = eventTime;
+    DateTime maxEventTime = maxIngestedEventTime.get();
+    while (maxEventTime == null || maxEventTime.isBefore(eventTime)) {
+      if (maxIngestedEventTime.compareAndSet(maxEventTime, eventTime)) {
+        break;
+      }
+      maxEventTime = maxIngestedEventTime.get();
     }
   }
 
@@ -824,24 +823,20 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public List<String> getDimensionNames()
   {
-    synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.keySet());
-    }
+    Map<String, DimensionDesc> dimensionDescs = dimensions.get().getDimensionDescs();
+    return ImmutableList.copyOf(dimensionDescs.keySet());
   }
 
   public List<DimensionDesc> getDimensions()
   {
-    synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.values());
-    }
+    return dimensions.get().getDimensionDescsList();
   }
 
   @Nullable
   public DimensionDesc getDimension(String dimension)
   {
-    synchronized (dimensionDescs) {
-      return dimensionDescs.get(dimension);
-    }
+    Map<String, DimensionDesc> dimensionDescs = dimensions.get().getDimensionDescs();
+    return dimensionDescs.get(dimension);
   }
 
   @Nullable
@@ -901,9 +896,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public List<String> getDimensionOrder()
   {
-    synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.keySet());
-    }
+    Map<String, DimensionDesc> dimensionDescs = dimensions.get().getDimensionDescs();
+    return ImmutableList.copyOf(dimensionDescs.keySet());
   }
 
   private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
@@ -925,28 +919,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities
   )
   {
-    synchronized (dimensionDescs) {
-      if (!dimensionDescs.isEmpty()) {
-        throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionDescs.keySet());
-      }
-      for (String dim : oldDimensionOrder) {
-        if (dimensionDescs.get(dim) == null) {
-          ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
-          columnCapabilities.put(dim, capabilities);
-          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-          addNewDimension(dim, capabilities, handler);
-        }
+    DimensionData dimensionData = dimensions.get().clone();
+    if (dimensionData.size() != 0) {
+      throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionData.getDimensionDescs().keySet());
+    }
+    for (String dim : oldDimensionOrder) {
+      if (dimensionData.getDimensionDesc(dim) == null) {
+        ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
+        dimensionData.putCapabilities(dim, capabilities);
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+        dimensionData.addNewDimension(dim, capabilities, handler);
       }
     }
-  }
-
-  @GuardedBy("dimensionDescs")
-  private DimensionDesc addNewDimension(String dim, ColumnCapabilitiesImpl capabilities, DimensionHandler handler)
-  {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, capabilities, handler);
-    dimensionDescs.put(dim, desc);
-    dimensionDescsList.add(desc);
-    return desc;
   }
 
   public List<String> getMetricNames()
@@ -970,7 +954,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public ColumnCapabilities getCapabilities(String column)
   {
-    return columnCapabilities.get(column);
+    return dimensions.get().getDimensionCapabilities(column);
   }
 
   public Metadata getMetadata()
@@ -1047,7 +1031,83 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public DateTime getMaxIngestedEventTime()
   {
-    return maxIngestedEventTime;
+    return maxIngestedEventTime.get();
+  }
+
+  private static class DimensionData
+  {
+    private Map<String, ColumnCapabilitiesImpl> columnCapabilities;
+    private Map<String, DimensionDesc> dimensionDescs;
+    private List<DimensionDesc> dimensionDescsList;
+
+
+    DimensionData()
+    {
+      this.columnCapabilities = new HashMap<>();
+      this.dimensionDescs = Maps.newLinkedHashMap();
+      this.dimensionDescsList = new ArrayList<>();
+    }
+
+    private DimensionData(Map<String, ColumnCapabilitiesImpl> columnCapabilities, Map<String, DimensionDesc> dimensionDescs, List<DimensionDesc> dimensionDescsList)
+    {
+      this.columnCapabilities = new HashMap<>(columnCapabilities);
+      this.dimensionDescs = Maps.newLinkedHashMap(dimensionDescs);
+      this.dimensionDescsList = new ArrayList<>(dimensionDescsList);
+    }
+
+    @Override
+    public DimensionData clone()
+    {
+      return new DimensionData(columnCapabilities, dimensionDescs, dimensionDescsList);
+    }
+
+    public DimensionDesc addNewDimension(String dim, ColumnCapabilitiesImpl capabilities, DimensionHandler handler)
+    {
+      DimensionDesc desc = new DimensionDesc(dimensionDescsList.size(), dim, capabilities, handler);
+      dimensionDescs.put(dim, desc);
+      dimensionDescsList.add(desc);
+      return desc;
+    }
+
+    public DimensionData rebase(DimensionData previous)
+    {
+      DimensionData rebased = previous.clone();
+      for (DimensionDesc dim : dimensionDescsList) {
+        rebased.putCapabilities(dim.getName(), dim.getCapabilities());
+        rebased.addNewDimension(dim.getName(), dim.getCapabilities(), dim.getHandler());
+      }
+      return rebased;
+    }
+
+    public int size()
+    {
+      return dimensionDescsList.size();
+    }
+
+    public DimensionDesc getDimensionDesc(String dimension)
+    {
+      return dimensionDescs.get(dimension);
+    }
+
+    public ColumnCapabilitiesImpl getDimensionCapabilities(String dimension)
+    {
+      return columnCapabilities.get(dimension);
+    }
+
+    public void putCapabilities(String name, ColumnCapabilitiesImpl capabilities)
+    {
+      columnCapabilities.put(name, capabilities);
+    }
+
+    public Map<String, DimensionDesc> getDimensionDescs()
+    {
+      return dimensionDescs;
+    }
+
+    public List<DimensionDesc> getDimensionDescsList()
+    {
+      return dimensionDescsList;
+    }
   }
 
   public static final class DimensionDesc
@@ -1154,22 +1214,23 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()
   {
-    return new IncrementalIndexRowComparator(dimensionDescsList);
+    return new IncrementalIndexRowComparator(dimensions);
   }
 
   @VisibleForTesting
   static final class IncrementalIndexRowComparator implements Comparator<IncrementalIndexRow>
   {
-    private List<DimensionDesc> dimensionDescs;
+    private AtomicReference<DimensionData> dimensionData;
 
-    public IncrementalIndexRowComparator(List<DimensionDesc> dimDescs)
+    public IncrementalIndexRowComparator(AtomicReference<DimensionData> dimensionData)
     {
-      this.dimensionDescs = dimDescs;
+      this.dimensionData = dimensionData;
     }
 
     @Override
     public int compare(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
     {
+      List<DimensionDesc> dimensionDescs = dimensionData.get().getDimensionDescsList();
       int retVal = Longs.compare(lhs.timestamp, rhs.timestamp);
       int numComparisons = Math.min(lhs.dims.length, rhs.dims.length);
 
