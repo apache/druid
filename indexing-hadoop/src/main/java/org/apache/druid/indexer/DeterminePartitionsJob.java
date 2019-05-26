@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -42,7 +41,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -167,10 +165,17 @@ public class DeterminePartitionsJob implements Jobby
         }
 
 
-        if (!groupByJob.waitForCompletion(true)) {
-          log.error("Job failed: %s", groupByJob.getJobID());
-          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-          return false;
+        try {
+          if (!groupByJob.waitForCompletion(true)) {
+            log.error("Job failed: %s", groupByJob.getJobID());
+            failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+            return false;
+          }
+        }
+        catch (IOException ioe) {
+          if (!Utils.checkAppSuccessForJobIOException(ioe, groupByJob, config.isUseYarnRMJobStatusFallback())) {
+            throw ioe;
+          }
         }
       } else {
         log.info("Skipping group-by job.");
@@ -230,10 +235,17 @@ public class DeterminePartitionsJob implements Jobby
       }
 
 
-      if (!dimSelectionJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
-        failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!dimSelectionJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
+          failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
+          return false;
+        }
+      }
+      catch (IOException ioe) {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, dimSelectionJob, config.isUseYarnRMJobStatusFallback())) {
+          throw ioe;
+        }
       }
 
       /*
@@ -272,7 +284,7 @@ public class DeterminePartitionsJob implements Jobby
       return true;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -698,37 +710,33 @@ public class DeterminePartitionsJob implements Jobby
             // One more shard to go
             final ShardSpec shardSpec;
 
-            if (currentDimPartitions.partitions.isEmpty()) {
-              shardSpec = NoneShardSpec.instance();
+            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
+              // Combine with previous shard
+              final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
+                  currentDimPartitions.partitions.size() - 1
+              );
+
+              final SingleDimensionShardSpec previousShardSpec = (SingleDimensionShardSpec) previousDimPartition.shardSpec;
+
+              shardSpec = new SingleDimensionShardSpec(
+                  currentDimPartitions.dim,
+                  previousShardSpec.getStart(),
+                  null,
+                  previousShardSpec.getPartitionNum()
+              );
+
+              log.info("Removing possible shard: %s", previousShardSpec);
+
+              currentDimPartition.rows += previousDimPartition.rows;
+              currentDimPartition.cardinality += previousDimPartition.cardinality;
             } else {
-              if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
-                // Combine with previous shard
-                final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
-                    currentDimPartitions.partitions.size() - 1
-                );
-
-                final SingleDimensionShardSpec previousShardSpec = (SingleDimensionShardSpec) previousDimPartition.shardSpec;
-
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    previousShardSpec.getStart(),
-                    null,
-                    previousShardSpec.getPartitionNum()
-                );
-
-                log.info("Removing possible shard: %s", previousShardSpec);
-
-                currentDimPartition.rows += previousDimPartition.rows;
-                currentDimPartition.cardinality += previousDimPartition.cardinality;
-              } else {
-                // Create new shard
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    currentDimPartitionStart,
-                    null,
-                    currentDimPartitions.partitions.size()
-                );
-              }
+              // Create new shard
+              shardSpec = new SingleDimensionShardSpec(
+                  currentDimPartitions.dim,
+                  currentDimPartitionStart,
+                  null,
+                  currentDimPartitions.partitions.size()
+              );
             }
 
             log.info(

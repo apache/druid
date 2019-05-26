@@ -25,7 +25,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.CompressionUtils;
+import org.apache.druid.java.util.common.CompressionUtilsTest;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -134,6 +134,7 @@ public class JobHelperTest
                 false,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -193,7 +194,7 @@ public class JobHelperTest
 
     File evilZip = new File(tmpDir, "evil.zip");
     Files.deleteIfExists(evilZip.toPath());
-    CompressionUtils.makeEvilZip(evilZip);
+    CompressionUtilsTest.makeEvilZip(evilZip);
 
     try {
       JobHelper.unzipNoGuava(

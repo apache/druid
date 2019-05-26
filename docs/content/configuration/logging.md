@@ -24,7 +24,7 @@ title: "Logging"
 
 # Logging
 
-Druid nodes will emit logs that are useful for debugging to the console. Druid nodes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.html#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
+Apache Druid (incubating) processes will emit logs that are useful for debugging to the console. Druid processes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.html#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
 Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. Logging can be configured with a log4j2.xml file. Add the path to the directory containing the log4j2.xml file (e.g. the _common/ dir) to your classpath if you want to override default Druid log configuration. Note that this directory should be earlier in the classpath than the druid jars. The easiest way to do this is to prefix the classpath with the config dir.
 
@@ -50,6 +50,39 @@ An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sa
         <AppenderRef ref="Console"/>
     </Logger>
     -->
+  </Loggers>
+</Configuration>
+```
+
+## My logs are really chatty, can I set them to asynchronously write?
+
+Yes, using a `log4j2.xml` similar to the following causes some of the more chatty classes to write asynchronously:
+
+```
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <AsyncLogger name="org.apache.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <AsyncLogger name="org.apache.druid.client.BatchServerInventoryView" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <!-- Make extra sure nobody adds logs in a bad way that can hurt performance -->
+    <AsyncLogger name="org.apache.druid.client.ServerInventoryView" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <AsyncLogger name ="org.apache.druid.java.util.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+    </Root>
   </Loggers>
 </Configuration>
 ```

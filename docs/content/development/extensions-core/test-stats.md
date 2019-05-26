@@ -24,7 +24,7 @@ title: "Test Stats Aggregators"
 
 # Test Stats Aggregators
 
-Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details.
+This Apache Druid (incubating) extension incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details.
 
 Make sure to include `druid-stats` extension in order to use these aggregrators.
 

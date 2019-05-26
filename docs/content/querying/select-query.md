@@ -24,6 +24,14 @@ title: "Select Queries"
 
 # Select Queries
 
+<div class="note caution">
+We encourage you to use the [Scan query](../querying/scan-query.html) type rather than Select whenever possible.
+In situations involving larger numbers of segments, the Select query can have very high memory and performance overhead.
+The Scan query does not have this issue.
+The major difference between the two is that the Scan query does not support pagination.
+However, the Scan query type is able to return a virtually unlimited number of results even without pagination, making it unnecessary in many cases.
+</div>
+
 Select queries return raw Druid rows and support pagination.
 
 ```json
@@ -40,13 +48,6 @@ Select queries return raw Druid rows and support pagination.
    "pagingSpec":{"pagingIdentifiers": {}, "threshold":5}
  }
 ```
-
-<div class="note info">
-Consider using the [Scan query](../querying/scan-query.html) instead of the Select query if you don't need pagination, and you
-don't need the strict time-ascending or time-descending ordering offered by the Select query. The Scan query returns
-results without pagination, and offers "looser" ordering than Select, but is significantly more efficient in terms of
-both processing time and memory requirements. It is also capable of returning a virtually unlimited number of results.
-</div>
 
 There are several main parts to a select query:
 

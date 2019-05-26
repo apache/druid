@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Quickstart"
+title: "Apache Druid (incubating) Single-Server Quickstart"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Quickstart"
   ~ under the License.
   -->
 
-# Druid Quickstart
+# Apache Druid (incubating) Single-Server Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
@@ -32,20 +32,20 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 ## Prerequisites
 
+### Software
+
 You will need:
-
-  * Java 8
+  * Java 8 (8u92+)
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
-  * 8G of RAM
-  * 2 vCPUs
 
-On Mac OS X, you can use [Oracle's JDK
-8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to install
-Java.
 
-On Linux, your OS package manager should be able to help for Java. If your Ubuntu-
-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
-OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
+### Hardware
+
+Druid includes several example [single-server configurations](../operations/single-server.html), along with scripts to start the Druid processes using these configurations.
+
+If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is a good choice, sized for a 4CPU/16GB RAM environment.
+
+If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger configuration than `micro-quickstart`. 
 
 ## Getting started
 
@@ -63,7 +63,7 @@ In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - template configurations for a clustered setup
+* `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
@@ -86,32 +86,33 @@ The startup scripts for the tutorial will expect the contents of the Zookeeper t
 
 ## Start up Druid services
 
+The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as `bin/start-single-server-small`.
+
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
+./bin/start-micro-quickstart
 ```
 
 This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
 
 ```bash
-bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
-[Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[broker], logging to[//stage/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[historical], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[overlord], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[middleManager], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/tutorial/conf
-
+$ ./bin/start-micro-quickstart 
+[Fri May  3 11:40:50 2019] Running command[zk], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk conf
+[Fri May  3 11:40:50 2019] Running command[coordinator-overlord], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/coordinator-overlord.log]: bin/run-druid coordinator-overlord conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[broker], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[router], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/router.log]: bin/run-druid router conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[historical], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[middleManager], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager conf/druid/single-server/micro-quickstart
 ```
 
 All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
-Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes.
+Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
 ### Resetting cluster state
 
-If you want a clean start after stopping the services, delete the `var` directory and run the `bin/supervise` script again.
+If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
 
 Once every service has started, you are now ready to load data.
 
@@ -185,11 +186,11 @@ The following tutorials demonstrate various methods of loading data into Druid, 
 
 This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 
-### [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html)
+### [Tutorial: Loading stream data from Apache Kafka](./tutorial-kafka.html)
 
 This tutorial demonstrates how to load streaming data from a Kafka topic.
 
-### [Tutorial: Loading a file using Hadoop](./tutorial-batch-hadoop.html)
+### [Tutorial: Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html)
 
 This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
 

@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames, HTMLSelect } from "../components/filler";
-import * as numeral from "numeral";
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import * as FileSaver from 'file-saver';
+import * as numeral from 'numeral';
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
-
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  let currentFilter = filters.find(f => f.id === id);
+  value = `"${value}"`;
+  const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
     if (currentFilter.value !== value) {
@@ -36,17 +37,17 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
-export function makeTextFilter(placeholder: string = ''): FilterRender {
+export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
     return <InputGroup
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
+      rightElement={filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />}
       placeholder={placeholder}
-    />
-  }
+    />;
+  };
 }
 
 export function makeBooleanFilter(): FilterRender {
@@ -56,14 +57,58 @@ export function makeBooleanFilter(): FilterRender {
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || "all"}
-      fill={true}
+      value={filterValue || 'all'}
+      fill
     >
       <option value="all">Show all</option>
       <option value="true">true</option>
       <option value="false">false</option>
     </HTMLSelect>;
+  };
+}
+
+// ----------------------------
+
+interface NeedleAndMode {
+  needle: string;
+  mode: 'exact' | 'prefix';
+}
+
+function getNeedleAndMode(input: string): NeedleAndMode {
+  if (input.startsWith(`"`) && input.endsWith(`"`)) {
+    return {
+      needle: input.slice(1, -1),
+      mode: 'exact'
+    };
   }
+  return {
+    needle: input.startsWith(`"`) ? input.substring(1) : input,
+    mode: 'prefix'
+  };
+}
+
+export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
+  if (value === undefined ) {
+    return true;
+  }
+  if (value === null) return false;
+  const haystack = String(value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return needle === haystack;
+  }
+  return haystack.startsWith(needle);
+}
+
+export function sqlQueryCustomTableFilter(filter: Filter): string {
+  const columnName = JSON.stringify(filter.id);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return `${columnName} = '${needle.toUpperCase()}' OR ${columnName} = '${needle.toLowerCase()}'`;
+  }
+  return `${columnName} LIKE '${needle.toUpperCase()}%' OR ${columnName} LIKE '${needle.toLowerCase()}%'`;
 }
 
 // ----------------------------
@@ -128,12 +173,61 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
-export function localStorageSet(key: string, value: string): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
+export function parseJson(json: string): any {
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    return undefined;
+  }
 }
 
-export function localStorageGet(key: string): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
+export function validJson(json: string): boolean {
+  try {
+    JSON.parse(json);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// stringify JSON to string; if JSON is null, parse empty string ""
+export function stringifyJSON(item: any): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return '';
+  }
+}
+
+// parse string to JSON object; if string is empty, return null
+export function parseStringToJSON(s: string): JSON | null {
+  if (s === '') {
+    return null;
+  } else {
+    return JSON.parse(s);
+  }
+}
+
+export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
+  return xs.filter(Boolean) as any;
+}
+
+export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
+  return (xs.map(f) as any).filter(Boolean);
+}
+
+export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[]): string[] {
+  const pre = things.filter((x) => prefix.includes(x)).sort();
+  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x)).sort();
+  const post = things.filter((x) => suffix.includes(x)).sort();
+  return pre.concat(mid, post);
+}
+
+// ----------------------------
+
+export function downloadFile(text: string, type: string, fileName: string): void {
+  const blob = new Blob([text], {
+    type: `text/${type}`
+  });
+  FileSaver.saveAs(blob, fileName);
 }

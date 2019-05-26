@@ -220,14 +220,6 @@ public interface IndexMerger
   // Faster than IndexMaker
   File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
 
-  File convert(
-      File inDir,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException;
-
   File append(
       List<IndexableAdapter> indexes,
       AggregatorFactory[] aggregators,

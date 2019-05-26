@@ -113,7 +113,8 @@ public class DruidCoordinatorSegmentKillerTest
             null,
             false,
             false,
-            Duration.ZERO
+            Duration.ZERO,
+            Duration.millis(10)
         )
     );
 

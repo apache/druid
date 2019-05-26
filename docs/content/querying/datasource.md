@@ -24,7 +24,7 @@ title: "Datasources"
 
 # Datasources
 
-A data source is the Druid equivalent of a database table. However, a query can also masquerade as a data source, providing subquery-like functionality. Query data sources are currently supported only by [GroupBy](../querying/groupbyquery.html) queries.
+A data source is the Apache Druid (incubating) equivalent of a database table. However, a query can also masquerade as a data source, providing subquery-like functionality. Query data sources are currently supported only by [GroupBy](../querying/groupbyquery.html) queries.
 
 ### Table Data Source
 The table data source is the most common type. It's represented by a string, or by the full structure:

@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.transform.RowFunction;
@@ -168,6 +169,15 @@ public class DimFilterHavingSpec extends BaseHavingSpec
     }
 
     return new TransformSpec(filter, transforms).toTransformer(rowSignature);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_DIM_FILTER)
+        .appendCacheable(dimFilter)
+        .appendByte((byte) (isFinalize() ? 1 : 0))
+        .build();
   }
 
   private static class RowAsInputRow implements InputRow

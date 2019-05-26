@@ -114,6 +114,17 @@ public interface DataSegmentPusher
     );
   }
 
+  static String getDefaultStorageDirWithExistingUniquePath(DataSegment segment, String uniquePath)
+  {
+    return JOINER.join(
+        segment.getDataSource(),
+        StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
+        segment.getVersion(),
+        segment.getShardSpec().getPartitionNum(),
+        uniquePath
+    );
+  }
+
   static String generateUniquePath()
   {
     return UUID.randomUUID().toString();

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -94,7 +93,8 @@ public class DoubleStorageTest
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       scanQueryQueryToolChest,
-      new ScanQueryEngine()
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
   private Druids.ScanQueryBuilder newTestQuery()
@@ -327,7 +327,7 @@ public class DoubleStorageTest
         index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
       }
       catch (IndexSizeExceededException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     });
 

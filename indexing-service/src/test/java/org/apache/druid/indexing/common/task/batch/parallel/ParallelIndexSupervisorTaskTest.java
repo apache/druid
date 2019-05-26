@@ -24,7 +24,6 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -229,12 +228,88 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
   }
 
+  @Test
+  public void testWith1MaxNumSubTasks() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2017/2018"),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        ),
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+    Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getRunner());
+  }
+
   private ParallelIndexSupervisorTask newTask(
       Interval interval,
       ParallelIndexIOConfig ioConfig
   )
   {
+    return newTask(
+        interval,
+        ioConfig,
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+  }
+
+  private ParallelIndexSupervisorTask newTask(
+      Interval interval,
+      ParallelIndexIOConfig ioConfig,
+      ParallelIndexTuningConfig tuningConfig
+  )
+  {
     // set up ingestion spec
+    //noinspection unchecked
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
@@ -257,29 +332,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             getObjectMapper()
         ),
         ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        tuningConfig
     );
 
     // set up test tools
@@ -315,9 +368,8 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
-      setToolbox(toolbox);
       setRunner(
           new TestRunner(
               toolbox,
@@ -325,10 +377,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
               indexingServiceClient
           )
       );
-      return TaskStatus.fromCode(
-          getId(),
-          getRunner().run()
-      );
+      return getRunner();
     }
   }
 

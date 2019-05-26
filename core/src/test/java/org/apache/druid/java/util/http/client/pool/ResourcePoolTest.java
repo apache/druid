@@ -209,13 +209,19 @@ public class ResourcePoolTest
     blockedThread.waitForValueToBeGotten(1, TimeUnit.SECONDS);
     pool.close();
 
-
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
+    // billy0Thread calling ResourceContainer.returnResource() will result
+    // in a call to resourceFactory.close() when latch2 is triggered
+    resourceFactory.close("billy0");
+    EasyMock.expectLastCall().once();
     EasyMock.replay(resourceFactory);
 
     latch2.countDown();
     blockedThread.waitForValueToBeGotten(1, TimeUnit.SECONDS);
+    // wait for billy0Thread to have called resourceFactory.close() to avoid race
+    // between billy0Thread calling it and verify() checking for the call
+    billy0Thread.join();
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);

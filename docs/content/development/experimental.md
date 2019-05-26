@@ -24,16 +24,15 @@ title: "Experimental Features"
 
 # Experimental Features
 
-Experimental features are features we have developed but have not fully tested in a production environment. If you choose to try them out, there will likely be edge cases that we have not covered. We would love feedback on any of these features, whether they are bug reports, suggestions for improvement, or letting us know they work as intended.
+Features often start out in "experimental" status that indicates they are still evolving.
+This can mean any of the following things:
 
-<div class="note caution">
-APIs for experimental features may change in backwards incompatible ways.
-</div>
+1. The feature's API may change even in minor releases or patch releases.
+2. The feature may have known "missing" pieces that will be added later.
+3. The feature may or may not have received full battle-testing in production environments.
 
-To enable experimental features, include their artifacts in the configuration runtime.properties file, e.g.,
+All experimental features are optional.
 
-```
-druid.extensions.loadList=["druid-histogram"]
-```
-
-The configuration files for all the indexer and query nodes need to be updated with this.
+Note that not all of these points apply to every experimental feature. Some have been battle-tested in terms of
+implementation, but are still marked experimental due to an evolving API. Please check the documentation for each
+feature for full details.

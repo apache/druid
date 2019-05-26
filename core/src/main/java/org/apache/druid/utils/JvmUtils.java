@@ -23,9 +23,25 @@ import com.google.inject.Inject;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.util.StringTokenizer;
 
 public class JvmUtils
 {
+  private static final boolean IS_JAVA9_COMPATIBLE = isJava9Compatible(System.getProperty("java.specification.version"));
+
+  private static boolean isJava9Compatible(String versionString)
+  {
+    final StringTokenizer st = new StringTokenizer(versionString, ".");
+    int majorVersion = Integer.parseInt(st.nextToken());
+
+    return majorVersion >= 9;
+  }
+
+  public static boolean isIsJava9Compatible()
+  {
+    return IS_JAVA9_COMPATIBLE;
+  }
+
   @Inject
   private static RuntimeInfo runtimeInfo = new RuntimeInfo();
 

@@ -200,3 +200,115 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+   APACHE DRUID (INCUBATING) SUBCOMPONENTS:
+
+   Apache Druid (incubating) includes a number of subcomponents with
+   separate copyright notices and license terms. Your use of the source
+   code for these subcomponents is subject to the terms and
+   conditions of the following licenses.
+
+
+Apache License version 2.0
+================================
+
+SOURCE/JAVA-CORE
+    This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter
+     adapted from Apache Hive.
+      * processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+      * extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
+      * extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
+
+    This product contains variable length long deserialization code adapted from Apache Lucene.
+      * processing/src/main/java/org/apache/druid/segment/data/VSizeLongSerde.java
+
+    This product contains SQL query planning code adapted from Apache Calcite.
+      * sql/src/main/java/org/apache/druid/sql/calcite/
+
+    This product contains Kerberos authentication code adapted from Apache Hadoop.
+      * extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
+
+    This product contains a modified version of the java-alphanum library,
+     copyright Andrew Duffy (https://github.com/amjjd/java-alphanum).
+      * processing/src/main/java/org/apache/druid/query/ordering/StringComparators.java
+
+    This product contains a modified version of the Metamarkets java-util library,
+     copyright Metamarkets Group Inc. (https://github.com/metamx/java-util).
+      * java-util/
+
+    This product contains a modified version of the Metamarkets bytebuffer-collections library,
+     copyright Metamarkets Group Inc. (https://github.com/metamx/bytebuffer-collections)
+      * processing/src/main/java/org/apache/druid/collections/
+
+    This product contains a modified version of the Metamarkets extendedset library,
+     copyright Metamarkets Group Inc. (https://github.com/metamx/extendedset)
+      * extendedset/
+
+    This product contains a modified version of the CONCISE (COmpressed 'N' Composable Integer SEt) library,
+     copyright Alessandro Colantonio (https://sourceforge.net/projects/concise/), extending the functionality of
+     ConciseSet to use IntBuffers.
+      * extendedset/src/main/java/org/apache/druid/extendedset/intset/
+
+    This product contains modified portions of the Guava library,
+     copyright The Guava Authors (https://github.com/google/guava).
+      Closer class:
+      * core/src/main/java/org/apache/druid/java/util/common/io/Closer.java
+      Splitter.splitToList() method:
+      * core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
+      DirectExecutorService class:
+      * core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
+
+    This product contains modified versions of the Dockerfile, scripts, and related configuration files
+     used for building SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
+      * examples/quickstart/tutorial/hadoop/docker/
+
+    This product contains fixed bins histogram percentile computation code adapted from Netflix Spectator,
+     copyright Netflix, Inc. (https://github.com/Netflix/spectator)
+      * extensions-core/histogram/src/main/java/org/apache/druid/query/aggregation/histogram/FixedBucketsHistogram.java
+
+    This product contains ByteBuffer unmapping code adapted from Apache Kafka
+      * core/src/main/java/org/apache/druid/java/util/common/ByteBufferUtils.java
+
+    This product contains s3 directory place holder check code adapted from JetS3t (https://bitbucket.org/jmurty/jets3t/wiki/Home).
+      * extensions-core/s3-extensions/src/main/java/org/apache/druid/storage/s3/S3Utils.java
+
+    This product contains lpad and rpad methods adapted from Apache Flink.
+      * core/src/main/java/org/apache/druid/java/util/common/StringUtils.java
+
+
+MIT License
+================================
+
+SOURCE/WEB-CONSOLE
+    This product bundles jQuery version 1.11.0, copyright jQuery Foundation, Inc.,
+     which is available under an MIT license. For details, see licenses/src/jquery.MIT.
+
+    This product bundles sizzle.js by way of jQuery version 1.11.0, copyright jQuery Foundation and other contributors
+     which is available under an MIT license. For details, see licenses/src/sizzle.MIT.
+
+    This product bundles jQuery UI version 1.9.2, copyright jQuery Foundation and other contributors,
+     which is available under an MIT license. For details, see licenses/src/jquery-ui.MIT.
+
+    This product bundles underscore version 1.2.2, copyright Jeremy Ashkenas, DocumentCloud,
+     which is available under an MIT license. For details, see licenses/src/underscore.MIT.
+
+
+BSD-3-Clause License
+================================
+
+SOURCE/WEB-CONSOLE
+    This product bundles demo_table.css and jquery.dataTables.js from DataTables version 1.8.2, copyright Allan Jardine.,
+     which is available under a BSD-3-Clause License. For details, see licenses/src/datatables.BSD3.
+
+SOURCE/JAVA-CORE
+    This product contains Porter stemmer adapted from a Javascript Porter Stemmer (https://github.com/kristopolous/Porter-Stemmer)
+     which is available under a BSD-3-Clause License.
+      * processing/src/test/java/org/apache/druid/query/extraction/JavaScriptExtractionFnTest.java
+
+Public Domain
+================================
+
+SOURCE/JAVA-CORE
+    This product uses a smear function adapted from MurmurHash3, written by Austin Appleby who has placed
+     MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp).
+      * processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java

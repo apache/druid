@@ -104,7 +104,7 @@ public class TiersResource
       Map<String, Map<Interval, Map<IntervalProperties, Object>>> tierToStatsPerInterval = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-          for (DataSegment dataSegment : druidServer.getSegments()) {
+          for (DataSegment dataSegment : druidServer.iterateAllSegments()) {
             Map<IntervalProperties, Object> properties = tierToStatsPerInterval
                 .computeIfAbsent(dataSegment.getDataSource(), dsName -> new HashMap<>())
                 .computeIfAbsent(dataSegment.getInterval(), interval -> new EnumMap<>(IntervalProperties.class));

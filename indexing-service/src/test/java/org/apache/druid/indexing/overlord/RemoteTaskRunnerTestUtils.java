@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -218,7 +217,7 @@ public class RemoteTaskRunnerTestUtils
               return cf.checkExists().forPath(path) != null;
             }
             catch (Exception e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 

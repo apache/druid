@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
 
@@ -116,5 +117,15 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
            ", value='" + value + '\'' +
            ", extractionFn=" + extractionFn +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_DIM_SELECTOR)
+        .appendString(dimension)
+        .appendString(value)
+        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+        .build();
   }
 }

@@ -59,8 +59,18 @@
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>install</arguments>
+              <arguments>ci</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>license-check</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run check-licenses</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
           <execution>
@@ -71,6 +81,17 @@
             <phase>test</phase>
             <configuration>
               <arguments>test</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>generate-licenses-file</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run generate-licenses-file</arguments>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>

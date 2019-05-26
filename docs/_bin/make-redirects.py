@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -57,6 +57,7 @@ for redirect in redirects:
       raise Exception('Redirect target does not exist for source: ' + source)
 
   # Write redirect file
+  os.makedirs(os.path.dirname(source_file), exist_ok=True)
   with open(source_file, 'w') as f:
     f.write("---\n")
     f.write("layout: redirect_page\n")

@@ -112,6 +112,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
     binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
+    binder.bind(BadRequestExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -272,7 +273,8 @@ public class JettyServerModule extends JerseyServletModule
         }
 
         sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
-        if (tlsServerConfig.isRequireClientCertificate()) {
+        sslContextFactory.setWantClientAuth(tlsServerConfig.isRequestClientCertificate());
+        if (tlsServerConfig.isRequireClientCertificate() || tlsServerConfig.isRequestClientCertificate()) {
           if (tlsServerConfig.getCrlPath() != null) {
             // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
             // Certificate validation is always performed when client certificates are required.
@@ -440,7 +442,8 @@ public class JettyServerModule extends JerseyServletModule
               log.warn(e, "Unable to stop Jetty server.");
             }
           }
-        }
+        },
+        Lifecycle.Stage.SERVER
     );
 
     return server;

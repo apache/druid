@@ -42,9 +42,10 @@ import java.io.Closeable;
  * Closeable and it is very important that the close() method doesn't get forgotten, which is easy to do if this
  * gets passed around as an Iterator.
  *
- * The implementation of this interface only needs to be minimally thread-safe. The methods ##start(), ##advance(),
- * ##currRow() and ##makeCommitter() are all called from the same thread.  ##makeCommitter(), however, returns a callback
- * which will be called on another thread, so the operations inside of that callback must be thread-safe.
+ * The implementation of this interface only needs to be minimally thread-safe. The methods {@link #start()}, {@link
+ * #advance()}, {@link #currRow()} and {@link #makeCommitter()} are all called from the same thread. {@link
+ * #makeCommitter()}, however, returns a callback which will be called on another thread, so the operations inside of
+ * that callback must be thread-safe.
  */
 @ExtensionPoint
 public interface FirehoseV2 extends Closeable

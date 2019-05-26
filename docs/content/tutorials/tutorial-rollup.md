@@ -24,7 +24,7 @@ title: "Tutorial: Roll-up"
 
 # Tutorial: Roll-up
 
-Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
+Apache Druid (incubating) can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
 
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 
@@ -100,8 +100,7 @@ We'll ingest this data using the following ingestion task spec, located at `quic
     "tuningConfig" : {
       "type" : "index",
       "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 25000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsInMemory" : 25000
     }
   }
 }
@@ -118,7 +117,7 @@ We will see how these definitions are used after we load this data.
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/rollup-index.json 
+bin/post-index-task --file quickstart/tutorial/rollup-index.json --url http://localhost:8081
 ```
 
 After the script completes, we will query the data.

@@ -56,7 +56,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
     final String taskSpec = StringUtils.replace(
-        getTaskAsString(indexTaskFilePath),
+        getResourceAsString(indexTaskFilePath),
         "%%DATASOURCE%%",
         fullDatasourceName
     );
@@ -98,7 +98,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     final String fullReindexDatasourceName = reindexDataSource + config.getExtraDatasourceNameSuffix();
 
     String taskSpec = StringUtils.replace(
-        getTaskAsString(reindexTaskFilePath),
+        getResourceAsString(reindexTaskFilePath),
         "%%DATASOURCE%%",
         fullBaseDatasourceName
     );
@@ -123,7 +123,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           "%%DATASOURCE%%",
-          fullBaseDatasourceName
+          fullReindexDatasourceName
       );
 
       queryHelper.testQueriesFromString(queryResponseTemplate, 2);
@@ -144,9 +144,16 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath
-  )
+  ) throws IOException
   {
-    submitTaskAndWait(indexTaskFilePath, dataSource, false);
+    final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
+    final String taskSpec = StringUtils.replace(
+        getResourceAsString(indexTaskFilePath),
+        "%%DATASOURCE%%",
+        fullDatasourceName
+    );
+
+    submitTaskAndWait(taskSpec, fullDatasourceName, false);
     try {
       sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
@@ -160,9 +167,24 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     final Set<String> oldVersions = waitForNewVersion ? coordinator.getSegmentVersions(dataSourceName) : null;
 
+    long startSubTaskCount = -1;
+    final boolean assertRunsSubTasks = taskSpec.contains("index_parallel");
+    if (assertRunsSubTasks) {
+      startSubTaskCount = countCompleteSubTasks(dataSourceName);
+    }
+
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
+
+    if (assertRunsSubTasks) {
+      final long newSubTasks = countCompleteSubTasks(dataSourceName) - startSubTaskCount;
+      Assert.assertTrue(
+          StringUtils.format(
+              "The supervisor task[%s] didn't create any sub tasks. Was it executed in the parallel mode?",
+              taskID
+          ), newSubTasks > 0);
+    }
 
     // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
     // data source. For that second round we need to make sure the coordinator actually learned
@@ -178,5 +200,13 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     RetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
     );
+  }
+
+  private long countCompleteSubTasks(final String dataSource)
+  {
+    return indexer.getCompleteTasksForDataSource(dataSource)
+                  .stream()
+                  .filter(t -> t.getType().equals("index_sub"))
+                  .count();
   }
 }

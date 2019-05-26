@@ -1,15 +1,11 @@
 [
   {
     "query": {
-      "query": "SELECT datasource, count(*) FROM sys.segments GROUP BY 1"
+      "query": "SELECT datasource, count(*) FROM sys.segments WHERE datasource='wikipedia_editstream' OR datasource='twitterstream' GROUP BY 1 "
     },
     "expectedResults": [
       {
         "datasource": "wikipedia_editstream",
-        "EXPR$1": 1
-      },
-      {
-        "datasource": "wikipedia",
         "EXPR$1": 1
       },
       {
@@ -20,11 +16,11 @@
   },
   {
     "query": {
-      "query": "SELECT server_type FROM sys.servers"
+      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL"
     },
     "expectedResults": [
       {
-        "server_type": "historical"
+        "server_type":"historical"
       }
     ]
   }

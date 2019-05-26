@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -61,7 +60,7 @@ public abstract class ServerRunnable extends GuiceRunnable
       lifecycle.join();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -93,11 +92,13 @@ public abstract class ServerRunnable extends GuiceRunnable
 
   /**
    * This is a helper class used by CliXXX classes to announce {@link DiscoveryDruidNode}
-   * as part of {@link Lifecycle.Stage#LAST}.
+   * as part of {@link Lifecycle.Stage#ANNOUNCEMENTS}.
    */
   protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
-    public static class Child {}
+    public static class Child
+    {
+    }
 
     public static class Builder
     {
@@ -200,7 +201,7 @@ public abstract class ServerRunnable extends GuiceRunnable
               announcer.unannounce(discoveryDruidNode);
             }
           },
-          Lifecycle.Stage.LAST
+          Lifecycle.Stage.ANNOUNCEMENTS
       );
 
       return new Child();

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Kafka Eight Firehose"
+title: "Apache Kafka Eight Firehose"
 ---
 
 <!--
@@ -24,7 +24,7 @@ title: "Kafka Eight Firehose"
 
 # Kafka Eight Firehose
 
-Make sure to [include](../../operations/including-extensions.html) `druid-kafka-eight` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-kafka-eight` as an extension.
 
 This firehose acts as a Kafka 0.8.x consumer and ingests data from Kafka.
 

@@ -24,7 +24,7 @@ title: "Hadoop-based Batch Ingestion VS Native Batch Ingestion"
 
 # Comparison of Batch Ingestion Methods
 
-Druid basically supports three types of batch ingestion: Hadoop-based
+Apache Druid (incubating) basically supports three types of batch ingestion: Apache Hadoop-based
 batch ingestion, native parallel batch ingestion, and native local batch
 ingestion. The below table shows what features are supported by each
 ingestion method.
@@ -38,6 +38,6 @@ ingestion method.
 | Supported [rollup modes](http://druid.io/docs/latest/ingestion/index.html#roll-up-modes) | Perfect rollup | Best-effort rollup | Both perfect and best-effort rollup |
 | Supported partitioning methods | [Both Hash-based and range partitioning](http://druid.io/docs/latest/ingestion/hadoop.html#partitioning-specification) | N/A | Hash-based partitioning (when `forceGuaranteedRollup` = true) |
 | Supported input locations | All locations accessible via HDFS client or Druid dataSource | All implemented [firehoses](./firehose.html) | All implemented [firehoses](./firehose.html) |
-| Supported file formats | All implemented Hadoop InputFormats | Currently only text file format (CSV, TSV, JSON) | Currently only text file format (CSV, TSV, JSON) |
+| Supported file formats | All implemented Hadoop InputFormats | Currently text file formats (CSV, TSV, JSON) by default. Additional formats can be added though a [custom extension](../development/modules.html) implementing [`FiniteFirehoseFactory`](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/FiniteFirehoseFactory.java) | Currently text file formats (CSV, TSV, JSON) by default. Additional formats can be added though a [custom extension](../development/modules.html) implementing [`FiniteFirehoseFactory`](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/FiniteFirehoseFactory.java) |
 | Saving parse exceptions in ingestion report | Currently not supported | Currently not supported | Supported |
 | Custom segment version | Supported, but this is NOT recommended | N/A | N/A |

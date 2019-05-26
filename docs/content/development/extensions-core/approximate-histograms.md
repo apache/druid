@@ -24,11 +24,15 @@ title: "Approximate Histogram aggregators"
 
 # Approximate Histogram aggregators
 
-Make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
 
 The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
 
-## Approximate Histogram aggregator
+## Approximate Histogram aggregator (Deprecated)
+
+<div class="note caution">
+The Approximate Histogram aggregator is deprecated. Please use <a href="../extensions-core/datasketches-quantiles.html">DataSketches Quantiles</a> instead which provides a superior distribution-independent algorithm with formal error guarantees.
+</div>
 
 This aggregator is based on
 [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf)

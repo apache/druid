@@ -54,8 +54,10 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -504,10 +506,12 @@ public class CompactionTask extends AbstractTask
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
+            null,
             null, // no filter
             // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
             dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
             Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
@@ -845,7 +849,16 @@ public class CompactionTask extends AbstractTask
         }
 
         final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
-        final int maxRowsPerSegment = Math.toIntExact(Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes));
+        final long maxRowsPerSegmentLong = Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes);
+        final int maxRowsPerSegment = Numbers.toIntExact(
+            maxRowsPerSegmentLong,
+            StringUtils.format(
+                "Estimated maxRowsPerSegment[%s] is out of integer value range. "
+                + "Please consider reducing targetCompactionSizeBytes[%s].",
+                maxRowsPerSegmentLong,
+                targetCompactionSizeBytes
+            )
+        );
         Preconditions.checkState(maxRowsPerSegment > 0, "Negative maxRowsPerSegment[%s]", maxRowsPerSegment);
 
         log.info(
@@ -854,8 +867,11 @@ public class CompactionTask extends AbstractTask
             avgRowsPerByte,
             nonNullTargetCompactionSizeBytes
         );
+        // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+        // If this is set to something too small, compactionTask can generate small segments
+        // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
         return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment);
+            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
       } else {
         return tuningConfig;
       }

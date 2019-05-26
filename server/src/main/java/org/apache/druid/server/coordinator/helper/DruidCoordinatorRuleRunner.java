@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -32,14 +32,9 @@ import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -89,43 +84,17 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // find available segments which are not overshadowed by other segments in DB
     // only those would need to be loaded/dropped
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    for (DataSegment segment : params.getAvailableSegments()) {
-      VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(segment.getDataSource());
-      if (timeline == null) {
-        timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-        timelines.put(segment.getDataSource(), timeline);
-      }
-
-      timeline.add(
-          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)
-      );
-    }
-
-    Set<DataSegment> overshadowed = new HashSet<>();
-    for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
-      for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-        for (DataSegment dataSegment : holder.getObject().payloads()) {
-          overshadowed.add(dataSegment);
-        }
-      }
-    }
-
-    Set<DataSegment> nonOvershadowed = new HashSet<>();
-    for (DataSegment dataSegment : params.getAvailableSegments()) {
-      if (!overshadowed.contains(dataSegment)) {
-        nonOvershadowed.add(dataSegment);
-      }
-    }
+    final Set<DataSegment> overshadowed = ImmutableDruidDataSource
+        .determineOvershadowedSegments(params.getAvailableSegments());
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
     }
 
-    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExistingWithoutAvailableSegments()
-                                                                       .withReplicationManager(replicatorThrottler)
-                                                                       .withAvailableSegments(nonOvershadowed)
-                                                                       .build();
+    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
+        .buildFromExistingWithoutAvailableSegments()
+        .withReplicationManager(replicatorThrottler)
+        .build();
 
     // Run through all matched rules for available segments
     DateTime now = DateTimes.nowUtc();
@@ -133,7 +102,11 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
+    for (DataSegment segment : params.getAvailableSegments()) {
+      if (overshadowed.contains(segment)) {
+        // Skipping overshadowed segments
+        continue;
+      }
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
@@ -159,9 +132,6 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
          .emit();
     }
 
-    return paramsWithReplicationManager.buildFromExistingWithoutAvailableSegments()
-                                       .withCoordinatorStats(stats)
-                                       .withAvailableSegments(params.getAvailableSegments())
-                                       .build();
+    return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 }

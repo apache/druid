@@ -24,8 +24,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -119,6 +122,86 @@ interface Function
     protected ExprEval eval(double x, double y)
     {
       return eval((long) x, (long) y);
+    }
+  }
+
+  abstract class DoubleParamString extends DoubleParam
+  {
+    @Override
+    protected final ExprEval eval(ExprEval x, ExprEval y)
+    {
+      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+        throw new IAE(
+            "Function[%s] needs a string as first argument and an integer as second argument",
+            name()
+        );
+      }
+      return eval(x.asString(), y.asInt());
+    }
+
+    protected abstract ExprEval eval(String x, int y);
+  }
+
+  class ParseLong implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "parse_long";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final int radix;
+      if (args.size() == 1) {
+        radix = 10;
+      } else if (args.size() == 2) {
+        radix = args.get(1).eval(bindings).asInt();
+      } else {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      final String input = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      if (input == null) {
+        return ExprEval.ofLong(null);
+      }
+
+      final long retVal;
+      try {
+        if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
+          // Strip leading 0x from hex strings.
+          retVal = Long.parseLong(input.substring(2), radix);
+        } else {
+          retVal = Long.parseLong(input, radix);
+        }
+      }
+      catch (NumberFormatException e) {
+        return ExprEval.ofLong(null);
+      }
+
+      return ExprEval.of(retVal);
+    }
+  }
+
+  class Pi implements Function
+  {
+    private static final double PI = Math.PI;
+
+    @Override
+    public String name()
+    {
+      return "pi";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() >= 1) {
+        throw new IAE("Function[%s] needs 0 argument", name());
+      }
+
+      return ExprEval.of(PI);
     }
   }
 
@@ -245,6 +328,21 @@ interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.cosh(param));
+    }
+  }
+
+  class Cot extends SingleParamMath
+  {
+    @Override
+    public String name()
+    {
+      return "cot";
+    }
+
+    @Override
+    protected ExprEval eval(double param)
+    {
+      return ExprEval.of(Math.cos(param) / Math.sin(param));
     }
   }
 
@@ -404,7 +502,7 @@ interface Function
     }
   }
 
-  class Round extends SingleParamMath
+  class Round implements Function
   {
     @Override
     public String name()
@@ -413,9 +511,42 @@ interface Function
     }
 
     @Override
-    protected ExprEval eval(double param)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return ExprEval.of(Math.round(param));
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      ExprEval value1 = args.get(0).eval(bindings);
+      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+      }
+
+      if (args.size() == 1) {
+        return eval(value1);
+      } else {
+        ExprEval value2 = args.get(1).eval(bindings);
+        if (value2.type() != ExprType.LONG) {
+          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+        }
+        return eval(value1, value2.asInt());
+      }
+    }
+
+    private ExprEval eval(ExprEval param)
+    {
+      return eval(param, 0);
+    }
+
+    private ExprEval eval(ExprEval param, int scale)
+    {
+      if (param.type() == ExprType.LONG) {
+        return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
+      } else if (param.type() == ExprType.DOUBLE) {
+        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+      } else {
+        return ExprEval.of(null);
+      }
     }
   }
 
@@ -944,6 +1075,36 @@ interface Function
     }
   }
 
+  class StringFormatFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "format";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() < 1) {
+        throw new IAE("Function[%s] needs 1 or more arguments", name());
+      }
+
+      final String formatString = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+
+      if (formatString == null) {
+        return ExprEval.of(null);
+      }
+
+      final Object[] formatArgs = new Object[args.size() - 1];
+      for (int i = 1; i < args.size(); i++) {
+        formatArgs[i - 1] = args.get(i).eval(bindings).value();
+      }
+
+      return ExprEval.of(StringUtils.nonStrictFormat(formatString, formatArgs));
+    }
+  }
+
   class StrposFunc implements Function
   {
     @Override
@@ -1014,6 +1175,49 @@ interface Function
         // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
         return ExprEval.of(NullHandling.defaultStringValue());
       }
+    }
+  }
+
+  class RightFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "right";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      int len = x.length();
+      return ExprEval.of(y < len ? x.substring(len - y) : x);
+    }
+  }
+
+  class LeftFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "left";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
     }
   }
 
@@ -1088,6 +1292,43 @@ interface Function
     }
   }
 
+  class ReverseFunc extends SingleParam
+  {
+    @Override
+    public String name()
+    {
+      return "reverse";
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval param)
+    {
+      if (param.type() != ExprType.STRING) {
+        throw new IAE(
+            "Function[%s] needs a string argument",
+            name()
+        );
+      }
+      final String arg = param.asString();
+      return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
+    }
+  }
+
+  class RepeatFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "repeat";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
+    }
+  }
+
   class IsNullFunc implements Function
   {
     @Override
@@ -1127,4 +1368,89 @@ interface Function
       return ExprEval.of(expr.value() != null, ExprType.LONG);
     }
   }
+
+  class LpadFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "lpad";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+      
+      String base = args.get(0).eval(bindings).asString();
+      int len = args.get(1).eval(bindings).asInt();
+      String pad = args.get(2).eval(bindings).asString();
+
+      if (base == null || pad == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.lpad(base, len, pad));
+      }
+
+    }
+  }
+
+  class RpadFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "rpad";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+
+      String base = args.get(0).eval(bindings).asString();
+      int len = args.get(1).eval(bindings).asInt();
+      String pad = args.get(2).eval(bindings).asString();
+
+      if (base == null || pad == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.rpad(base, len, pad));
+      }
+
+    }
+  }
+
+  class SubMonthFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "subtract_months";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+
+      Long left = args.get(0).eval(bindings).asLong();
+      Long right = args.get(1).eval(bindings).asLong();
+      DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
+
+      if (left == null || right == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
+      }
+
+    }
+  }
+
 }

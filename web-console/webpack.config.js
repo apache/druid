@@ -19,11 +19,20 @@
 const process = require('process');
 const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const { version } = require('./package.json');
 
 module.exports = (env) => {
-  const druidUrl = 'http://' + ((env || {}).druid_host || process.env.druid_host || 'localhost:8888');
+  let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
+  if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
+  if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
+
+  const proxyTarget = {
+    target: druidUrl,
+    secure: false
+  };
+
   return {
     mode: process.env.NODE_ENV || 'development',
     entry: {
@@ -42,14 +51,30 @@ module.exports = (env) => {
     devServer: {
       publicPath: '/public',
       index: './index.html',
+      openPage: 'unified-console.html',
       port: 18081,
       proxy: {
-        '/status': druidUrl,
-        '/druid': druidUrl
+        '/status': proxyTarget,
+        '/druid': proxyTarget,
+        '/proxy': proxyTarget
       }
     },
     module: {
       rules: [
+        {
+          test: /\.tsx?$/,
+          enforce: 'pre',
+          use: [
+            {
+              loader: 'tslint-loader',
+              options: {
+                configFile: 'tslint.json',
+                emitErrors: true,
+                fix: false // Set this to true to auto fix errors
+              }
+            }
+          ]
+        },
         {
           test: /\.tsx?$/,
           use: 'ts-loader',
@@ -75,6 +100,9 @@ module.exports = (env) => {
           ]
         }
       ]
-    }
+    },
+    plugins: [
+      // new BundleAnalyzerPlugin()
+    ]
   };
 };

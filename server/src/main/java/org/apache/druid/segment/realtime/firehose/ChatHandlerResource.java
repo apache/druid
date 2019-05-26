@@ -20,8 +20,10 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
 import javax.ws.rs.Path;
@@ -49,9 +51,19 @@ public class ChatHandlerResource
   public Object doTaskChat(@PathParam("id") String handlerId, @Context HttpHeaders headers)
   {
     if (taskId != null) {
-      List<String> requestTaskId = headers.getRequestHeader(TASK_ID_HEADER);
-      if (requestTaskId != null && !requestTaskId.contains(StringUtils.urlEncode(taskId))) {
-        return null;
+      final List<String> requestTaskIds = headers.getRequestHeader(TASK_ID_HEADER);
+      final String requestTaskId = requestTaskIds != null && !requestTaskIds.isEmpty()
+                                   ? Iterables.getOnlyElement(requestTaskIds)
+                                   : null;
+
+      // Sanity check: Callers set TASK_ID_HEADER to our taskId (URL-encoded, if >= 0.14.0) if they want to be
+      // assured of talking to the correct task, and not just some other task running on the same port.
+      if (requestTaskId != null
+          && !requestTaskId.equals(taskId)
+          && !StringUtils.urlDecode(requestTaskId).equals(taskId)) {
+        throw new BadRequestException(
+            StringUtils.format("Requested taskId[%s] doesn't match with taskId[%s]", requestTaskId, taskId)
+        );
       }
     }
 
@@ -61,6 +73,6 @@ public class ChatHandlerResource
       return handler.get();
     }
 
-    return null;
+    throw new BadRequestException(StringUtils.format("Can't find chatHandler for handler[%s]", handlerId));
   }
 }

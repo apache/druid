@@ -21,20 +21,18 @@ package org.apache.druid.segment.loading;
 
 import org.apache.druid.timeline.DataSegment;
 
-import java.io.IOException;
-
 /**
  * Mostly used for test purpose.
  */
 public class NoopDataSegmentKiller implements DataSegmentKiller
 {
   @Override
-  public void kill(DataSegment segments) throws SegmentLoadingException
+  public void kill(DataSegment segments)
   {
   }
 
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
   }
 }

@@ -22,6 +22,8 @@ package org.apache.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.netty.util.SuppressForbidden;
+import org.apache.curator.RetryPolicy;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
@@ -70,6 +72,7 @@ public class CuratorModule implements Module
 
   @Provides
   @LazySingleton
+  @SuppressForbidden(reason = "System#err")
   public CuratorFramework makeCurator(CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
   {
     final Builder builder = CuratorFrameworkFactory.builder();
@@ -79,10 +82,33 @@ public class CuratorModule implements Module
           StringUtils.format("%s:%s", config.getZkUser(), config.getZkPwd()).getBytes(StandardCharsets.UTF_8)
       );
     }
+
+    RetryPolicy retryPolicy;
+    if (config.getTerminateDruidProcessOnConnectFail()) {
+      final Runnable exitRunner = () -> {
+        try {
+          log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
+          lifecycle.stop();
+          System.err.println("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        }
+        finally {
+          System.exit(1);
+        }
+      };
+      retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
+          exitRunner,
+          BASE_SLEEP_TIME_MS,
+          MAX_SLEEP_TIME_MS,
+          MAX_RETRIES
+      );
+    } else {
+      retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    }
+
     final CuratorFramework framework = builder
         .ensembleProvider(ensembleProvider)
         .sessionTimeoutMs(config.getZkSessionTimeoutMs())
-        .retryPolicy(new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
+        .retryPolicy(retryPolicy)
         .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
         .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
         .build();
@@ -127,6 +153,30 @@ public class CuratorModule implements Module
       return new FixedEnsembleProvider(config.getZkHosts());
     }
 
+    RetryPolicy retryPolicy;
+    if (config.getTerminateDruidProcessOnConnectFail()) {
+      // It's unknown whether or not this precaution is needed.  Tests revealed that this path was never taken.
+      //  see discussions in https://github.com/apache/incubator-druid/pull/6740
+
+      final Runnable exitRunner = () -> {
+        try {
+          log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        }
+        finally {
+          System.exit(1);
+        }
+      };
+
+      retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
+          exitRunner,
+          BASE_SLEEP_TIME_MS,
+          MAX_SLEEP_TIME_MS,
+          MAX_RETRIES
+      );
+    } else {
+      retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    }
+
     return new ExhibitorEnsembleProvider(
         new Exhibitors(
             exConfig.getHosts(),
@@ -136,7 +186,7 @@ public class CuratorModule implements Module
         new DefaultExhibitorRestClient(exConfig.getUseSsl()),
         exConfig.getRestUriPath(),
         exConfig.getPollingMs(),
-        new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES)
+        retryPolicy
     )
     {
       @Override

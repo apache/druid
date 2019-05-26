@@ -52,11 +52,11 @@ There are several main parts to a search query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "search"; this is the first thing Druid looks at to figure out how to interpret the query.|yes|
+|queryType|This String should always be "search"; this is the first thing Apache Druid (incubating) looks at to figure out how to interpret the query.|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
 |granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.html).|yes|
 |filter|See [Filters](../querying/filters.html).|no|
-|limit| Defines the maximum number per Historical node (parsed as int) of search results to return. |no (default to 1000)|
+|limit| Defines the maximum number per Historical process (parsed as int) of search results to return. |no (default to 1000)|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
 |query|See [SearchQuerySpec](../querying/searchqueryspec.html).|yes|

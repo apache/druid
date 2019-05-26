@@ -1,7 +1,7 @@
 [
   {
     "query": {
-      "query": "SELECT count(*) FROM sys.segments WHERE datasource='wikipedia_index_test'"
+      "query": "SELECT count(*) FROM sys.segments WHERE datasource LIKE 'wikipedia_index_test%'"
     },
     "expectedResults": [
       {
@@ -11,17 +11,17 @@
   },
   {
     "query": {
-      "query": "SELECT server_type FROM sys.servers"
+      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL"
     },
     "expectedResults": [
       {
-        "server_type": "historical"
+        "server_type":"historical"
       }
     ]
   },
   {
     "query": {
-      "query": "SELECT status FROM sys.tasks"
+      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%' GROUP BY 1"
     },
     "expectedResults": [
       {

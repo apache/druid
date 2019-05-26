@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -129,10 +128,10 @@ public class IndexGeneratorJob implements Jobby
           + " either there was no input data to process or all the input events were discarded due to some error",
           e.getMessage()
       );
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
@@ -213,21 +212,31 @@ public class IndexGeneratorJob implements Jobby
         JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
       }
 
-      boolean success = job.waitForCompletion(true);
+      try {
+        boolean success = job.waitForCompletion(true);
 
-      Counters counters = job.getCounters();
-      if (counters == null) {
-        log.info("No counters found for job [%s]", job.getJobName());
-      } else {
-        Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-        if (invalidRowCount != null) {
-          jobStats.setInvalidRowCount(invalidRowCount.getValue());
+        Counters counters = job.getCounters();
+        if (counters == null) {
+          log.info("No counters found for job [%s]", job.getJobName());
         } else {
-          log.info("No invalid row counter found for job [%s]", job.getJobName());
+          Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+          if (invalidRowCount != null) {
+            jobStats.setInvalidRowCount(invalidRowCount.getValue());
+          } else {
+            log.info("No invalid row counter found for job [%s]", job.getJobName());
+          }
+        }
+
+        return success;
+      }
+      catch (IOException ioe) {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, job, config.isUseYarnRMJobStatusFallback())) {
+          throw ioe;
+        } else {
+          return true;
         }
       }
 
-      return success;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -727,7 +736,7 @@ public class IndexGeneratorJob implements Jobby
                         }
                         catch (Exception e) {
                           log.error(e, "persist index error");
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                         finally {
                           // close this index
@@ -856,7 +865,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       catch (ExecutionException | TimeoutException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         index.close();
