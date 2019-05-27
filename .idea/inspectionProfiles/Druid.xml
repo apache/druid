@@ -89,6 +89,8 @@
     <inspection_tool class="JSReferencingArgumentsOutsideOfFunction" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="Java8MapForEach" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="REPORT_INACCESSIBLE" value="false" />
+    </inspection_tool>
     <inspection_tool class="Jscs" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
