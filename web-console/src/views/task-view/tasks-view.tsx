@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Alert, Button, ButtonGroup, Icon, Intent, Label, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Alert, Button, ButtonGroup, Intent, Label, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
@@ -36,7 +36,7 @@ import {
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
-import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
+import { BasicAction } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
