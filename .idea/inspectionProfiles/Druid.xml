@@ -88,6 +88,7 @@
     <inspection_tool class="JSRedeclarationOfBlockScope" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="JSReferencingArgumentsOutsideOfFunction" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="Java8MapForEach" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true">
     <inspection_tool class="Jscs" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -158,7 +159,7 @@
       <searchConfiguration name="Suboptimal IndexedInts iteration" text="$x$ &lt; $y$.size()" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="IndexedInts" expressionTypes="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" expressionTypes="java.lang.Iterable|java.util.Iterator|Object[]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />

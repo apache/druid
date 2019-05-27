@@ -214,16 +214,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
-      tasks.putIfAbsent(
-          task.getId(),
+      tasks.computeIfAbsent(
+          task.getId(), k ->
           new ForkingTaskRunnerWorkItem(
             task,
             exec.submit(
-              new Callable<TaskStatus>()
-              {
+              new Callable<TaskStatus>() {
                 @Override
-                public TaskStatus call()
-                {
+                public TaskStatus call() {
                   final String attemptUUID = UUID.randomUUID().toString();
                   final File taskDir = taskConfig.getTaskDir(task.getId());
                   final File attemptDir = new File(taskDir, attemptUUID);
@@ -295,12 +293,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                         // Override task specific javaOpts
                         Object taskJavaOpts = task.getContextValue(
-                            ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
+                          ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
                         );
                         if (taskJavaOpts != null) {
                           Iterables.addAll(
-                              command,
-                              new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                            command,
+                            new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
                           );
                         }
 
@@ -308,11 +306,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           for (String allowedPrefix : config.getAllowedPrefixes()) {
                             // See https://github.com/apache/incubator-druid/issues/1841
                             if (propName.startsWith(allowedPrefix)
-                                && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
-                                && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
+                              && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
+                              && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
                             ) {
                               command.add(
-                                  StringUtils.format(
+                                StringUtils.format(
                                   "-D%s=%s",
                                   propName,
                                   props.getProperty(propName)
@@ -326,7 +324,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         for (String propName : props.stringPropertyNames()) {
                           if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                             command.add(
-                                StringUtils.format(
+                              StringUtils.format(
                                 "-D%s=%s",
                                 propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                 props.getProperty(propName)
@@ -341,7 +339,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           for (String propName : context.keySet()) {
                             if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                               command.add(
-                                  StringUtils.format(
+                                StringUtils.format(
                                   "-D%s=%s",
                                   propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                   task.getContextValue(propName)
@@ -353,7 +351,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                         // Add dataSource, taskId and taskType for metrics or logging
                         command.add(
-                            StringUtils.format(
+                          StringUtils.format(
                             "-D%s%s=%s",
                             MonitorsConfig.METRIC_DIMENSION_PREFIX,
                             DruidMetrics.DATASOURCE,
@@ -361,7 +359,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           )
                         );
                         command.add(
-                            StringUtils.format(
+                          StringUtils.format(
                             "-D%s%s=%s",
                             MonitorsConfig.METRIC_DIMENSION_PREFIX,
                             DruidMetrics.TASK_ID,
@@ -369,7 +367,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           )
                         );
                         command.add(
-                            StringUtils.format(
+                          StringUtils.format(
                             "-D%s%s=%s",
                             MonitorsConfig.METRIC_DIMENSION_PREFIX,
                             DruidMetrics.TASK_TYPE,
@@ -420,9 +418,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                       TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                       TaskRunnerUtils.notifyStatusChanged(
-                          listeners,
-                          task.getId(),
-                          TaskStatus.running(task.getId())
+                        listeners,
+                        task.getId(),
+                        TaskStatus.running(task.getId())
                       );
 
                       log.info("Logging task %s output to: %s", task.getId(), logFile);
@@ -441,8 +439,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         if (statusCode == 0) {
                           runFailed = false;
                         }
-                      }
-                      finally {
+                      } finally {
                         Thread.currentThread().setName(priorThreadName);
                         // Upload task logs
                         taskLogPusher.pushTaskLog(task.getId(), logFile);
@@ -462,19 +459,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
-                    }
-                    catch (Throwable t) {
+                    } catch (Throwable t) {
                       throw closer.rethrow(t);
-                    }
-                    finally {
+                    } finally {
                       closer.close();
                     }
-                  }
-                  catch (Throwable t) {
+                  } catch (Throwable t) {
                     log.info(t, "Exception caught during execution");
                     throw new RuntimeException(t);
-                  }
-                  finally {
+                  } finally {
                     try {
                       synchronized (tasks) {
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
@@ -498,15 +491,13 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           log.info("Removing task directory: %s", taskDir);
                           FileUtils.deleteDirectory(taskDir);
                         }
-                      }
-                      catch (Exception e) {
+                      } catch (Exception e) {
                         log.makeAlert(e, "Failed to delete task directory")
                           .addData("taskDir", taskDir.toString())
                           .addData("task", task.getId())
                           .emit();
                       }
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                       log.error(e, "Suppressing exception caught while cleaning up task");
                     }
                   }
@@ -514,7 +505,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
               }
             )
           )
-      );
+        );
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }

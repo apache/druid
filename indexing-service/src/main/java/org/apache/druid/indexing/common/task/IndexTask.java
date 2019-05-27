@@ -768,7 +768,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
 
           if (determineNumPartitions) {
-            hllCollectors.putIfAbsent(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
+            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
                 queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),

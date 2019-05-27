@@ -549,7 +549,7 @@ public class DataSourcesResource
         continue;
       }
 
-      tierDistinctSegments.putIfAbsent(tier, new HashSet<>());
+      tierDistinctSegments.computeIfAbsent(tier, k -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {

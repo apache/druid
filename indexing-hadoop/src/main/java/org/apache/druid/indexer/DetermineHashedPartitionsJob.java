@@ -307,7 +307,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                          .getSegmentGranularity()
                          .bucket(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
-        hyperLogLogs.putIfAbsent(interval, HyperLogLogCollector.makeLatestCollector());
+        hyperLogLogs.computeIfAbsent(interval, intv -> HyperLogLogCollector.makeLatestCollector());
       } else {
         final Optional<Interval> maybeInterval = config.getGranularitySpec()
                                                        .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));
