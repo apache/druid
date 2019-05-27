@@ -219,7 +219,8 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         segmentFileMap.computeIfAbsent(segment, k -> {
           try {
             return segmentLoader.getSegmentFiles(segment);
-          } catch (SegmentLoadingException e) {
+          }
+          catch (SegmentLoadingException e) {
             throw new RuntimeException(e);
           }
         });
@@ -242,18 +243,20 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
 
     final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
-      Iterables.concat(
+        Iterables.concat(
         Iterables.transform(
           timeLineSegments,
           new Function<TimelineObjectHolder<String, DataSegment>, Iterable<WindowedStorageAdapter>>() {
             @Override
-            public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder) {
+            public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder)
+            {
               return
                 Iterables.transform(
                   holder.getObject(),
                   new Function<PartitionChunk<DataSegment>, WindowedStorageAdapter>() {
                     @Override
-                    public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input) {
+                    public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input)
+                    {
                       final DataSegment segment = input.getObject();
                       try {
                         return new WindowedStorageAdapter(
@@ -267,7 +270,8 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
                           ),
                           holder.getInterval()
                         );
-                      } catch (IOException e) {
+                      }
+                      catch (IOException e) {
                         throw new RuntimeException(e);
                       }
                     }
@@ -508,7 +512,10 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String metric : chunk.getObject().getMetrics()) {
-          uniqueMetrics.computeIfAbsent(metric, k -> { return index[0]++; });
+          uniqueMetrics.computeIfAbsent(metric, k -> {
+            return index[0]++;
+          }
+          );
         }
       }
     }
