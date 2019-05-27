@@ -410,7 +410,7 @@ ORDER BY "rank" DESC, "server" DESC`);
 
               const details: string[] = [];
               if (row.lastCompletedTaskTime) {
-                details.push(`Last completed task time: ${row.lastCompletedTaskTime}`);
+                details.push(`Last completed task: ${row.lastCompletedTaskTime}`);
               }
               if (row.blacklistedUntil) {
                 details.push(`Blacklisted until: ${row.blacklistedUntil}`);
