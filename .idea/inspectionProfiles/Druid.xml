@@ -304,7 +304,7 @@
         <constraint name="x" maxCount="2147483647" within="" contains="" />
         <constraint name="ImmutableMap" regexp="Immutable.*" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Use Map.putIfAbsent() instead of containsKey() + put()" created="1558868694225" text="if (!$m$.containsKey($k$)) {&#10;    $m$.put($k$, $v$);&#10;}" recursive="false" caseInsensitive="true" type="JAVA">
+      <searchConfiguration name="Use map.putIfAbsent(k,v) or map.computeIfAbsent(k,v) where appropriate instead of containsKey() + put(). If computing v is expensive or has side effects use map.computeIfAbsent() instead" created="1558868694225" text="if (!$m$.containsKey($k$)) {&#10;    $m$.put($k$, $v$);&#10;}" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="m" within="" contains="" />
         <constraint name="k" within="" contains="" />
         <constraint name="v" within="" contains="" />
