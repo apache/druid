@@ -122,11 +122,15 @@ export function countBy<T>(array: T[], fn: (x: T, index: number) => string = Str
   return counts;
 }
 
-export function lookupBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, T> {
-  const lookup: Record<string, T> = {};
+function identity(x: any): any {
+  return x;
+}
+
+export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
+  const lookup: Record<string, Q> = {};
   for (let i = 0; i < array.length; i++) {
-    const key = fn(array[i], i);
-    lookup[key] = array[i];
+    const a = array[i];
+    lookup[keyFn(a, i)] = valueFn(a, i);
   }
   return lookup;
 }

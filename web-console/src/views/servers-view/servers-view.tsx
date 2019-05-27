@@ -130,13 +130,13 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     );
   }
 
-  static getServers = async (): Promise<ServerQueryResultRow[]> => {
+  static async getServers(): Promise<ServerQueryResultRow[]> {
     const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
     const allServers = allServerResp.data;
-    return allServers.filter((s: any) => s.type === 'historical').map((s: any) => {
+    return allServers.map((s: any) => {
       return {
         server: s.host,
-        server_type: 'historical',
+        server_type: s.type === 'indexer-executor' ? 'peon' : s.type,
         tier: s.tier,
         host: s.host.split(':')[0],
         plaintext_port: parseInt(s.host.split(':')[1], 10),
@@ -260,6 +260,7 @@ ORDER BY "rank" DESC, "server" DESC`);
         this.setState({ serverFilter: filtered });
       }}
       pivotBy={groupServersBy ? [groupServersBy] : []}
+      defaultPageSize={50}
       columns={[
         {
           Header: 'Server',
