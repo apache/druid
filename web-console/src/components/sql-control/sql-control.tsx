@@ -58,7 +58,7 @@ const langTools = ace.acequire('ace/ext/language_tools');
 
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
-  onRun: (query: string, bypassCache: boolean, wrapQuery: boolean) => void;
+  onRun: (query: string, context: Record<string, any>, wrapQuery: boolean) => void;
   onExplain: (sqlQuery: string) => void;
   queryElapsed: number | null;
 }
@@ -69,6 +69,8 @@ export interface SqlControlState {
   autoCompleteLoading: boolean;
   bypassCache: boolean;
   wrapQuery: boolean;
+  useApproximateCountDistinct: boolean;
+  useApproximateTopN: boolean;
 
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
@@ -84,6 +86,9 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
       autoCompleteLoading: false,
       bypassCache: false,
       wrapQuery: true,
+      useApproximateCountDistinct: true,
+      useApproximateTopN: true,
+
       editorHeight: 200
     };
   }
@@ -220,8 +225,19 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   private onRunClick = () => {
     const { onRun } = this.props;
-    const { query, bypassCache, wrapQuery } = this.state;
-    onRun(query, bypassCache, wrapQuery);
+    const { query, bypassCache, wrapQuery, useApproximateCountDistinct, useApproximateTopN } = this.state;
+    const context: Record<string, any> = {};
+    if (bypassCache) {
+      context.useCache = false;
+      context.populateCache = false;
+    }
+    if (useApproximateCountDistinct === false) {
+      context.useApproximateCountDistinct = false;
+    }
+    if (useApproximateTopN === false) {
+      context.useApproximateTopN = false;
+    }
+    onRun(query, context, wrapQuery);
   }
 
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
@@ -231,7 +247,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   renderExtraMenu(isRune: boolean) {
     const { onExplain } = this.props;
-    const { query, autoComplete, bypassCache, wrapQuery } = this.state;
+    const { query, autoComplete, bypassCache, wrapQuery, useApproximateCountDistinct, useApproximateTopN } = this.state;
 
     return <Menu>
       <MenuItem
@@ -257,6 +273,16 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
             checked={autoComplete}
             label="Auto complete"
             onChange={() => this.setState({autoComplete: !autoComplete})}
+          />
+          <MenuCheckbox
+            checked={useApproximateCountDistinct}
+            label="Use approximate COUNT(DISTINCT)"
+            onChange={() => this.setState({useApproximateCountDistinct: !useApproximateCountDistinct})}
+          />
+          <MenuCheckbox
+            checked={useApproximateTopN}
+            label="Use approximate TopN"
+            onChange={() => this.setState({useApproximateTopN: !useApproximateTopN})}
           />
         </>
       }

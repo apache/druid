@@ -38,7 +38,7 @@ import './sql-view.scss';
 
 interface QueryWithFlags {
   queryString: string;
-  bypassCache?: boolean;
+  context?: Record<string, any>;
   wrapQuery?: boolean;
 }
 
@@ -84,19 +84,14 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithFlags: QueryWithFlags) => {
-        const { queryString, bypassCache, wrapQuery } = queryWithFlags;
+        const { queryString, context, wrapQuery } = queryWithFlags;
         const startTime = new Date();
 
         if (queryString.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(queryString);
 
-          if (bypassCache) {
-            runeQuery.context = runeQuery.context || {};
-            runeQuery.context.useCache = false;
-            runeQuery.context.populateCache = false;
-          }
-
+          if (context) runeQuery.context = context;
           const result = await queryDruidRune(runeQuery);
           return {
             queryResult: decodeRune(runeQuery, result),
@@ -114,13 +109,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             header: true
           };
 
-          if (wrapQuery) {
-            queryPayload.context = {
-              useCache: false,
-              populateCache: false
-            };
-          }
-
+          if (context) queryPayload.context = context;
           const result = await queryDruidSql(queryPayload);
 
           return {
@@ -228,9 +217,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       <div className="top-pane">
         <SqlControl
           initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
-          onRun={(queryString, bypassCache, wrapQuery) => {
+          onRun={(queryString, context, wrapQuery) => {
             localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
-            this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
+            this.sqlQueryManager.runQuery({ queryString, context, wrapQuery });
           }}
           onExplain={this.getExplain}
           queryElapsed={queryElapsed}
