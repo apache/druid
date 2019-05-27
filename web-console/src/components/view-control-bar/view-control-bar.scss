@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import "../../variables";
+
 .view-control-bar {
-  height: 30px;
+  height: $view-control-bar-height;
   white-space: nowrap;
 
   & > * {

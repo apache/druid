@@ -115,6 +115,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
   static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
     this.state = {
@@ -153,9 +154,6 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
-    if (!localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE)) {
-      localStorageSet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE, '60');
-    }
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -714,7 +712,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         customClassName={'tasks-view app-view'}
         vertical
         percentage
-        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string)}
+        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string) || 60}
         primaryMinSize={30}
         secondaryMinSize={30}
         onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}

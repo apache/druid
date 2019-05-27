@@ -19,11 +19,11 @@
 import {
   Button,
   ButtonGroup,
-  Intent,
+  Intent, IResizeEntry,
   Menu,
   MenuItem,
   Popover,
-  Position
+  Position, ResizeSensor
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
@@ -32,7 +32,6 @@ import 'brace/ext/language_tools';
 import 'brace/mode/hjson';
 import 'brace/mode/sql';
 import 'brace/theme/solarized_dark';
-import * as classNames from 'classnames';
 import * as Hjson from 'hjson';
 import * as React from 'react';
 import AceEditor from 'react-ace';
@@ -45,7 +44,6 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../variables';
 import { MenuCheckbox } from './../menu-checkbox/menu-checkbox';
 
 import './sql-control.scss';
-
 
 function validHjson(query: string) {
   try {
@@ -71,6 +69,10 @@ export interface SqlControlState {
   autoCompleteLoading: boolean;
   bypassCache: boolean;
   wrapQuery: boolean;
+
+  // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
+  // Since this component will grown and shrink dynamically we will measure its height and then set it.
+  editorHeight: number;
 }
 
 export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
@@ -81,7 +83,8 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
       autoComplete: true,
       autoCompleteLoading: false,
       bypassCache: false,
-      wrapQuery: true
+      wrapQuery: true,
+      editorHeight: 200
     };
   }
 
@@ -221,6 +224,11 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     onRun(query, bypassCache, wrapQuery);
   }
 
+  private handleAceContainerResize = (entries: IResizeEntry[]) => {
+    if (entries.length !== 1) return;
+    this.setState({ editorHeight: entries[0].contentRect.height });
+  }
+
   renderExtraMenu(isRune: boolean) {
     const { onExplain } = this.props;
     const { query, autoComplete, bypassCache, wrapQuery } = this.state;
@@ -262,33 +270,37 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   render() {
     const { queryElapsed } = this.props;
-    const { query, autoComplete, wrapQuery } = this.state;
+    const { query, autoComplete, wrapQuery, editorHeight } = this.state;
     const isRune = query.trim().startsWith('{');
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
-      <AceEditor
-        key={isRune ? 'hjson' : 'sql'}
-        mode={isRune ? 'hjson' : 'sql'}
-        theme="solarized_dark"
-        name="ace-editor"
-        onChange={this.handleChange}
-        focus
-        fontSize={14}
-        width="100%"
-        height="30vh"
-        showPrintMargin={false}
-        value={query}
-        editorProps={{
-          $blockScrolling: Infinity
-        }}
-        setOptions={{
-          enableBasicAutocompletion: isRune ? false : autoComplete,
-          enableLiveAutocompletion: isRune ? false : autoComplete,
-          showLineNumbers: true,
-          tabSize: 2
-        }}
-      />
+      <ResizeSensor onResize={this.handleAceContainerResize}>
+        <div className="ace-container">
+          <AceEditor
+            key={isRune ? 'hjson' : 'sql'}
+            mode={isRune ? 'hjson' : 'sql'}
+            theme="solarized_dark"
+            name="ace-editor"
+            onChange={this.handleChange}
+            focus
+            fontSize={14}
+            width="100%"
+            height={`${editorHeight}px`}
+            showPrintMargin={false}
+            value={query}
+            editorProps={{
+              $blockScrolling: Infinity
+            }}
+            setOptions={{
+              enableBasicAutocompletion: isRune ? false : autoComplete,
+              enableLiveAutocompletion: isRune ? false : autoComplete,
+              showLineNumbers: true,
+              tabSize: 2
+            }}
+          />
+        </div>
+      </ResizeSensor>
       <div className="buttons">
         <ButtonGroup>
           <Button
@@ -303,7 +315,9 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         </ButtonGroup>
         {
           queryElapsed &&
-          <span className="query-elapsed"> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+          <span className="query-elapsed">
+            {`Last query took ${(queryElapsed / 1000).toFixed(2)} seconds`}
+          </span>
         }
       </div>
     </div>;

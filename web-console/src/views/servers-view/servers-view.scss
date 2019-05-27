@@ -28,15 +28,9 @@
 
   .ReactTable{
     position: absolute;
-    top: 50px;
+    top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
-  }
-
-  .bottom-pane {
-    height: 100%;
-    position: relative;
-    padding-top: 15px;
   }
 
   ul {

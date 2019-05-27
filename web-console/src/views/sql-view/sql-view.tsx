@@ -18,6 +18,7 @@
 
 import * as Hjson from 'hjson';
 import * as React from 'react';
+import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 
 import { NullTableCell, SqlControl } from '../../components';
@@ -166,6 +167,10 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     this.explainQueryManager.terminate();
   }
 
+  onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+    localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
+  }
+
   getExplain = (q: string) => {
     this.setState({
       explainDialogOpen: true,
@@ -211,18 +216,30 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     const { initSql } = this.props;
     const { queryElapsed } = this.state;
 
-    return <div className="sql-view app-view">
-      <SqlControl
-        initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
-        onRun={(queryString, bypassCache, wrapQuery) => {
-          localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
-          this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
-        }}
-        onExplain={this.getExplain}
-        queryElapsed={queryElapsed}
-      />
-      {this.renderResultTable()}
-      {this.renderExplainDialog()}
-    </div>;
+    return <SplitterLayout
+      customClassName="sql-view app-view"
+      vertical
+      percentage
+      secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60}
+      primaryMinSize={30}
+      secondaryMinSize={30}
+      onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+    >
+      <div className="top-pane">
+        <SqlControl
+          initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
+          onRun={(queryString, bypassCache, wrapQuery) => {
+            localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+            this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
+          }}
+          onExplain={this.getExplain}
+          queryElapsed={queryElapsed}
+        />
+      </div>
+      <div className="bottom-pane">
+        {this.renderResultTable()}
+        {this.renderExplainDialog()}
+      </div>
+    </SplitterLayout>;
   }
 }
