@@ -40,14 +40,14 @@
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
 
     <developers>
         <developer>
-            <name>Druid Committers</name>
-            <url>http://druid.io/community/index.html#committers</url>
+            <name>Apache Druid Committers</name>
+            <url>https://druid.apache.org/community/#committers</url>
         </developer>
     </developers>
 
@@ -73,6 +73,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
@@ -175,6 +176,7 @@
         <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
+        <module>extensions-contrib/influxdb-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -601,7 +603,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.5.0</version>
+                <version>1.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -994,7 +996,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.14</version>
+                        <version>8.20</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -1348,6 +1350,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.1</version>
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
@@ -1367,6 +1370,33 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>java-9+</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <inherited>true</inherited>
+                        <!-- prefer release instead of source/target in JDK 9 and above -->
+                        <configuration>
+                            <release>${java.version}</release>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration combine.self="override">
+                            <!-- disable tests until we fully support JDK 9 and above -->
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>strict</id>
             <build>
@@ -1498,6 +1528,7 @@
                                     <licenseFamilyName>MIT JQuery</licenseFamilyName>
                                     <notes></notes>
                                     <patterns>
+                                        <pattern>Copyright 2005, 2014 jQuery Foundation, Inc. and other contributors</pattern>
                                         <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
                                         <pattern>jQuery Foundation, Inc. | jquery.org/license</pattern>
                                     </patterns>
@@ -1566,6 +1597,7 @@
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
+                                <exclude>src/**/*.snap</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 /**
  * This aggregator factory is for merging existing sketches.
  * The input column must contain {@link HllSketch}
- * @author Alexander Saydakov
  */
 public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 {

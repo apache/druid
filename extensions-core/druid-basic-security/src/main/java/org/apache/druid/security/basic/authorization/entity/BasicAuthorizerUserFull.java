@@ -25,6 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Please see the class javadocs on {@link BasicAuthorizerRoleSimplifiedPermissions} for details on the deprecation.
+ */
+@Deprecated
 public class BasicAuthorizerUserFull
 {
   private final String name;

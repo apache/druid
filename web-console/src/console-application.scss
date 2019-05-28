@@ -31,10 +31,6 @@
     bottom: 0;
     padding: $standard-padding;
 
-    &.scrollable {
-      overflow-y: scroll;
-    }
-
     &.narrow-pad {
       padding: $standard-padding 10px;
     }

@@ -51,7 +51,9 @@ public final class DimensionHandlerUtils
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
 
-  private DimensionHandlerUtils() {}
+  private DimensionHandlerUtils()
+  {
+  }
 
   public static final ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
       new ColumnCapabilitiesImpl().setType(ValueType.STRING)
