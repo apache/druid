@@ -36,7 +36,7 @@ import {
 
 import './sql-view.scss';
 
-interface QueryWithFlags {
+interface QueryWithContext {
   queryString: string;
   context?: Record<string, any>;
   wrapQuery?: boolean;
@@ -63,9 +63,13 @@ interface SqlQueryResult {
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
+  static trimSemicolon(query: string): string {
+    // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
+    return query.replace(/;+(\s*)$/, '$1');
+  }
 
-  private sqlQueryManager: QueryManager<QueryWithFlags, SqlQueryResult>;
-  private explainQueryManager: QueryManager<string, any>;
+  private sqlQueryManager: QueryManager<QueryWithContext, SqlQueryResult>;
+  private explainQueryManager: QueryManager<QueryWithContext, BasicQueryExplanation | SemiJoinQueryExplanation | string>;
 
   constructor(props: SqlViewProps, context: any) {
     super(props, context);
@@ -83,8 +87,8 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (queryWithFlags: QueryWithFlags) => {
-        const { queryString, context, wrapQuery } = queryWithFlags;
+      processQuery: async (queryWithContext: QueryWithContext) => {
+        const { queryString, context, wrapQuery } = queryWithContext;
         const startTime = new Date();
 
         if (queryString.trim().startsWith('{')) {
@@ -100,7 +104,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${queryString.replace(/;+(\s*)$/, '$1')}) LIMIT 2000` :
+            `SELECT * FROM (${SqlView.trimSemicolon(queryString)}) LIMIT 2000` :
             queryString;
 
           const queryPayload: Record<string, any> = {
@@ -132,14 +136,17 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     });
 
     this.explainQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
-        const explainQuery = `explain plan for ${query}`;
-        const result = await queryDruidSql({
-          query: explainQuery,
+      processQuery: async (queryWithContext: QueryWithContext) => {
+        const { queryString, context } = queryWithContext;
+        const explainPayload: Record<string, any> = {
+          query: `EXPLAIN PLAN FOR (${SqlView.trimSemicolon(queryString)})`,
           resultFormat: 'object'
-        });
-        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]['PLAN']);
-        return data;
+        };
+
+        if (context) explainPayload.context = context;
+        const result = await queryDruidSql(explainPayload);
+
+        return parseQueryPlan(result[0]['PLAN']);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -158,15 +165,6 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   onSecondaryPaneSizeChange(secondaryPaneSize: number) {
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
-  }
-
-  getExplain = (q: string) => {
-    this.setState({
-      explainDialogOpen: true,
-      loadingExplain: true,
-      explainError: null
-    });
-    this.explainQueryManager.runQuery(q);
   }
 
   renderExplainDialog() {
@@ -221,7 +219,10 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
             this.sqlQueryManager.runQuery({ queryString, context, wrapQuery });
           }}
-          onExplain={this.getExplain}
+          onExplain={(queryString, context) => {
+            this.setState({ explainDialogOpen: true });
+            this.explainQueryManager.runQuery({ queryString, context });
+          }}
           queryElapsed={queryElapsed}
         />
       </div>

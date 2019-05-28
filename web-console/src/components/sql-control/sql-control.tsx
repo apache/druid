@@ -59,7 +59,7 @@ const langTools = ace.acequire('ace/ext/language_tools');
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
   onRun: (query: string, context: Record<string, any>, wrapQuery: boolean) => void;
-  onExplain: (sqlQuery: string) => void;
+  onExplain: (sqlQuery: string, context: Record<string, any>) => void;
   queryElapsed: number | null;
 }
 
@@ -67,10 +67,10 @@ export interface SqlControlState {
   query: string;
   autoComplete: boolean;
   autoCompleteLoading: boolean;
-  bypassCache: boolean;
   wrapQuery: boolean;
   useApproximateCountDistinct: boolean;
   useApproximateTopN: boolean;
+  useCache: boolean;
 
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
@@ -84,10 +84,10 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
       query: props.initSql || '',
       autoComplete: true,
       autoCompleteLoading: false,
-      bypassCache: false,
       wrapQuery: true,
       useApproximateCountDistinct: true,
       useApproximateTopN: true,
+      useCache: true,
 
       editorHeight: 200
     };
@@ -217,6 +217,26 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     this.addCompleters();
   }
 
+  getContext(): Record<string, any> {
+    const { useCache, useApproximateCountDistinct, useApproximateTopN } = this.state;
+    const context: Record<string, any> = {};
+
+    if (useCache === false) {
+      context.useCache = false;
+      context.populateCache = false;
+    }
+
+    if (useApproximateCountDistinct === false) {
+      context.useApproximateCountDistinct = false;
+    }
+
+    if (useApproximateTopN === false) {
+      context.useApproximateTopN = false;
+    }
+
+    return context;
+  }
+
   private handleChange = (newValue: string): void => {
     this.setState({
       query: newValue
@@ -225,19 +245,8 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   private onRunClick = () => {
     const { onRun } = this.props;
-    const { query, bypassCache, wrapQuery, useApproximateCountDistinct, useApproximateTopN } = this.state;
-    const context: Record<string, any> = {};
-    if (bypassCache) {
-      context.useCache = false;
-      context.populateCache = false;
-    }
-    if (useApproximateCountDistinct === false) {
-      context.useApproximateCountDistinct = false;
-    }
-    if (useApproximateTopN === false) {
-      context.useApproximateTopN = false;
-    }
-    onRun(query, context, wrapQuery);
+    const { query, wrapQuery } = this.state;
+    onRun(query, this.getContext(), wrapQuery);
   }
 
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
@@ -247,7 +256,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   renderExtraMenu(isRune: boolean) {
     const { onExplain } = this.props;
-    const { query, autoComplete, bypassCache, wrapQuery, useApproximateCountDistinct, useApproximateTopN } = this.state;
+    const { query, autoComplete, useCache, wrapQuery, useApproximateCountDistinct, useApproximateTopN } = this.state;
 
     return <Menu>
       <MenuItem
@@ -262,7 +271,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           <MenuItem
             icon={IconNames.CLEAN}
             text="Explain"
-            onClick={() => onExplain(query)}
+            onClick={() => onExplain(query, this.getContext())}
           />
           <MenuCheckbox
             checked={wrapQuery}
@@ -287,9 +296,9 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         </>
       }
       <MenuCheckbox
-        checked={bypassCache}
-        label="Bypass cache"
-        onChange={() => this.setState({bypassCache: !bypassCache})}
+        checked={useCache}
+        label="Use cache"
+        onChange={() => this.setState({useCache: !useCache})}
       />
     </Menu>;
   }
