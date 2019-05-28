@@ -72,9 +72,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   @Override
   protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
   {
+    //noinspection unchecked
     return new KinesisIndexTaskRunner(
         this,
-        parser,
+        dataSchema.getParser(),
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,

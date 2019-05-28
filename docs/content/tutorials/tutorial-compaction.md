@@ -41,7 +41,7 @@ For this tutorial, we'll be using the Wikipedia edits sample data, with an inges
 The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.json`. Let's submit that spec, which will create a datasource called `compaction-tutorial`:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-init-index.json 
+bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url http://localhost:8081
 ```
 
 <div class="note caution">
@@ -99,7 +99,7 @@ In this tutorial example, only one compacted segment will be created per hour, a
 Let's submit this task now:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json
+bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json --url http://localhost:8081
 ```
 
 After the task finishes, refresh the [segments view](http://localhost:8888/unified-console.html#segments).
@@ -158,7 +158,7 @@ Note that `segmentGranularity` is set to `DAY` in this compaction task spec.
 Let's submit this task now:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-day-granularity.json
+bin/post-index-task --file quickstart/tutorial/compaction-day-granularity.json --url http://localhost:8081
 ```
 
 It will take a bit of time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, there will only be one DAY granularity segment:

@@ -27,10 +27,10 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class DoublesSketchMergeAggregator implements Aggregator
 {
 
-  private final ColumnValueSelector<DoublesSketch> selector;
+  private final ColumnValueSelector selector;
   private DoublesUnion union;
 
-  public DoublesSketchMergeAggregator(final ColumnValueSelector<DoublesSketch> selector, final int k)
+  public DoublesSketchMergeAggregator(final ColumnValueSelector selector, final int k)
   {
     this.selector = selector;
     union = DoublesUnion.builder().setMaxK(k).build();
@@ -39,12 +39,9 @@ public class DoublesSketchMergeAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    final DoublesSketch sketch = selector.getObject();
-    if (sketch == null) {
-      return;
-    }
-    union.update(sketch);
+    updateUnion(selector, union);
   }
+
 
   @Override
   public synchronized Object get()
@@ -70,4 +67,16 @@ public class DoublesSketchMergeAggregator implements Aggregator
     union = null;
   }
 
+  static void updateUnion(ColumnValueSelector selector, DoublesUnion union)
+  {
+    final Object object = selector.getObject();
+    if (object == null) {
+      return;
+    }
+    if (object instanceof DoublesSketch) {
+      union.update((DoublesSketch) object);
+    } else {
+      union.update(selector.getDouble());
+    }
+  }
 }

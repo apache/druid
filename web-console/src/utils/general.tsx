@@ -88,9 +88,10 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
+  if (value === undefined ) {
     return true;
   }
+  if (value === null) return false;
   const haystack = String(value.toLowerCase());
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
@@ -205,6 +206,10 @@ export function parseStringToJSON(s: string): JSON | null {
   } else {
     return JSON.parse(s);
   }
+}
+
+export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
+  return xs.filter(Boolean) as any;
 }
 
 export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {

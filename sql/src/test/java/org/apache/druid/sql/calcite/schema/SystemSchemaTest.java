@@ -37,6 +37,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
@@ -144,6 +146,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+  private InventoryView serverInventoryView;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -245,10 +248,12 @@ public class SystemSchemaTest extends CalciteTestBase
     druidSchema.awaitInitialization();
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,
         serverView,
+        serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
         client,
         client,
@@ -416,8 +421,6 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
   );
-
-
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
@@ -671,7 +674,11 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
-                                                     .withConstructor(druidNodeDiscoveryProvider, authMapper)
+                                                     .withConstructor(
+                                                         druidNodeDiscoveryProvider,
+                                                         serverInventoryView,
+                                                         authMapper
+                                                     )
                                                      .createMock();
     EasyMock.replay(serversTable);
     final DruidNodeDiscovery coordinatorNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
@@ -706,7 +713,14 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(mmNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
 
-    EasyMock.replay(druidNodeDiscoveryProvider);
+    final DruidServer server1 = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName())).andReturn(server1).once();
+    EasyMock.expect(server1.getCurrSize()).andReturn(200L).once();
+    final DruidServer server2 = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical2.toDruidServer().getName())).andReturn(server2).once();
+    EasyMock.expect(server2.getCurrSize()).andReturn(400L).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, serverInventoryView, server1, server2);
     EasyMock.replay(
         coordinatorNodeDiscovery,
         overlordNodeDiscovery,
@@ -765,7 +779,7 @@ public class SystemSchemaTest extends CalciteTestBase
         -1,
         "historical",
         "tier",
-        0,
+        400,
         1000
     );
     verifyServerRow(
@@ -809,7 +823,7 @@ public class SystemSchemaTest extends CalciteTestBase
         -1,
         "historical",
         "tier",
-        0,
+        200,
         1000
     );
     verifyServerRow(

@@ -2683,8 +2683,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   ) throws JsonProcessingException
   {
     if (context != null) {
-      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
-
       if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
         final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
         checkpoints.put(0, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());

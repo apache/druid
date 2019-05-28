@@ -55,6 +55,7 @@ Generated/copied dynamically
 ```
 GET /status
 GET /druid/indexer/v1/supervisor?full
+POST /druid/indexer/v1/worker
 GET /druid/indexer/v1/workers
 GET /druid/coordinator/v1/loadqueue?simple
 GET /druid/coordinator/v1/config

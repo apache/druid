@@ -188,7 +188,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         true,
         tuningConfig.getUserAllowedHadoopPrefix(),
         tuningConfig.isLogParseExceptions(),
-        tuningConfig.getMaxParseExceptions()
+        tuningConfig.getMaxParseExceptions(),
+        tuningConfig.isUseYarnRMJobStatusFallback()
     );
     
     // generate granularity

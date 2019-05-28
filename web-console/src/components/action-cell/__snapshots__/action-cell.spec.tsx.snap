@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`describe action cell action cell snapshot 1`] = `
+<div
+  class="action-cell"
+>
+  <div>
+    hello world
+  </div>
+</div>
+`;

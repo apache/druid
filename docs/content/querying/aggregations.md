@@ -271,7 +271,7 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 
 #### DataSketches Theta Sketch
 
-The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](https://datasketches.github.io/) library.
 
 #### DataSketches HLL Sketch
 
@@ -304,7 +304,7 @@ Note the DataSketches Theta and HLL aggregators currently only support single-co
 
 #### DataSketches Quantiles Sketch
 
-The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](https://datasketches.github.io/) library.
 
 We recommend this aggregator in general for quantiles/histogram use cases, as it provides formal error bounds and has distribution-independent accuracy.
 

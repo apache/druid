@@ -1253,11 +1253,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     for (Task task : secondTasks.getValues()) {
-      KinesisIndexTask KinesisIndexTask = (KinesisIndexTask) task;
-      Assert.assertEquals(dataSchema, KinesisIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), KinesisIndexTask.getTuningConfig());
+      KinesisIndexTask kinesisIndexTask = (KinesisIndexTask) task;
+      Assert.assertEquals(dataSchema, kinesisIndexTask.getDataSchema());
+      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), kinesisIndexTask.getTuningConfig());
 
-      KinesisIndexTaskIOConfig taskConfig = KinesisIndexTask.getIOConfig();
+      KinesisIndexTaskIOConfig taskConfig = kinesisIndexTask.getIOConfig();
       Assert.assertEquals("sequenceName-1", taskConfig.getBaseSequenceName());
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
@@ -3709,7 +3709,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       boolean suspended
   )
   {
-    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
         "awsEndpoint",
         null,
@@ -3759,7 +3759,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new KinesisSupervisorSpec(
             dataSchema,
             tuningConfig,
-            KinesisSupervisorIOConfig,
+            kinesisSupervisorIOConfig,
             null,
             suspended,
             taskStorage,
@@ -3810,7 +3810,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Integer fetchDelayMillis
   )
   {
-    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
         "awsEndpoint",
         null,
@@ -3860,7 +3860,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new KinesisSupervisorSpec(
             dataSchema,
             tuningConfig,
-            KinesisSupervisorIOConfig,
+            kinesisSupervisorIOConfig,
             null,
             suspended,
             taskStorage,
@@ -3893,7 +3893,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       boolean isTaskCurrentReturn
   )
   {
-    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
         "awsEndpoint",
         null,
@@ -3943,7 +3943,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new KinesisSupervisorSpec(
             dataSchema,
             tuningConfig,
-            KinesisSupervisorIOConfig,
+            kinesisSupervisorIOConfig,
             null,
             suspended,
             taskStorage,
@@ -3978,7 +3978,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       KinesisSupervisorTuningConfig tuningConfig
   )
   {
-    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
         "awsEndpoint",
         null,
@@ -4028,7 +4028,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new KinesisSupervisorSpec(
             dataSchema,
             tuningConfig,
-            KinesisSupervisorIOConfig,
+            kinesisSupervisorIOConfig,
             null,
             suspended,
             taskStorage,
