@@ -108,7 +108,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   /** Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting. */
-  private final ConcurrentMap<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   private volatile boolean stopping = false;
 
