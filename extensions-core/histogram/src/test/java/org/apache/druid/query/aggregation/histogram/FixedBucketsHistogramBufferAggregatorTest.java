@@ -47,7 +47,8 @@ public class FixedBucketsHistogramBufferAggregatorTest
         5,
         0,
         50,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
     );
 
     FixedBucketsHistogramBufferAggregator agg = new FixedBucketsHistogramBufferAggregator(
