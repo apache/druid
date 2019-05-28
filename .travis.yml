@@ -22,12 +22,8 @@ sudo: false
 dist: trusty
 group: deprecated-2017Q4
 
-language: node_js
-node_js:
-  - "10"
-
 jdk:
-  - oraclejdk8
+  - openjdk8
 
 cache:
   directories:
@@ -35,6 +31,9 @@ cache:
 
 matrix:
   include:
+      # Java 11 build
+    - jdk: openjdk11
+
       # license checks
     - env:
        - NAME="license checks"

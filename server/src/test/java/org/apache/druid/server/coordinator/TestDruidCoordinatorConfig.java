@@ -46,7 +46,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       String consoleStatic,
       boolean mergeSegments,
       boolean convertSegments,
-      Duration getLoadQueuePeonRepeatDelay
+      Duration getLoadQueuePeonRepeatDelay,
+      Duration CuratorCreateZkNodesRepeatDelay
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -108,8 +109,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return consoleStatic;
   }
 
-  @Override public Duration getLoadQueuePeonRepeatDelay()
+  @Override
+  public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
   }
+
 }

@@ -40,7 +40,6 @@ import java.util.Set;
  * The bounds are provided at a given number of standard deviations (optional, defaults to 1).
  * This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%, 95.4% and 99.7%
  * confidence intervals.
- * @author Alexander Saydakov
  */
 public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregator
 {

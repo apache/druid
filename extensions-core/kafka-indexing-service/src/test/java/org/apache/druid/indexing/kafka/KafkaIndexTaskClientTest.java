@@ -184,9 +184,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testInternalServerError()
   {
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [500]");
+    expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [500] and content []");
 
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
+    expect(responseHolder.getContent()).andReturn("");
     expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
@@ -231,7 +232,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
                                       .andReturn(HttpResponseStatus.OK);
     expect(responseHolder.getResponse()).andReturn(response);
-    expect(responseHolder.getContent()).andReturn("")
+    expect(responseHolder.getContent()).andReturn("").times(2)
                                        .andReturn("{}");
     expect(response.headers()).andReturn(headers);
     expect(headers.get("X-Druid-Task-Id")).andReturn("a-different-task-id");
@@ -291,7 +292,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
                                       .andReturn(HttpResponseStatus.OK).times(1);
-    expect(responseHolder.getContent()).andReturn("").times(2)
+    expect(responseHolder.getContent()).andReturn("").times(4)
                                        .andReturn("{\"0\":1, \"1\":10}");
     expect(responseHolder.getResponse()).andReturn(response).times(2);
     expect(response.headers()).andReturn(headers).times(2);

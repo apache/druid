@@ -157,9 +157,14 @@ public class DruidProcessingModule implements Module
       }
     }
     catch (UnsupportedOperationException e) {
+      log.debug("Checking for direct memory size is not support on this platform: %s", e);
       log.info(
-          "Could not verify that you have enough direct memory, so I hope you do! Error message was: %s",
-          e.getMessage()
+          "Unable to determine max direct memory size. If druid.processing.buffer.sizeBytes is explicitly configured, "
+          + "then make sure to set -XX:MaxDirectMemorySize to at least \"druid.processing.buffer.sizeBytes * "
+          + "(druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)\", "
+          + "or else set -XX:MaxDirectMemorySize to at least 25%% of maximum jvm heap size.",
+          config.getNumMergeBuffers(),
+          config.getNumThreads()
       );
     }
   }

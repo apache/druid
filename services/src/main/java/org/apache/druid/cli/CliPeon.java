@@ -50,7 +50,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.NodeTypeConfig;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -136,8 +136,12 @@ public class CliPeon extends GuiceRunnable
   // path to store the task's TaskReport objects
   private String taskReportPath;
 
+  /**
+   * Still using --nodeType as the flag for backward compatibility, although the concept is now more precisely called
+   * "serverType".
+   */
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
-  public String nodeType = "indexer-executor";
+  public String serverType = "indexer-executor";
 
   private static final Logger log = new Logger(CliPeon.class);
 
@@ -260,7 +264,7 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
-            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.fromString(nodeType)));
+            binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
           }
 

@@ -24,7 +24,7 @@ title: "Avro"
 
 # Avro
 
-This extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.
+This Apache Druid (incubating) extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.
 
 ### Avro Stream Parser
 

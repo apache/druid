@@ -44,5 +44,6 @@ public class ThriftExtensionsModule implements DruidModule
 
   @Override
   public void configure(Binder binder)
-  { }
+  {
+  }
 }

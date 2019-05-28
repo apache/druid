@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Working with different versions of Hadoop"
+title: "Working with different versions of Apache Hadoop"
 ---
 
 <!--
@@ -24,7 +24,7 @@ title: "Working with different versions of Hadoop"
 
 # Working with different versions of Hadoop
 
-Druid can interact with Hadoop in two ways:
+Apache Druid (incubating) can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.html) using the druid-hdfs-storage extension.
 2. [Batch-load data from Hadoop](../ingestion/hadoop.html) using Map/Reduce jobs.

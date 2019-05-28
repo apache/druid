@@ -24,7 +24,7 @@ title: "Basic Security"
 
 # Druid Basic Security
 
-This extension adds:
+This Apache Druid (incubating) extension adds:
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
 - an Authorizer which implements basic role-based access control
 
@@ -172,6 +172,87 @@ Return a list of all user names.
 `GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
 Return the name and role information of the user with name {userName}
 
+Example output:
+```json
+{
+  "name": "druid2",
+  "roles": [
+    "druidRole"
+  ]
+}
+```
+
+This API supports the following flags:
+- `?full`: The response will also include the full information for each role currently assigned to the user.
+
+Example output:
+```json
+{
+  "name": "druid2",
+  "roles": [
+    {
+      "name": "druidRole",
+      "permissions": [
+        {
+          "resourceAction": {
+            "resource": {
+              "name": "A",
+              "type": "DATASOURCE"
+            },
+            "action": "READ"
+          },
+          "resourceNamePattern": "A"
+        },
+        {
+          "resourceAction": {
+            "resource": {
+              "name": "C",
+              "type": "CONFIG"
+            },
+            "action": "WRITE"
+          },
+          "resourceNamePattern": "C"
+        }
+      ]
+    }
+  ]
+}
+```
+
+The output format of this API when `?full` is specified is deprecated and in later versions will be switched to the output format used when both `?full` and `?simplifyPermissions` flag is set. 
+
+The `resourceNamePattern` is a compiled version of the resource name regex. It is redundant and complicates the use of this API for clients such as frontends that edit the authorization configuration, as the permission format in this output does not match the format used for adding permissions to a role.
+
+- `?full?simplifyPermissions`: When both `?full` and `?simplifyPermissions` are set, the permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field.
+
+```json
+{
+  "name": "druid2",
+  "roles": [
+    {
+      "name": "druidRole",
+      "users": null,
+      "permissions": [
+        {
+          "resource": {
+            "name": "A",
+            "type": "DATASOURCE"
+          },
+          "action": "READ"
+        },
+        {
+          "resource": {
+            "name": "C",
+            "type": "CONFIG"
+          },
+          "action": "WRITE"
+        }
+      ]
+    }
+  ]
+}
+```
+
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
 Create a new user with name {userName}
 
@@ -184,7 +265,56 @@ Delete the user with name {userName}
 Return a list of all role names.
 
 `GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`
-Return name and permissions for the role named {roleName}
+Return name and permissions for the role named {roleName}.
+
+Example output:
+```json
+{
+  "name": "druidRole2",
+  "permissions": [
+    {
+      "resourceAction": {
+        "resource": {
+          "name": "E",
+          "type": "DATASOURCE"
+        },
+        "action": "WRITE"
+      },
+      "resourceNamePattern": "E"
+    }
+  ]
+}
+```
+
+The default output format of this API is deprecated and in later versions will be switched to the output format used when the `?simplifyPermissions` flag is set. The `resourceNamePattern` is a compiled version of the resource name regex. It is redundant and complicates the use of this API for clients such as frontends that edit the authorization configuration, as the permission format in this output does not match the format used for adding permissions to a role.
+
+This API supports the following flags:
+
+- `?full`: The output will contain an extra `users` list, containing the users that currently have this role.
+
+```json
+"users":["druid"]
+```
+
+- `?simplifyPermissions`: The permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field. The `users` field will be null when `?full` is not specified.
+
+Example output:
+```json
+{
+  "name": "druidRole2",
+  "users": null,
+  "permissions": [
+    {
+      "resource": {
+        "name": "E",
+        "type": "DATASOURCE"
+      },
+      "action": "WRITE"
+    }
+  ]
+}
+```
+
 
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`
 Create a new role with name {roleName}.
@@ -309,6 +439,20 @@ There is only one possible resource name for the "STATE" config resource type, "
 For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.html).
 
 GET requires READ permission, while POST and DELETE require WRITE permission.
+
+### SQL Permissions
+
+Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
+
+Queries on the [INFORMATION_SCHEMA tables](../../querying/sql.html#information-schema) will
+return information about datasources that the caller has DATASOURCE READ access to. Other
+datasources will be omitted.
+
+Queries on the [system schema tables](../../querying/sql.html#system-schema) require the following permissions:
+- `segments`: Segments will be filtered based on DATASOURCE READ permissions.
+- `servers`: The user requires STATE READ permissions.
+- `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
+- `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
 
 ## Configuration Propagation
 

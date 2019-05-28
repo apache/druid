@@ -24,7 +24,7 @@ title: "groupBy Queries"
 
 # groupBy Queries
 
-These types of queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache Druid (incubating) queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 <div class="note info">
@@ -288,7 +288,8 @@ disk space.
 
 With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
 will not exceed available memory for the maximum possible concurrent query load (given by
-druid.processing.numMergeBuffers). See [How much direct memory does Druid use?](../operations/performance-faq.html) for more details.
+druid.processing.numMergeBuffers). See the [Basic Cluster Tuning Guide](../operations/basic-cluster-tuning.html) 
+for more details about direct memory usage, organized by Druid process type.
 
 Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a "query" [dataSource](datasource.html#query-data-source)) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.html#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
 

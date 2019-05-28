@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Versioning Druid"
+title: "Versioning Apache Druid (incubating)"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Versioning Druid"
   ~ under the License.
   -->
 
-# Versioning Druid
+# Versioning Apache Druid (incubating)
 
 This page discusses how we do versioning and provides information on our stable releases.
 

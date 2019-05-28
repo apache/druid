@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
  * Base type for interfaces that manage column value selection, e.g. {@link DimensionSelector}, {@link
@@ -33,7 +33,7 @@ import org.apache.druid.guice.annotations.PublicApi;
  * methods and null from {@link #getObject()}, should always be an instance of {@link NilColumnValueSelector}.
  * `selector instanceof NilColumnValueSelector` is the recommended way to check for this condition.
  */
-@PublicApi
+@ExtensionPoint
 public interface ColumnValueSelector<T> extends BaseLongColumnValueSelector, BaseDoubleColumnValueSelector,
     BaseFloatColumnValueSelector, BaseObjectColumnValueSelector<T>
 {

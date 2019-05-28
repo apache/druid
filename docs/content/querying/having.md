@@ -28,7 +28,7 @@ A having clause is a JSON object identifying which rows from a groupBy query sho
 
 It is essentially the equivalent of the HAVING clause in SQL.
 
-Druid supports the following types of having clauses.
+Apache Druid (incubating) supports the following types of having clauses.
 
 ### Query filters
 

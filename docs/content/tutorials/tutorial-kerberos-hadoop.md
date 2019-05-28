@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Configuring Druid to use a Kerberized Hadoop as Deep Storage"
+title: "Configuring Apache Druid (incubating) to use Kerberized Apache Hadoop as Deep Storage"
 ---
 
 <!--

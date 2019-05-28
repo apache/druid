@@ -17,6 +17,7 @@
  */
 
 export const LocalStorageKeys = {
+  INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',
   SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as 'supervisor-table-column-selection',
@@ -24,7 +25,9 @@ export const LocalStorageKeys = {
   SERVER_TABLE_COLUMN_SELECTION: 'historical-table-column-selection' as 'historical-table-column-selection',
   MIDDLEMANAGER_TABLE_COLUMN_SELECTION: 'middleManager-table-column-selection' as 'middleManager-table-column-selection',
   LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as 'lookup-table-column-selection',
-  QUERY_KEY: 'druid-console-query' as 'druid-console-query'
+  QUERY_KEY: 'druid-console-query' as 'druid-console-query',
+  TASKS_VIEW_PANE_SIZE: 'tasks-view-pane-size' as 'tasks-view-pane-size',
+  SERVERS_VIEW_PANE_SIZE: 'servers-view-pane-size' as 'servers-view-pane-size'
 
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];

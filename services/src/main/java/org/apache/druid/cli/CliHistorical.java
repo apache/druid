@@ -36,7 +36,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.NodeTypeConfig;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Self;
@@ -92,7 +92,7 @@ public class CliHistorical extends ServerRunnable
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
-          binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
+          binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
           binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
           Jerseys.addResource(binder, QueryResource.class);
