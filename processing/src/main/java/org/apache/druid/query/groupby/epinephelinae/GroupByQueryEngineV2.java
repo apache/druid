@@ -359,7 +359,7 @@ public class GroupByQueryEngineV2
             delegate.close();
           }
           delegate = initNewDelegate();
-          return true;
+          return delegate.hasNext();
         } else {
           return false;
         }
