@@ -561,8 +561,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       if (dataSource != null) {
         dataSource.addSegment(segment);
       }
-      String s = segment.getId().toString();
-      segmentIdsToMarkAsUsed.add(s);
+      segmentIdsToMarkAsUsed.add(segment.getId().toString());
     }
 
     return markSegmentsAsUsed(segmentIdsToMarkAsUsed);
@@ -1021,7 +1020,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                         }
                         catch (IOException e) {
                           log.makeAlert(e, "Failed to read segment from db.").emit();
-                          // If one entry is database is corrupted, doPoll() should continue to work overall. See
+                          // If one entry in database is corrupted doPoll() should continue to work overall. See
                           // .filter(Objects::nonNull) below in this method.
                           return null;
                         }

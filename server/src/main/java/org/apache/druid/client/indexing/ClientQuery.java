@@ -24,16 +24,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * {@link org.apache.druid.indexing.common.task.Task} representations for clients. The magic conversion happens right
+ * org.apache.druid.indexing.common.task.Task representations for clients. The magic conversion happens right
  * at the moment of making a REST query: {@link HttpIndexingServiceClient#runTask} serializes ClientTaskQuery
- * objects and {@link org.apache.druid.indexing.overlord.http.OverlordResource#taskPost} deserializes {@link
- * org.apache.druid.indexing.common.task.Task} objects from the same bytes. Therefore JSON serialization fields of
- * ClientTaskQuery objects must match with those of the corresponding {@link
- * org.apache.druid.indexing.common.task.Task} objects.
+ * objects and org.apache.druid.indexing.overlord.http.OverlordResource.taskPost() deserializes
+ * org.apache.druid.indexing.common.task.Task objects from the same bytes. Therefore JSON serialization fields of
+ * ClientTaskQuery objects must match with those of the corresponding
+ * org.apache.druid.indexing.common.task.Task objects.
  */
-// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
-// upgraded to IntelliJ 2018+.
-@SuppressWarnings("JavadocResource")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "kill", value = ClientKillQuery.class),

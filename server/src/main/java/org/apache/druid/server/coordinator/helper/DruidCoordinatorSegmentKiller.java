@@ -39,11 +39,8 @@ import java.util.List;
  * Completely removes information about unused segments whose end time is older than {@link #retainDuration} from now
  * from the metadata store. This action is called "to kill a segment".
  *
- * @see org.apache.druid.indexing.common.task.KillTask
+ * See org.apache.druid.indexing.common.task.KillTask
  */
-// IntelliJ 2017 doesn't support forward Javadoc links; the suppression should be removed when TeamCity build is
-// upgraded to IntelliJ 2018+.
-@SuppressWarnings("JavadocResource")
 public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorSegmentKiller.class);
