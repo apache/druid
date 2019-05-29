@@ -219,7 +219,7 @@ public class BasicSecurityDruidModule implements DruidModule
   public static <T> T getInstance(
       Injector injector,
       String configClassName,
-      Class<? extends T> isCoordClass,
+      Class<? extends T> classRunByCoordinator,
       Class<? extends T> defaultClass
   ) throws ClassNotFoundException
   {
@@ -229,8 +229,8 @@ public class BasicSecurityDruidModule implements DruidModule
       final T instance = (T) injector.getInstance(Class.forName(configClassName));
       return instance;
     }
-    if (isCoordClass != null && isCoordinator(injector)) {
-      return injector.getInstance(isCoordClass);
+    if (classRunByCoordinator != null && isCoordinator(injector)) {
+      return injector.getInstance(classRunByCoordinator);
     }
     if (defaultClass != null) {
       return injector.getInstance(defaultClass);

@@ -21,6 +21,7 @@ package org.apache.druid.security.basic.authentication.db.cache;
 
 /**
  * Noop basic authenticator cache notifier.
+ * No notification is sent on user udpate.
  * Might be used as a config option to override default authenticator cache notifier.
  */
 public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier

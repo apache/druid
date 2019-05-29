@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Basic authentication storage/cache/resource handler config.
- * The config is an option to specify classes of user/role managers, caches and notifiers.
- * If a config field is specified then the corresponding class is instantiated
+ * BasicAuthClassCompositionConfig provides options to specify authenticator/authorizer classes.
+ * If a field in this class is non-null then the corresponding class is instantiated
  * regardless of what type of Druid component runs it (see {@link BasicSecurityDruidModule}).
  * Hence every Druid component might be a user/role manager and notify others by sending notifications.
  * Every field must be a valid class name (appropriate for the corresponding goal) or null.
