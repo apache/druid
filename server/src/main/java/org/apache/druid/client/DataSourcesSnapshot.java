@@ -37,15 +37,17 @@ import java.util.stream.Collectors;
  * overshadowedSegments). Getters of {@link org.apache.druid.metadata.MetadataSegmentManager} should use this snapshot
  * to return dataSources and overshadowedSegments.
  */
-public class DataSourceSnapshot
+public class DataSourcesSnapshot
 {
   private final Collection<ImmutableDruidDataSource> dataSources;
+  private final ImmutableSet<SegmentId> overshadowedSegments;
 
-  public DataSourceSnapshot(
+  public DataSourcesSnapshot(
       Collection<ImmutableDruidDataSource> dataSources
   )
   {
     this.dataSources = dataSources;
+    this.overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments());
   }
 
   public Collection<ImmutableDruidDataSource> getDataSources()
@@ -55,7 +57,7 @@ public class DataSourceSnapshot
 
   public ImmutableSet<SegmentId> getOvershadowedSegments()
   {
-    return ImmutableSet.copyOf(determineOvershadowedSegments());
+    return overshadowedSegments;
   }
 
   /**

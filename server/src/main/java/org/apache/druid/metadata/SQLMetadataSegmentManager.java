@@ -24,7 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.client.DataSourceSnapshot;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
@@ -111,7 +111,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
   @Nullable
-  private volatile DataSourceSnapshot dataSourcesSnapshot = null;
+  private volatile DataSourcesSnapshot dataSourcesSnapshot = null;
 
   /**
    * The number of times this SQLMetadataSegmentManager was started.
@@ -210,7 +210,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       if (!isStarted()) {
         return;
       }
-
+      dataSourcesSnapshot = null;
       dataSources = null;
       currentStartOrder = -1;
       exec.shutdownNow();
@@ -619,27 +619,30 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return dataSourcesSnapshot.getDataSources();
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getDataSources()).orElse(null);
   }
 
   @Override
   @Nullable
   public Iterable<DataSegment> iterateAllSegments()
   {
-    final Collection<ImmutableDruidDataSource> snapshot = dataSourcesSnapshot.getDataSources();
-    if (snapshot == null) {
+    final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                                     .map(m -> m.getDataSources())
+                                                                     .orElse(null);
+    if (dataSources == null) {
       return null;
     }
 
-    return () -> snapshot.stream()
-                         .flatMap(dataSource -> dataSource.getSegments().stream())
-                         .iterator();
+    return () -> dataSources.stream()
+                            .flatMap(dataSource -> dataSource.getSegments().stream())
+                            .iterator();
   }
 
   @Override
+  @Nullable
   public Set<SegmentId> getOvershadowedSegments()
   {
-    return dataSourcesSnapshot.getOvershadowedSegments();
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getOvershadowedSegments()).orElse(null);
   }
 
   @Override
@@ -748,7 +751,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     dataSources = newDataSources;
 
     // replace "dataSourcesSnapshot" atomically
-    dataSourcesSnapshot = new DataSourceSnapshot(
+    dataSourcesSnapshot = new DataSourcesSnapshot(
         Optional.ofNullable(dataSources)
                 .map(m ->
                          m.values()
