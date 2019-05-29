@@ -58,8 +58,8 @@ import java.util.concurrent.locks.ReentrantLock;
  *    doesn't need logging during start or stop).
  *  - {@link Stage#NORMAL}: This is the default stage. Most objects will probably make the most sense to be registered
  *    at this level, with the exception of any form of server or service announcements
- *  - {@link Stage#SERVER}: This lifecycle stage is intended for all 'server' objects, for example, {@link
- *    org.apache.druid.server.initialization.jetty.JettyServerModule}, but any sort of 'server' that expects most (or
+ *  - {@link Stage#SERVER}: This lifecycle stage is intended for all 'server' objects, for example,
+ *    org.apache.druid.server.initialization.jetty.JettyServerModule, but any sort of 'server' that expects most (or
  *    some specific) Lifecycle objects to be initialized by the time it starts, and still available at the time it stops
  *    can logically live in this stage.
  *  - {@link Stage#ANNOUNCEMENTS}: Any object which announces to a cluster this servers location belongs in this stage.
