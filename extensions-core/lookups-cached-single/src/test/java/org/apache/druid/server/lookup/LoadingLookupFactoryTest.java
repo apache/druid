@@ -20,6 +20,7 @@
 package org.apache.druid.server.lookup;
 
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
@@ -27,7 +28,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import org.apache.druid.server.lookup.cache.loading.OffHeapLoadingCache;
 import org.apache.druid.server.lookup.cache.loading.OnHeapLoadingCache;
-import org.codehaus.jackson.annotate.JsonCreator;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,11 +38,11 @@ import java.util.List;
 
 public class LoadingLookupFactoryTest
 {
-  DataFetcher dataFetcher = EasyMock.createMock(DataFetcher.class);
-  LoadingCache lookupCache = EasyMock.createStrictMock(LoadingCache.class);
-  LoadingCache reverseLookupCache = EasyMock.createStrictMock(LoadingCache.class);
-  LoadingLookup loadingLookup = EasyMock.createMock(LoadingLookup.class);
-  LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
+  private final DataFetcher dataFetcher = EasyMock.createMock(DataFetcher.class);
+  private final LoadingCache<String, String> lookupCache = EasyMock.createStrictMock(LoadingCache.class);
+  private final LoadingCache<String, List<String>> reverseLookupCache = EasyMock.createStrictMock(LoadingCache.class);
+  private final LoadingLookup loadingLookup = EasyMock.createMock(LoadingLookup.class);
+  private final LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
       dataFetcher,
       lookupCache,
       reverseLookupCache,

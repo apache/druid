@@ -25,10 +25,10 @@ import { ActionCell} from './action-cell';
 
 describe('describe action cell', () => {
   it('action cell snapshot', () => {
-    const actionCell =
-      <ActionCell >
-        <div>hello world</div>
-      </ActionCell>;
+    const actionCell = <ActionCell
+      onDetail={() => null}
+      actions={[]}
+    />;
     const { container, getByText } = render(actionCell);
     expect(container.firstChild).toMatchSnapshot();
   });

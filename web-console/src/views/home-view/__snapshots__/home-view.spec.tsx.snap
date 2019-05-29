@@ -124,7 +124,7 @@ exports[`describe home view home viexw snapshot 1`] = `
           icon="database"
         />
          
-        Data servers
+        Servers
       </Component>
       <p>
         Loading...
