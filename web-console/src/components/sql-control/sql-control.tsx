@@ -25,6 +25,7 @@ import {
   Popover,
   Position, ResizeSensor
 } from '@blueprintjs/core';
+import { Hotkey, Hotkeys, HotkeysTarget } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as ace from 'brace';
@@ -77,6 +78,7 @@ export interface SqlControlState {
   editorHeight: number;
 }
 
+@HotkeysTarget
 export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
   constructor(props: SqlControlProps, context: any) {
     super(props, context);
@@ -301,6 +303,18 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         onChange={() => this.setState({useCache: !useCache})}
       />
     </Menu>;
+  }
+
+  public renderHotkeys() {
+    return <Hotkeys>
+      <Hotkey
+        allowInInput
+        global
+        combo="ctrl + enter"
+        label="run on click"
+        onKeyDown={this.onRunClick}
+      />
+    </Hotkeys>;
   }
 
   render() {
