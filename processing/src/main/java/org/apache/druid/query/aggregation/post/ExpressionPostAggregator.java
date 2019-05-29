@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -63,8 +65,8 @@ public class ExpressionPostAggregator implements PostAggregator
   private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
 
-  private final Expr parsed;
-  private final Set<String> dependentFields;
+  private final Supplier<Expr> parsed;
+  private final Supplier<Set<String>> dependentFields;
 
   /**
    * Constructor for serialization.
@@ -100,14 +102,38 @@ public class ExpressionPostAggregator implements PostAggregator
     this.macroTable = macroTable;
     this.finalizers = finalizers;
 
-    this.parsed = Parser.parse(expression, macroTable);
-    this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
+    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.dependentFields = Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(parsed.get())));
   }
+
+  private ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Map<String, Function<Object, Object>> finalizers,
+      final Supplier<Expr> parsed,
+      final Supplier<Set<String>> dependentFields
+  )
+  {
+    Preconditions.checkArgument(expression != null, "expression cannot be null");
+
+    this.name = name;
+    this.expression = expression;
+    this.ordering = ordering;
+    this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
+    this.macroTable = macroTable;
+    this.finalizers = finalizers;
+
+    this.parsed = parsed;
+    this.dependentFields = dependentFields;
+  }
+
 
   @Override
   public Set<String> getDependentFields()
   {
-    return dependentFields;
+    return dependentFields.get();
   }
 
   @Override
@@ -128,7 +154,7 @@ public class ExpressionPostAggregator implements PostAggregator
         }
     );
 
-    return parsed.eval(Parser.withMap(finalizedValues)).value();
+    return parsed.get().eval(Parser.withMap(finalizedValues)).value();
   }
 
   @Override
@@ -151,7 +177,9 @@ public class ExpressionPostAggregator implements PostAggregator
                 entry -> entry.getKey(),
                 entry -> entry.getValue()::finalizeComputation
             )
-        )
+        ),
+        parsed,
+        dependentFields
     );
   }
 
@@ -190,7 +218,7 @@ public class ExpressionPostAggregator implements PostAggregator
   {
     /**
      * Ensures the following order: numeric > NaN > Infinite.
-     *
+     * <p>
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
      * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ExprMacroTable, Map)}.
      */
