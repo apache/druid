@@ -59,12 +59,17 @@ public class RedisCache implements Cache
 
   public static RedisCache create(final RedisCacheConfig config)
   {
+    JedisPool pool;
     JedisPoolConfig poolConfig = new JedisPoolConfig();
     poolConfig.setMaxTotal(config.getMaxTotalConnections());
     poolConfig.setMaxIdle(config.getMaxIdleConnections());
     poolConfig.setMinIdle(config.getMinIdleConnections());
 
-    JedisPool pool = new JedisPool(poolConfig, config.getHost(), config.getPort(), config.getTimeout());
+    if(config.getPasswd() != null){
+      pool = new JedisPool(poolConfig, config.getHost(), config.getPort(),  config.getTimeout(),config.getPasswd());
+    }else{
+      pool = new JedisPool(poolConfig, config.getHost(), config.getPort(), config.getTimeout());
+    }
     return new RedisCache(pool, config);
   }
 

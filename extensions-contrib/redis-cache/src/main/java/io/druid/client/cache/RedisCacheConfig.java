@@ -29,6 +29,9 @@ public class RedisCacheConfig
   @JsonProperty
   private int port;
 
+  @JsonProperty
+  private String  passwd;
+
   // milliseconds, default to one day
   @JsonProperty
   private long expiration = 24 * 3600 * 1000;
@@ -57,6 +60,11 @@ public class RedisCacheConfig
   public int getPort()
   {
     return port;
+  }
+
+  public String getPasswd()
+  {
+    return passwd;
   }
 
   public long getExpiration()

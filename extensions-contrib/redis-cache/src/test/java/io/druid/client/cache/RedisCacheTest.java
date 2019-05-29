@@ -182,6 +182,11 @@ public class RedisCacheTest
     Assert.assertEquals(null, result.get(key3));
   }
 
+  @Test
+  public void testConfigPasswd(){
+    Assert.assertNull(cacheConfig.getPasswd());
+  }
+
   public void put(Cache cache, String namespace, byte[] key, Integer value)
   {
     cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
