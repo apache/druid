@@ -333,6 +333,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
               showLineNumbers: true,
               tabSize: 2
             }}
+            style={{}}
           />
         </div>
       </ResizeSensor>
