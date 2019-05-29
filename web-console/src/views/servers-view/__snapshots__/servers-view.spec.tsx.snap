@@ -92,6 +92,7 @@ exports[`describe servers view action servers view 1`] = `
         "Header": undefined,
         "Pivot": undefined,
         "PivotValue": undefined,
+        "Placeholder": undefined,
         "aggregate": undefined,
         "className": "",
         "filterAll": false,
@@ -104,6 +105,7 @@ exports[`describe servers view action servers view 1`] = `
         "getProps": [Function],
         "headerClassName": "",
         "headerStyle": Object {},
+        "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
@@ -202,6 +204,7 @@ exports[`describe servers view action servers view 1`] = `
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
+    defaultPage={0}
     defaultPageSize={50}
     defaultResized={Array []}
     defaultSortDesc={false}
@@ -252,6 +255,7 @@ exports[`describe servers view action servers view 1`] = `
     onFetchData={[Function]}
     onFilteredChange={[Function]}
     originalKey="_original"
+    pageJumpText="jump to page"
     pageSizeOptions={
       Array [
         5,
@@ -270,6 +274,7 @@ exports[`describe servers view action servers view 1`] = `
     previousText="Previous"
     resizable={true}
     resolveData={[Function]}
+    rowsSelectorText="rows per page"
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
