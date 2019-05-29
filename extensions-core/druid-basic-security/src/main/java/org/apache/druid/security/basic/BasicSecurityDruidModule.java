@@ -58,7 +58,6 @@ import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerRes
 import org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
 import org.apache.druid.security.basic.authorization.endpoint.DefaultBasicAuthorizerResourceHandler;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class BasicSecurityDruidModule implements DruidModule
@@ -89,8 +88,7 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthenticatorMetadataStorageUpdater(),
-        CoordinatorBasicAuthenticatorMetadataStorageUpdater.class,
-        null
+        CoordinatorBasicAuthenticatorMetadataStorageUpdater.class
     );
   }
 
@@ -134,8 +132,7 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthenticatorCacheNotifier(),
-        CoordinatorBasicAuthenticatorCacheNotifier.class,
-        null
+        CoordinatorBasicAuthenticatorCacheNotifier.class
     );
   }
 
@@ -149,8 +146,7 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthorizerMetadataStorageUpdater(),
-        CoordinatorBasicAuthorizerMetadataStorageUpdater.class,
-        null
+        CoordinatorBasicAuthorizerMetadataStorageUpdater.class
     );
   }
 
@@ -194,8 +190,7 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthorizerCacheNotifier(),
-        CoordinatorBasicAuthorizerCacheNotifier.class,
-        null
+        CoordinatorBasicAuthorizerCacheNotifier.class
     );
   }
 
@@ -215,8 +210,7 @@ public class BasicSecurityDruidModule implements DruidModule
    * Returns the instance provided either by a config property or coordinator-run class or default class.
    * The order of check corresponds to the order of method params.
    */
-  @Nullable
-  public static <T> T getInstance(
+  private static <T> T getInstance(
       Injector injector,
       String configClassName,
       Class<? extends T> classRunByCoordinator,
@@ -235,7 +229,16 @@ public class BasicSecurityDruidModule implements DruidModule
     if (defaultClass != null) {
       return injector.getInstance(defaultClass);
     }
-    return null;
+    throw new AssertionError("The instance must not be null");
+  }
+
+  private static <T> T getInstance(
+      Injector injector,
+      String configClassName,
+      Class<? extends T> classRunByCoordinator
+  ) throws ClassNotFoundException
+  {
+    return getInstance(injector, configClassName, classRunByCoordinator, null);
   }
 
   private static boolean isCoordinator(Injector injector)
