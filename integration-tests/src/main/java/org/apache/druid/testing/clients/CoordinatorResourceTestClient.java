@@ -241,12 +241,6 @@ public class CoordinatorResourceTestClient
       );
     }
 
-    @SuppressWarnings("unused") // It's unclear whether this call to readValue() has desirable side effects.
-    Map<String, Object> results = jsonMapper.readValue(
-        response.getContent(),
-        new TypeReference<Map<String, Object>>(){}
-    );
-
     StatusResponseHolder response2 = httpClient.go(
         new Request(HttpMethod.POST, new URL(url)).setContent(
             "application/json",

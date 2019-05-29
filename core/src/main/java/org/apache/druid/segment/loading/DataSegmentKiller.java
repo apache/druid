@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
@@ -29,6 +30,15 @@ import java.io.IOException;
 public interface DataSegmentKiller
 {
   Logger log = new Logger(DataSegmentKiller.class);
+
+  static String descriptorPath(String path)
+  {
+    int lastPathSeparatorIndex = path.lastIndexOf('/');
+    if (lastPathSeparatorIndex == -1) {
+      throw new IAE("Invalid path: [%s], should contain '/'", path);
+    }
+    return path.substring(0, lastPathSeparatorIndex) + "/descriptor.json";
+  }
 
   /**
    * Removes segment files (index and metadata) from deep storage.

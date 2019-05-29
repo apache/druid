@@ -24,6 +24,7 @@ import com.google.api.client.googleapis.testing.json.GoogleJsonResponseException
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -40,8 +41,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final String descriptorPath =
-      indexPath.substring(0, indexPath.lastIndexOf('/')) + "/descriptor.json"; //-V6009
+  private static final String descriptorPath = DataSegmentKiller.descriptorPath(indexPath);
 
   private static final DataSegment dataSegment = new DataSegment(
       "test",
