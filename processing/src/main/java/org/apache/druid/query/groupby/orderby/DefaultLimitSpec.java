@@ -37,6 +37,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -243,7 +246,30 @@ public class DefaultLimitSpec implements LimitSpec
       if (postAggregatorsMap.containsKey(columnName)) {
         nextOrdering = metricOrdering(columnName, postAggregatorsMap.get(columnName).getComparator());
       } else if (aggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparator());
+        Comparator comparator;
+        AggregatorFactory aggFactory = aggregatorsMap.get(columnName);
+        if (aggFactory instanceof StringLastAggregatorFactory
+            || aggFactory instanceof StringFirstAggregatorFactory) {
+          Comparator<SerializablePairLongString> strComparator = (o1, o2) -> {
+            int comparation;
+
+            if (o1 == null && o2 == null) {
+              comparation = 0;
+            } else if (o1 == null) {
+              comparation = -1;
+            } else if (o2 == null) {
+              comparation = 1;
+            } else {
+              comparation = columnSpec.getDimensionComparator().compare(o1.rhs, o2.rhs);
+            }
+            return comparation;
+          };
+
+          comparator = strComparator;
+        } else {
+          comparator = aggFactory.getComparator();
+        }
+        nextOrdering = metricOrdering(columnName, comparator);
       } else if (dimensionsMap.containsKey(columnName)) {
         nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
       }
