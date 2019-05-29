@@ -64,6 +64,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
         "Header": undefined,
         "Pivot": undefined,
         "PivotValue": undefined,
+        "Placeholder": undefined,
         "aggregate": undefined,
         "className": "",
         "filterAll": false,
@@ -76,6 +77,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
         "getProps": [Function],
         "headerClassName": "",
         "headerStyle": Object {},
+        "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
@@ -129,6 +131,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
+    defaultPage={0}
     defaultPageSize={50}
     defaultResized={Array []}
     defaultSortDesc={false}
@@ -177,6 +180,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     ofText="of"
     onFetchData={[Function]}
     originalKey="_original"
+    pageJumpText="jump to page"
     pageSizeOptions={
       Array [
         5,
@@ -194,6 +198,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     previousText="Previous"
     resizable={true}
     resolveData={[Function]}
+    rowsSelectorText="rows per page"
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
