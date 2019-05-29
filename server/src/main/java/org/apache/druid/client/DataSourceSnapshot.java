@@ -65,7 +65,6 @@ public class DataSourceSnapshot
    */
   private List<SegmentId> determineOvershadowedSegments()
   {
-
     final List<DataSegment> segments = dataSources.stream()
                                                   .flatMap(ds -> ds.getSegments().stream())
                                                   .collect(Collectors.toList());

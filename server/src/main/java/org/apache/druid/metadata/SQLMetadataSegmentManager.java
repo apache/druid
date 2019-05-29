@@ -632,8 +632,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
 
     return () -> snapshot.stream()
-                                    .flatMap(dataSource -> dataSource.getSegments().stream())
-                                    .iterator();
+                         .flatMap(dataSource -> dataSource.getSegments().stream())
+                         .iterator();
   }
 
   @Override
