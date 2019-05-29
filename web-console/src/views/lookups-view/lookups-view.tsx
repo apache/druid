@@ -36,7 +36,7 @@ import {BasicAction, basicActionsToMenu} from '../../utils/basic-action';
 import './lookups-view.scss';
 
 
-const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', 'Actions'];
+const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', ActionCell.COLUMN_LABEL];
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
 
@@ -214,7 +214,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     }
   }
 
-  private getlookupActions(lookupTier: string, lookupId: string): BasicAction[] {
+  private getLookupActions(lookupTier: string, lookupId: string): BasicAction[] {
     return [
       {
         icon: IconNames.EDIT,
@@ -304,31 +304,21 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             show: tableColumnSelectionHandler.showColumn('Version')
           },
           {
-            Header: 'Actions',
-            id: 'actions',
-            width: 70,
+            Header: ActionCell.COLUMN_LABEL,
+            id: ActionCell.COLUMN_ID,
+            width: ActionCell.COLUMN_WIDTH,
             accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
               const lookupId = row.value.id;
               const lookupTier = row.value.tier;
-              const lookupActions = this.getlookupActions(lookupTier, lookupId);
-              const lookupMenu = basicActionsToMenu(lookupActions);
-
-              return <ActionCell>
-                {
-                  lookupMenu &&
-                  <Popover content={lookupMenu} position={Position.BOTTOM_RIGHT}>
-                      <Icon icon={IconNames.WRENCH}/>
-                  </Popover>
-                }
-              </ActionCell>;
+              const lookupActions = this.getLookupActions(lookupTier, lookupId);
+              return <ActionCell actions={lookupActions}/>;
             },
-            show: tableColumnSelectionHandler.showColumn('Actions')
+            show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
           }
         ]}
         defaultPageSize={50}
-        className="-striped -highlight"
       />
     </>;
   }

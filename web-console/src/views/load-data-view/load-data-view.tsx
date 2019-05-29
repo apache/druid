@@ -31,8 +31,8 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, NullTableCell } from '../../components/index';
-import { AsyncActionDialog } from '../../dialogs/index';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, NullTableCell } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -782,7 +782,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1062,7 +1061,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1255,7 +1253,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1493,7 +1490,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1815,7 +1811,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }

@@ -21,16 +21,15 @@ import { render } from 'react-testing-library';
 
 import {SqlControl} from './sql-control';
 
-
 describe('describe sql control', () => {
   it('sql control snapshot', () => {
-    const sqlControl =
-      <SqlControl
-        initSql={'test'}
-        onRun={(query: string, bypassCache: boolean, wrapQuery: boolean) => {}}
-        onExplain={(sqlQuery: string) => {}}
-        queryElapsed={2}
-      />
+    const sqlControl = <SqlControl
+      initSql={'test'}
+      onRun={(query, context, wrapQuery) => {}}
+      onExplain={(sqlQuery, context) => {}}
+      queryElapsed={2}
+    />;
+
     const { container, getByText } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
   });
