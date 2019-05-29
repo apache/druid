@@ -274,7 +274,7 @@ public class MultiValuedDimensionTest
   }
 
   @Test
-  public void testGroupByWithDimFilterNullResults()
+  public void testGroupByWithDimFilterEmptyResults()
   {
     GroupByQuery query = GroupByQuery
         .builder()
