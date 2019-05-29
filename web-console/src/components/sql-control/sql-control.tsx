@@ -308,6 +308,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   public renderHotkeys() {
     return <Hotkeys>
       <Hotkey
+        allowInInput
         global
         combo="ctrl + enter"
         label="run on click"
