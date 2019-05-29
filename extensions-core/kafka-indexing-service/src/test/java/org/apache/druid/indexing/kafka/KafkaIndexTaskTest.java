@@ -1660,7 +1660,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc3 = sd("2011/P1D", 1);
     SegmentDescriptor desc4 = sd("2012/P1D", 0);
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc4), publishedDescriptors());
+    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 2L))
@@ -1681,7 +1681,7 @@ public class KafkaIndexTaskTest
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
         ImmutableSet.of(ImmutableList.of("d", "e", "h")),
-        ImmutableSet.of(readSegmentColumn("dim1", desc2))
+        ImmutableSet.of(readSegmentColumn("dim1", publishedDescriptors.get(1)))
     );
   }
 
