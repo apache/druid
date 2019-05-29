@@ -1341,7 +1341,7 @@ public class DruidCoordinatorRuleRunnerTest
     availableSegments.add(v2);
 
     EasyMock.expect(coordinator.getMetadataSegmentManager()).andReturn(databaseSegmentManager).anyTimes();
-    EasyMock.expect(databaseSegmentManager.getOvershadowedSegments()).andReturn(ImmutableSet.of(v1)).anyTimes();
+    EasyMock.expect(databaseSegmentManager.getOvershadowedSegments()).andReturn(ImmutableSet.of(v1.getId())).anyTimes();
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     EasyMock.replay(coordinator, databaseSegmentManager);
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());

@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -99,13 +100,13 @@ public interface MetadataSegmentManager
   Collection<String> getAllDataSourceNames();
 
   /**
-   * Returns a collection of overshadowed segments
+   * Returns a set of overshadowed segment Ids
    *
    * Will return null if we do not have a valid snapshot of segments yet (perhaps the underlying metadata store has
    * not yet been polled.)
    */
   @Nullable
-  Collection<DataSegment> getOvershadowedSegments();
+  Set<SegmentId> getOvershadowedSegments();
 
   /**
    * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.

@@ -22,10 +22,9 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.client.DataSourceSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
@@ -62,7 +61,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +111,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
   @Nullable
-  private volatile ImmutableSet<DataSegment> overshadowedSegments = null;
+  private volatile DataSourceSnapshot dataSourcesSnapshot = null;
 
   /**
    * The number of times this SQLMetadataSegmentManager was started.
@@ -214,7 +212,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       }
 
       dataSources = null;
-      overshadowedSegments = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -456,6 +453,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
+      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
+
       if (removed == 0) {
         return false;
       }
@@ -620,35 +619,27 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return Optional.ofNullable(dataSources)
-                   .map(m ->
-                            m.values()
-                             .stream()
-                             .map(DruidDataSource::toImmutableDruidDataSource)
-                             .collect(Collectors.toList())
-                   )
-                   .orElse(null);
+    return dataSourcesSnapshot.getDataSources();
   }
 
   @Override
   @Nullable
   public Iterable<DataSegment> iterateAllSegments()
   {
-    final ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = dataSources;
-    if (dataSourcesSnapshot == null) {
+    final Collection<ImmutableDruidDataSource> snapshot = dataSourcesSnapshot.getDataSources();
+    if (snapshot == null) {
       return null;
     }
 
-    return () -> dataSourcesSnapshot.values()
-                                    .stream()
+    return () -> snapshot.stream()
                                     .flatMap(dataSource -> dataSource.getSegments().stream())
                                     .iterator();
   }
 
   @Override
-  public Set<DataSegment> getOvershadowedSegments()
+  public Set<SegmentId> getOvershadowedSegments()
   {
-    return overshadowedSegments;
+    return dataSourcesSnapshot.getOvershadowedSegments();
   }
 
   @Override
@@ -755,35 +746,18 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
     // Replace "dataSources" atomically.
     dataSources = newDataSources;
-    // the overshadowedSegments could become invalid if dataSources is updated outside of
-    // this method, currently both dataSources and overshadowedSegments are updated here
-    // and in stop()
-    overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments(segments));
-  }
 
-  /**
-   * This method builds timelines from given segments and finds the overshadowed segments list
-   *
-   * @return overshadowed segments list
-   */
-  private List<DataSegment> determineOvershadowedSegments(Iterable<DataSegment> segments)
-  {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    segments.forEach(segment -> timelines
-        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
-
-    // It's fine to add all overshadowed segments to a single collection because only
-    // a small fraction of the segments in the cluster are expected to be overshadowed,
-    // so building this collection shouldn't generate a lot of garbage.
-    final List<DataSegment> overshadowedSegments = new ArrayList<>();
-    for (DataSegment dataSegment : segments) {
-      final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
-        overshadowedSegments.add(dataSegment);
-      }
-    }
-    return overshadowedSegments;
+    // replace "dataSourcesSnapshot" atomically
+    dataSourcesSnapshot = new DataSourceSnapshot(
+        Optional.ofNullable(dataSources)
+                .map(m ->
+                         m.values()
+                          .stream()
+                          .map(DruidDataSource::toImmutableDruidDataSource)
+                          .collect(Collectors.toList())
+                )
+                .orElse(null)
+    );
   }
 
   /**

@@ -33,10 +33,10 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  */
@@ -86,9 +86,9 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // only those would need to be loaded/dropped
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
     // If metadata store hasn't been polled yet, use empty overshadowed list
-    final Collection<DataSegment> overshadowed = Optional
+    final Set<SegmentId> overshadowed = Optional
         .ofNullable(coordinator.getMetadataSegmentManager().getOvershadowedSegments())
-        .orElse(Collections.emptyList());
+        .orElse(Collections.emptySet());
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
@@ -106,7 +106,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
     for (DataSegment segment : params.getAvailableSegments()) {
-      if (overshadowed.contains(segment)) {
+      if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
         continue;
       }

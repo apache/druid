@@ -192,14 +192,14 @@ public class MetadataResource
   )
   {
     // If metadata store hasn't been polled yet, use empty overshadowed list
-    final Collection<DataSegment> overshadowedSegments = Optional
+    final Set<SegmentId> overshadowedSegments = Optional
         .ofNullable(metadataSegmentManager.getOvershadowedSegments())
-        .orElse(Collections.emptyList());
+        .orElse(Collections.emptySet());
 
     final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
         .map(segment -> new SegmentWithOvershadowedStatus(
             segment,
-            overshadowedSegments.contains(segment)
+            overshadowedSegments.contains(segment.getId())
         ));
 
     final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
