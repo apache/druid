@@ -16,7 +16,7 @@ exports[`describe sql view sql view snapshot 1`] = `
   <div
     className="top-pane"
   >
-    <SqlControl
+    <HotkeysTarget(SqlControl)
       initSql="test"
       onExplain={[Function]}
       onRun={[Function]}
