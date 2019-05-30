@@ -41,6 +41,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "Replicas",
               "Partitions",
               "Duration Seconds",
+              "Aggragate lag",
               "Actions",
             ]
           }
@@ -127,6 +128,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "accessor": [Function],
               "id": "status",
               "show": true,
+              "width": 300,
             },
             Object {
               "Header": "Recent Errors",
@@ -137,7 +139,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             Object {
               "Header": "Partitions",
               "accessor": [Function],
-              "id": "partitiond",
+              "id": "partitions",
               "show": true,
             },
             Object {
@@ -147,15 +149,15 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "show": true,
             },
             Object {
-              "Header": "Partitions",
-              "accessor": [Function],
-              "id": "partitions",
-              "show": true,
-            },
-            Object {
               "Header": "Duration seconds",
               "accessor": [Function],
               "id": "seconds_duration",
+              "show": true,
+            },
+            Object {
+              "Header": "Aggregate lag",
+              "accessor": [Function],
+              "id": "aggregat_lag",
               "show": true,
             },
             Object {
