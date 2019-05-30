@@ -40,7 +40,7 @@ import { BasicAction } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
-const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', ActionCell.COLUMN_LABEL];
+const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', 'Recent errors', 'Replicas', 'Partitions', 'Duration Seconds', ActionCell.COLUMN_LABEL];
 const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', ActionCell.COLUMN_LABEL];
 
 export interface TasksViewProps extends React.Props<any> {
@@ -181,6 +181,10 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        const data = resp.data;
+        for ( let i = 0 ; i < data.length; i++) {
+          data[i].status = await axios.get(`/druid/indexer/v1/supervisor/${data[i].id}/status`);
+        }
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -462,21 +466,76 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: supervisorTableColumnSelectionHandler.showColumn('Topic/Stream')
           },
           {
-            Header: 'Status',
+            Header: 'Detailed status',
             id: 'status',
-            accessor: (row) => row.spec.suspended ? 'Suspended' : 'Running',
-            Cell: row => {
-              const value = row.value;
-              return <span>
-                <span
-                  style={{ color: value === 'Suspended' ? '#d58512' : '#2167d5' }}
-                >
-                  &#x25cf;&nbsp;
-                </span>
-                {value}
-              </span>;
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.detailedState;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Status')
+            show: supervisorTableColumnSelectionHandler.showColumn('Detailed status')
+          },
+          {
+            Header: 'Recent Errors',
+            id: 'errors',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.recentErrors.length;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Recent Errors')
+          },
+          {
+            Header: 'Partitions',
+            id: 'partitiond',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.partitions;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Partitions')
+          },
+          {
+            Header: 'Replicas',
+            id: 'replicas',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.replicas;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Replicas')
+          },
+          {
+            Header: 'Partitions',
+            id: 'partitions',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.partitions;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Partitions')
+          },
+          {
+            Header: 'Duration seconds',
+            id: 'seconds_duration',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              return data.payload.durationSeconds;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Duration seconds')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
