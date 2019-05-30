@@ -46,8 +46,8 @@
 
     <developers>
         <developer>
-            <name>Druid Committers</name>
-            <url>http://druid.io/community/index.html#committers</url>
+            <name>Apache Druid Community</name>
+            <url>http://druid.io/community/index.html</url>
         </developer>
     </developers>
 

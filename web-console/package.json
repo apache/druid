@@ -2,7 +2,7 @@
   "name": "web-console",
   "version": "0.15.0",
   "description": "A web console for Apache Druid",
-  "author": "Imply Data Inc.",
+  "author": "Apache Druid Community",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
