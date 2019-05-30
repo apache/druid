@@ -39,8 +39,10 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import org.apache.druid.security.basic.authentication.db.cache.CoordinatorPollingBasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.db.cache.MetadataStoragePollingBasicAuthenticatorCacheManager;
+import org.apache.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
+import org.apache.druid.security.basic.authentication.db.updater.NoopBasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourceHandler;
 import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
@@ -51,8 +53,10 @@ import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCac
 import org.apache.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheNotifier;
 import org.apache.druid.security.basic.authorization.db.cache.CoordinatorPollingBasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.db.cache.MetadataStoragePollingBasicAuthorizerCacheManager;
+import org.apache.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
 import org.apache.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
+import org.apache.druid.security.basic.authorization.db.updater.NoopBasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerResource;
 import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerResourceHandler;
 import org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
@@ -88,7 +92,8 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthenticatorMetadataStorageUpdater(),
-        CoordinatorBasicAuthenticatorMetadataStorageUpdater.class
+        CoordinatorBasicAuthenticatorMetadataStorageUpdater.class,
+        NoopBasicAuthenticatorMetadataStorageUpdater.class
     );
   }
 
@@ -132,7 +137,8 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthenticatorCacheNotifier(),
-        CoordinatorBasicAuthenticatorCacheNotifier.class
+        CoordinatorBasicAuthenticatorCacheNotifier.class,
+        NoopBasicAuthenticatorCacheNotifier.class
     );
   }
 
@@ -146,7 +152,8 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthorizerMetadataStorageUpdater(),
-        CoordinatorBasicAuthorizerMetadataStorageUpdater.class
+        CoordinatorBasicAuthorizerMetadataStorageUpdater.class,
+        NoopBasicAuthorizerMetadataStorageUpdater.class
     );
   }
 
@@ -190,7 +197,8 @@ public class BasicSecurityDruidModule implements DruidModule
     return getInstance(
         injector,
         config.getAuthorizerCacheNotifier(),
-        CoordinatorBasicAuthorizerCacheNotifier.class
+        CoordinatorBasicAuthorizerCacheNotifier.class,
+        NoopBasicAuthorizerCacheNotifier.class
     );
   }
 
@@ -223,22 +231,10 @@ public class BasicSecurityDruidModule implements DruidModule
       final T instance = (T) injector.getInstance(Class.forName(configClassName));
       return instance;
     }
-    if (classRunByCoordinator != null && isCoordinator(injector)) {
+    if (isCoordinator(injector)) {
       return injector.getInstance(classRunByCoordinator);
     }
-    if (defaultClass != null) {
-      return injector.getInstance(defaultClass);
-    }
-    throw new AssertionError("The instance must not be null");
-  }
-
-  private static <T> T getInstance(
-      Injector injector,
-      String configClassName,
-      Class<? extends T> classRunByCoordinator
-  ) throws ClassNotFoundException
-  {
-    return getInstance(injector, configClassName, classRunByCoordinator, null);
+    return injector.getInstance(defaultClass);
   }
 
   private static boolean isCoordinator(Injector injector)
