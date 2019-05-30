@@ -125,25 +125,26 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
       CalciteTests.getJsonMapper().registerModule(mod);
     }
 
-    final QueryableIndex index = IndexBuilder.create()
-                                             .tmpDir(temporaryFolder.newFolder())
-                                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                             .schema(
-                                                 new IncrementalIndexSchema.Builder()
-                                                     .withMetrics(
-                                                         new CountAggregatorFactory("cnt"),
-                                                         new DoubleSumAggregatorFactory("m1", "m1"),
-                                                         new DoublesSketchAggregatorFactory(
-                                                             "qsketch_m1",
-                                                             "m1",
-                                                             128
-                                                         )
-                                                     )
-                                                     .withRollup(false)
-                                                     .build()
-                                             )
-                                             .rows(CalciteTests.ROWS1)
-                                             .buildMMappedIndex();
+    final QueryableIndex index =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt"),
+                                new DoubleSumAggregatorFactory("m1", "m1"),
+                                new DoublesSketchAggregatorFactory(
+                                    "qsketch_m1",
+                                    "m1",
+                                    128
+                                )
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(CalciteTests.ROWS1)
+                    .buildMMappedIndex();
 
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -393,6 +394,73 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                                 )
                             ),
                             new DoublesSketchToQuantilePostAggregator("_a1", makeFieldAccessPostAgg("_a1:agg"), 0.98f)
+                        )
+                    )
+                    .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                    .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
+  }
+
+  @Test
+  public void testQuantileOnInnerQuantileQuery() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT dim1, APPROX_QUANTILE_DS(x, 0.5)\n"
+                       + "FROM (SELECT dim1, dim2, APPROX_QUANTILE_DS(m1, 0.5) AS x FROM foo GROUP BY dim1, dim2) GROUP BY dim1";
+
+
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+
+    ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
+    builder.add(new Object[]{"", 1.0});
+    builder.add(new Object[]{"1", 4.0});
+    builder.add(new Object[]{"10.1", 2.0});
+    builder.add(new Object[]{"2", 3.0});
+    builder.add(new Object[]{"abc", 6.0});
+    builder.add(new Object[]{"def", 5.0});
+    final List<Object[]> expectedResults = builder.build();
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    // Verify query
+    Assert.assertEquals(
+        GroupByQuery.builder()
+                    .setDataSource(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("dim1", "d0"),
+                                            new DefaultDimensionSpec("dim2", "d1")
+                                        )
+                                        .setAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new DoublesSketchAggregatorFactory("a0:agg", "m1", 128)
+                                            )
+                                        )
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
+                                            )
+                                        )
+                                        .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                                        .build()
+                        )
+                    )
+                    .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("d0", "_d0", ValueType.STRING))
+                    .setAggregatorSpecs(
+                        new DoublesSketchAggregatorFactory("_a0:agg", "a0", 128)
+                    )
+                    .setPostAggregatorSpecs(
+                        ImmutableList.of(
+                            new DoublesSketchToQuantilePostAggregator("_a0", makeFieldAccessPostAgg("_a0:agg"), 0.5f)
                         )
                     )
                     .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))

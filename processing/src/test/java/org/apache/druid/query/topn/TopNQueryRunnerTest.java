@@ -4330,11 +4330,11 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> Runner = new FinalizeResultsQueryRunner(
+    final QueryRunner<Result<TopNResultValue>> _runner = new FinalizeResultsQueryRunner(
         chest.mergeResults(chest.preMergeQueryDecoration(runner)),
         chest
     );
-    return Runner.run(QueryPlus.wrap(query), context);
+    return _runner.run(QueryPlus.wrap(query), context);
   }
 
   @Test

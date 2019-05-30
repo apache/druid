@@ -47,7 +47,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -70,7 +70,8 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -79,7 +80,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode rexNode = Expressions.fromFieldAccess(
@@ -112,7 +112,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = arg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
         VirtualColumn virtualColumn =
-            querySignature.getOrCreateVirtualColumnForExpression(plannerContext, arg, sqlTypeName);
+            virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, sqlTypeName);
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
         myvirtualColumns.add(virtualColumn);
       }

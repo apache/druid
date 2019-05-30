@@ -24,8 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -57,7 +58,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 
@@ -67,9 +67,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
 
-  private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
   protected final DataSchema dataSchema;
-  protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
   protected final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
@@ -77,6 +75,11 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final AuthorizerMapper authorizerMapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected final CircularBuffer<Throwable> savedParseExceptions;
+
+  // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
+  // See https://github.com/apache/incubator-druid/issues/7724 for issues that can cause.
+  // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
+  private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
 
   public SeekableStreamIndexTask(
       final String id,
@@ -99,7 +102,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         context
     );
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
-    this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
@@ -111,7 +113,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.context = context;
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
-    this.runner = createTaskRunner();
+    this.runnerSupplier = Suppliers.memoize(this::createTaskRunner);
   }
 
   private static String makeTaskId(String dataSource, String type)
@@ -129,7 +131,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     return StringUtils.format("%s_%s", type, dataSource);
   }
-
 
   @Override
   public int getPriority()
@@ -164,7 +165,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   @Override
   public TaskStatus run(final TaskToolbox toolbox)
   {
-    return runner.run(toolbox);
+    return getRunner().run(toolbox);
   }
 
   @Override
@@ -177,19 +178,19 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public void stopGracefully(TaskConfig taskConfig)
   {
     if (taskConfig.isRestoreTasksOnRestart()) {
-      runner.stopGracefully();
+      getRunner().stopGracefully();
     }
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
-    if (runner.getAppenderator() == null) {
+    if (getRunner().getAppenderator() == null) {
       // Not yet initialized, no data yet, just return a noop runner.
       return new NoopQueryRunner<>();
     }
 
-    return (queryPlus, responseContext) -> queryPlus.run(runner.getAppenderator(), responseContext);
+    return (queryPlus, responseContext) -> queryPlus.run(getRunner().getAppenderator(), responseContext);
   }
 
   public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
@@ -283,13 +284,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   @VisibleForTesting
   public Appenderator getAppenderator()
   {
-    return runner.getAppenderator();
+    return getRunner().getAppenderator();
   }
 
   @VisibleForTesting
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> getRunner()
   {
-    return runner;
+    return runnerSupplier.get();
   }
-
 }

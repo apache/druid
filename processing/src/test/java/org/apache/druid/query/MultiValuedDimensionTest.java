@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -90,13 +91,15 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiValuedDimensionTest
 {
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "groupby: {0} forceHashAggregation: {2} ({1})")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config, TmpFileSegmentWriteOutMediumFactory.instance()});
-      constructors.add(new Object[]{config, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
+      constructors.add(new Object[]{config, TmpFileSegmentWriteOutMediumFactory.instance(), false});
+      constructors.add(new Object[]{config, OffHeapMemorySegmentWriteOutMediumFactory.instance(), false});
+      constructors.add(new Object[]{config, TmpFileSegmentWriteOutMediumFactory.instance(), true});
+      constructors.add(new Object[]{config, OffHeapMemorySegmentWriteOutMediumFactory.instance(), true});
     }
     return constructors;
   }
@@ -113,11 +116,12 @@ public class MultiValuedDimensionTest
   private File persistedSegmentDirNullSampler;
 
   private final GroupByQueryConfig config;
+  private final ImmutableMap<String, Object> context;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, boolean forceHashAggregation)
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         ImmutableList.of(),
@@ -126,6 +130,10 @@ public class MultiValuedDimensionTest
     );
     this.config = config;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+
+    this.context = config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)
+                   ? ImmutableMap.of()
+                   : ImmutableMap.of("forceHashAggregation", forceHashAggregation);
   }
 
   @Before
@@ -257,6 +265,7 @@ public class MultiValuedDimensionTest
         .setDimensions(new DefaultDimensionSpec("tags", "tags"))
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setDimFilter(new SelectorDimFilter("tags", "t3", null))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -279,6 +288,79 @@ public class MultiValuedDimensionTest
   }
 
   @Test
+  public void testGroupByWithDimFilterEmptyResults()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tags", "tags"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimFilter(new InDimFilter("product", ImmutableList.of("product_5"), null))
+        .setContext(context)
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndexNullSampler, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndexNullSampler, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-empty");
+  }
+
+  @Test
+  public void testGroupByWithDimFilterNullishResults()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tags", "tags"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimFilter(
+            new InDimFilter("product", ImmutableList.of("product_5", "product_6", "product_8"), null)
+        )
+        .setContext(context)
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndexNullSampler, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndexNullSampler, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults;
+    // an empty row e.g. [], or group by 'missing' value, is grouped with the default string value, "" or null
+    // grouping input is filtered to [], null, [""]
+    if (NullHandling.replaceWithDefault()) {
+      // when sql compatible null handling is disabled, the inputs are effectively [], null, [null] and
+      // are all grouped as null
+      expectedResults = Collections.singletonList(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 6L)
+      );
+    } else {
+      // with sql compatible null handling, null and [] = null, but [""] = ""
+      expectedResults = ImmutableList.of(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
+      );
+    }
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-nullish");
+  }
+
+  @Test
   public void testGroupByWithDimFilterAndWithFilteredDimSpec()
   {
     GroupByQuery query = GroupByQuery
@@ -289,6 +371,7 @@ public class MultiValuedDimensionTest
         .setDimensions(new RegexFilteredDimensionSpec(new DefaultDimensionSpec("tags", "tags"), "t3"))
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setDimFilter(new SelectorDimFilter("tags", "t3", null))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -328,6 +411,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -375,6 +459,7 @@ public class MultiValuedDimensionTest
         )
         .setLimit(5)
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -419,6 +504,7 @@ public class MultiValuedDimensionTest
         )
         .setLimit(5)
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -463,6 +549,7 @@ public class MultiValuedDimensionTest
         )
         .setLimit(5)
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -506,6 +593,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -552,6 +640,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -594,6 +683,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -636,6 +726,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -685,6 +776,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -729,6 +821,7 @@ public class MultiValuedDimensionTest
         )
         .setLimit(5)
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     helper.runQueryOnSegmentsObjs(
@@ -763,6 +856,7 @@ public class MultiValuedDimensionTest
         )
         .setLimit(5)
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
         .build();
 
     helper.runQueryOnSegmentsObjs(
@@ -789,7 +883,8 @@ public class MultiValuedDimensionTest
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
-        .filters(new SelectorDimFilter("tags", "t3", null)).build();
+        .filters(new SelectorDimFilter("tags", "t3", null))
+        .build();
 
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
