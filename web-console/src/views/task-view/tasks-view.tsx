@@ -109,18 +109,14 @@ function statusToColor(status: string): string {
   }
 }
 
-function detailedStatusToColor(status: string): string {
+function stateToColor(status: string): string {
   switch (status) {
     case 'RUNNING': return '#2167d5';
-    case 'CONNECTING_TO_STREAM': return '#d5631a';
-    case 'DISCOVERING_INITIAL_TASKS': return '#d5631a';
-    case 'CREATING_TASKS': return '#d5631a';
     case 'SUSPENDED': return '#d5631a';
-    case 'WAITING_TO_RUN': return '#d5631a';
-    case 'SHUTTING_DOWN': return '#d5631a';
-    case 'UNHEALTHY': return '#d5100a';
-    case 'LOST_CONTACT_WITH_STREAM': return '#d5100a';
-    case 'UNABLE_TO_CONNECT_TO_STREAM': return '#d5100a';
+    case 'PENDING': return '#d5631a';
+    case 'UNHEALTHY_SUPERVISOR': return '#d5100a';
+    case 'UNHEALTHY_TASKS': return '#d5100a';
+    case 'STOPPING': return '#d5100a';
     default: return '#0a1500';
   }
 }
@@ -494,7 +490,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = payload.detailedState;
               return <span>
                 <span
-                  style={{ color: detailedStatusToColor(value)}}
+                  style={{ color: stateToColor(payload.state)}}
                 >
                   &#x25cf;&nbsp;
                 </span>
