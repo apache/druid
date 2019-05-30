@@ -396,6 +396,7 @@ GROUP BY 1`);
       }
     });
   }
+
   private  getDisabled(showDisabled: boolean) {
     if (this.state.loadDisabled) {
       this.datasourceQueryManager.rerunLastQuery();
@@ -403,6 +404,13 @@ GROUP BY 1`);
     }
     this.setState({showDisabled: !showDisabled});
   }
+
+  private refresh() {
+    console.log('calling');
+    this.datasourceQueryManager.rerunLastQuery();
+    if (!this.state.showDisabled) this.setState({loadDisabled: true});
+  }
+
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
     const { goToSql } = this.props;
@@ -653,7 +661,7 @@ GROUP BY 1`);
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
-          onClick={() => this.datasourceQueryManager.rerunLastQuery()}
+          onClick={() => this.refresh()}
         />
         {
           !noSqlMode &&
