@@ -93,17 +93,33 @@ public class ExpressionPostAggregator implements PostAggregator
       final Map<String, Function<Object, Object>> finalizers
   )
   {
-    Preconditions.checkArgument(expression != null, "expression cannot be null");
+    this(
+        name,
+        expression,
+        ordering,
+        macroTable,
+        finalizers,
+        Suppliers.memoize(() -> Parser.parse(expression, macroTable))
+    );
+  }
 
-    this.name = name;
-    this.expression = expression;
-    this.ordering = ordering;
-    this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
-    this.macroTable = macroTable;
-    this.finalizers = finalizers;
-
-    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
-    this.dependentFields = Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(parsed.get())));
+  private ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Map<String, Function<Object, Object>> finalizers,
+      final Supplier<Expr> parsed
+  )
+  {
+    this(
+        name,
+        expression,
+        ordering,
+        macroTable,
+        finalizers,
+        parsed,
+        Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(parsed.get()))));
   }
 
   private ExpressionPostAggregator(
@@ -218,7 +234,7 @@ public class ExpressionPostAggregator implements PostAggregator
   {
     /**
      * Ensures the following order: numeric > NaN > Infinite.
-     * <p>
+     *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
      * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ExprMacroTable, Map)}.
      */
