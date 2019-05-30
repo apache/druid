@@ -744,6 +744,106 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectStarFromSelectSingleColumnWithLimitDescending() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC) LIMIT 2",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("__time", "dim1"))
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc"},
+            new Object[]{"def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectProjectionFromSelectSingleColumnWithInnerLimitDescending() throws Exception
+  {
+    testQuery(
+        "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ValueType.STRING))
+                .columns(ImmutableList.of("__time", "v0"))
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"beep abc"},
+            new Object[]{"beep def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectProjectionFromSelectSingleColumnDescending() throws Exception
+  {
+    // Regression test for https://github.com/apache/incubator-druid/issues/7768.
+
+    testQuery(
+        "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ValueType.STRING))
+                .columns(ImmutableList.of("__time", "v0"))
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"beep abc"},
+            new Object[]{"beep def"},
+            new Object[]{"beep 1"},
+            new Object[]{"beep 2"},
+            new Object[]{"beep 10.1"},
+            new Object[]{"beep "}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectProjectionFromSelectSingleColumnWithInnerAndOuterLimitDescending() throws Exception
+  {
+    testQuery(
+        "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) LIMIT 2",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ValueType.STRING))
+                .columns(ImmutableList.of("__time", "v0"))
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"beep abc"},
+            new Object[]{"beep def"}
+        )
+    );
+  }
+
+  @Test
   public void testGroupBySingleColumnDescendingNoTopN() throws Exception
   {
     testQuery(
@@ -1823,7 +1923,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
     final List<String> queries = ImmutableList.of(
-        "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
+        "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by non-__time
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5", // DISTINCT with OFFSET
         "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (SELECT dim1 FROM foo WHERE dim2 = 'a')", // NOT IN subquery
