@@ -114,6 +114,7 @@ public class CompactionTask extends AbstractTask
   private final DimensionsSpec dimensionsSpec;
   @Nullable
   private final AggregatorFactory[] metricsSpec;
+  @Nullable
   private final Granularity segmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
@@ -208,18 +209,21 @@ public class CompactionTask extends AbstractTask
   }
 
   @JsonProperty
+  @Nullable
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
   }
 
   @JsonProperty
+  @Nullable
   public AggregatorFactory[] getMetricsSpec()
   {
     return metricsSpec;
   }
 
   @JsonProperty
+  @Nullable
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
