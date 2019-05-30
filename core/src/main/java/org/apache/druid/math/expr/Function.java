@@ -933,7 +933,7 @@ interface Function
     }
   }
 
-  class CastFunc extends DoubleParam
+  class CastFunc extends DoubleParam implements ArrayFunction
   {
     @Override
     public String name()
@@ -955,6 +955,48 @@ interface Function
         throw new IAE("invalid type '%s'", y.asString());
       }
       return x.castTo(castTo);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      // side effect of array function interface, nothing to do
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo) {
+          case LONG_ARRAY:
+          case DOUBLE_ARRAY:
+          case STRING_ARRAY:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo) {
+          case LONG:
+          case DOUBLE:
+          case STRING:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
     }
   }
 
@@ -1511,9 +1553,9 @@ interface Function
   /**
    * Function that operates on array typed operands
    */
-  abstract class ArrayFunction implements Function
+  interface ArrayFunction extends Function
   {
-    void validateArguments(List<Expr> args)
+    default void validateArguments(List<Expr> args)
     {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
@@ -1524,14 +1566,14 @@ interface Function
      * Given a list of arguments to this {@link ArrayFunction}, get the set of arguments that must evaluate to an array
      * value
      */
-    public Set<Expr> getArrayInputs(List<Expr> args)
+    default Set<Expr> getArrayInputs(List<Expr> args)
     {
       validateArguments(args);
       return ImmutableSet.of(args.get(0));
     }
 
     @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
+    default Set<Expr> getScalarInputs(List<Expr> args)
     {
       return Collections.emptySet();
     }
@@ -1540,10 +1582,10 @@ interface Function
   /**
    * {@link ArraysFunction} that takes 1 array operand and 1 scalar operand
    */
-  abstract class ArrayScalarFunction extends ArrayFunction
+  abstract class ArrayScalarFunction implements ArrayFunction
   {
     @Override
-    void validateArguments(List<Expr> args)
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
@@ -1581,10 +1623,10 @@ interface Function
   /**
    * {@link ArraysFunction} that takes 2 array operands
    */
-  abstract class ArraysFunction extends ArrayFunction
+  abstract class ArraysFunction implements ArrayFunction
   {
     @Override
-    void validateArguments(List<Expr> args)
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
@@ -1615,7 +1657,7 @@ interface Function
     abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
   }
 
-  class ArrayLengthFunction extends ArrayFunction
+  class ArrayLengthFunction implements ArrayFunction
   {
     @Override
     public String name()
