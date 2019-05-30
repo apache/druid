@@ -36,7 +36,11 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "Datasource",
               "Type",
               "Topic/Stream",
-              "Status",
+              "Detailed status",
+              "Recent errors",
+              "Replicas",
+              "Partitions",
+              "Duration Seconds",
               "Actions",
             ]
           }
@@ -77,7 +81,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
-            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -90,7 +93,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
-            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -121,10 +123,39 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "show": true,
             },
             Object {
-              "Cell": [Function],
-              "Header": "Status",
+              "Header": "Detailed status",
               "accessor": [Function],
               "id": "status",
+              "show": true,
+            },
+            Object {
+              "Header": "Recent Errors",
+              "accessor": [Function],
+              "id": "errors",
+              "show": true,
+            },
+            Object {
+              "Header": "Partitions",
+              "accessor": [Function],
+              "id": "partitiond",
+              "show": true,
+            },
+            Object {
+              "Header": "Replicas",
+              "accessor": [Function],
+              "id": "replicas",
+              "show": true,
+            },
+            Object {
+              "Header": "Partitions",
+              "accessor": [Function],
+              "id": "partitions",
+              "show": true,
+            },
+            Object {
+              "Header": "Duration seconds",
+              "accessor": [Function],
+              "id": "seconds_duration",
               "show": true,
             },
             Object {
@@ -142,7 +173,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
-        defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
@@ -191,7 +221,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         ofText="of"
         onFetchData={[Function]}
         originalKey="_original"
-        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -209,7 +238,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
-        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
@@ -411,7 +439,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
-            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -424,7 +451,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
-            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -502,7 +528,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
-        defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
@@ -567,7 +592,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         onFetchData={[Function]}
         onFilteredChange={[Function]}
         originalKey="_original"
-        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -586,7 +610,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
-        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}

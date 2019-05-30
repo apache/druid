@@ -40,7 +40,7 @@ import { BasicAction } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
-const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', 'Recent errors', 'Replicas', 'Partitions', 'Duration Seconds', ActionCell.COLUMN_LABEL];
+const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', 'Recent errors', 'Replicas', 'Partitions', 'Duration Seconds', 'Aggragate lag', ActionCell.COLUMN_LABEL];
 const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', ActionCell.COLUMN_LABEL];
 
 export interface TasksViewProps extends React.Props<any> {
@@ -105,6 +105,22 @@ function statusToColor(status: string): string {
     case 'PENDING': return '#ffbf00';
     case 'SUCCESS': return '#57d500';
     case 'FAILED': return '#d5100a';
+    default: return '#0a1500';
+  }
+}
+
+function detailedStatusToColor(status: string): string {
+  switch (status) {
+    case 'RUNNING': return '#2167d5';
+    case 'CONNECTING_TO_STREAM': return '#d5631a';
+    case 'DISCOVERING_INITIAL_TASKS': return '#d5631a';
+    case 'CREATING_TASKS': return '#d5631a';
+    case 'SUSPENDED': return '#d5631a';
+    case 'WAITING_TO_RUN': return '#d5631a';
+    case 'SHUTTING_DOWN': return '#d5631a';
+    case 'UNHEALTHY': return '#d5100a';
+    case 'LOST_CONTACT_WITH_STREAM': return '#d5100a';
+    case 'UNABLE_TO_CONNECT_TO_STREAM': return '#d5100a';
     default: return '#0a1500';
   }
 }
@@ -317,7 +333,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
       );
-    // @ts-ignore
+
     return actions;
   }
 
@@ -468,12 +484,23 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           {
             Header: 'Detailed status',
             id: 'status',
+            width: 300,
             accessor: (row) => {
               const { status } = row;
               if (!status) return '';
               const { data } = status;
               if (!data) return '';
-              return data.payload.detailedState;
+              const { payload } = data;
+              if (!payload) return '';
+              const value = payload.detailedState;
+              return <span>
+                <span
+                  style={{ color: detailedStatusToColor(value)}}
+                >
+                  &#x25cf;&nbsp;
+                </span>
+                {value}
+              </span>;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Detailed status')
           },
@@ -485,19 +512,23 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!status) return '';
               const { data } = status;
               if (!data) return '';
-              return data.payload.recentErrors.length;
+              const { payload } = data;
+              if (!payload) return '';
+              return payload.recentErrors.length;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Recent Errors')
           },
           {
             Header: 'Partitions',
-            id: 'partitiond',
+            id: 'partitions',
             accessor: (row) => {
               const { status } = row;
               if (!status) return '';
               const { data } = status;
               if (!data) return '';
-              return data.payload.partitions;
+              const { payload } = data;
+              if (!payload) return '';
+              return payload.partitions;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Partitions')
           },
@@ -509,21 +540,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!status) return '';
               const { data } = status;
               if (!data) return '';
-              return data.payload.replicas;
+              const { payload } = data;
+              if (!payload) return '';
+              return payload.replicas;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Replicas')
-          },
-          {
-            Header: 'Partitions',
-            id: 'partitions',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              return data.payload.partitions;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Partitions')
           },
           {
             Header: 'Duration seconds',
@@ -533,9 +554,25 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!status) return '';
               const { data } = status;
               if (!data) return '';
-              return data.payload.durationSeconds;
+              const { payload } = data;
+              if (!payload) return '';
+              return payload.durationSeconds;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Duration seconds')
+          },
+          {
+            Header: 'Aggregate lag',
+            id: 'aggregat_lag',
+            accessor: (row) => {
+              const { status } = row;
+              if (!status) return '';
+              const { data } = status;
+              if (!data) return '';
+              const { payload } = data;
+              if (!payload) return '';
+              return payload.aggregateLag;
+            },
+            show: supervisorTableColumnSelectionHandler.showColumn('Aggragate lag')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
@@ -858,19 +895,19 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       {
         supervisorTableActionDialogId &&
         <SupervisorTableActionDialog
-          isOpen
-          supervisorId={supervisorTableActionDialogId}
-          actions={supervisorTableActionDialogActions}
-          onClose={() => this.setState({supervisorTableActionDialogId: null})}
+            isOpen
+            supervisorId={supervisorTableActionDialogId}
+            actions={supervisorTableActionDialogActions}
+            onClose={() => this.setState({supervisorTableActionDialogId: null})}
         />
       }
       {
         taskTableActionDialogId &&
         <TaskTableActionDialog
-          isOpen
-          taskId={taskTableActionDialogId}
-          actions={taskTableActionDialogActions}
-          onClose={() => this.setState({taskTableActionDialogId: null})}
+            isOpen
+            taskId={taskTableActionDialogId}
+            actions={taskTableActionDialogActions}
+            onClose={() => this.setState({taskTableActionDialogId: null})}
         />
       }
     </>;
