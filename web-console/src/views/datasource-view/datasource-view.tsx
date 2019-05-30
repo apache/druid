@@ -72,6 +72,7 @@ export interface DatasourcesViewState {
   datasourcesFilter: Filter[];
 
   showDisabled: boolean;
+  loadDisabled: boolean;
   retentionDialogOpenOn: { datasource: string, rules: any[] } | null;
   compactionDialogOpenOn: {datasource: string, configData: any} | null;
   dropDataDatasource: string | null;
@@ -111,6 +112,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       datasourcesFilter: [],
 
       showDisabled: false,
+      loadDisabled: true,
       retentionDialogOpenOn: null,
       compactionDialogOpenOn: null,
       dropDataDatasource: null,
@@ -151,7 +153,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
         const seen = countBy(datasources, (x: any) => x.datasource);
 
-        const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
+        const disabledResp = await axios.get(this.state.showDisabled ? '/druid/coordinator/v1/metadata/datasources?includeDisabled' : '/druid/coordinator/v1/metadata/datasources' );
         const disabled: string[] = disabledResp.data.filter((d: string) => !seen[d]);
 
         const rulesResp = await axios.get('/druid/coordinator/v1/rules');
@@ -393,6 +395,13 @@ GROUP BY 1`);
         }
       }
     });
+  }
+  private  getDisabled(showDisabled: boolean) {
+    if (this.state.loadDisabled) {
+      this.datasourceQueryManager.rerunLastQuery();
+      this.setState({loadDisabled: false});
+    }
+    this.setState({showDisabled: !showDisabled});
   }
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
@@ -657,7 +666,7 @@ GROUP BY 1`);
         <Switch
           checked={showDisabled}
           label="Show disabled"
-          onChange={() => this.setState({ showDisabled: !showDisabled })}
+          onChange={() => this.getDisabled(showDisabled)}
         />
         <TableColumnSelection
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
