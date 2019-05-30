@@ -154,7 +154,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
     for (int k = 0; k < reps; ++k) {
-      for (int i = 0; i < count; ++i) {
+      for (int i = 0; i < count; ++i) { //-V6017: The 'k' counter is not used the nested loop because it's just reps.
         final int pos = positions[i];
         final int size = sizes[i];
 

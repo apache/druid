@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, InputGroup, Intent, TextArea } from '@blueprintjs/core';
+import {Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea} from '@blueprintjs/core';
 import axios from 'axios';
 import * as React from 'react';
 import * as CopyToClipboard from 'react-copy-to-clipboard';
@@ -43,15 +43,18 @@ export interface ShowLogProps extends React.Props<any> {
 
 export interface ShowLogState {
   logValue: string;
+  tail: boolean;
 }
 
 export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
+  public log = React.createRef<HTMLTextAreaElement>();
+
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
     this.state = {
-      logValue: ''
+      logValue: '',
+      tail: false
     };
-
     this.getLogInfo();
   }
 
@@ -71,12 +74,39 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
     }
   }
 
+  async tail() {
+      await this.getLogInfo();
+      if (this.state.tail) {
+          if (this.log.current) {
+            this.log.current.scrollTo(0, this.log.current.scrollHeight);
+          }
+          setTimeout(() => {
+            this.tail();
+          }, 2000);
+        }
+    }
+
+  private handleCheckboxChange = () => {
+    this.setState({
+      tail: !this.state.tail
+    });
+    if (!this.state.tail) {
+      this.tail();
+    }
+  }
+
+
   render() {
     const { endpoint, downloadFilename } = this.props;
     const { logValue } = this.state;
 
     return <div className="show-log">
       <div className="top-actions">
+        <Checkbox
+          label="Tail log"
+          checked={this.state.tail}
+          onChange={this.handleCheckboxChange}
+        />
         <ButtonGroup className="right-buttons">
           {
             downloadFilename &&
@@ -106,9 +136,11 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
         </ButtonGroup>
       </div>
       <div className="main-area">
-        <TextArea
+        <textarea
+          className="bp3-input"
           readOnly
           value={logValue}
+          ref={this.log}
         />
       </div>
     </div>;

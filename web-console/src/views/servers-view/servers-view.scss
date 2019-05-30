@@ -19,11 +19,18 @@
 @import "../../variables";
 
 .servers-view {
-  padding-bottom: 50px;
+  height: 100%;
+  width: 100%;
 
-  .view-control-bar,
-  .ReactTable {
+  .view-control-bar {
     margin-bottom: $standard-padding;
+  }
+
+  .ReactTable{
+    position: absolute;
+    top: $view-control-bar-height + $standard-padding;
+    bottom: 0;
+    width: 100%;
   }
 
   ul {
@@ -33,7 +40,7 @@
   .fill-indicator {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: 16px;
     background-color: #dadada;
     border-radius: 2px;
 

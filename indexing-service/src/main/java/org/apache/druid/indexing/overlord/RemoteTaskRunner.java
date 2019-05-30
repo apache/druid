@@ -724,8 +724,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     final RemoteTaskRunnerWorkItem removed = completeTasks.remove(taskId);
-    final Worker worker = removed.getWorker();
-    if (removed == null || worker == null) {
+    final Worker worker;
+    if (removed == null || (worker = removed.getWorker()) == null) {
       log.makeAlert("WTF?! Asked to cleanup nonexistent task")
          .addData("taskId", taskId)
          .emit();

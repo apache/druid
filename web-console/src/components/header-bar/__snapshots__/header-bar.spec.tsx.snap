@@ -99,7 +99,7 @@ exports[`describe header bar header bar snapshot 1`] = `
       href="#servers"
       icon="database"
       minimal={true}
-      text="Data servers"
+      text="Servers"
     />
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
