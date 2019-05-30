@@ -515,7 +515,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!payload) return '';
               return payload.recentErrors.length;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Recent Errors')
+            show: supervisorTableColumnSelectionHandler.showColumn('Recent errors')
           },
           {
             Header: 'Partitions',
