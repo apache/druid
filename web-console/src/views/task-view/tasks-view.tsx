@@ -40,7 +40,7 @@ import { BasicAction } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
-const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', 'Recent errors', 'Replicas', 'Partitions', 'Duration Seconds', 'Aggragate lag', ActionCell.COLUMN_LABEL];
+const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', 'Recent errors', 'Replicas', 'Partitions', 'Duration seconds', 'Aggragate lag', ActionCell.COLUMN_LABEL];
 const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', ActionCell.COLUMN_LABEL];
 
 export interface TasksViewProps extends React.Props<any> {
@@ -504,7 +504,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: supervisorTableColumnSelectionHandler.showColumn('Detailed status')
           },
           {
-            Header: 'Recent Errors',
+            Header: 'Recent errors',
             id: 'errors',
             accessor: (row) => {
               const { status } = row;
