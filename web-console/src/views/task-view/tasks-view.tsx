@@ -333,7 +333,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
       );
-
     return actions;
   }
 
@@ -895,19 +894,19 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       {
         supervisorTableActionDialogId &&
         <SupervisorTableActionDialog
-            isOpen
-            supervisorId={supervisorTableActionDialogId}
-            actions={supervisorTableActionDialogActions}
-            onClose={() => this.setState({supervisorTableActionDialogId: null})}
+          isOpen
+          supervisorId={supervisorTableActionDialogId}
+          actions={supervisorTableActionDialogActions}
+          onClose={() => this.setState({supervisorTableActionDialogId: null})}
         />
       }
       {
         taskTableActionDialogId &&
         <TaskTableActionDialog
-            isOpen
-            taskId={taskTableActionDialogId}
-            actions={taskTableActionDialogActions}
-            onClose={() => this.setState({taskTableActionDialogId: null})}
+          isOpen
+          taskId={taskTableActionDialogId}
+          actions={taskTableActionDialogActions}
+          onClose={() => this.setState({taskTableActionDialogId: null})}
         />
       }
     </>;
