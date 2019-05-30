@@ -32,6 +32,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -120,5 +121,33 @@ public class StandardDeviationPostAggregator implements PostAggregator
         .appendString(estimator)
         .appendBoolean(isVariancePop)
         .build();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    StandardDeviationPostAggregator that = (StandardDeviationPostAggregator) o;
+
+    if (!Objects.equals(name, that.name)) {
+      return false;
+    }
+    if (!Objects.equals(fieldName, that.fieldName)) {
+      return false;
+    }
+    if (!Objects.equals(estimator, that.estimator)) {
+      return false;
+    }
+    if (!Objects.equals(isVariancePop, that.isVariancePop)) {
+      return false;
+    }
+
+    return true;
   }
 }
