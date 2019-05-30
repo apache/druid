@@ -79,8 +79,9 @@ export class SupervisorTableActionDialog extends React.Component<SupervisorTable
       title={`Supervisor: ${supervisorId}`}
       bottomButtons={basicActionsToButtons(actions)}
     >
-      {activeTab === 'payload' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`} downloadFilename={`supervisor-payload-${supervisorId}.json`}/>}
+
       {activeTab === 'status' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`} downloadFilename={`supervisor-status-${supervisorId}.json`}/>}
+      {activeTab === 'payload' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`} downloadFilename={`supervisor-payload-${supervisorId}.json`}/>}
       {activeTab === 'stats' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`} downloadFilename={`supervisor-stats-${supervisorId}.json`}/>}
       {activeTab === 'history' && <ShowJson endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`} downloadFilename={`supervisor-history-${supervisorId}.json`}/>}
     </TableActionDialog>;

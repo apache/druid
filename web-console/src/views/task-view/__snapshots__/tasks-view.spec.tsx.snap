@@ -40,7 +40,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "Recent errors",
               "Replicas",
               "Partitions",
-              "Duration Seconds",
+              "Duration seconds",
               "Aggragate lag",
               "Actions",
             ]
@@ -131,7 +131,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "width": 300,
             },
             Object {
-              "Header": "Recent Errors",
+              "Header": "Recent errors",
               "accessor": [Function],
               "id": "errors",
               "show": true,
