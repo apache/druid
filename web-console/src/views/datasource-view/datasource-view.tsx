@@ -405,7 +405,6 @@ GROUP BY 1`);
     this.setState({showDisabled: !showDisabled});
   }
 
-
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
     const { goToSql } = this.props;
 
