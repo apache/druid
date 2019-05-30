@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.eclipse.jetty.http.HttpStatus;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -43,7 +44,6 @@ import java.util.function.BooleanSupplier;
  * DI configuration phase.
  */
 @Singleton
-@Path("/selfDiscovered")
 @ResourceFilters(StateResourceFilter.class)
 public class SelfDiscoveryResource
 {
@@ -76,10 +76,25 @@ public class SelfDiscoveryResource
     lifecycle.addHandler(selfDiscoveryListenerRegistrator, Lifecycle.Stage.SERVER);
   }
 
+  /** See the description of this endpoint in api-reference.md. */
   @GET
+  @Path("/status/selfDiscoveredStatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSelfDiscoveredStatus()
+  {
+    return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered.getAsBoolean())).build();
+  }
+
+  /** See the description of this endpoint in api-reference.md. */
+  @GET
+  @Path("/status/selfDiscovered")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSelfDiscovered()
   {
-    return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered.getAsBoolean())).build();
+    if (selfDiscovered.getAsBoolean()) {
+      return Response.ok().build();
+    } else {
+      return Response.status(HttpStatus.SERVICE_UNAVAILABLE_503).build();
+    }
   }
 }
