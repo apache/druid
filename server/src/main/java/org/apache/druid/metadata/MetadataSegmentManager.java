@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -107,6 +108,13 @@ public interface MetadataSegmentManager
    */
   @Nullable
   Set<SegmentId> getOvershadowedSegments();
+
+  /**
+   * Returns a snapshot of DruidDataSources and overshadowed segments
+   *
+   */
+  @Nullable
+  DataSourcesSnapshot getDataSourcesSnapshot();
 
   /**
    * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.

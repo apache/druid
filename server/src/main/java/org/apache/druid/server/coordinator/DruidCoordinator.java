@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -82,6 +83,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -145,6 +147,7 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+  private final DataSourcesSnapshot dataSourcesSnapshot;
 
   @Inject
   public DruidCoordinator(
@@ -233,6 +236,7 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
 
     this.segmentCompactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    this.dataSourcesSnapshot = metadataSegmentManager.getDataSourcesSnapshot();
   }
 
   public boolean isLeader()
@@ -245,9 +249,9 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public MetadataSegmentManager getMetadataSegmentManager()
+  public DataSourcesSnapshot getDataSourcesSnapshot()
   {
-    return metadataSegmentManager;
+    return metadataSegmentManager.getDataSourcesSnapshot();
   }
 
   /**
@@ -321,7 +325,9 @@ public class DruidCoordinator
   public Map<String, Double> getLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
-    final Collection<ImmutableDruidDataSource> dataSources = metadataSegmentManager.getDataSources();
+    final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                                     .map(m -> m.getDataSources())
+                                                                     .orElse(null);
 
     if (dataSources == null) {
       return loadStatus;
@@ -398,7 +404,9 @@ public class DruidCoordinator
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                    .map(m -> m.getDataSource(segment.getDataSource()))
+                                                    .orElse(null);
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
@@ -488,7 +496,10 @@ public class DruidCoordinator
   @Nullable
   public Iterable<DataSegment> iterateAvailableDataSegments()
   {
-    return metadataSegmentManager.iterateAllSegments();
+    final Iterable<DataSegment> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                      .map(m -> m.iterateAllSegmentsInSnapshot())
+                                                      .orElse(null);
+    return dataSources == null ? null : dataSources;
   }
 
   @LifecycleStart
@@ -675,7 +686,9 @@ public class DruidCoordinator
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
-        final Collection<ImmutableDruidDataSource> dataSources = metadataSegmentManager.getDataSources();
+        final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                                         .map(m -> m.getDataSources())
+                                                                         .orElse(null);
         if (dataSources == null) {
           log.info("Metadata store not polled yet, skipping this run.");
           return;

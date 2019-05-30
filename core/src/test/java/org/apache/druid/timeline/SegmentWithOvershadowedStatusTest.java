@@ -73,7 +73,7 @@ public class SegmentWithOvershadowedStatusTest
     );
 
     final SegmentWithOvershadowedStatus segment = new SegmentWithOvershadowedStatus(dataSegment, false);
-    
+
     final Map<String, Object> objectMap = mapper.readValue(
         mapper.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT

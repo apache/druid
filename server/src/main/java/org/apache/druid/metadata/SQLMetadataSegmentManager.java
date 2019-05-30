@@ -71,6 +71,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -105,11 +106,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final SQLMetadataConnector connector;
 
   // Volatile since this reference is reassigned in "poll" and then read from in other threads.
-  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty map).
   // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
   // null and nonnull multiple times as stop() and start() are called.
-  @Nullable
-  private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
   @Nullable
   private volatile DataSourcesSnapshot dataSourcesSnapshot = null;
 
@@ -211,7 +209,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
       dataSourcesSnapshot = null;
-      dataSources = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -453,7 +450,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
-      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
+      if (dataSourcesSnapshot != null) {
+        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
+        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.remove(dataSource));
+        replaceDataSourcesSnapshot(dataSourcesMap);
+      }
 
       if (removed == 0) {
         return false;
@@ -476,22 +477,22 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
       // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
       List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                  dataSourceName,
-                  (dsName, dataSource) -> {
-                    for (SegmentId possibleSegmentId : possibleSegmentIds) {
-                      if (dataSource.removeSegment(possibleSegmentId) != null) {
-                        break;
-                      }
-                    }
-                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                    //noinspection ReturnOfNull
-                    return dataSource.isEmpty() ? null : dataSource;
-                  }
-              )
-      );
+      if (dataSourcesSnapshot != null) {
+        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
+        BiFunction<String, ImmutableDruidDataSource, ImmutableDruidDataSource> fn = (dsName, dataSource) -> {
+          for (SegmentId possibleSegmentId : possibleSegmentIds) {
+            DruidDataSource druidDataSource = new DruidDataSource(dataSource.getName(), dataSource.getProperties());
+            if (druidDataSource.removeSegment(possibleSegmentId) != null) {
+              dataSource = druidDataSource.toImmutableDruidDataSource();
+              break;
+            }
+          }
+          return dataSource;
+        };
+
+        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.computeIfPresent(dataSourceName, fn));
+        replaceDataSourcesSnapshot(dataSourcesMap);
+      }
 
       return removed;
     }
@@ -506,18 +507,18 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   {
     try {
       final boolean removed = removeSegmentFromTable(segmentId.toString());
-      Optional.ofNullable(dataSources).ifPresent(
-          m ->
-              m.computeIfPresent(
-                  segmentId.getDataSource(),
-                  (dsName, dataSource) -> {
-                    dataSource.removeSegment(segmentId);
-                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-                    //noinspection ReturnOfNull
-                    return dataSource.isEmpty() ? null : dataSource;
-                  }
-              )
-      );
+      if (dataSourcesSnapshot != null) {
+        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
+        BiFunction<String, ImmutableDruidDataSource, ImmutableDruidDataSource> fn = (dsName, dataSource) -> {
+          DruidDataSource druidDataSource = new DruidDataSource(dataSource.getName(), dataSource.getProperties());
+          if (druidDataSource.removeSegment(segmentId) != null) {
+            dataSource = druidDataSource.toImmutableDruidDataSource();
+          }
+          return dataSource;
+        };
+
+        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.computeIfPresent(segmentId.getDataSource(), fn));
+      }
       return removed;
     }
     catch (Exception e) {
@@ -611,8 +612,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public ImmutableDruidDataSource getDataSource(String dataSourceName)
   {
-    final DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(dataSourceName)).orElse(null);
-    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
+    final ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                        .map(m -> m.getDataSourcesMap().get(dataSourceName))
+                                                        .orElse(null);
+    return dataSource == null ? null : dataSource;
   }
 
   @Override
@@ -643,6 +646,13 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public Set<SegmentId> getOvershadowedSegments()
   {
     return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getOvershadowedSegments()).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
   }
 
   @Override
@@ -747,26 +757,27 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
-    // Replace "dataSources" atomically.
-    dataSources = newDataSources;
 
-    // replace "dataSourcesSnapshot" atomically
-    dataSourcesSnapshot = new DataSourcesSnapshot(
-        Optional.ofNullable(dataSources)
-                .map(m ->
-                         m.values()
-                          .stream()
-                          .map(DruidDataSource::toImmutableDruidDataSource)
-                          .collect(Collectors.toList())
-                )
-                .orElse(null)
-    );
+    replaceDataSourcesSnapshot(newDataSources.entrySet()
+                                             .stream()
+                                             .collect(Collectors.toMap(
+                                                 e -> e.getKey(),
+                                                 e -> e.getValue().toImmutableDruidDataSource()
+                                             )));
+  }
+
+  /**
+   * replace "dataSourcesSnapshot" atomically
+   */
+  private void replaceDataSourcesSnapshot(Map<String, ImmutableDruidDataSource> dataSources)
+  {
+    dataSourcesSnapshot = new DataSourcesSnapshot(dataSources);
   }
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and then replace them in {@link #dataSources}. This method allows to use already
+   * existing segments each time, and then replace them in {@link #dataSourcesSnapshot}. This method allows to use already
    * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
    * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
@@ -774,7 +785,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(segment.getDataSource())).orElse(null);
+    ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                  .map(m -> m.getDataSourcesMap().get(segment.getDataSource()))
+                                                  .orElse(null);
     if (dataSource == null) {
       return segment;
     }

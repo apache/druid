@@ -25,6 +25,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,11 +40,11 @@ import java.util.stream.Collectors;
  */
 public class DataSourcesSnapshot
 {
-  private final Collection<ImmutableDruidDataSource> dataSources;
+  private final Map<String, ImmutableDruidDataSource> dataSources;
   private final ImmutableSet<SegmentId> overshadowedSegments;
 
   public DataSourcesSnapshot(
-      Collection<ImmutableDruidDataSource> dataSources
+      Map<String, ImmutableDruidDataSource> dataSources
   )
   {
     this.dataSources = dataSources;
@@ -52,12 +53,34 @@ public class DataSourcesSnapshot
 
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
+    return dataSources.values();
+  }
+
+  public Map<String, ImmutableDruidDataSource> getDataSourcesMap()
+  {
     return dataSources;
+  }
+
+  @Nullable
+  public ImmutableDruidDataSource getDataSource(String dataSourceName)
+  {
+    return dataSources.get(dataSourceName);
   }
 
   public ImmutableSet<SegmentId> getOvershadowedSegments()
   {
     return overshadowedSegments;
+  }
+
+  @Nullable
+  public Iterable<DataSegment> iterateAllSegmentsInSnapshot()
+  {
+    if (dataSources == null) {
+      return null;
+    }
+    return () -> dataSources.values().stream()
+                            .flatMap(dataSource -> dataSource.getSegments().stream())
+                            .iterator();
   }
 
   /**
@@ -67,7 +90,7 @@ public class DataSourcesSnapshot
    */
   private List<SegmentId> determineOvershadowedSegments()
   {
-    final List<DataSegment> segments = dataSources.stream()
+    final List<DataSegment> segments = dataSources.values().stream()
                                                   .flatMap(ds -> ds.getSegments().stream())
                                                   .collect(Collectors.toList());
     final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
