@@ -94,6 +94,8 @@ public class ApplyFunctionTest
     assertExpr("foldr((x, y) -> x + y, [1, 1, 1, 1, 1], 0)", 5L);
     assertExpr("foldr((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
     assertExpr("foldr((a, acc) -> concat(a, acc), a, '')", "foobarbazbarfoo");
+    assertExpr("foldr((a, acc) -> array_append(acc, a), a, [])", new String[]{"foo", "bar", "baz", "foobar"});
+    assertExpr("foldr((a, acc) -> array_append(acc, a), b, cast([], 'LONG_ARRAY'))", new Long[]{1L, 2L, 3L, 4L, 5L});
   }
 
   @Test

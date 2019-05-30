@@ -396,6 +396,12 @@ public class ExprListenerImpl extends ExprBaseListener
     nodes.put(ctx, new StringArrayExpr(values));
   }
 
+  @Override
+  public void exitEmptyArray(ExprParser.EmptyArrayContext ctx)
+  {
+    nodes.put(ctx, new StringArrayExpr(new String[0]));
+  }
+
   private static String escapeStringLiteral(String text)
   {
     String unquoted = text.substring(1, text.length() - 1);

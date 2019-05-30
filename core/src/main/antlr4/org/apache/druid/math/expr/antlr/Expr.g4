@@ -32,6 +32,7 @@ expr : 'null'                                         # null
      | '[' DOUBLE  (','? DOUBLE)* ']'                 # doubleArray
      | '[' LONG (','? LONG)* ']'                      # longArray
      | '[' STRING (','? STRING)* ']'                  # stringArray
+     | '[]'                                           # emptyArray
      ;
 
 lambda : (IDENTIFIER | '(' IDENTIFIER (','? IDENTIFIER)* ')') '->' expr
