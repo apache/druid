@@ -72,7 +72,6 @@ export interface DatasourcesViewState {
   datasourcesFilter: Filter[];
 
   showDisabled: boolean;
-  loadDisabled: boolean;
   retentionDialogOpenOn: { datasource: string, rules: any[] } | null;
   compactionDialogOpenOn: {datasource: string, configData: any} | null;
   dropDataDatasource: string | null;
@@ -112,7 +111,6 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       datasourcesFilter: [],
 
       showDisabled: false,
-      loadDisabled: true,
       retentionDialogOpenOn: null,
       compactionDialogOpenOn: null,
       dropDataDatasource: null,
@@ -398,17 +396,10 @@ GROUP BY 1`);
   }
 
   private  getDisabled(showDisabled: boolean) {
-    if (this.state.loadDisabled) {
+    if (!showDisabled) {
       this.datasourceQueryManager.rerunLastQuery();
-      this.setState({loadDisabled: false});
     }
     this.setState({showDisabled: !showDisabled});
-  }
-
-  private refresh() {
-    console.log('calling');
-    this.datasourceQueryManager.rerunLastQuery();
-    if (!this.state.showDisabled) this.setState({loadDisabled: true});
   }
 
 
@@ -661,7 +652,7 @@ GROUP BY 1`);
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
-          onClick={() => this.refresh()}
+          onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
         {
           !noSqlMode &&
