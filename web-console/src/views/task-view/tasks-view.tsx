@@ -194,9 +194,9 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
         const data = resp.data;
-        for ( let i = 0 ; i < data.length; i++) {
-          data[i].status = await axios.get(`/druid/indexer/v1/supervisor/${data[i].id}/status`);
-        }
+        data.forEach( async (item: any ) => {
+          item.status = await axios.get(`/druid/indexer/v1/supervisor/${item.id}/status`);
+        });
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
