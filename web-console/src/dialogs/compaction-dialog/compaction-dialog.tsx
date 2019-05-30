@@ -50,7 +50,6 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
     let config: Record<string, any> = {
       dataSource: datasource,
       inputSegmentSizeBytes: 419430400,
-      keepSegmentGranularity: true,
       maxNumSegmentsToCompact: 150,
       skipOffsetFromLatest: 'P1D',
       targetCompactionSizeBytes: 419430400,
@@ -81,10 +80,6 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
           {
             name: 'inputSegmentSizeBytes',
             type: 'number'
-          },
-          {
-            name: 'keepSegmentGranularity',
-            type: 'boolean'
           },
           {
             name: 'maxNumSegmentsToCompact',
