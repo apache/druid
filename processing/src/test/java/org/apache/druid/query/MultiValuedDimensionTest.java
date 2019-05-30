@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -299,7 +300,51 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "dimFilter");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-empty");
+  }
+
+  @Test
+  public void testGroupByWithDimFilterNullishResults()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tags", "tags"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimFilter(
+            new InDimFilter("product", ImmutableList.of("product_5", "product_6", "product_8"), null)
+        )
+        .setContext(context)
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndexNullSampler, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndexNullSampler, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults;
+    // an empty row e.g. [], or group by 'missing' value, is grouped with the default string value, "" or null
+    // grouping input is filtered to [], null, [""]
+    if (NullHandling.replaceWithDefault()) {
+      // when sql compatible null handling is disabled, the inputs are effectively [], null, [null] and
+      // are all grouped as null
+      expectedResults = Collections.singletonList(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 6L)
+      );
+    } else {
+      // with sql compatible null handling, null and [] = null, but [""] = ""
+      expectedResults = ImmutableList.of(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
+      );
+    }
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-nullish");
   }
 
   @Test
