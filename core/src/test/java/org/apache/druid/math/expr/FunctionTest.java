@@ -228,6 +228,7 @@ public class FunctionTest
     assertExpr("array_concat([1 2 3], [2 4 6])", new Long[]{1L, 2L, 3L, 2L, 4L, 6L});
     assertExpr("array_concat([1 2 3], 4)", new Long[]{1L, 2L, 3L, 4L});
     assertExpr("array_concat(0, [1 2 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertExpr("array_concat(map(y -> y * 3, b), [1 2 3])", new Double[]{1.0, 2.0, 3.3, 1.0, 2.0, 3.0});
     assertExpr("array_concat(0, 1)", new Long[]{0L, 1L});
   }
 
@@ -245,6 +246,16 @@ public class FunctionTest
     assertExpr("string_to_array('1,2,3', ',')", new String[]{"1", "2", "3"});
     assertExpr("string_to_array('1', ',')", new String[]{"1"});
     assertExpr("string_to_array(array_to_string(a, ','), ',')", new String[]{"foo", "bar", "baz", "foobar"});
+  }
+
+  @Test
+  public void testArrayCast()
+  {
+    assertExpr("cast([1, 2, 3], 'STRING_ARRAY')", new String[]{"1", "2", "3"});
+    assertExpr("cast([1, 2, 3], 'DOUBLE_ARRAY')", new Double[]{1.0, 2.0, 3.0});
+    assertExpr("cast(c, 'LONG_ARRAY')", new Long[]{3L, 4L, 5L});
+    assertExpr("cast(string_to_array(array_to_string(b, ','), ','), 'LONG_ARRAY')", new Long[]{1L, 2L, 3L, 4L, 5L});
+    assertExpr("cast(['1.0' '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
   }
 
   private void assertExpr(final String expression, final Object expectedResult)
