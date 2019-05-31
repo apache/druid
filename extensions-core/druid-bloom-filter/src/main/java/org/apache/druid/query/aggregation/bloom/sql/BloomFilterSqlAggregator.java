@@ -46,7 +46,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -68,7 +68,8 @@ public class BloomFilterSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -77,7 +78,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     final RexNode inputOperand = Expressions.fromFieldAccess(
         rowSignature,
         project,
@@ -168,7 +168,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           input.getSimpleExtraction().getExtractionFn()
       );
     } else {
-      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           input,
           inputOperand.getType().getSqlTypeName()

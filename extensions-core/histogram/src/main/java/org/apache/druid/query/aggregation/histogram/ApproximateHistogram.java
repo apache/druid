@@ -419,7 +419,7 @@ public class ApproximateHistogram
       // use unused slot to shift array left or right and make space for the new bin to insert
       if (insertAt < unusedIndex) {
         shiftRight(insertAt, unusedIndex);
-      } else if (insertAt >= unusedIndex) {
+      } else {
         shiftLeft(unusedIndex, insertAt - 1);
         insertAt--;
       }

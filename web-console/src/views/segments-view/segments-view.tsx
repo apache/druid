@@ -24,7 +24,7 @@ import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components/index';
+import { TableColumnSelection, ViewControlBar } from '../../components';
 import {
   addFilter,
   formatBytes,
@@ -363,7 +363,6 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         }
       ]}
       defaultPageSize={50}
-      className="-striped -highlight"
       SubComponent={rowInfo => {
         const { original } = rowInfo;
         const { payload } = rowInfo.original;

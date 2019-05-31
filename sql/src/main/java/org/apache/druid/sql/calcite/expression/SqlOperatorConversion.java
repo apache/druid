@@ -23,7 +23,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -54,16 +54,18 @@ public interface SqlOperatorConversion
   /**
    * Returns a Druid filter corresponding to a Calcite {@code RexNode} used as a filter condition.
    *
-   * @param plannerContext   SQL planner context
-   * @param querySignature   signature of the rows being filtered, and any expression column references
-   * @param rexNode          filter expression rex node
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          input row signature
+   * @param virtualColumnRegistry re-usable virtual column references
+   * @param rexNode               filter expression rex node
    *
-   * @return filter, or null if the call cannot be translated
+   * @return filter, or null if the call cannot be translated to a filter
    */
   @Nullable
   default DimFilter toDruidFilter(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       RexNode rexNode
   )
   {

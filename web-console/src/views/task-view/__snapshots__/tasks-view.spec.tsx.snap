@@ -63,7 +63,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         TrComponent={[Function]}
         TrGroupComponent={[Function]}
         aggregatedKey="_aggregated"
-        className="-striped -highlight"
+        className=""
         collapseOnDataChange={true}
         collapseOnPageChange={true}
         collapseOnSortingChange={true}
@@ -77,6 +77,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
+            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -89,6 +90,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
+            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -140,7 +142,8 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
-        defaultPageSize={5}
+        defaultPage={0}
+        defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
         defaultSortMethod={[Function]}
@@ -188,6 +191,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         ofText="of"
         onFetchData={[Function]}
         originalKey="_original"
+        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -205,6 +209,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
+        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
@@ -392,7 +397,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         TrComponent={[Function]}
         TrGroupComponent={[Function]}
         aggregatedKey="_aggregated"
-        className="-striped -highlight"
+        className=""
         collapseOnDataChange={true}
         collapseOnPageChange={true}
         collapseOnSortingChange={true}
@@ -406,6 +411,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
+            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -418,6 +424,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
+            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -495,6 +502,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
+        defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
@@ -559,6 +567,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         onFetchData={[Function]}
         onFilteredChange={[Function]}
         originalKey="_original"
+        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -577,6 +586,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
+        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}

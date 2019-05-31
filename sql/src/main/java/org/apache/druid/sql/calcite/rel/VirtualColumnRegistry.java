@@ -32,52 +32,38 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * Wraps a {@link RowSignature} and provides facilities to re-use {@link VirtualColumn} definitions for dimensions,
- * filters, and filtered aggregators while constructing a {@link DruidQuery}
+ * Provides facilities to create and re-use {@link VirtualColumn} definitions for dimensions, filters, and filtered
+ * aggregators while constructing a {@link DruidQuery}.
  */
-public class DruidQuerySignature
+public class VirtualColumnRegistry
 {
-  private final RowSignature rowSignature;
-  private final boolean isAggregateSignature;
-
+  private final RowSignature baseRowSignature;
   private final Map<String, VirtualColumn> virtualColumnsByExpression;
   private final Map<String, VirtualColumn> virtualColumnsByName;
   private final String virtualColumnPrefix;
   private int virtualColumnCounter;
 
-  public DruidQuerySignature(RowSignature rowSignature)
-  {
-    this.isAggregateSignature = false;
-    this.rowSignature = rowSignature;
-    this.virtualColumnPrefix = rowSignature == null ? "v" : Calcites.findUnusedPrefix(
-        "v",
-        new TreeSet<>(rowSignature.getRowOrder())
-    );
-    this.virtualColumnsByExpression = new HashMap<>();
-    this.virtualColumnsByName = new HashMap<>();
-  }
-
-  private DruidQuerySignature(
-      RowSignature rowSignature,
-      String prefix,
+  private VirtualColumnRegistry(
+      RowSignature baseRowSignature,
+      String virtualColumnPrefix,
       Map<String, VirtualColumn> virtualColumnsByExpression,
-      Map<String, VirtualColumn> virtualColumnsByName,
-      boolean isAggregateSignature
+      Map<String, VirtualColumn> virtualColumnsByName
   )
   {
-    this.isAggregateSignature = isAggregateSignature;
-    this.rowSignature = rowSignature;
-    this.virtualColumnPrefix = prefix;
+    this.baseRowSignature = baseRowSignature;
+    this.virtualColumnPrefix = virtualColumnPrefix;
     this.virtualColumnsByExpression = virtualColumnsByExpression;
     this.virtualColumnsByName = virtualColumnsByName;
   }
 
-  /**
-   * Get {@link RowSignature} of {@link DruidQuery} under construction
-   */
-  public RowSignature getRowSignature()
+  public static VirtualColumnRegistry create(final RowSignature rowSignature)
   {
-    return rowSignature;
+    return new VirtualColumnRegistry(
+        rowSignature,
+        Calcites.findUnusedPrefix("v", new TreeSet<>(rowSignature.getRowOrder())),
+        new HashMap<>(),
+        new HashMap<>()
+    );
   }
 
   /**
@@ -88,19 +74,16 @@ public class DruidQuerySignature
     return virtualColumnsByName.containsKey(virtualColumnName);
   }
 
-
   /**
-   * Get existing or create new (if not {@link DruidQuerySignature#isAggregateSignature}) {@link VirtualColumn} for a given
-   * {@link DruidExpression}
+   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression}.
    */
-  @Nullable
   public VirtualColumn getOrCreateVirtualColumnForExpression(
       PlannerContext plannerContext,
       DruidExpression expression,
       SqlTypeName typeName
   )
   {
-    if (!isAggregateSignature && !virtualColumnsByExpression.containsKey(expression.getExpression())) {
+    if (!virtualColumnsByExpression.containsKey(expression.getExpression())) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
       final VirtualColumn virtualColumn = expression.toVirtualColumn(
           virtualColumnName,
@@ -126,23 +109,25 @@ public class DruidQuerySignature
   @Nullable
   public VirtualColumn getVirtualColumn(String virtualColumnName)
   {
-    return virtualColumnsByName.getOrDefault(virtualColumnName, null);
+    return virtualColumnsByName.get(virtualColumnName);
   }
 
   /**
-   * Create as an "immutable" "aggregate" signature for a grouping, so that post aggregations and having filters
-   * can not define new virtual columns
-   * @param sourceSignature
-   * @return
+   * Get a signature representing the base signature plus all registered virtual columns.
    */
-  public DruidQuerySignature asAggregateSignature(RowSignature sourceSignature)
+  public RowSignature getFullRowSignature()
   {
-    return new DruidQuerySignature(
-        sourceSignature,
-        virtualColumnPrefix,
-        virtualColumnsByExpression,
-        virtualColumnsByName,
-        true
-    );
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (String columnName : baseRowSignature.getRowOrder()) {
+      builder.add(columnName, baseRowSignature.getColumnType(columnName));
+    }
+
+    for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
+      final String columnName = virtualColumn.getOutputName();
+      builder.add(columnName, virtualColumn.capabilities(columnName).getType());
+    }
+
+    return builder.build();
   }
 }

@@ -163,7 +163,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         <AnchorButton minimal active={active === 'datasources'} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" />
         <AnchorButton minimal active={active === 'segments'} icon={IconNames.STACKED_CHART} text="Segments" href="#segments" />
         <AnchorButton minimal active={active === 'tasks'} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
-        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Data servers" href="#servers" />
+        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Servers" href="#servers" />
 
         <NavbarDivider/>
         <AnchorButton minimal active={active === 'query'} icon={IconNames.APPLICATION} text="Query" href="#query" />
