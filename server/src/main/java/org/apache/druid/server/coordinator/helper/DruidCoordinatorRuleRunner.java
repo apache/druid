@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -86,9 +87,13 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // only those would need to be loaded/dropped
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
     // If metadata store hasn't been polled yet, use empty overshadowed list
-    final Set<SegmentId> overshadowed = Optional
-        .ofNullable(coordinator.getDataSourcesSnapshot().getOvershadowedSegments())
-        .orElse(ImmutableSet.of());
+    final DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
+    Set<SegmentId> overshadowed = ImmutableSet.of();
+    if (dataSourcesSnapshot != null) {
+      overshadowed = Optional
+          .ofNullable(dataSourcesSnapshot.getOvershadowedSegments())
+          .orElse(ImmutableSet.of());
+    }
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);

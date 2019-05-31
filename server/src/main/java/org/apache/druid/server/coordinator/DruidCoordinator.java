@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -147,7 +148,10 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-  private final DataSourcesSnapshot dataSourcesSnapshot;
+  /**
+   * set in {@link CoordinatorRunnable#run()} at start of every coordinator run
+   */
+  private volatile DataSourcesSnapshot dataSourcesSnapshot = null;
 
   @Inject
   public DruidCoordinator(
@@ -236,7 +240,6 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
 
     this.segmentCompactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
-    this.dataSourcesSnapshot = metadataSegmentManager.getDataSourcesSnapshot();
   }
 
   public boolean isLeader()
@@ -247,11 +250,6 @@ public class DruidCoordinator
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
   {
     return loadManagementPeons;
-  }
-
-  public DataSourcesSnapshot getDataSourcesSnapshot()
-  {
-    return metadataSegmentManager.getDataSourcesSnapshot();
   }
 
   /**
@@ -382,6 +380,12 @@ public class DruidCoordinator
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
+  }
+
+  @VisibleForTesting
+  void setDataSourcesSnapshotForTest(DataSourcesSnapshot snapshot)
+  {
+    dataSourcesSnapshot = snapshot;
   }
 
   public void moveSegment(
@@ -686,9 +690,11 @@ public class DruidCoordinator
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
+        dataSourcesSnapshot = metadataSegmentManager.getDataSourcesSnapshot();
         final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
                                                                          .map(m -> m.getDataSources())
                                                                          .orElse(null);
+
         if (dataSources == null) {
           log.info("Metadata store not polled yet, skipping this run.");
           return;
@@ -702,6 +708,7 @@ public class DruidCoordinator
                                          .withCompactionConfig(getCompactionConfig())
                                          .withEmitter(emitter)
                                          .withBalancerStrategy(balancerStrategy)
+                                         .withDataSourcesSnapshot(dataSourcesSnapshot)
                                          .build();
         for (DruidCoordinatorHelper helper : helpers) {
           // Don't read state and run state in the same helper otherwise racy conditions may exist

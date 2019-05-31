@@ -564,7 +564,6 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(coordinator.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -997,7 +996,6 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testReplicantThrottle()
   {
-    EasyMock.expect(coordinator.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of()).anyTimes();
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     EasyMock.replay(coordinator, databaseSegmentManager, dataSourcesSnapshot);
@@ -1125,7 +1123,6 @@ public class DruidCoordinatorRuleRunnerTest
                                     .build()
         )
         .atLeastOnce();
-    EasyMock.expect(coordinator.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of()).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
     coordinator.removeSegment(EasyMock.anyObject());
@@ -1344,12 +1341,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
     availableSegments.add(v1);
     availableSegments.add(v2);
-
+    EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of(v1.getId())).anyTimes();
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    EasyMock.expect(coordinator.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
-    EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of()).anyTimes();
-    EasyMock.replay(dataSourcesSnapshot);
-    EasyMock.replay(coordinator, databaseSegmentManager);
+    EasyMock.replay(coordinator, dataSourcesSnapshot);
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     mockEmptyPeon();
@@ -1393,6 +1387,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withDataSourcesSnapshot(dataSourcesSnapshot)
             .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -1413,7 +1408,6 @@ public class DruidCoordinatorRuleRunnerTest
 
   private void mockCoordinator()
   {
-    EasyMock.expect(coordinator.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();

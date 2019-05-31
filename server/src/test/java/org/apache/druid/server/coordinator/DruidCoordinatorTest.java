@@ -111,7 +111,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
-    EasyMock.expect(databaseSegmentManager.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot);
+    EasyMock.expect(databaseSegmentManager.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
+    EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
     EasyMock.replay(databaseSegmentManager);
     EasyMock.expect(
         configManager.watch(
@@ -250,7 +251,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(segment);
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
+    coordinator.setDataSourcesSnapshotForTest(dataSourcesSnapshot);
+    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
@@ -535,22 +537,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
   private void setupMetadataSegmentManagerMock(DruidDataSource dataSource)
   {
-    EasyMock.expect(databaseSegmentManager.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot);
-    EasyMock.replay(databaseSegmentManager);
-    EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
     EasyMock
-        .expect(databaseSegmentManager.iterateAllSegments())
+        .expect(dataSourcesSnapshot.iterateAllSegmentsInSnapshot())
         .andReturn(dataSource.getSegments())
         .anyTimes();
     EasyMock
-        .expect(databaseSegmentManager.getDataSources())
+        .expect(dataSourcesSnapshot.getDataSources())
         .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
         .anyTimes();
-    EasyMock
-        .expect(databaseSegmentManager.getAllDataSourceNames())
-        .andReturn(Collections.singleton(dataSource.getName()))
-        .anyTimes();
-    EasyMock.replay(databaseSegmentManager);
+    EasyMock.replay(dataSourcesSnapshot);
   }
 
   @Nullable
