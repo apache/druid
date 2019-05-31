@@ -5,8 +5,31 @@ exports[`describe servers view action servers view 1`] = `
   className="servers-view app-view"
 >
   <ViewControlBar
-    label="Historicals"
+    label="Servers"
   >
+    <Component>
+      Group by
+    </Component>
+    <Blueprint3.ButtonGroup>
+      <Blueprint3.Button
+        active={true}
+        onClick={[Function]}
+      >
+        None
+      </Blueprint3.Button>
+      <Blueprint3.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Type
+      </Blueprint3.Button>
+      <Blueprint3.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Tier
+      </Blueprint3.Button>
+    </Blueprint3.ButtonGroup>
     <Blueprint3.Button
       icon="refresh"
       onClick={[Function]}
@@ -17,22 +40,19 @@ exports[`describe servers view action servers view 1`] = `
       onClick={[Function]}
       text="Go to SQL"
     />
-    <Blueprint3.Switch
-      checked={false}
-      label="Group by tier"
-      onChange={[Function]}
-    />
     <TableColumnSelection
       columns={
         Array [
           "Server",
+          "Type",
           "Tier",
+          "Host",
+          "Port",
           "Curr size",
           "Max size",
           "Usage",
-          "Load/drop queues",
-          "Host",
-          "Port",
+          "Detail",
+          "Actions",
         ]
       }
       onChange={[Function]}
@@ -58,7 +78,7 @@ exports[`describe servers view action servers view 1`] = `
     TrComponent={[Function]}
     TrGroupComponent={[Function]}
     aggregatedKey="_aggregated"
-    className="-striped -highlight"
+    className=""
     collapseOnDataChange={true}
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
@@ -72,6 +92,7 @@ exports[`describe servers view action servers view 1`] = `
         "Header": undefined,
         "Pivot": undefined,
         "PivotValue": undefined,
+        "Placeholder": undefined,
         "aggregate": undefined,
         "className": "",
         "filterAll": false,
@@ -84,6 +105,7 @@ exports[`describe servers view action servers view 1`] = `
         "getProps": [Function],
         "headerClassName": "",
         "headerStyle": Object {},
+        "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
@@ -103,8 +125,28 @@ exports[`describe servers view action servers view 1`] = `
         },
         Object {
           "Cell": [Function],
+          "Header": "Type",
+          "accessor": "server_type",
+          "show": true,
+          "width": 150,
+        },
+        Object {
+          "Cell": [Function],
           "Header": "Tier",
           "accessor": "tier",
+          "show": true,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Header": "Host",
+          "accessor": "host",
+          "show": true,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Header": "Port",
+          "accessor": [Function],
+          "id": "port",
           "show": true,
         },
         Object {
@@ -140,7 +182,7 @@ exports[`describe servers view action servers view 1`] = `
         Object {
           "Aggregated": [Function],
           "Cell": [Function],
-          "Header": "Load/drop queues",
+          "Header": "Detail",
           "accessor": [Function],
           "filterable": false,
           "id": "queue",
@@ -148,17 +190,13 @@ exports[`describe servers view action servers view 1`] = `
           "width": 400,
         },
         Object {
-          "Aggregated": [Function],
-          "Header": "Host",
-          "accessor": "host",
-          "show": true,
-        },
-        Object {
-          "Aggregated": [Function],
-          "Header": "Port",
+          "Cell": [Function],
+          "Header": "Actions",
           "accessor": [Function],
-          "id": "port",
+          "filterable": false,
+          "id": "actions",
           "show": true,
+          "width": 70,
         },
       ]
     }
@@ -166,7 +204,8 @@ exports[`describe servers view action servers view 1`] = `
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
-    defaultPageSize={10}
+    defaultPage={0}
+    defaultPageSize={50}
     defaultResized={Array []}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
@@ -216,6 +255,7 @@ exports[`describe servers view action servers view 1`] = `
     onFetchData={[Function]}
     onFilteredChange={[Function]}
     originalKey="_original"
+    pageJumpText="jump to page"
     pageSizeOptions={
       Array [
         5,
@@ -234,6 +274,7 @@ exports[`describe servers view action servers view 1`] = `
     previousText="Previous"
     resizable={true}
     resolveData={[Function]}
+    rowsSelectorText="rows per page"
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
@@ -244,209 +285,29 @@ exports[`describe servers view action servers view 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <div
-    className="control-separator"
-  />
-  <ViewControlBar
-    label="MiddleManagers"
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Disable worker"
+    failText="Could not disable worker"
+    intent="danger"
+    onClose={[Function]}
+    successText="Worker has been disabled"
   >
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
-    />
-    <TableColumnSelection
-      columns={
-        Array [
-          "Host",
-          "Usage",
-          "Availability groups",
-          "Last completed task time",
-          "Blacklisted until",
-        ]
-      }
-      onChange={[Function]}
-      tableColumnsHidden={Array []}
-    />
-  </ViewControlBar>
-  <ReactTable
-    AggregatedComponent={[Function]}
-    ExpanderComponent={[Function]}
-    FilterComponent={[Function]}
-    LoadingComponent={[Function]}
-    NoDataComponent={[Function]}
-    PadRowComponent={[Function]}
-    PaginationComponent={[Function]}
-    PivotValueComponent={[Function]}
-    ResizerComponent={[Function]}
-    SubComponent={[Function]}
-    TableComponent={[Function]}
-    TbodyComponent={[Function]}
-    TdComponent={[Function]}
-    TfootComponent={[Function]}
-    ThComponent={[Function]}
-    TheadComponent={[Function]}
-    TrComponent={[Function]}
-    TrGroupComponent={[Function]}
-    aggregatedKey="_aggregated"
-    className="-striped -highlight"
-    collapseOnDataChange={true}
-    collapseOnPageChange={true}
-    collapseOnSortingChange={true}
-    column={
-      Object {
-        "Aggregated": undefined,
-        "Cell": undefined,
-        "Expander": undefined,
-        "Filter": undefined,
-        "Footer": undefined,
-        "Header": undefined,
-        "Pivot": undefined,
-        "PivotValue": undefined,
-        "aggregate": undefined,
-        "className": "",
-        "filterAll": false,
-        "filterMethod": undefined,
-        "filterable": undefined,
-        "footerClassName": "",
-        "footerStyle": Object {},
-        "getFooterProps": [Function],
-        "getHeaderProps": [Function],
-        "getProps": [Function],
-        "headerClassName": "",
-        "headerStyle": Object {},
-        "minWidth": 100,
-        "resizable": undefined,
-        "show": true,
-        "sortMethod": undefined,
-        "sortable": undefined,
-        "style": Object {},
-      }
-    }
-    columns={
-      Array [
-        Object {
-          "Cell": [Function],
-          "Header": "Host",
-          "accessor": [Function],
-          "id": "host",
-          "show": true,
-        },
-        Object {
-          "Header": "Usage",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "usage",
-          "show": true,
-          "width": 60,
-        },
-        Object {
-          "Header": "Availability groups",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "availabilityGroups",
-          "show": true,
-          "width": 60,
-        },
-        Object {
-          "Header": "Last completed task time",
-          "accessor": "lastCompletedTaskTime",
-          "show": true,
-        },
-        Object {
-          "Header": "Blacklisted until",
-          "accessor": "blacklistedUntil",
-          "show": true,
-        },
-      ]
-    }
-    data={Array []}
-    defaultExpanded={Object {}}
-    defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
-    defaultPageSize={10}
-    defaultResized={Array []}
-    defaultSortDesc={false}
-    defaultSortMethod={[Function]}
-    defaultSorted={Array []}
-    expanderDefaults={
-      Object {
-        "filterable": false,
-        "resizable": false,
-        "sortable": false,
-        "width": 35,
-      }
-    }
-    filterable={true}
-    filtered={
-      Array [
-        Object {
-          "id": "host",
-          "value": "test",
-        },
-      ]
-    }
-    freezeWhenExpanded={false}
-    getLoadingProps={[Function]}
-    getNoDataProps={[Function]}
-    getPaginationProps={[Function]}
-    getProps={[Function]}
-    getResizerProps={[Function]}
-    getTableProps={[Function]}
-    getTbodyProps={[Function]}
-    getTdProps={[Function]}
-    getTfootProps={[Function]}
-    getTfootTdProps={[Function]}
-    getTfootTrProps={[Function]}
-    getTheadFilterProps={[Function]}
-    getTheadFilterThProps={[Function]}
-    getTheadFilterTrProps={[Function]}
-    getTheadGroupProps={[Function]}
-    getTheadGroupThProps={[Function]}
-    getTheadGroupTrProps={[Function]}
-    getTheadProps={[Function]}
-    getTheadThProps={[Function]}
-    getTheadTrProps={[Function]}
-    getTrGroupProps={[Function]}
-    getTrProps={[Function]}
-    groupedByPivotKey="_groupedByPivot"
-    indexKey="_index"
-    loading={true}
-    loadingText="Loading..."
-    multiSort={true}
-    nestingLevelKey="_nestingLevel"
-    nextText="Next"
-    noDataText=""
-    ofText="of"
-    onFetchData={[Function]}
-    onFilteredChange={[Function]}
-    originalKey="_original"
-    pageSizeOptions={
-      Array [
-        5,
-        10,
-        20,
-        25,
-        50,
-        100,
-      ]
-    }
-    pageText="Page"
-    pivotDefaults={Object {}}
-    pivotIDKey="_pivotID"
-    pivotValKey="_pivotVal"
-    previousText="Previous"
-    resizable={true}
-    resolveData={[Function]}
-    rowsText="rows"
-    showPageJump={true}
-    showPageSizeOptions={true}
-    showPagination={true}
-    showPaginationBottom={true}
-    showPaginationTop={false}
-    sortable={true}
-    style={Object {}}
-    subRowsKey="_subRows"
-  />
+    <p>
+      Are you sure you want to disable worker 'null'?
+    </p>
+  </AsyncActionDialog>
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Enable worker"
+    failText="Could not enable worker"
+    intent="primary"
+    onClose={[Function]}
+    successText="Worker has been enabled"
+  >
+    <p>
+      Are you sure you want to enable worker 'null'?
+    </p>
+  </AsyncActionDialog>
 </div>
 `;

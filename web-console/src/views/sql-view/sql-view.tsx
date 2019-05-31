@@ -18,10 +18,11 @@
 
 import * as Hjson from 'hjson';
 import * as React from 'react';
+import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 
-import { NullTableCell, SqlControl } from '../../components/index';
-import { QueryPlanDialog } from '../../dialogs/index';
+import { NullTableCell, SqlControl } from '../../components';
+import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
   decodeRune,
@@ -35,9 +36,9 @@ import {
 
 import './sql-view.scss';
 
-interface QueryWithFlags {
+interface QueryWithContext {
   queryString: string;
-  bypassCache?: boolean;
+  context?: Record<string, any>;
   wrapQuery?: boolean;
 }
 
@@ -62,9 +63,13 @@ interface SqlQueryResult {
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
+  static trimSemicolon(query: string): string {
+    // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
+    return query.replace(/;+(\s*)$/, '$1');
+  }
 
-  private sqlQueryManager: QueryManager<QueryWithFlags, SqlQueryResult>;
-  private explainQueryManager: QueryManager<string, any>;
+  private sqlQueryManager: QueryManager<QueryWithContext, SqlQueryResult>;
+  private explainQueryManager: QueryManager<QueryWithContext, BasicQueryExplanation | SemiJoinQueryExplanation | string>;
 
   constructor(props: SqlViewProps, context: any) {
     super(props, context);
@@ -82,20 +87,15 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (queryWithFlags: QueryWithFlags) => {
-        const { queryString, bypassCache, wrapQuery } = queryWithFlags;
+      processQuery: async (queryWithContext: QueryWithContext) => {
+        const { queryString, context, wrapQuery } = queryWithContext;
         const startTime = new Date();
 
         if (queryString.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(queryString);
 
-          if (bypassCache) {
-            runeQuery.context = runeQuery.context || {};
-            runeQuery.context.useCache = false;
-            runeQuery.context.populateCache = false;
-          }
-
+          if (context) runeQuery.context = context;
           const result = await queryDruidRune(runeQuery);
           return {
             queryResult: decodeRune(runeQuery, result),
@@ -104,7 +104,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${queryString.replace(/;+(\s*)$/, '$1')}) LIMIT 2000` :
+            `SELECT * FROM (${SqlView.trimSemicolon(queryString)}) LIMIT 2000` :
             queryString;
 
           const queryPayload: Record<string, any> = {
@@ -113,13 +113,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             header: true
           };
 
-          if (wrapQuery) {
-            queryPayload.context = {
-              useCache: false,
-              populateCache: false
-            };
-          }
-
+          if (context) queryPayload.context = context;
           const result = await queryDruidSql(queryPayload);
 
           return {
@@ -142,14 +136,17 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     });
 
     this.explainQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
-        const explainQuery = `explain plan for ${query}`;
-        const result = await queryDruidSql({
-          query: explainQuery,
+      processQuery: async (queryWithContext: QueryWithContext) => {
+        const { queryString, context } = queryWithContext;
+        const explainPayload: Record<string, any> = {
+          query: `EXPLAIN PLAN FOR (${SqlView.trimSemicolon(queryString)})`,
           resultFormat: 'object'
-        });
-        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]['PLAN']);
-        return data;
+        };
+
+        if (context) explainPayload.context = context;
+        const result = await queryDruidSql(explainPayload);
+
+        return parseQueryPlan(result[0]['PLAN']);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -166,13 +163,8 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     this.explainQueryManager.terminate();
   }
 
-  getExplain = (q: string) => {
-    this.setState({
-      explainDialogOpen: true,
-      loadingExplain: true,
-      explainError: null
-    });
-    this.explainQueryManager.runQuery(q);
+  onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+    localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
   renderExplainDialog() {
@@ -204,8 +196,6 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           };
         })
       }
-      defaultPageSize={10}
-      className="-striped -highlight"
     />;
   }
 
@@ -213,18 +203,33 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     const { initSql } = this.props;
     const { queryElapsed } = this.state;
 
-    return <div className="sql-view app-view">
-      <SqlControl
-        initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
-        onRun={(queryString, bypassCache, wrapQuery) => {
-          localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
-          this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
-        }}
-        onExplain={this.getExplain}
-        queryElapsed={queryElapsed}
-      />
-      {this.renderResultTable()}
-      {this.renderExplainDialog()}
-    </div>;
+    return <SplitterLayout
+      customClassName="sql-view app-view"
+      vertical
+      percentage
+      secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60}
+      primaryMinSize={30}
+      secondaryMinSize={30}
+      onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+    >
+      <div className="top-pane">
+        <SqlControl
+          initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
+          onRun={(queryString, context, wrapQuery) => {
+            localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+            this.sqlQueryManager.runQuery({ queryString, context, wrapQuery });
+          }}
+          onExplain={(queryString, context) => {
+            this.setState({ explainDialogOpen: true });
+            this.explainQueryManager.runQuery({ queryString, context });
+          }}
+          queryElapsed={queryElapsed}
+        />
+      </div>
+      <div className="bottom-pane">
+        {this.renderResultTable()}
+        {this.renderExplainDialog()}
+      </div>
+    </SplitterLayout>;
   }
 }

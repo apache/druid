@@ -16,21 +16,46 @@
  * limitations under the License.
  */
 
+import { Icon, Popover, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
+
+import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './action-cell.scss';
 
 export interface ActionCellProps extends React.Props<any> {
+  onDetail?: () => void;
+  actions?: BasicAction[];
 }
 
 export class ActionCell extends React.Component<ActionCellProps, {}> {
+  static COLUMN_ID = 'actions';
+  static COLUMN_LABEL = 'Actions';
+  static COLUMN_WIDTH = 70;
+
   constructor(props: ActionCellProps, context: any) {
     super(props, context);
   }
 
   render() {
+    const { onDetail, actions } = this.props;
+    const actionsMenu = actions ? basicActionsToMenu(actions) : null;
+
     return <div className="action-cell">
-      {this.props.children}
+      {
+        onDetail &&
+        <Icon
+          icon={IconNames.SEARCH_TEMPLATE}
+          onClick={() => onDetail()}
+        />
+      }
+      {
+        actionsMenu &&
+        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+          <Icon icon={IconNames.WRENCH}/>
+        </Popover>
+      }
     </div>;
   }
 }

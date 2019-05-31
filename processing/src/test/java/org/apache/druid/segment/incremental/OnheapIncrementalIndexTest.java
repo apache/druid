@@ -19,12 +19,17 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -101,6 +106,95 @@ public class OnheapIncrementalIndexTest
     checkThread.interrupt();
 
     Assert.assertEquals(0, checkFailedCount.get());
+  }
+
+  @Test
+  public void testMultithreadAddFactsUsingExpressionAndJavaScript() throws Exception
+  {
+    final IncrementalIndex indexExpr = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(new LongSumAggregatorFactory(
+                    "oddnum",
+                    null,
+                    "if(value%2==1,1,0)",
+                    TestExprMacroTable.INSTANCE
+                ))
+                .withRollup(true)
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .buildOnheap();
+
+    final IncrementalIndex indexJs = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(new JavaScriptAggregatorFactory(
+                    "oddnum",
+                    ImmutableList.of("value"),
+                    "function(current, value) { if (value%2==1) current = current + 1; return current;}",
+                    "function() {return 0;}",
+                    "function(a, b) { return a + b;}",
+                    JavaScriptConfig.getEnabledInstance()
+                ))
+                .withRollup(true)
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .buildOnheap();
+
+    final int addThreadCount = 2;
+    Thread[] addThreads = new Thread[addThreadCount];
+    for (int i = 0; i < addThreadCount; ++i) {
+      addThreads[i] = new Thread(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          final Random random = ThreadLocalRandom.current();
+          try {
+            for (int j = 0; j < MAX_ROWS / addThreadCount; ++j) {
+              int randomInt = random.nextInt(100000);
+              MapBasedInputRow mapBasedInputRowExpr = new MapBasedInputRow(
+                  0,
+                  Collections.singletonList("billy"),
+                  ImmutableMap.of("billy", randomInt % 3, "value", randomInt)
+              );
+              MapBasedInputRow mapBasedInputRowJs = new MapBasedInputRow(
+                  0,
+                  Collections.singletonList("billy"),
+                  ImmutableMap.of("billy", randomInt % 3, "value", randomInt)
+              );
+              indexExpr.add(mapBasedInputRowExpr);
+              indexJs.add(mapBasedInputRowJs);
+            }
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+      addThreads[i].start();
+    }
+
+    for (int i = 0; i < addThreadCount; ++i) {
+      addThreads[i].join();
+    }
+
+    long exprSum = 0;
+    long jsSum = 0;
+
+    for (IncrementalIndexRow row : indexExpr.getFacts().keySet()) {
+      exprSum += indexExpr.getMetricLongValue(row.getRowIndex(), 0);
+    }
+
+    for (IncrementalIndexRow row : indexJs.getFacts().keySet()) {
+      jsSum += indexJs.getMetricLongValue(row.getRowIndex(), 0);
+    }
+
+    Assert.assertEquals(exprSum, jsSum);
   }
 
   @Test

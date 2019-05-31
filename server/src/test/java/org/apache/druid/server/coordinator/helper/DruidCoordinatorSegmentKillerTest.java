@@ -111,10 +111,7 @@ public class DruidCoordinatorSegmentKillerTest
             Duration.parse("PT86400S"),
             1000,
             null,
-            false,
-            false,
-            Duration.ZERO,
-            Duration.millis(10)
+            Duration.ZERO
         )
     );
 

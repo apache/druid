@@ -19,10 +19,36 @@
 @import "../../variables";
 
 .tasks-view {
-  padding-bottom: 50px;
+  height: 100%;
+  width: 100%;
 
-  .view-control-bar,
+  .top-pane {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom: 0;
+
+    .view-control-bar {
+      margin-bottom: $standard-padding;
+    }
+  }
+
+  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
+    height: 3px;
+    background-color: #6d8ea9;
+  }
+
+  .bottom-pane {
+    position: absolute;
+    width: 100%;
+    top: 12px;
+    bottom: 0;
+  }
+
   .ReactTable {
-    margin-bottom: $standard-padding;
+    position: absolute;
+    top: $view-control-bar-height + $standard-padding;
+    bottom: 0;
+    width: 100%;
   }
 }
