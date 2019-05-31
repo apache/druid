@@ -19,7 +19,7 @@
 import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
-import { Loader } from '../components/loader';
+import { Loader } from '../components/loader/loader';
 import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
@@ -37,6 +37,7 @@ class NoData extends React.Component {
 /* tslint:enable:max-classes-per-file */
 
 Object.assign(ReactTableDefaults, {
+  className: '-striped -highlight',
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
     const id = filter.pivotId || filter.id;
     return booleanCustomTableFilter(filter, row[id]);
@@ -51,5 +52,6 @@ Object.assign(ReactTableDefaults, {
     const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);
     const previewCount = countBy(previewValues);
     return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
-  }
+  },
+  defaultPageSize: 20
 });

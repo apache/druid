@@ -45,5 +45,7 @@ public final class CloseableUtils
     }
   }
 
-  private CloseableUtils() {}
+  private CloseableUtils()
+  {
+  }
 }

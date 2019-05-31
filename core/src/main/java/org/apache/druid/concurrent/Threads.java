@@ -55,5 +55,7 @@ public final class Threads
     }
   }
 
-  private Threads() {}
+  private Threads()
+  {
+  }
 }

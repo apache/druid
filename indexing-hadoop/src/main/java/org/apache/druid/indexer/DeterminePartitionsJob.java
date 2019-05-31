@@ -165,10 +165,17 @@ public class DeterminePartitionsJob implements Jobby
         }
 
 
-        if (!groupByJob.waitForCompletion(true)) {
-          log.error("Job failed: %s", groupByJob.getJobID());
-          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-          return false;
+        try {
+          if (!groupByJob.waitForCompletion(true)) {
+            log.error("Job failed: %s", groupByJob.getJobID());
+            failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+            return false;
+          }
+        }
+        catch (IOException ioe) {
+          if (!Utils.checkAppSuccessForJobIOException(ioe, groupByJob, config.isUseYarnRMJobStatusFallback())) {
+            throw ioe;
+          }
         }
       } else {
         log.info("Skipping group-by job.");
@@ -228,10 +235,17 @@ public class DeterminePartitionsJob implements Jobby
       }
 
 
-      if (!dimSelectionJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
-        failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!dimSelectionJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
+          failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
+          return false;
+        }
+      }
+      catch (IOException ioe) {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, dimSelectionJob, config.isUseYarnRMJobStatusFallback())) {
+          throw ioe;
+        }
       }
 
       /*

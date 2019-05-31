@@ -92,8 +92,7 @@ public final class CachingClusteredClientTestUtils
                     SelectQuery.class,
                     new SelectQueryQueryToolChest(
                         objectMapper,
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-                        selectConfigSupplier
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     )
                 )
                 .put(
@@ -115,5 +114,7 @@ public final class CachingClusteredClientTestUtils
     return objectMapper;
   }
 
-  private CachingClusteredClientTestUtils() {}
+  private CachingClusteredClientTestUtils()
+  {
+  }
 }

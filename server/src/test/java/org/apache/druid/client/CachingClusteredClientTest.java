@@ -1315,8 +1315,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-            SELECT_CONFIG_SUPPLIER
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1393,8 +1392,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-            SELECT_CONFIG_SUPPLIER
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();

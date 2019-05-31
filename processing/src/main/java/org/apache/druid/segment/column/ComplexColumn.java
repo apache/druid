@@ -19,45 +19,60 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
 
 /**
-*/
-public class ComplexColumn implements BaseColumn
+ * This interface represents a complex column and can be implemented by druid extension writer of a custom column
+ * with arbitrary serialization instead of a custom column that serializes rows of objects serialized using
+ * {@link org.apache.druid.segment.data.GenericIndexed} class which is default implementation of "writeToXXX" methods in
+ * {@link org.apache.druid.segment.serde.ComplexColumnSerializer}. In that case {@link GenericIndexedBasedComplexColumn}
+ * should be used.
+ */
+@ExtensionPoint
+public interface ComplexColumn extends BaseColumn
 {
-  private final GenericIndexed<?> index;
-  private final String typeName;
+  /**
+   * @return Class of objects returned on calls to {@link ComplexColumn#getRowValue(int)} .
+   */
+  Class<?> getClazz();
 
-  public ComplexColumn(String typeName, GenericIndexed<?> index)
-  {
-    this.index = index;
-    this.typeName = typeName;
-  }
+  /**
+   * @return Typename associated with this column.
+   */
+  String getTypeName();
 
-  public String getTypeName()
-  {
-    return typeName;
-  }
+  /**
+   * Return rows in the column.
+   * @param rowNum the row number
+   * @return row object of type same as {@link ComplexColumn#getClazz()}  } at row number "rowNum" .
+   */
+  Object getRowValue(int rowNum);
 
-  @Nullable
-  public Object getRowValue(int rowNum)
-  {
-    return index.get(rowNum);
-  }
+  /**
+   * @return serialized size (in bytes) of this column.
+   */
+  int getLength();
 
-  public int getLength()
-  {
-    return index.size();
-  }
-
+  /**
+   * Close and release any resources associated with this column.
+   */
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
+  void close();
+
+  /**
+   * Optionally overridden when complex column serialization is not based on default serialization based
+   * on {@link org.apache.druid.segment.data.GenericIndexed} in {@link org.apache.druid.segment.serde.ComplexColumnSerializer}.
+   * @param offset object to retrieve row number
+   * @return the {@link ColumnValueSelector} object
+   */
+  @Override
+  default ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return new ObjectColumnSelector()
     {
@@ -71,7 +86,7 @@ public class ComplexColumn implements BaseColumn
       @Override
       public Class classOfObject()
       {
-        return index.getClazz();
+        return getClazz();
       }
 
       @Override
@@ -80,11 +95,5 @@ public class ComplexColumn implements BaseColumn
         inspector.visit("column", ComplexColumn.this);
       }
     };
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
   }
 }

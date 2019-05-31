@@ -3,6 +3,7 @@ node_modules/
 resources/
 public/
 lib/*.css
+coverage/
 
 coordinator-console/
 pages/

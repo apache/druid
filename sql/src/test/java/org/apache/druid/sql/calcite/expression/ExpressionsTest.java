@@ -699,7 +699,19 @@ public class ExpressionsTest extends CalciteTestBase
             rexBuilder.makeLiteral("PT2H"),
             rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true)
         ),
-        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3)"),
+        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
+        DateTimes.of("2000-02-02T22:05:06").getMillis()
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new TimeShiftOperatorConversion().calciteOperator(),
+            inputRef("t"),
+            rexBuilder.makeLiteral("PT2H"),
+            rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
+            rexBuilder.makeLiteral("America/Los_Angeles")
+        ),
+        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
@@ -767,7 +779,7 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),1)"
+            "timestamp_shift(\"t\",concat('P', 13, 'M'),1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
@@ -817,7 +829,7 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1)"
+            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
@@ -832,7 +844,7 @@ public class ExpressionsTest extends CalciteTestBase
             inputRef("tstr"),
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"),
+        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 

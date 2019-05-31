@@ -384,7 +384,9 @@ public class MovingAverageQueryTest
         new ServiceEmitter("", "", null)
         {
           @Override
-          public void emit(Event event) {}
+          public void emit(Event event)
+          {
+          }
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );

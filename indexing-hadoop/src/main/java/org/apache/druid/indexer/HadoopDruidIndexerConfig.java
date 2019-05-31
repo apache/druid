@@ -375,6 +375,12 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public boolean isUseYarnRMJobStatusFallback()
+  {
+    return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
+  }
+
+
   public void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {
     this.hadoopJobIdFileName = hadoopJobIdFileName;

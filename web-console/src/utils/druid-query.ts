@@ -27,6 +27,7 @@ export function parseHtmlError(htmlStr: string): string | null {
   return htmlStr
     .substring(startIndex + 10, endIndex)
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, `'`)
     .replace(/&gt;/g, '>');
 }
 
