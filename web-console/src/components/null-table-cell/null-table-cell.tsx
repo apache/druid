@@ -35,6 +35,8 @@ export class NullTableCell extends React.Component<NullTableCellProps, {}> {
     } else if (value !== '' && value != null) {
       if (timestamp) {
         return <span className="null-table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
+      } else if (Array.isArray(value)) {
+        return `[${value.join(', ')}]`;
       } else {
         return value;
       }
