@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -211,7 +212,9 @@ public class VarianceSqlAggregatorTest
         holder.add(v);
       }
     } else {
-      holder.add(0.0f);
+      if (NullHandling.replaceWithDefault()) {
+        holder.add(0.0f);
+      }
     }
   }
 
