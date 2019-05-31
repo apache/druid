@@ -241,7 +241,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private interface Notice
   {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
+    void handle() throws ExecutionException, InterruptedException, TimeoutException;
   }
 
   private static class StatsFromTaskResult
