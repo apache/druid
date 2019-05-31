@@ -36,7 +36,6 @@
 
   <properties>
     <parquet.version>1.10.1</parquet.version>
-    <snappy.version>1.1.7.2</snappy.version>
   </properties>
   <dependencies>
     <dependency>
@@ -94,11 +93,6 @@
           <artifactId>slf4j-api</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
-      <version>${snappy.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
