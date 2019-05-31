@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
-  static final Configuration JSONPATH_CONFIGURATION =
+  private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
                    .jsonProvider(new GenericAvroJsonProvider())
                    .mappingProvider(new NotImplementedMappingProvider())
@@ -87,12 +87,10 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
 
-  private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString)
+  public AvroFlattenerMaker(final boolean binaryAsString)
   {
-    this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
   }
 
@@ -128,8 +126,8 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private Object transformValue(final Object field)
   {
-    if (fromPigAvroStorage && field instanceof GenericData.Array) {
-      return Lists.transform((List) field, item -> String.valueOf(((GenericRecord) item).get(0)));
+    if (field instanceof GenericData.Array) {
+      return Lists.transform((List<?>) field, String::valueOf);
     }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
@@ -142,7 +140,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       return field.toString();
     }
     if (field instanceof List) {
-      return ((List) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
+      return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
     return field;
   }
