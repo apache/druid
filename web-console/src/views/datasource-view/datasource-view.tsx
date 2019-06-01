@@ -35,7 +35,7 @@ import {
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
-  QueryManager, TableColumnSelectorHandler
+  QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -99,7 +99,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
-  private tableColumnSelectionHandler: TableColumnSelectorHandler;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -122,7 +122,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       dropReloadInterval: ''
     };
 
-    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }

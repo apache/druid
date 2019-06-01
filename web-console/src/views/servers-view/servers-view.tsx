@@ -35,7 +35,7 @@ import {
   formatBytes,
   formatBytesCompact, LocalStorageKeys, lookupBy,
   queryDruidSql,
-  QueryManager, TableColumnSelectorHandler
+  QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
@@ -110,7 +110,7 @@ interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>
 
 export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
-  private serverTableColumnSelectorHandler: TableColumnSelectorHandler;
+  private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: ServersViewProps, context: any) {
     super(props, context);
@@ -125,7 +125,7 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       middleManagerEnableWorkerHost: null
     };
 
-    this.serverTableColumnSelectorHandler = new TableColumnSelectorHandler(
+    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
@@ -239,7 +239,7 @@ ORDER BY "rank" DESC, "server" DESC`);
 
   renderServersTable() {
     const { servers, serversLoading, serversError, serverFilter, groupServersBy } = this.state;
-    const { serverTableColumnSelectorHandler } = this;
+    const { serverTableColumnSelectionHandler } = this;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -267,7 +267,7 @@ ORDER BY "rank" DESC, "server" DESC`);
           accessor: 'server',
           width: 300,
           Aggregated: row => '',
-          show: serverTableColumnSelectorHandler.showColumn('Server')
+          show: serverTableColumnSelectionHandler.showColumn('Server')
         },
         {
           Header: 'Type',
@@ -277,7 +277,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'server_type', value) }); }}>{value}</a>;
           },
-          show: serverTableColumnSelectorHandler.showColumn('Type')
+          show: serverTableColumnSelectionHandler.showColumn('Type')
         },
         {
           Header: 'Tier',
@@ -286,13 +286,13 @@ ORDER BY "rank" DESC, "server" DESC`);
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
           },
-          show: serverTableColumnSelectorHandler.showColumn('Tier')
+          show: serverTableColumnSelectionHandler.showColumn('Tier')
         },
         {
           Header: 'Host',
           accessor: 'host',
           Aggregated: () => '',
-          show: serverTableColumnSelectorHandler.showColumn('Host')
+          show: serverTableColumnSelectionHandler.showColumn('Host')
         },
         {
           Header: 'Port',
@@ -308,7 +308,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             return ports.join(', ') || 'No port';
           },
           Aggregated: () => '',
-          show: serverTableColumnSelectorHandler.showColumn('Port')
+          show: serverTableColumnSelectionHandler.showColumn('Port')
         },
         {
           Header: 'Curr size',
@@ -327,7 +327,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectorHandler.showColumn('Curr size')
+          show: serverTableColumnSelectionHandler.showColumn('Curr size')
         },
         {
           Header: 'Max size',
@@ -346,7 +346,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectorHandler.showColumn('Max size')
+          show: serverTableColumnSelectionHandler.showColumn('Max size')
         },
         {
           Header: 'Usage',
@@ -398,7 +398,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                 return '';
             }
           },
-          show: serverTableColumnSelectorHandler.showColumn('Usage')
+          show: serverTableColumnSelectionHandler.showColumn('Usage')
         },
         {
           Header: 'Detail',
@@ -446,7 +446,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
           },
-          show: serverTableColumnSelectorHandler.showColumn('Detail')
+          show: serverTableColumnSelectionHandler.showColumn('Detail')
         },
         {
           Header: ActionCell.COLUMN_LABEL,
@@ -460,7 +460,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const workerActions = this.getWorkerActions(row.value.host, disabled);
             return <ActionCell actions={workerActions}/>;
           },
-          show: serverTableColumnSelectorHandler.showColumn(ActionCell.COLUMN_LABEL)
+          show: serverTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
         }
       ]}
     />;
@@ -539,7 +539,7 @@ ORDER BY "rank" DESC, "server" DESC`);
   render() {
     const { goToSql, noSqlMode } = this.props;
     const { groupServersBy } = this.state;
-    const { serverTableColumnSelectorHandler } = this;
+    const { serverTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
       <ViewControlBar label="Servers">
@@ -564,8 +564,8 @@ ORDER BY "rank" DESC, "server" DESC`);
         }
         <TableColumnSelector
           columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectorHandler.changeTableColumnSelector(column)}
-          tableColumnsHidden={serverTableColumnSelectorHandler.hiddenColumns}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
+          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>
       {this.renderServersTable()}

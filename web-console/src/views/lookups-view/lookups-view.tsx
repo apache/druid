@@ -29,7 +29,7 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
-  TableColumnSelectorHandler
+  TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
@@ -63,7 +63,7 @@ export interface LookupsViewState {
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
   private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
-  private tableColumnSelectionHandler: TableColumnSelectorHandler;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: LookupsViewProps, context: any) {
     super(props, context);
@@ -83,7 +83,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       deleteLookupTier: null,
       deleteLookupName: null
     };
-    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }

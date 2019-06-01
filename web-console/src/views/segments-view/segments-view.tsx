@@ -34,7 +34,7 @@ import {
   queryDruidSql,
   QueryManager,
   sqlQueryCustomTableFilter,
-  TableColumnSelectorHandler
+  TableColumnSelectionHandler
 } from '../../utils';
 
 import './segments-view.scss';
@@ -83,7 +83,7 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private tableColumnSelectionHandler: TableColumnSelectorHandler;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -159,7 +159,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       }
     });
 
-    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }

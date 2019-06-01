@@ -18,7 +18,7 @@
 
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
-export class TableColumnSelectorHandler {
+export class TableColumnSelectionHandler {
   tableName: LocalStorageKeys;
   hiddenColumns: string[];
   updateComponent: () => void;
