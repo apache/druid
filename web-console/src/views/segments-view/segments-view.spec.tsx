@@ -25,7 +25,7 @@ import * as React from 'react';
 import {SegmentsView} from '../segments-view/segments-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe segments-view', () => {
+describe('segments-view', () => {
   it('segments view snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView

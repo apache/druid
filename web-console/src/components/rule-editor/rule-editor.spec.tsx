@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import {Rule, RuleEditor} from './rule-editor';
 
-describe('describe rule editor', () => {
+describe('rule editor', () => {
   it('rule editor snapshot', () => {
     const ruleEditor =
     <RuleEditor

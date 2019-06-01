@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import {AutoForm} from './auto-form';
 
 
-describe('describe auto-form snapshot', () => {
+describe('auto-form snapshot', () => {
   it('auto-form snapshot', () => {
     const autoForm =
       <AutoForm

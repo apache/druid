@@ -25,7 +25,7 @@ import * as React from 'react';
 import {ServersView} from './servers-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe servers view', () => {
+describe('servers view', () => {
   it('action servers view', () => {
     const serversView = shallow(
       <ServersView

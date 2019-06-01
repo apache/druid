@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {AboutDialog} from './about-dialog';
 
 
-describe('describe about dialog', () => {
+describe('about dialog', () => {
   it('about dialog snapshot', () => {
     const aboutDialog =
      <AboutDialog

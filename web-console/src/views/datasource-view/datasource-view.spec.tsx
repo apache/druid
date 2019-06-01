@@ -21,7 +21,7 @@ import * as React from 'react';
 
 import {DatasourcesView} from './datasource-view';
 
-describe('describe data source view', () => {
+describe('data source view', () => {
   it('data source view snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView

@@ -22,12 +22,12 @@ import { render } from 'react-testing-library';
 
 import {SnitchDialog} from './snitch-dialog';
 
-describe('describe snitch dialog', () => {
+describe('snitch dialog', () => {
   it('snitch dialog snapshot', () => {
     const snitchDialog =
       <SnitchDialog
         onSave={() => null}
-        isOpen={true}
+        isOpen
       />;
     const { container, getByText } = render(snitchDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();

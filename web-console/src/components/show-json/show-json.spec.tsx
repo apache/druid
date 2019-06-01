@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import {ShowJson} from './show-json';
 
 
-describe('describe rule editor', () => {
+describe('rule editor', () => {
   it('rule editor snapshot', () => {
     const showJson =
       <ShowJson

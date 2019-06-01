@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import {SqlControl} from './sql-control';
 
-describe('describe sql control', () => {
+describe('sql control', () => {
   it('sql control snapshot', () => {
     const sqlControl = <SqlControl
       initSql={'test'}

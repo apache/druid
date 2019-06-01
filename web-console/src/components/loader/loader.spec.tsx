@@ -21,11 +21,10 @@ import { render } from 'react-testing-library';
 
 import { Loader} from './loader';
 
-describe('describe loader', () => {
+describe('loader', () => {
   it('loader snapshot', () => {
-    const loader =
-    <Loader
-      loading={true}
+    const loader = <Loader
+      loading
       loadingText={'test'}
     />;
     const { container, getByText } = render(loader);

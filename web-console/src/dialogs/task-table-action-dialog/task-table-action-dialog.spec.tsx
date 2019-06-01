@@ -24,7 +24,7 @@ import { render } from 'react-testing-library';
 import {TaskTableActionDialog} from './task-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
-describe('describe task table action dialog', () => {
+describe('task table action dialog', () => {
   it('task table action dialog snapshot', () => {
     const taskTableActionDialog =
       <TaskTableActionDialog

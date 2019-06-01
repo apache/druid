@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import { ViewControlBar } from './view-control-bar';
 
-describe('describe view control bar snapshot', () => {
+describe('view control bar snapshot', () => {
   it('view control bar snapshot snapshot', () => {
     const viewControlBar =
       <ViewControlBar label="A label">

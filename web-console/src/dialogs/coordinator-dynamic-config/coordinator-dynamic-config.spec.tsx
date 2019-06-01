@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {CoordinatorDynamicConfigDialog} from './coordinator-dynamic-config';
 
 
-describe('describe coordinator dynamic config', () => {
+describe('coordinator dynamic config', () => {
   it('coordinator dynamic config snapshot', () => {
     const coordinatorDynamicConfig =
       <CoordinatorDynamicConfigDialog

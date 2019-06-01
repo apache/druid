@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import {TableColumnSelector} from './table-column-selector';
 
-describe('describe table column', () => {
+describe('table column', () => {
   it('table column snapshot', () => {
     const tableColumn =
       <TableColumnSelector

@@ -25,7 +25,7 @@ import * as React from 'react';
 import {TasksView} from './tasks-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe tasks view', () => {
+describe('tasks view', () => {
   it('tasks view snapshot', () => {
     const taskView = shallow(
       <TasksView

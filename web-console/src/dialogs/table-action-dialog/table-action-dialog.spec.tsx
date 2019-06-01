@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {TableActionDialog} from './table-action-dialog';
 
 
-describe('describe table action dialog', () => {
+describe('table action dialog', () => {
   it('table action dialog snapshot', () => {
     const tableActionDialog =
       <TableActionDialog

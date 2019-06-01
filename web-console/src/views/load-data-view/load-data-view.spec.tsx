@@ -25,7 +25,7 @@ import {LoadDataView} from './load-data-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
 
-describe('describe load data view', () => {
+describe('load data view', () => {
   it('load data view snapshot', () => {
     const loadDataView = shallow(
       <LoadDataView

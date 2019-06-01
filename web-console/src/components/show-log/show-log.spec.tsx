@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import {ShowLog} from './show-log';
 
 
-describe('describe show log', () => {
+describe('show log', () => {
   it('describe show log', () => {
     const showLog =
       <ShowLog

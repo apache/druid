@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {QueryPlanDialog} from './query-plan-dialog';
 
 
-describe('describe query plan dialog', () => {
+describe('query plan dialog', () => {
   it('query plan dialog snapshot', () => {
     const queryPlanDialog =
       <QueryPlanDialog

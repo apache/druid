@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import {ExternalLink} from './external-link';
 
-describe('describe external link', () => {
+describe('external link', () => {
   it('external link snapshot', () => {
     const externalLink =
       <ExternalLink href={'http://test/'}>

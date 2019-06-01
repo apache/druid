@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import {JSONInput} from './json-input';
 
-describe('describe json input', () => {
+describe('json input', () => {
   it('json input snapshot', () => {
     const jsonCollapse =
     <JSONInput

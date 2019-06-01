@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {HistoryDialog} from './history-dialog';
 
 
-describe('describe history dialog', () => {
+describe('history dialog', () => {
   it('history dialog snapshot', () => {
     const historyDialog =
       <HistoryDialog

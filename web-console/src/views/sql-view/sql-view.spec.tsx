@@ -25,7 +25,7 @@ import * as React from 'react';
 import {SqlView} from './sql-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe sql view', () => {
+describe('sql view', () => {
   it('sql view snapshot', () => {
     const sqlView = shallow(
       <SqlView

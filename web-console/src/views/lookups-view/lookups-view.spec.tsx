@@ -25,7 +25,7 @@ import * as React from 'react';
 import {LookupsView} from './lookups-view';
 
 Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe lookups view', () => {
+describe('lookups view', () => {
   it('lookups view snapshot', () => {
     const lookupsView = shallow(
       <LookupsView/>);

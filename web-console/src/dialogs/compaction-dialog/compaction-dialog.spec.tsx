@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {CompactionDialog} from './compaction-dialog';
 
 
-describe('describe compaction dialog', () => {
+describe('compaction dialog', () => {
   it('compaction dialog snapshot', () => {
     const compactionDialog =
       <CompactionDialog

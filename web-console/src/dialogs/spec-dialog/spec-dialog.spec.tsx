@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 
 import {SpecDialog} from './spec-dialog';
 
-describe('describe spec dialog', () => {
+describe('spec dialog', () => {
   it('spec dialog snapshot', () => {
     const specDialog =
       <SpecDialog

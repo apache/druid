@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {AsyncActionDialog} from './async-action-dialog';
 
 
-describe('describe async action dialog', () => {
+describe('async action dialog', () => {
   it('async action dialog snapshot', () => {
     const asyncActionDialog =
       <AsyncActionDialog

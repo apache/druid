@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {RetentionDialog} from './retention-dialog';
 
 
-describe('describe retention dialog', () => {
+describe('retention dialog', () => {
   it('retention dialog snapshot', () => {
     const retentionDialog =
       <RetentionDialog

@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import { ActionCell} from './action-cell';
 
-describe('describe action cell', () => {
+describe('action cell', () => {
   it('action cell snapshot', () => {
     const actionCell = <ActionCell
       onDetail={() => null}

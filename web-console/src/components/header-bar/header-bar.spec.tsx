@@ -21,7 +21,7 @@ import * as React from 'react';
 
 import {HeaderBar} from './header-bar';
 
-describe('describe header bar', () => {
+describe('header bar', () => {
   it('header bar snapshot', () => {
     const headerBar = shallow(
       <HeaderBar

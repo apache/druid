@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import {JSONCollapse} from './json-collapse';
 
 
-describe('describe json collapse ', () => {
+describe('json collapse ', () => {
   it('json collapse snapshot', () => {
     const jsonCollapse =
     <JSONCollapse
