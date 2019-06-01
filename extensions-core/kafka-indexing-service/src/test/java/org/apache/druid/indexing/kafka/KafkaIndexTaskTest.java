@@ -831,15 +831,8 @@ public class KafkaIndexTaskTest
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
 
-    // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData();
+
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
@@ -2301,15 +2294,7 @@ public class KafkaIndexTaskTest
     maxRowsPerSegment = Integer.MAX_VALUE;
     maxTotalRows = null;
 
-    // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData();
 
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");

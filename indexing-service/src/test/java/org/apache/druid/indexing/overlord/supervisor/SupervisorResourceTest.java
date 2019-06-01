@@ -69,7 +69,8 @@ public class SupervisorResourceTest extends EasyMockSupport
   {
     supervisorResource = new SupervisorResource(
         taskMaster,
-        new AuthorizerMapper(null) {
+        new AuthorizerMapper(null)
+        {
           @Override
           public Authorizer getAuthorizer(String name)
           {
@@ -92,7 +93,8 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecPost()
   {
-    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null) {
+    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
+    {
 
       @Override
       public List<String> getDataSources()
@@ -132,7 +134,8 @@ public class SupervisorResourceTest extends EasyMockSupport
   public void testSpecGetAll()
   {
     Set<String> supervisorIds = ImmutableSet.of("id1", "id2");
-    SupervisorSpec spec1 = new TestSupervisorSpec("id1", null, null) {
+    SupervisorSpec spec1 = new TestSupervisorSpec("id1", null, null)
+    {
 
       @Override
       public List<String> getDataSources()
@@ -140,7 +143,8 @@ public class SupervisorResourceTest extends EasyMockSupport
         return Collections.singletonList("datasource1");
       }
     };
-    SupervisorSpec spec2 = new TestSupervisorSpec("id2", null, null) {
+    SupervisorSpec spec2 = new TestSupervisorSpec("id2", null, null)
+    {
 
       @Override
       public List<String> getDataSources()
@@ -183,7 +187,8 @@ public class SupervisorResourceTest extends EasyMockSupport
   {
     Set<String> supervisorIds = ImmutableSet.of("id1", "id2");
 
-    SupervisorSpec spec1 = new TestSupervisorSpec("id1", null, null) {
+    SupervisorSpec spec1 = new TestSupervisorSpec("id1", null, null)
+    {
 
       @Override
       public List<String> getDataSources()
@@ -191,7 +196,8 @@ public class SupervisorResourceTest extends EasyMockSupport
         return Collections.singletonList("datasource1");
       }
     };
-    SupervisorSpec spec2 = new TestSupervisorSpec("id2", null, null) {
+    SupervisorSpec spec2 = new TestSupervisorSpec("id2", null, null)
+    {
 
       @Override
       public List<String> getDataSources()
@@ -290,9 +296,40 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testSpecGetHealth()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(3);
+    EasyMock.expect(supervisorManager.isSupervisorHealthy("my-id")).andReturn(Optional.of(true));
+    EasyMock.expect(supervisorManager.isSupervisorHealthy("my-id-2")).andReturn(Optional.of(false));
+    EasyMock.expect(supervisorManager.isSupervisorHealthy("my-id-3")).andReturn(Optional.absent());
+    replayAll();
+
+    Response response = supervisorResource.specGetHealth("my-id");
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("healthy", true), response.getEntity());
+
+    response = supervisorResource.specGetHealth("my-id-2");
+
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("healthy", false), response.getEntity());
+
+    response = supervisorResource.specGetHealth("my-id-3");
+
+    Assert.assertEquals(404, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "[my-id-3] does not exist or health check not implemented"),
+        response.getEntity()
+    );
+
+    verifyAll();
+  }
+
+  @Test
   public void testSpecSuspend()
   {
-    TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true) {
+    TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true)
+    {
       @Override
       public List<String> getDataSources()
       {
@@ -329,7 +366,8 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecResume()
   {
-    TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false) {
+    TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false)
+    {
       @Override
       public List<String> getDataSources()
       {
@@ -872,8 +910,14 @@ public class SupervisorResourceTest extends EasyMockSupport
     Capture<String> id1 = Capture.newInstance();
     Capture<String> id2 = Capture.newInstance();
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
-    EasyMock.expect(supervisorManager.resetSupervisor(EasyMock.capture(id1), EasyMock.anyObject(DataSourceMetadata.class))).andReturn(true);
-    EasyMock.expect(supervisorManager.resetSupervisor(EasyMock.capture(id2), EasyMock.anyObject(DataSourceMetadata.class))).andReturn(false);
+    EasyMock.expect(supervisorManager.resetSupervisor(
+        EasyMock.capture(id1),
+        EasyMock.anyObject(DataSourceMetadata.class)
+    )).andReturn(true);
+    EasyMock.expect(supervisorManager.resetSupervisor(
+        EasyMock.capture(id2),
+        EasyMock.anyObject(DataSourceMetadata.class)
+    )).andReturn(false);
     replayAll();
 
     Response response = supervisorResource.reset("my-id");

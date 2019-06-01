@@ -44,6 +44,12 @@ public interface Supervisor
     return ImmutableMap.of();
   }
 
+  @Nullable
+  default Boolean isHealthy()
+  {
+    return null; // default implementation for interface compatability; returning null since true or false is misleading
+  }
+
   void reset(DataSourceMetadata dataSourceMetadata);
 
   /**
