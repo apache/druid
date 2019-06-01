@@ -296,7 +296,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onAction: () => this.props.goToLoadDataView(id)
         });
     }
-    actions.push({
+    actions.push(
+      {
         icon: IconNames.STEP_BACKWARD,
         title: 'Reset',
         onAction: () => this.setState({ resetSupervisorId: id })
@@ -312,8 +313,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
-      );
-    // @ts-ignore
+    );
     return actions;
   }
 
