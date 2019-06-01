@@ -986,7 +986,11 @@ BINARY/JAVA-CORE
       * com.google.code.findbugs:jsr305
 
     This product bundles Protocol Buffers version 3.1.0, copyright Google, Inc.,
-     which is available under a BSD-3-Clause License. For details, see licenses/bin/protobuf-java.BSD3.
+     which is available under a BSD-3-Clause License, except src/google/protobuf/stubs/atomicops_internals_generic_gcc.h
+     and src/google/protobuf/stubs/atomicops_internals_power.h files
+     which are copyrighted by Red Hat Inc and Bloomberg Finance LP, respectively, and available under a BSD-3-Clause.
+     For details, see licenses/bin/protobuf-java.BSD3, licenses/bin/protobuf-java-redhat.BSD3,
+     and licenses/bin/protobuf-java-bloomberg.BSD3.
       * com.google.protobuf:protobuf-java
 
     This product bundles JLine version 0.9.94, copyright Marc Prud'hommeaux,
