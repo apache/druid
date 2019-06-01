@@ -23,6 +23,7 @@ import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionIcon } from '../../components/action-icon/action-icon';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -570,7 +571,7 @@ GROUP BY 1`);
                 className="clickable-cell"
               >
                 {text}&nbsp;
-                <a>&#x270E;</a>
+                <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
             show: tableColumnSelectionHandler.showColumn('Retention')
@@ -597,7 +598,7 @@ GROUP BY 1`);
                 onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
               >
                 {text}&nbsp;
-                <a>&#x270E;</a>
+                <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
             show: tableColumnSelectionHandler.showColumn('Compaction')
