@@ -1,6 +1,18 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`table cell matches snapshot 1`] = `
+exports[`table cell matches snapshot array 1`] = `[a, b, c]`;
+
+exports[`table cell matches snapshot null 1`] = `
+<span
+  class="table-cell null"
+>
+  null
+</span>
+`;
+
+exports[`table cell matches snapshot simple 1`] = `Hello World`;
+
+exports[`table cell matches snapshot truncate 1`] = `
 <span
   class="table-cell truncated"
 >

@@ -22,7 +22,40 @@ import { render } from 'react-testing-library';
 import {TableCell} from './table-cell';
 
 describe('table cell', () => {
-  it('matches snapshot', () => {
+  it('matches snapshot null', () => {
+    const tableCell = <TableCell
+      value={null}
+      unparseable={false}
+      timestamp={false}
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot simple', () => {
+    const tableCell = <TableCell
+      value="Hello World"
+      unparseable={false}
+      timestamp={false}
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot array', () => {
+    const tableCell = <TableCell
+      value={['a', 'b', 'c']}
+      unparseable={false}
+      timestamp={false}
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot truncate', () => {
     const longString = new Array(100).join('test');
     const tableCell = <TableCell
       value={longString}
@@ -30,7 +63,7 @@ describe('table cell', () => {
       timestamp={false}
     />;
 
-    const { container, getByText } = render(tableCell);
+    const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
