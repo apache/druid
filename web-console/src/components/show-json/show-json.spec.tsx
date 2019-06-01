@@ -21,7 +21,6 @@ import { render } from 'react-testing-library';
 
 import { ShowJson } from './show-json';
 
-
 describe('rule editor', () => {
   it('matches snapshot', () => {
     const showJson =

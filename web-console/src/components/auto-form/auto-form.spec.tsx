@@ -21,7 +21,6 @@ import { render } from 'react-testing-library';
 
 import { AutoForm } from './auto-form';
 
-
 describe('auto-form snapshot', () => {
   it('matches snapshot', () => {
     const autoForm =

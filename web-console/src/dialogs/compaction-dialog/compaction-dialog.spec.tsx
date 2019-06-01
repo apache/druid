@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { CompactionDialog } from './compaction-dialog';
-
 
 describe('compaction dialog', () => {
   it('matches snapshot', () => {

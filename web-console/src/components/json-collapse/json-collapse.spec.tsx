@@ -22,7 +22,6 @@ import { render } from 'react-testing-library';
 
 import { JSONCollapse } from './json-collapse';
 
-
 describe('json collapse ', () => {
   it('matches snapshot', () => {
     const jsonCollapse =

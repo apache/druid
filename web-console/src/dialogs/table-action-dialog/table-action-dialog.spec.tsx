@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { TableActionDialog } from './table-action-dialog';
-
 
 describe('table action dialog', () => {
   it('matches snapshot', () => {

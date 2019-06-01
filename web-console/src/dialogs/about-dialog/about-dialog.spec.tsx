@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { AboutDialog } from './about-dialog';
-
 
 describe('about dialog', () => {
   it('matches snapshot', () => {

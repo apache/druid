@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 

@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { AsyncActionDialog } from './async-action-dialog';
-
 
 describe('async action dialog', () => {
   it('matches snapshot', () => {

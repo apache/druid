@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import { LookupEditDialog } from '..';
+import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
 
 describe('overload dynamic config', () => {
   it('matches snapshot', () => {

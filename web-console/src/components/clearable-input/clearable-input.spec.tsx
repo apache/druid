@@ -21,7 +21,6 @@ import { render } from 'react-testing-library';
 
 import { ClearableInput } from './clearable-input';
 
-
 describe('decribe clearable-input', () => {
   it('matches snapshot', () => {
     const centerMessage =

@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
-
 
 describe('lookup edit dialog', () => {
   it('matches snapshot', () => {

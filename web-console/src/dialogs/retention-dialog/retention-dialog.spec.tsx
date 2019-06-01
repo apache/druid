@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { RetentionDialog } from './retention-dialog';
-
 
 describe('retention dialog', () => {
   it('matches snapshot', () => {
