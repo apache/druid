@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-
-import { Intent } from '@blueprintjs/core';
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
