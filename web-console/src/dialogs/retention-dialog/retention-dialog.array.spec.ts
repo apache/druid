@@ -54,4 +54,4 @@ describe('reorderArray', () => {
     expect(newArray).toEqual(['a', 'b', 'd', 'c', 'e']);
     expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
-})
+});

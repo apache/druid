@@ -29,7 +29,7 @@ describe('table action dialog', () => {
       <TableActionDialog
         sideButtonMetadata={[{icon: 'badge', text: 'test' }]}
         onClose={() => null}
-        isOpen={true}
+        isOpen
       />;
     const { container, getByText } = render(tableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();

@@ -26,7 +26,7 @@ describe('overload dynamic config', () => {
   it('overload dynamic config snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
-        isOpen={true}
+        isOpen
         onClose={() => null}
         onSubmit={() => null}
         onChange={() => null}

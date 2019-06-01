@@ -32,7 +32,7 @@ describe('async action dialog', () => {
         confirmButtonText={'test'}
         successText={'test'}
         failText={'test'}
-      />
+      />;
     const { container, getByText } = render(asyncActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });

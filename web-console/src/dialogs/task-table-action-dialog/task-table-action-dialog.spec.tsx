@@ -31,7 +31,7 @@ describe('task table action dialog', () => {
         taskId={'test'}
         actions={[basicAction]}
         onClose={() => null}
-        isOpen={true}
+        isOpen
       />;
     const { container, getByText } = render(taskTableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
