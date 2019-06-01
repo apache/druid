@@ -18,8 +18,8 @@
 
 import {Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea} from '@blueprintjs/core';
 import axios from 'axios';
+import * as copy from 'copy-to-clipboard';
 import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -116,18 +116,17 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
               onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
             />
           }
-          <CopyToClipboard text={logValue}>
-            <Button
-              text="Copy"
-              minimal
-              onClick={() => {
-                AppToaster.show({
-                  message: 'Copied log to clipboard',
-                  intent: Intent.SUCCESS
-                });
-              }}
-            />
-          </CopyToClipboard>
+          <Button
+            text="Copy"
+            minimal
+            onClick={() => {
+              copy(logValue, { format: 'text/plain' });
+              AppToaster.show({
+                message: 'Log copied to clipboard',
+                intent: Intent.SUCCESS
+              });
+            }}
+          />
           <Button
             text="View full log"
             minimal

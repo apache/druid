@@ -17,9 +17,12 @@
  * limitations under the License.
  */
 
+import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import * as copy from 'copy-to-clipboard';
 import * as React from 'react';
 
+import { AppToaster } from '../../singletons/toaster';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
@@ -37,17 +40,26 @@ export class TableCell extends React.Component<NullTableCellProps, {}> {
     if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
     return <span className="table-cell truncated">
       {TableCell.shortenString(str)}
-      <ActionIcon icon={IconNames.CODE}/>
+      <ActionIcon
+        icon={IconNames.CLIPBOARD}
+        onClick={() => {
+          copy(str, { format: 'text/plain' });
+          AppToaster.show({
+            message: 'Value copied to clipboard',
+            intent: Intent.SUCCESS
+          });
+        }}
+      />
     </span>;
   }
 
   static shortenString(str: string): string {
     // Print something like:
     // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
-    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW + 15);
+    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW + 17);
     const prefix = str.substr(0, str.length - (omit + 10));
     const suffix = str.substr(str.length - 10);
-    return `${prefix}...${omit} omitted...${suffix}`;
+    return `${prefix} ...${omit} omitted... ${suffix}`;
   }
 
   render() {

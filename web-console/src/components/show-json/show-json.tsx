@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
+import * as copy from 'copy-to-clipboard';
 import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -76,18 +76,17 @@ export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
           }
-          <CopyToClipboard text={jsonValue}>
-            <Button
-              text="Copy"
-              minimal
-              onClick={() => {
-                AppToaster.show({
-                  message: 'Copied JSON to clipboard',
-                  intent: Intent.SUCCESS
-                });
-              }}
-            />
-          </CopyToClipboard>
+          <Button
+            text="Copy"
+            minimal
+            onClick={() => {
+              copy(jsonValue, { format: 'text/plain' });
+              AppToaster.show({
+                message: 'JSON copied to clipboard',
+                intent: Intent.SUCCESS
+              });
+            }}
+          />
           <Button
             text="View raw"
             minimal
