@@ -21,7 +21,7 @@ import { render } from 'react-testing-library';
 
 import { MenuCheckbox } from './menu-checkbox';
 
-describe('menuCheckBox ', () => {
+describe('menu checkbox', () => {
   it('matches snapshot', () => {
     const menuCheckbox =
     <MenuCheckbox/>;
