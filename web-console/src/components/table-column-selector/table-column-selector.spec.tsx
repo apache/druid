@@ -19,12 +19,12 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {TableColumnSelection} from './table-column-selection';
+import {TableColumnSelector} from './table-column-selector';
 
 describe('describe table column', () => {
   it('table column snapshot', () => {
     const tableColumn =
-      <TableColumnSelection
+      <TableColumnSelector
         columns={['a', 'b', 'c']}
         onChange={(column: string) => {}}
         tableColumnsHidden={['a', 'b', 'c']}

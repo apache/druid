@@ -17,7 +17,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
       onClick={[Function]}
       text="Add"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Lookup name",

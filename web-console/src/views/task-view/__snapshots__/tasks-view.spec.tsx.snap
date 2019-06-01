@@ -30,7 +30,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
           onClick={[Function]}
           text="Submit supervisor"
         />
-        <TableColumnSelection
+        <TableColumnSelector
           columns={
             Array [
               "Datasource",
@@ -361,7 +361,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             text="Submit task"
           />
         </Blueprint3.Popover>
-        <TableColumnSelection
+        <TableColumnSelector
           columns={
             Array [
               "Task ID",

@@ -22,7 +22,7 @@ import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { ActionCell, RuleEditor, TableColumnSelection, ViewControlBar} from '../../components';
+import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar} from '../../components';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -34,7 +34,7 @@ import {
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
-  QueryManager, TableColumnSelectionHandler
+  QueryManager, TableColumnSelectorHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -98,7 +98,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private tableColumnSelectionHandler: TableColumnSelectorHandler;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -121,7 +121,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       dropReloadInterval: ''
     };
 
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
       LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
@@ -669,9 +669,9 @@ GROUP BY 1`);
           label="Show disabled"
           onChange={() => this.toggleDisabled(showDisabled)}
         />
-        <TableColumnSelection
+        <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

@@ -18,7 +18,7 @@
 
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
-export class TableColumnSelectionHandler {
+export class TableColumnSelectorHandler {
   tableName: LocalStorageKeys;
   hiddenColumns: string[];
   updateComponent: () => void;
@@ -43,7 +43,7 @@ export class TableColumnSelectionHandler {
     }
   }
 
-  changeTableColumnSelection(column: string): void {
+  changeTableColumnSelector(column: string): void {
     let newSelections: string[];
     if (this.hiddenColumns.includes(column)) {
       newSelections = this.hiddenColumns.filter(c => c !== column);

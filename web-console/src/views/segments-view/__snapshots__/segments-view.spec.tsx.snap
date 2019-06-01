@@ -18,7 +18,7 @@ exports[`describe segments-view segments view snapshot 1`] = `
       onClick={[Function]}
       text="Go to SQL"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Segment ID",

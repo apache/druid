@@ -31,6 +31,6 @@ export * from './rule-editor/rule-editor';
 export * from './show-json/show-json';
 export * from './show-log/show-log';
 export * from './sql-control/sql-control';
-export * from './table-column/table-column-selection';
+export * from './table-column-selector/table-column-selector';
 export * from './view-control-bar/view-control-bar';
 export * from './clearable-input/clearable-input';

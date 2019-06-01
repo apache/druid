@@ -40,7 +40,7 @@ exports[`describe servers view action servers view 1`] = `
       onClick={[Function]}
       text="Go to SQL"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Server",

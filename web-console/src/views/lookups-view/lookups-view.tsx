@@ -23,13 +23,13 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import {ActionCell, TableColumnSelection, ViewControlBar} from '../../components';
+import {ActionCell, TableColumnSelector, ViewControlBar} from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
-  TableColumnSelectionHandler
+  TableColumnSelectorHandler
 } from '../../utils';
 import {BasicAction, basicActionsToMenu} from '../../utils/basic-action';
 
@@ -63,7 +63,7 @@ export interface LookupsViewState {
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
   private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private tableColumnSelectionHandler: TableColumnSelectorHandler;
 
   constructor(props: LookupsViewProps, context: any) {
     super(props, context);
@@ -83,7 +83,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       deleteLookupTier: null,
       deleteLookupName: null
     };
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
       LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
@@ -359,9 +359,9 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             onClick={() => this.openLookupEditDialog('', '')}
           />
         }
-        <TableColumnSelection
+        <TableColumnSelector
           columns={tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

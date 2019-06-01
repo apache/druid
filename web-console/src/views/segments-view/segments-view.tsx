@@ -24,7 +24,7 @@ import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components';
+import { TableColumnSelector, ViewControlBar } from '../../components';
 import {
   addFilter,
   formatBytes,
@@ -34,7 +34,7 @@ import {
   queryDruidSql,
   QueryManager,
   sqlQueryCustomTableFilter,
-  TableColumnSelectionHandler
+  TableColumnSelectorHandler
 } from '../../utils';
 
 import './segments-view.scss';
@@ -83,7 +83,7 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private tableColumnSelectionHandler: TableColumnSelectorHandler;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -159,7 +159,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       }
     });
 
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+    this.tableColumnSelectionHandler = new TableColumnSelectorHandler(
       LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
@@ -400,9 +400,9 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             onClick={() => goToSql(this.segmentsSqlQueryManager.getLastQuery().query)}
           />
         }
-        <TableColumnSelection
+        <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>
