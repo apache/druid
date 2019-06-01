@@ -223,11 +223,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<Throwable>(
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      buildSegmentsSavedParseExceptions = new CircularBuffer<Throwable>(
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
     }
