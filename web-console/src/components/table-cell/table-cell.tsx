@@ -19,7 +19,7 @@
 
 import * as React from 'react';
 
-import './null-table-cell.scss';
+import './table-cell.scss';
 
 export interface NullTableCellProps extends React.Props<any> {
   value?: any;
@@ -27,21 +27,21 @@ export interface NullTableCellProps extends React.Props<any> {
   unparseable?: boolean;
 }
 
-export class NullTableCell extends React.Component<NullTableCellProps, {}> {
+export class TableCell extends React.Component<NullTableCellProps, {}> {
   render() {
     const { value, timestamp, unparseable } = this.props;
     if (unparseable) {
-      return <span className="null-table-cell unparseable">{`error`}</span>;
+      return <span className="table-cell unparseable">error</span>;
     } else if (value !== '' && value != null) {
       if (timestamp) {
-        return <span className="null-table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
+        return <span className="table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
       } else if (Array.isArray(value)) {
         return `[${value.join(', ')}]`;
       } else {
         return value;
       }
     } else {
-      return <span className="null-table-cell null">null</span>;
+      return <span className="table-cell null">null</span>;
     }
   }
 }

@@ -26,7 +26,7 @@ export * from './json-collapse/json-collapse';
 export * from './json-input/json-input';
 export * from './loader/loader';
 export * from './menu-checkbox/menu-checkbox';
-export * from './null-table-cell/null-table-cell';
+export * from './table-cell/table-cell';
 export * from './rule-editor/rule-editor';
 export * from './show-json/show-json';
 export * from './show-log/show-log';

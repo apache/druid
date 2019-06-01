@@ -19,12 +19,12 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {NullTableCell} from './null-table-cell';
+import {TableCell} from './table-cell';
 
 describe('describe nullTable', () => {
   it('nullTable snapshot', () => {
     const nullTableCell =
-    <NullTableCell
+    <TableCell
       value={'test'}
       unparseable={false}
       timestamp={false}
