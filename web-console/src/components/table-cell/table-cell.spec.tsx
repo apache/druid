@@ -44,9 +44,20 @@ describe('table cell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot array', () => {
+  it('matches snapshot array short', () => {
     const tableCell = <TableCell
       value={['a', 'b', 'c']}
+      unparseable={false}
+      timestamp={false}
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot array long', () => {
+    const tableCell = <TableCell
+      value={Array.from(new Array(100)).map((_, i) => i)}
       unparseable={false}
       timestamp={false}
     />;

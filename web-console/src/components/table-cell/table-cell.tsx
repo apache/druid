@@ -70,7 +70,7 @@ export class TableCell extends React.Component<NullTableCellProps, {}> {
       if (timestamp) {
         return <span className="table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
       } else if (Array.isArray(value)) {
-        return `[${value.join(', ')}]`;
+        return TableCell.possiblyTruncate(`[${value.join(', ')}]`);
       } else {
         return TableCell.possiblyTruncate(String(value));
       }
