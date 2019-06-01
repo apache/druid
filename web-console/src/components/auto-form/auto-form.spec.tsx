@@ -23,7 +23,7 @@ import { AutoForm } from './auto-form';
 
 
 describe('auto-form snapshot', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const autoForm =
       <AutoForm
         fields={[{name: 'testOne', type: 'number'},

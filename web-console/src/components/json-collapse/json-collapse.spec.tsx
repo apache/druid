@@ -24,7 +24,7 @@ import { JSONCollapse } from './json-collapse';
 
 
 describe('json collapse ', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const jsonCollapse =
     <JSONCollapse
       buttonText={'test'}

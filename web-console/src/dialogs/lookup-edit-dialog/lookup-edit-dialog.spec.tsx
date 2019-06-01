@@ -24,7 +24,7 @@ import { LookupEditDialog } from './lookup-edit-dialog';
 
 
 describe('lookup edit dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
         isOpen

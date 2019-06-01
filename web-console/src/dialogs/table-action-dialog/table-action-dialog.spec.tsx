@@ -24,7 +24,7 @@ import { TableActionDialog } from './table-action-dialog';
 
 
 describe('table action dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const tableActionDialog =
       <TableActionDialog
         sideButtonMetadata={[{icon: 'badge', text: 'test' }]}

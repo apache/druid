@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`action cell makes snapshot 1`] = `
+exports[`action cell matches snapshot 1`] = `
 <div
   class="action-cell"
 >

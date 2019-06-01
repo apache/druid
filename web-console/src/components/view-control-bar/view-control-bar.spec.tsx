@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { ViewControlBar } from './view-control-bar';
 
 describe('view control bar snapshot', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const viewControlBar =
       <ViewControlBar label="A label">
         <div>Hello world</div>

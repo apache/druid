@@ -24,7 +24,7 @@ import { HistoryDialog } from './history-dialog';
 
 
 describe('history dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const historyDialog =
       <HistoryDialog
         historyRecords={[{auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name : 'test' })}, {auditTime: 'test', auditInfo: 'test',  payload: JSON.stringify({ name : 'test' })}]}

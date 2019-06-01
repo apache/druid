@@ -22,7 +22,7 @@ import * as React from 'react';
 import { DatasourcesView } from './datasource-view';
 
 describe('data source view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
         goToSql={(initSql: string) => {}}

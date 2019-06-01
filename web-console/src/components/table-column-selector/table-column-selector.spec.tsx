@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { TableColumnSelector } from './table-column-selector';
 
 describe('table column', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const tableColumn =
       <TableColumnSelector
         columns={['a', 'b', 'c']}

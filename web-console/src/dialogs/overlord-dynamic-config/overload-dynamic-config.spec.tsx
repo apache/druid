@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import { LookupEditDialog } from '..';
 
 describe('overload dynamic config', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
         isOpen

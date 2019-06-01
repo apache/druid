@@ -22,7 +22,7 @@ import * as React from 'react';
 import { HomeView } from './home-view';
 
 describe('home view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const homeView = shallow(
       <HomeView
         noSqlMode={false}

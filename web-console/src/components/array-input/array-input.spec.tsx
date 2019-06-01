@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import { ArrayInput } from './array-input';
 
 describe('array input', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const arrayInput = <ArrayInput
       values={['apple', 'banana', 'pear']}
       className={'test'}

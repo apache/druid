@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { MenuCheckbox } from './menu-checkbox';
 
 describe('menuCheckBox ', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const menuCheckbox =
     <MenuCheckbox/>;
     const { container } = render(menuCheckbox);

@@ -24,7 +24,7 @@ import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config';
 
 
 describe('coordinator dynamic config', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const coordinatorDynamicConfig =
       <CoordinatorDynamicConfigDialog
         onClose={() => null}

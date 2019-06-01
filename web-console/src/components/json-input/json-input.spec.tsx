@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { JSONInput } from './json-input';
 
 describe('json input', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const jsonCollapse =
     <JSONInput
       onChange={(newJSONValue: any) => {}}

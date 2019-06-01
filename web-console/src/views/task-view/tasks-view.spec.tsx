@@ -22,7 +22,7 @@ import * as React from 'react';
 import { TasksView } from './tasks-view';
 
 describe('tasks view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const taskView = shallow(
       <TasksView
         openDialog={'test'}

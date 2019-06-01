@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`segments-view makes snapshot 1`] = `
+exports[`segments-view matches snapshot 1`] = `
 <div
   className="segments-view app-view"
 >

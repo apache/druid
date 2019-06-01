@@ -22,7 +22,7 @@ import * as React from 'react';
 import { SqlView } from './sql-view';
 
 describe('sql view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const sqlView = shallow(
       <SqlView
         initSql={'test'}

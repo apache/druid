@@ -24,7 +24,7 @@ import { RetentionDialog } from './retention-dialog';
 
 
 describe('retention dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const retentionDialog =
       <RetentionDialog
         datasource={'test'}

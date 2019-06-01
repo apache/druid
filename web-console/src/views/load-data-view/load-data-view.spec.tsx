@@ -22,7 +22,7 @@ import * as React from 'react';
 import { LoadDataView } from './load-data-view';
 
 describe('load data view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const loadDataView = shallow(
       <LoadDataView
         goToTask={(taskId: string | null) => {}}

@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { SqlControl } from './sql-control';
 
 describe('sql control', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const sqlControl = <SqlControl
       initSql={'test'}
       onRun={(query, context, wrapQuery) => {}}

@@ -24,7 +24,7 @@ import { AsyncActionDialog } from './async-action-dialog';
 
 
 describe('async action dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const asyncActionDialog =
       <AsyncActionDialog
         action={() => {return  Promise.resolve(); }}

@@ -22,7 +22,7 @@ import * as React from 'react';
 import { SegmentsView } from '../segments-view/segments-view';
 
 describe('segments-view', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView
         datasource={'test'}

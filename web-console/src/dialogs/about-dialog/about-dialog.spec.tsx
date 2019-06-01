@@ -24,7 +24,7 @@ import { AboutDialog } from './about-dialog';
 
 
 describe('about dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const aboutDialog =
      <AboutDialog
        onClose={() => null}

@@ -23,7 +23,7 @@ import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
 describe('supervisor table action dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const supervisorTableActionDialog =
       <SupervisorTableActionDialog
         supervisorId={'test'}

@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import { SpecDialog } from './spec-dialog';
 
 describe('spec dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const specDialog =
       <SpecDialog
         onSubmit={(spec: JSON) => null}

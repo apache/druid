@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { Loader } from './loader';
 
 describe('loader', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const loader = <Loader
       loading
       loadingText={'test'}

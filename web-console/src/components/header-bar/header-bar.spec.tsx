@@ -22,7 +22,7 @@ import * as React from 'react';
 import { HeaderBar } from './header-bar';
 
 describe('header bar', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const headerBar = shallow(
       <HeaderBar
         active={'load-data'}

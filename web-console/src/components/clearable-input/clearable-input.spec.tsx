@@ -23,7 +23,7 @@ import { ClearableInput } from './clearable-input';
 
 
 describe('decribe clearable-input', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const centerMessage =
       <ClearableInput
         className={'testClassName'}

@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { CenterMessage } from './center-message';
 
 describe('decribe center-message', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const centerMessage =
       <CenterMessage>
         <div>Hello World</div>

@@ -23,7 +23,7 @@ import { ShowJson } from './show-json';
 
 
 describe('rule editor', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const showJson =
       <ShowJson
         endpoint={'test'}

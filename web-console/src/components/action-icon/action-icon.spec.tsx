@@ -23,7 +23,7 @@ import { ActionIcon } from './action-icon';
 import { IconNames } from '@blueprintjs/icons';
 
 describe('action icon', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD}/>;
     const { container } = render(actionIcon);
     expect(container.firstChild).toMatchSnapshot();

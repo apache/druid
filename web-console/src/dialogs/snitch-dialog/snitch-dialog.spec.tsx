@@ -23,7 +23,7 @@ import { render } from 'react-testing-library';
 import { SnitchDialog } from './snitch-dialog';
 
 describe('snitch dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const snitchDialog =
       <SnitchDialog
         onSave={() => null}

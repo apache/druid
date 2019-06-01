@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`sql control makes snapshot 1`] = `
+exports[`sql control matches snapshot 1`] = `
 <div
   class="sql-control"
 >

@@ -24,7 +24,7 @@ import { CompactionDialog } from './compaction-dialog';
 
 
 describe('compaction dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const compactionDialog =
       <CompactionDialog
         onClose={() => null}

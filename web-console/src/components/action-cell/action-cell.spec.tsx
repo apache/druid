@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { ActionCell } from './action-cell';
 
 describe('action cell', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const actionCell = <ActionCell
       onDetail={() => null}
       actions={[]}

@@ -25,7 +25,7 @@ import { TaskTableActionDialog } from './task-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
 describe('task table action dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const taskTableActionDialog =
       <TaskTableActionDialog
         taskId={'test'}

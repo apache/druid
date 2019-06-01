@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { Rule, RuleEditor } from './rule-editor';
 
 describe('rule editor', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const ruleEditor =
     <RuleEditor
       rule={{type: 'loadForever' }}

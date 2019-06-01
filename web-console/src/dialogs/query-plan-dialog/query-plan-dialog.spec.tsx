@@ -24,7 +24,7 @@ import { QueryPlanDialog } from './query-plan-dialog';
 
 
 describe('query plan dialog', () => {
-  it('makes snapshot', () => {
+  it('matches snapshot', () => {
     const queryPlanDialog =
       <QueryPlanDialog
         explainResult={'test'}
