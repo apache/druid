@@ -16,18 +16,11 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+.action-icon {
+  color: #48aff0;
+  cursor: pointer;
 
-import { ActionCell} from './action-cell';
-
-describe('describe action cell', () => {
-  it('action cell snapshot', () => {
-    const actionCell = <ActionCell
-      onDetail={() => null}
-      actions={[]}
-    />;
-    const { container, getByText } = render(actionCell);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  &:hover {
+    color: #4891d2;
+  }
+}

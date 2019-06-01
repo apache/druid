@@ -17,7 +17,10 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
+
+import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
@@ -28,6 +31,25 @@ export interface NullTableCellProps extends React.Props<any> {
 }
 
 export class TableCell extends React.Component<NullTableCellProps, {}> {
+  static MAX_CHARS_TO_SHOW = 50;
+
+  static possiblyTruncate(str: string): React.ReactNode {
+    if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
+    return <span className="table-cell truncated">
+      {TableCell.shortenString(str)}
+      <ActionIcon icon={IconNames.CODE}/>
+    </span>;
+  }
+
+  static shortenString(str: string): string {
+    // Print something like:
+    // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
+    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW + 15);
+    const prefix = str.substr(0, str.length - (omit + 10));
+    const suffix = str.substr(str.length - 10);
+    return `${prefix}...${omit} omitted...${suffix}`;
+  }
+
   render() {
     const { value, timestamp, unparseable } = this.props;
     if (unparseable) {
@@ -38,7 +60,7 @@ export class TableCell extends React.Component<NullTableCellProps, {}> {
       } else if (Array.isArray(value)) {
         return `[${value.join(', ')}]`;
       } else {
-        return value;
+        return TableCell.possiblyTruncate(String(value));
       }
     } else {
       return <span className="table-cell null">null</span>;

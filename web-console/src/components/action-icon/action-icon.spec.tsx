@@ -19,15 +19,12 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import { ActionCell} from './action-cell';
+import { ActionIcon } from './action-icon';
 
-describe('describe action cell', () => {
+describe('action icon', () => {
   it('action cell snapshot', () => {
-    const actionCell = <ActionCell
-      onDetail={() => null}
-      actions={[]}
-    />;
-    const { container, getByText } = render(actionCell);
+    const actionIcon = <ActionIcon/>;
+    const { container, getByText } = render(actionIcon);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

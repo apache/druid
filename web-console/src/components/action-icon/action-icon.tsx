@@ -16,18 +16,26 @@
  * limitations under the License.
  */
 
+import { Icon, IconName } from '@blueprintjs/core';
+import classNames from 'classnames';
 import * as React from 'react';
-import { render } from 'react-testing-library';
 
-import { ActionCell} from './action-cell';
+import './action-icon.scss';
 
-describe('describe action cell', () => {
-  it('action cell snapshot', () => {
-    const actionCell = <ActionCell
-      onDetail={() => null}
-      actions={[]}
+export interface ActionIconProps extends React.Props<any> {
+  className?: string;
+  icon?: IconName;
+  onClick?: () => void;
+}
+
+export class ActionIcon extends React.Component<ActionIconProps, {}> {
+  render() {
+    const { className, icon, onClick } = this.props;
+
+    return <Icon
+      className={classNames('action-icon', className)}
+      icon={icon}
+      onClick={onClick}
     />;
-    const { container, getByText } = render(actionCell);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  }
+}

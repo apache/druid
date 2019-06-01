@@ -28,4 +28,10 @@
   &.timestamp {
     font-weight: bold;
   }
+
+  &.truncated {
+    .action-icon {
+      margin-left: 5px;
+    }
+  }
 }
