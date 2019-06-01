@@ -151,8 +151,11 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
         const seen = countBy(datasources, (x: any) => x.datasource);
 
-        const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
-        const disabled: string[] = disabledResp.data.filter((d: string) => !seen[d]);
+        let disabled: string [] = [];
+        if (this.state.showDisabled) {
+          const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled' );
+          disabled = disabledResp.data.filter((d: string) => !seen[d]);
+        }
 
         const rulesResp = await axios.get('/druid/coordinator/v1/rules');
         const rules = rulesResp.data;
@@ -393,6 +396,13 @@ GROUP BY 1`);
         }
       }
     });
+  }
+
+  private  toggleDisabled(showDisabled: boolean) {
+    if (!showDisabled) {
+      this.datasourceQueryManager.rerunLastQuery();
+    }
+    this.setState({showDisabled: !showDisabled});
   }
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
@@ -657,7 +667,7 @@ GROUP BY 1`);
         <Switch
           checked={showDisabled}
           label="Show disabled"
-          onChange={() => this.setState({ showDisabled: !showDisabled })}
+          onChange={() => this.toggleDisabled(showDisabled)}
         />
         <TableColumnSelection
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
