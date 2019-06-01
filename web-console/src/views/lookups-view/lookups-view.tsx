@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import {Button, Icon, Intent, Popover, Position} from '@blueprintjs/core';
+import { Button, Icon, Intent, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import {ActionCell, TableColumnSelector, ViewControlBar} from '../../components';
+import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -31,7 +31,7 @@ import {
   QueryManager,
   TableColumnSelectorHandler
 } from '../../utils';
-import {BasicAction, basicActionsToMenu} from '../../utils/basic-action';
+import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './lookups-view.scss';
 

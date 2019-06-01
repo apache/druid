@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import { Loader} from './loader';
+import { Loader } from './loader';
 
 describe('loader', () => {
-  it('loader snapshot', () => {
+  it('makes snapshot', () => {
     const loader = <Loader
       loading
       loadingText={'test'}

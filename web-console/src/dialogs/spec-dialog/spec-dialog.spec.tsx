@@ -20,10 +20,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {SpecDialog} from './spec-dialog';
+import { SpecDialog } from './spec-dialog';
 
 describe('spec dialog', () => {
-  it('spec dialog snapshot', () => {
+  it('makes snapshot', () => {
     const specDialog =
       <SpecDialog
         onSubmit={(spec: JSON) => null}

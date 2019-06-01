@@ -19,11 +19,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {ShowJson} from './show-json';
+import { ShowJson } from './show-json';
 
 
 describe('rule editor', () => {
-  it('rule editor snapshot', () => {
+  it('makes snapshot', () => {
     const showJson =
       <ShowJson
         endpoint={'test'}

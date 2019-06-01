@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {RetentionDialog} from './retention-dialog';
+import { RetentionDialog } from './retention-dialog';
 
 
 describe('retention dialog', () => {
-  it('retention dialog snapshot', () => {
+  it('makes snapshot', () => {
     const retentionDialog =
       <RetentionDialog
         datasource={'test'}

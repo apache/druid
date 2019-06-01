@@ -22,7 +22,7 @@ import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar} from '../../components';
+import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {

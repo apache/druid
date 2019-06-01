@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {LookupEditDialog} from './lookup-edit-dialog';
+import { LookupEditDialog } from './lookup-edit-dialog';
 
 
 describe('lookup edit dialog', () => {
-  it('lookup edit dialog snapshot', () => {
+  it('makes snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
         isOpen

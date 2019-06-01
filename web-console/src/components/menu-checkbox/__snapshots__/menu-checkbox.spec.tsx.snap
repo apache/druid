@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe menuCheckBox  menuCheckbox snapshot 1`] = `
+exports[`menuCheckBox  makes snapshot 1`] = `
 <li
   class="menu-checkbox"
 >

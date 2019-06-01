@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {AsyncActionDialog} from './async-action-dialog';
+import { AsyncActionDialog } from './async-action-dialog';
 
 
 describe('async action dialog', () => {
-  it('async action dialog snapshot', () => {
+  it('makes snapshot', () => {
     const asyncActionDialog =
       <AsyncActionDialog
         action={() => {return  Promise.resolve(); }}

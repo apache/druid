@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {Rule, RuleEditor} from './rule-editor';
+import { Rule, RuleEditor } from './rule-editor';
 
 describe('rule editor', () => {
-  it('rule editor snapshot', () => {
+  it('makes snapshot', () => {
     const ruleEditor =
     <RuleEditor
       rule={{type: 'loadForever' }}

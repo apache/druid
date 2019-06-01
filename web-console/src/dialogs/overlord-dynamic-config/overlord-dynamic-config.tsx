@@ -21,8 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
-import { ExternalLink } from '../../components/external-link/external-link';
+import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';

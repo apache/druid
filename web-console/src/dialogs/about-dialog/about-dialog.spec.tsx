@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {AboutDialog} from './about-dialog';
+import { AboutDialog } from './about-dialog';
 
 
 describe('about dialog', () => {
-  it('about dialog snapshot', () => {
+  it('makes snapshot', () => {
     const aboutDialog =
      <AboutDialog
        onClose={() => null}

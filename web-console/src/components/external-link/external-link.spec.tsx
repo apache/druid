@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {ExternalLink} from './external-link';
+import { ExternalLink } from './external-link';
 
 describe('external link', () => {
-  it('external link snapshot', () => {
+  it('makes snapshot', () => {
     const externalLink =
       <ExternalLink href={'http://test/'}>
         <div>hello world</div>

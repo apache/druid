@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {CompactionDialog} from './compaction-dialog';
+import { CompactionDialog } from './compaction-dialog';
 
 
 describe('compaction dialog', () => {
-  it('compaction dialog snapshot', () => {
+  it('makes snapshot', () => {
     const compactionDialog =
       <CompactionDialog
         onClose={() => null}

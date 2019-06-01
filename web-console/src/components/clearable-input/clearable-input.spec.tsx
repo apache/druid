@@ -19,11 +19,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {ClearableInput} from './clearable-input';
+import { ClearableInput } from './clearable-input';
 
 
 describe('decribe clearable-input', () => {
-  it('clearable-input snapshot', () => {
+  it('makes snapshot', () => {
     const centerMessage =
       <ClearableInput
         className={'testClassName'}

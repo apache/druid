@@ -20,10 +20,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {SnitchDialog} from './snitch-dialog';
+import { SnitchDialog } from './snitch-dialog';
 
 describe('snitch dialog', () => {
-  it('snitch dialog snapshot', () => {
+  it('makes snapshot', () => {
     const snitchDialog =
       <SnitchDialog
         onSave={() => null}

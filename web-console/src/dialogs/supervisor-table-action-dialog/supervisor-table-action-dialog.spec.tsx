@@ -19,11 +19,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {SupervisorTableActionDialog} from './supervisor-table-action-dialog';
+import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
 describe('supervisor table action dialog', () => {
-  it('supervisor table action dialog snapshot', () => {
+  it('makes snapshot', () => {
     const supervisorTableActionDialog =
       <SupervisorTableActionDialog
         supervisorId={'test'}

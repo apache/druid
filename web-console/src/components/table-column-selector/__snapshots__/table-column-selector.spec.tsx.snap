@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe table column table column snapshot 1`] = `
+exports[`table column makes snapshot 1`] = `
 <span
   class="bp3-popover-wrapper table-column-selector"
 >

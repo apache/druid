@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {TableColumnSelector} from './table-column-selector';
+import { TableColumnSelector } from './table-column-selector';
 
 describe('table column', () => {
-  it('table column snapshot', () => {
+  it('makes snapshot', () => {
     const tableColumn =
       <TableColumnSelector
         columns={['a', 'b', 'c']}

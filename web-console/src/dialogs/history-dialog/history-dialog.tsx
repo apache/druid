@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {Card, Dialog, Divider, IDialogProps} from '@blueprintjs/core';
+import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
 import * as React from 'react';
 
-import { JSONCollapse } from '../../components/json-collapse/json-collapse';
+import { JSONCollapse } from '../../components';
 
 import './history-dialog.scss';
 

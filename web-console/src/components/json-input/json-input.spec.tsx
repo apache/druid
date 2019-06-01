@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {JSONInput} from './json-input';
+import { JSONInput } from './json-input';
 
 describe('json input', () => {
-  it('json input snapshot', () => {
+  it('makes snapshot', () => {
     const jsonCollapse =
     <JSONInput
       onChange={(newJSONValue: any) => {}}

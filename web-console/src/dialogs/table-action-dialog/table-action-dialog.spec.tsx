@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {TableActionDialog} from './table-action-dialog';
+import { TableActionDialog } from './table-action-dialog';
 
 
 describe('table action dialog', () => {
-  it('table action dialog snapshot', () => {
+  it('makes snapshot', () => {
     const tableActionDialog =
       <TableActionDialog
         sideButtonMetadata={[{icon: 'badge', text: 'test' }]}

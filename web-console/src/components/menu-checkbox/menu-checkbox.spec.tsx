@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {MenuCheckbox} from './menu-checkbox';
+import { MenuCheckbox } from './menu-checkbox';
 
 describe('menuCheckBox ', () => {
-  it('menuCheckbox snapshot', () => {
+  it('makes snapshot', () => {
     const menuCheckbox =
     <MenuCheckbox/>;
     const { container, getByText } = render(menuCheckbox);

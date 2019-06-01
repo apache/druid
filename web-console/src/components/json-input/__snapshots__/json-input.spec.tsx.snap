@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe json input json input snapshot 1`] = `
+exports[`json input makes snapshot 1`] = `
 <div
   class=" ace_editor ace-tm"
   id="ace-editor"

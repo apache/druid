@@ -17,15 +17,15 @@
  */
 
 
-import {Intent} from '@blueprintjs/core';
+import { Intent } from '@blueprintjs/core';
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {TaskTableActionDialog} from './task-table-action-dialog';
+import { TaskTableActionDialog } from './task-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
 describe('task table action dialog', () => {
-  it('task table action dialog snapshot', () => {
+  it('makes snapshot', () => {
     const taskTableActionDialog =
       <TaskTableActionDialog
         taskId={'test'}

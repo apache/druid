@@ -24,7 +24,7 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar} from '../../components';
+import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog, TaskTableActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {

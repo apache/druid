@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import { ActionCell} from './action-cell';
+import { ActionCell } from './action-cell';
 
 describe('action cell', () => {
-  it('action cell snapshot', () => {
+  it('makes snapshot', () => {
     const actionCell = <ActionCell
       onDetail={() => null}
       actions={[]}

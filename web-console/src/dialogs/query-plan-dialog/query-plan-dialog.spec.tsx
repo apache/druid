@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {QueryPlanDialog} from './query-plan-dialog';
+import { QueryPlanDialog } from './query-plan-dialog';
 
 
 describe('query plan dialog', () => {
-  it('query plan dialog snapshot', () => {
+  it('makes snapshot', () => {
     const queryPlanDialog =
       <QueryPlanDialog
         explainResult={'test'}

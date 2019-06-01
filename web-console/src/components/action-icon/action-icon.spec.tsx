@@ -22,7 +22,7 @@ import { render } from 'react-testing-library';
 import { ActionIcon } from './action-icon';
 
 describe('action icon', () => {
-  it('action cell snapshot', () => {
+  it('makes snapshot', () => {
     const actionIcon = <ActionIcon/>;
     const { container, getByText } = render(actionIcon);
     expect(container.firstChild).toMatchSnapshot();

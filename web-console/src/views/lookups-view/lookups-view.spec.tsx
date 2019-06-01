@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 import * as React from 'react';
 
-import {LookupsView} from './lookups-view';
+import { LookupsView } from './lookups-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
 describe('lookups view', () => {
-  it('lookups view snapshot', () => {
+  it('makes snapshot', () => {
     const lookupsView = shallow(
       <LookupsView/>);
     expect(lookupsView).toMatchSnapshot();

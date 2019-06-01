@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {SqlControl} from './sql-control';
+import { SqlControl } from './sql-control';
 
 describe('sql control', () => {
-  it('sql control snapshot', () => {
+  it('makes snapshot', () => {
     const sqlControl = <SqlControl
       initSql={'test'}
       onRun={(query, context, wrapQuery) => {}}

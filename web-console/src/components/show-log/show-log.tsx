@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea} from '@blueprintjs/core';
+import { Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
 import * as copy from 'copy-to-clipboard';
 import * as React from 'react';

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe auto-form snapshot auto-form snapshot 1`] = `
+exports[`auto-form snapshot makes snapshot 1`] = `
 <div
   class="auto-form"
 >

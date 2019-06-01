@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 import * as React from 'react';
 
-import {TasksView} from './tasks-view';
+import { TasksView } from './tasks-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
 describe('tasks view', () => {
-  it('tasks view snapshot', () => {
+  it('makes snapshot', () => {
     const taskView = shallow(
       <TasksView
         openDialog={'test'}

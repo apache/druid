@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {HistoryDialog} from './history-dialog';
+import { HistoryDialog } from './history-dialog';
 
 
 describe('history dialog', () => {
-  it('history dialog snapshot', () => {
+  it('makes snapshot', () => {
     const historyDialog =
       <HistoryDialog
         historyRecords={[{auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name : 'test' })}, {auditTime: 'test', auditInfo: 'test',  payload: JSON.stringify({ name : 'test' })}]}

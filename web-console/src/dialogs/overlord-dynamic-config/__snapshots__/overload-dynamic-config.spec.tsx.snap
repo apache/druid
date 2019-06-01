@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe overload dynamic config overload dynamic config snapshot 1`] = `
+exports[`overload dynamic config makes snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -231,7 +231,7 @@ exports[`describe overload dynamic config overload dynamic config snapshot 1`] =
           />
         </div>
         <div
-          class=" ace_editor ace-tm lookup-edit-dialog-textarea"
+          class=" ace_editor ace-solarized-dark ace_dark lookup-edit-dialog-textarea"
           id="brace-editor"
           style="width: auto; height: 40vh;"
         >

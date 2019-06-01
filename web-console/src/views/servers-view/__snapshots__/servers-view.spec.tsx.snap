@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe servers view action servers view 1`] = `
+exports[`servers view action servers view 1`] = `
 <div
   className="servers-view app-view"
 >

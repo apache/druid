@@ -20,10 +20,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {ArrayInput} from './array-input';
+import { ArrayInput } from './array-input';
 
 describe('array input', () => {
-  it('array input snapshot', () => {
+  it('makes snapshot', () => {
     const arrayInput = <ArrayInput
       values={['apple', 'banana', 'pear']}
       className={'test'}

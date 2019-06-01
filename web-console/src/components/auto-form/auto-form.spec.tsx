@@ -19,11 +19,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {AutoForm} from './auto-form';
+import { AutoForm } from './auto-form';
 
 
 describe('auto-form snapshot', () => {
-  it('auto-form snapshot', () => {
+  it('makes snapshot', () => {
     const autoForm =
       <AutoForm
         fields={[{name: 'testOne', type: 'number'},

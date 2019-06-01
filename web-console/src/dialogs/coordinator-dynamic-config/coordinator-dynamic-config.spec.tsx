@@ -20,11 +20,11 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {CoordinatorDynamicConfigDialog} from './coordinator-dynamic-config';
+import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config';
 
 
 describe('coordinator dynamic config', () => {
-  it('coordinator dynamic config snapshot', () => {
+  it('makes snapshot', () => {
     const coordinatorDynamicConfig =
       <CoordinatorDynamicConfigDialog
         onClose={() => null}

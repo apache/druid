@@ -20,10 +20,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {LookupEditDialog} from '..';
+import { LookupEditDialog } from '..';
 
 describe('overload dynamic config', () => {
-  it('overload dynamic config snapshot', () => {
+  it('makes snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
         isOpen

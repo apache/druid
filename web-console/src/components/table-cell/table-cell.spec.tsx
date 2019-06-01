@@ -19,7 +19,7 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {TableCell} from './table-cell';
+import { TableCell } from './table-cell';
 
 describe('table cell', () => {
   it('matches snapshot null', () => {

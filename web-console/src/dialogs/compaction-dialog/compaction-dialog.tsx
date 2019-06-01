@@ -19,7 +19,7 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import * as React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
+import { AutoForm } from '../../components';
 
 import './compaction-dialog.scss';
 

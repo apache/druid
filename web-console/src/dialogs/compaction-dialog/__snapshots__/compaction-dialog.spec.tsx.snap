@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe compaction dialog compaction dialog snapshot 1`] = `
+exports[`compaction dialog makes snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -404,7 +404,7 @@ exports[`describe compaction dialog compaction dialog snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-tm"
+                class=" ace_editor ace-solarized-dark ace_dark"
                 id="ace-editor"
                 style="width: 100%; height: 8vh;"
               >
@@ -595,7 +595,7 @@ exports[`describe compaction dialog compaction dialog snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-tm"
+                class=" ace_editor ace-solarized-dark ace_dark"
                 id="ace-editor"
                 style="width: 100%; height: 8vh;"
               >

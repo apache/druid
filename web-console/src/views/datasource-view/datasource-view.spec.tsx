@@ -19,10 +19,10 @@
 import { shallow } from 'enzyme';
 import * as React from 'react';
 
-import {DatasourcesView} from './datasource-view';
+import { DatasourcesView } from './datasource-view';
 
 describe('data source view', () => {
-  it('data source view snapshot', () => {
+  it('makes snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
         goToSql={(initSql: string) => {}}
