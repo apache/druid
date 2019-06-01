@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
@@ -88,6 +89,16 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new RegexpExtractExpr(newArg));
+      }
+
+      @Override
+      public BindingDetails analyzeInputs()
+      {
+        final String identifier = arg.getIdentifierIfIdentifier();
+        if (identifier == null) {
+          return arg.analyzeInputs();
+        }
+        return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
       }
     }
     return new RegexpExtractExpr(arg);

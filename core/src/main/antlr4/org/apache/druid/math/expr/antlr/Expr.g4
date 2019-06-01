@@ -29,13 +29,13 @@ expr : 'null'                                         # null
      | DOUBLE                                         # doubleExpr
      | LONG                                           # longExpr
      | STRING                                         # string
-     | '[' DOUBLE  (','? DOUBLE)* ']'                 # doubleArray
-     | '[' LONG (','? LONG)* ']'                      # longArray
-     | '[' STRING (','? STRING)* ']'                  # stringArray
+     | '[' DOUBLE  (',' DOUBLE)* ']'                 # doubleArray
+     | '[' LONG (',' LONG)* ']'                      # longArray
+     | '[' STRING (',' STRING)* ']'                  # stringArray
      | '[]'                                           # emptyArray
      ;
 
-lambda : (IDENTIFIER | '(' IDENTIFIER (','? IDENTIFIER)* ')') '->' expr
+lambda : (IDENTIFIER | '(' (IDENTIFIER (',' IDENTIFIER)*)? ')') '->' expr
        ;
 
 fnArgs : expr (',' expr)*                             # functionArgs

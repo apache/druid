@@ -720,7 +720,7 @@ public class MultiValuedDimensionTest
         .setVirtualColumns(
             new ExpressionVirtualColumn(
                 "tt",
-                "foldr((tag, acc) -> concat(acc, tag), tags, '')",
+                "fold((tag, acc) -> concat(acc, tag), tags, '')",
                 ValueType.STRING,
                 TestExprMacroTable.INSTANCE
             )
@@ -770,7 +770,7 @@ public class MultiValuedDimensionTest
         .setVirtualColumns(
             new ExpressionVirtualColumn(
                 "tt",
-                "foldr((tag, acc) -> concat(concat(acc, case_searched(acc == '', '', ', '), concat('foo', tag)))), tags, '')",
+                "fold((tag, acc) -> concat(concat(acc, case_searched(acc == '', '', ', '), concat('foo', tag)))), tags, '')",
                 ValueType.STRING,
                 TestExprMacroTable.INSTANCE
             )
@@ -803,7 +803,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); identifier [tags] used as both scalar and array"
+        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()
@@ -838,7 +838,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); identifier [tags] used as both scalar and array"
+        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()

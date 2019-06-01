@@ -102,6 +102,12 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new TimestampFormatExpr(newArg));
       }
+
+      @Override
+      public BindingDetails analyzeInputs()
+      {
+        return arg.analyzeInputs();
+      }
     }
 
     return new TimestampFormatExpr(arg);

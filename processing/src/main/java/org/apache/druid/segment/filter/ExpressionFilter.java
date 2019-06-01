@@ -21,13 +21,11 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -50,7 +48,7 @@ public class ExpressionFilter implements Filter
   public ExpressionFilter(final Supplier<Expr> expr)
   {
     this.expr = expr;
-    this.requiredBindings = Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(expr.get())));
+    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getFreeVariables());
   }
 
   @Override

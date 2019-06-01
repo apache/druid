@@ -201,34 +201,34 @@ public class FunctionTest
   @Test
   public void testArrayContains()
   {
-    assertExpr("array_contains([1 2 3], 2)", "true");
-    assertExpr("array_contains([1 2 3], 4)", "false");
-    assertExpr("array_contains([1 2 3], [2 3])", "true");
-    assertExpr("array_contains([1 2 3], [3 4])", "false");
-    assertExpr("array_contains(b, [3 4])", "true");
+    assertExpr("array_contains([1, 2, 3], 2)", "true");
+    assertExpr("array_contains([1, 2, 3], 4)", "false");
+    assertExpr("array_contains([1, 2, 3], [2, 3])", "true");
+    assertExpr("array_contains([1, 2, 3], [3, 4])", "false");
+    assertExpr("array_contains(b, [3, 4])", "true");
   }
 
   @Test
   public void testArrayOverlap()
   {
-    assertExpr("array_overlap([1 2 3], [2 4 6])", "true");
-    assertExpr("array_overlap([1 2 3], [4 5 6])", "false");
+    assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", "true");
+    assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", "false");
   }
 
   @Test
   public void testArrayAppend()
   {
-    assertExpr("array_append([1 2 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertExpr("array_append([1 2 3], 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
   }
 
   @Test
   public void testArrayConcat()
   {
-    assertExpr("array_concat([1 2 3], [2 4 6])", new Long[]{1L, 2L, 3L, 2L, 4L, 6L});
-    assertExpr("array_concat([1 2 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertExpr("array_concat(0, [1 2 3])", new Long[]{0L, 1L, 2L, 3L});
-    assertExpr("array_concat(map(y -> y * 3, b), [1 2 3])", new Double[]{1.0, 2.0, 3.3, 1.0, 2.0, 3.0});
+    assertExpr("array_concat([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 2L, 4L, 6L});
+    assertExpr("array_concat([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_concat(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertExpr("array_concat(map(y -> y * 3, b), [1, 2, 3])", new Long[]{3L, 6L, 9L, 12L, 15L, 1L, 2L, 3L});
     assertExpr("array_concat(0, 1)", new Long[]{0L, 1L});
   }
 
@@ -255,7 +255,7 @@ public class FunctionTest
     assertExpr("cast([1, 2, 3], 'DOUBLE_ARRAY')", new Double[]{1.0, 2.0, 3.0});
     assertExpr("cast(c, 'LONG_ARRAY')", new Long[]{3L, 4L, 5L});
     assertExpr("cast(string_to_array(array_to_string(b, ','), ','), 'LONG_ARRAY')", new Long[]{1L, 2L, 3L, 4L, 5L});
-    assertExpr("cast(['1.0' '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
+    assertExpr("cast(['1.0', '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

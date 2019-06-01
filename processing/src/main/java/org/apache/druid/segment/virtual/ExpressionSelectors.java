@@ -135,7 +135,8 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final Parser.BindingDetails exprDetails = Parser.examineBindings(expression);
+    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
+    Parser.validateExpr(expression, exprDetails);
     final List<String> columns = exprDetails.getRequiredColumns();
 
     if (columns.size() == 1) {
@@ -194,7 +195,7 @@ public class ExpressionSelectors
     }
 
 
-    final Expr.ObjectBinding bindings = createBindings(expression, columnSelectorFactory);
+    final Expr.ObjectBinding bindings = createBindings(exprDetails, columnSelectorFactory);
 
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
@@ -202,7 +203,12 @@ public class ExpressionSelectors
     }
 
     if (unknownIfArrays.size() > 0) {
-      return new OpportunisticMultiValueStringExpressionColumnValueSelector(finalExpr, bindings, unknownIfArrays);
+      return new OpportunisticMultiValueStringExpressionColumnValueSelector(
+          finalExpr,
+          exprDetails,
+          bindings,
+          unknownIfArrays
+      );
     }
     // No special optimization.
     return new ExpressionColumnValueSelector(finalExpr, bindings);
@@ -214,7 +220,8 @@ public class ExpressionSelectors
       final ExtractionFn extractionFn
   )
   {
-    final Parser.BindingDetails exprDetails = Parser.examineBindings(expression);
+    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
+    Parser.validateExpr(expression, exprDetails);
     final List<String> columns = exprDetails.getRequiredColumns();
 
 
@@ -385,10 +392,13 @@ public class ExpressionSelectors
     }
   }
 
-  private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
+  private static Expr.ObjectBinding createBindings(
+      Expr.BindingDetails bindingDetails,
+      ColumnSelectorFactory columnSelectorFactory
+  )
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = Parser.findRequiredBindings(expression);
+    final List<String> columns = bindingDetails.getRequiredColumns();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);

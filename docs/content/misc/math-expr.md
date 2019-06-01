@@ -182,7 +182,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | `map(lambda,arr)` | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
 | `cartesian_map(lambda,arr1,arr2,...)` | applies a transform specified by a multi argument lambda expression to all elements of the cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
 | `filter(lambda,arr)` | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
-| `foldr(lambda,arr)` | right folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
-| `cartesian_foldr(lambda,arr1,arr2,...)` | right folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| `fold(lambda,arr)` | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
+| `cartesian_fold(lambda,arr1,arr2,...)` | folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
 | `any(lambda,arr)` | returns true if any element in the array matches the lambda expression |
 | `all(lambda,arr)` | returns true if all elements in the array matches the lambda expression |

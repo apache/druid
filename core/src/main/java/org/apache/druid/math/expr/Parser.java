@@ -25,8 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -37,13 +37,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.antlr.ExprLexer;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -162,12 +158,6 @@ public class Parser
   {
     Preconditions.checkArgument(unapplied.size() > 0);
 
-    // special handle if expr is just array identifier or array is being directly cast, that doesn't count
-    String s = Parser.getIdentifierOrCastIdentifier(expr);
-    if (s != null) {
-      return expr;
-    }
-
     ApplyFunction fn;
     final LambdaExpr lambdaExpr;
     final List<Expr> args;
@@ -189,7 +179,7 @@ public class Parser
               Set<Expr> arrayInputs = arrayFn.getArrayInputs(fnExpr.args);
               List<Expr> newArgs = new ArrayList<>();
               for (Expr arg : fnExpr.args) {
-                if (Parser.getIdentifierOrCastIdentifier(arg) == null && arrayInputs.contains(arg)) {
+                if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
                   Expr newArg = applyUnappliedIdentifiers(arg, unapplied);
                   newArgs.add(newArg);
                 } else {
@@ -204,7 +194,9 @@ public class Parser
           }
         }
     );
-    final Set<String> expectedArrays = Parser.findArrayFnBindings(newExpr);
+
+    Expr.BindingDetails newExprBindings = newExpr.analyzeInputs();
+    final Set<String> expectedArrays = newExprBindings.getArrayVariables();
     List<String> remainingUnappliedArgs =
         unapplied.stream().filter(x -> !expectedArrays.contains(x)).collect(Collectors.toList());
 
@@ -247,8 +239,9 @@ public class Parser
    */
   private static ApplyFunctionExpr liftApplyLambda(ApplyFunctionExpr expr, List<String> unappliedArgs)
   {
+    Expr.BindingDetails lambdaBinding = expr.lambdaExpr.analyzeInputs();
     // this will _not_ include the lambda identifiers.. anything in this list needs to be applied
-    List<IdentifierExpr> unappliedLambdaBindings = Parser.findRequiredBindings(expr.lambdaExpr)
+    List<IdentifierExpr> unappliedLambdaBindings = lambdaBinding.getFreeVariables()
                                                          .stream()
                                                          .filter(unappliedArgs::contains)
                                                          .map(IdentifierExpr::new)
@@ -291,10 +284,10 @@ public class Parser
         ApplyFunctionExpr arrayExpr = new ApplyFunctionExpr(newArrayFn, newArrayFn.name(), identityExpr, newArgs);
         newExpr = new ApplyFunctionExpr(expr.function, expr.function.name(), identityExpr, ImmutableList.of(arrayExpr));
         break;
-      case ApplyFunction.FoldrFunction.NAME:
-      case ApplyFunction.CartesianFoldrFunction.NAME:
-        // foldr((x, acc) -> acc + x + y, x, acc) => cartesian_foldr((x, y, acc) -> acc + x + y, x, y, acc)
-        // cartesian_foldr((x, y, acc) -> acc + x + y + z, x, y, acc) => cartesian_foldr((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
+      case ApplyFunction.FoldFunction.NAME:
+      case ApplyFunction.CartesianFoldFunction.NAME:
+        // fold((x, acc) -> acc + x + y, x, acc) => cartesian_fold((x, y, acc) -> acc + x + y, x, y, acc)
+        // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) => cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
 
         final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedArgs.size());
         final List<IdentifierExpr> newFoldLambdaIdentifiers = new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
@@ -311,7 +304,7 @@ public class Parser
         newArgs.addAll(unappliedLambdaBindings);
         final LambdaExpr newFoldLambda = new LambdaExpr(newFoldLambdaIdentifiers, expr.lambdaExpr.getExpr());
 
-        newFn = new ApplyFunction.CartesianFoldrFunction();
+        newFn = new ApplyFunction.CartesianFoldFunction();
         newExpr = new ApplyFunctionExpr(newFn, newFn.name(), newFoldLambda, newFoldArgs);
         break;
       default:
@@ -321,153 +314,12 @@ public class Parser
     return newExpr;
   }
 
-  public static List<String> findRequiredBindings(Expr expr)
+  public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
   {
-    final Set<String> found = new LinkedHashSet<>();
-    expr.visit(
-        new Expr.Visitor()
-        {
-          @Override
-          public void visit(Expr expr)
-          {
-            if (expr instanceof IdentifierExpr) {
-              found.add(expr.toString());
-            } else if (expr instanceof LambdaExpr) {
-              LambdaExpr lambda = (LambdaExpr) expr;
-              for (String identifier : lambda.getIdentifiers()) {
-                found.remove(identifier);
-              }
-            }
-          }
-        }
-    );
-    return Lists.newArrayList(found);
-  }
-
-  public static Set<String> findArrayFnBindings(Expr expr)
-  {
-    final Set<String> arrayFnBindings = new LinkedHashSet<>();
-    expr.visit(new Expr.Visitor()
-    {
-      @Override
-      public void visit(Expr expr)
-      {
-        final Set<Expr> arrayArgs;
-        if (expr instanceof FunctionExpr && ((FunctionExpr) expr).function instanceof Function.ArrayFunction) {
-          FunctionExpr fnExpr = (FunctionExpr) expr;
-          Function.ArrayFunction fn = (Function.ArrayFunction) fnExpr.function;
-          arrayArgs = fn.getArrayInputs(fnExpr.args);
-        } else if (expr instanceof ApplyFunctionExpr) {
-          ApplyFunctionExpr applyExpr = (ApplyFunctionExpr) expr;
-          arrayArgs = applyExpr.function.getArrayInputs(applyExpr.argsExpr);
-        } else {
-          arrayArgs = Collections.emptySet();
-        }
-        for (Expr arg : arrayArgs) {
-          String s = getIdentifierOrCastIdentifier(arg);
-          if (s != null) {
-            arrayFnBindings.add(s);
-          }
-        }
-      }
-    });
-    return arrayFnBindings;
-  }
-
-  /**
-   * Visits all nodes of an {@link Expr}, collecting information about how {@link IdentifierExpr} are used
-   */
-  public static BindingDetails examineBindings(Expr expr)
-  {
-    final Set<String> freeVariables = new HashSet<>();
-    final Set<String> scalarVariables = new HashSet<>();
-    final Set<String> arrayVariables = new HashSet<>();
-    expr.visit(childExpr -> {
-      if (childExpr instanceof IdentifierExpr) {
-        // all identifiers are free variables ...
-        freeVariables.add(childExpr.toString());
-      } else if (childExpr instanceof LambdaExpr) {
-        // ... unless they are erased by appearing in a lambda expression's arguments because they will be bound by
-        // the apply expression that wraps the lambda
-        LambdaExpr lambda = (LambdaExpr) childExpr;
-        for (String identifier : lambda.getIdentifiers()) {
-          freeVariables.remove(identifier);
-          scalarVariables.remove(identifier);
-          arrayVariables.remove(identifier);
-        }
-      } else {
-        // shallowly examining function expressions and apply function expressions can give us some context about if
-        // identifiers are used as scalar or array arguments to these functions. all identifiers should be encountered
-        // at some point, so we can use this to validate that identifiers are not used in inconsistent ways
-        final Set<Expr> scalarArgs;
-        final Set<Expr> arrayArgs;
-        if (childExpr instanceof FunctionExpr) {
-          FunctionExpr fnExpr = (FunctionExpr) childExpr;
-          scalarArgs = fnExpr.function.getScalarInputs(fnExpr.args);
-
-          if (fnExpr.function instanceof Function.ArraysFunction) {
-            Function.ArrayFunction fn = (Function.ArrayFunction) fnExpr.function;
-            arrayArgs = fn.getArrayInputs(fnExpr.args);
-          } else {
-            arrayArgs = Collections.emptySet();
-          }
-        } else if (childExpr instanceof ApplyFunctionExpr) {
-          ApplyFunctionExpr applyExpr = (ApplyFunctionExpr) childExpr;
-          scalarArgs = Collections.emptySet();
-          arrayArgs = applyExpr.function.getArrayInputs(applyExpr.argsExpr);
-        } else if (childExpr instanceof BinaryOpExprBase) {
-          BinaryOpExprBase binExpr = (BinaryOpExprBase) childExpr;
-          scalarArgs = ImmutableSet.of(binExpr.left, binExpr.right);
-          arrayArgs = Collections.emptySet();
-        } else if (childExpr instanceof UnaryExpr) {
-          UnaryExpr unaryExpr = (UnaryExpr) childExpr;
-          scalarArgs = ImmutableSet.of(unaryExpr.expr);
-          arrayArgs = Collections.emptySet();
-        } else {
-          // bail, child expression is not a function, apply function, or operator, nothing for us here
-          return;
-        }
-        for (Expr arg : scalarArgs) {
-          String s = getIdentifierIfIdentifier(arg);
-          if (s != null) {
-            scalarVariables.add(s);
-          }
-        }
-        for (Expr arg : arrayArgs) {
-          String s = getIdentifierOrCastIdentifier(arg);
-          if (s != null) {
-            arrayVariables.add(s);
-          }
-        }
-      }
-    });
-    for (String identifier : scalarVariables) {
-      if (arrayVariables.contains(identifier)) {
-        throw new RE("Invalid expression: %s; identifier [%s] used as both scalar and array", expr, identifier);
-      }
-    }
-    return new BindingDetails(freeVariables, scalarVariables, arrayVariables);
-  }
-
-  @Nullable
-  public static String getIdentifierOrCastIdentifier(Expr expr)
-  {
-    if (expr instanceof IdentifierExpr) {
-      return expr.toString();
-    } else if (expr instanceof FunctionExpr && ((FunctionExpr) expr).function instanceof Function.CastFunc) {
-      FunctionExpr fn = (FunctionExpr) expr;
-      return getIdentifierOrCastIdentifier(fn.args.get(0));
-    }
-    return null;
-  }
-
-  @Nullable
-  public static String getIdentifierIfIdentifier(Expr expr)
-  {
-    if (expr instanceof IdentifierExpr) {
-      return expr.toString();
-    } else {
-      return null;
+    final Set<String> inconsistentIdentifierUsage =
+        Sets.intersection(bindingDetails.getScalarVariables(), bindingDetails.getArrayVariables());
+    if (inconsistentIdentifierUsage.size() != 0) {
+      throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, inconsistentIdentifierUsage);
     }
   }
 
@@ -482,39 +334,5 @@ public class Parser
       Supplier<Object> supplier = bindings.get(name);
       return supplier == null ? null : supplier.get();
     };
-  }
-
-  public static class BindingDetails
-  {
-    private final Set<String> freeVariables;
-    private final Set<String> scalarVariables;
-    private final Set<String> arrayVariables;
-
-    BindingDetails(Set<String> freeVariables, Set<String> scalarVariables, Set<String> arrayVariables)
-    {
-      this.freeVariables = freeVariables;
-      this.scalarVariables = scalarVariables;
-      this.arrayVariables = arrayVariables;
-    }
-
-    public List<String> getRequiredColumns()
-    {
-      return new ArrayList<>(freeVariables);
-    }
-
-    public Set<String> getFreeVariables()
-    {
-      return freeVariables;
-    }
-
-    public Set<String> getScalarVariables()
-    {
-      return scalarVariables;
-    }
-
-    public Set<String> getArrayVariables()
-    {
-      return arrayVariables;
-    }
   }
 }

@@ -21,10 +21,13 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -163,10 +166,10 @@ public class ParserTest
   @Test
   public void testIdentifiers()
   {
-    validateParser("foo", "foo", ImmutableList.of("foo"));
-    validateParser("\"foo\"", "foo", ImmutableList.of("foo"));
-    validateParser("\"foo bar\"", "foo bar", ImmutableList.of("foo bar"));
-    validateParser("\"foo\\\"bar\"", "foo\"bar", ImmutableList.of("foo\"bar"));
+    validateParser("foo", "foo", ImmutableList.of("foo"), ImmutableSet.of());
+    validateParser("\"foo\"", "foo", ImmutableList.of("foo"), ImmutableSet.of());
+    validateParser("\"foo bar\"", "foo bar", ImmutableList.of("foo bar"), ImmutableSet.of());
+    validateParser("\"foo\\\"bar\"", "foo\"bar", ImmutableList.of("foo\"bar"), ImmutableSet.of());
   }
 
   @Test
@@ -183,20 +186,8 @@ public class ParserTest
   public void testLiteralArrays()
   {
     validateConstantExpression("[1.0, 2.345]", new Double[] {1.0, 2.345});
-    validateConstantExpression("[1.0 2.345]", new Double[] {1.0, 2.345});
     validateConstantExpression("[1, 3]", new Long[] {1L, 3L});
-    validateConstantExpression("[1 3]", new Long[] {1L, 3L});
     validateConstantExpression("[\'hello\', \'world\']", new String[] {"hello", "world"});
-    validateConstantExpression("[\'hello\' \'world\']", new String[] {"hello", "world"});
-  }
-
-  @Test
-  public void testApplyFunctions()
-  {
-    final Expr parsed = Parser.parse("map((x) -> x + 1, [1, 2, 3])", ExprMacroTable.nil());
-    Assert.assertEquals("(map ([x] -> (+ x 1)), [1, 2, 3])", parsed.toString());
-    ExprEval eval = parsed.eval(Parser.withMap(ImmutableMap.of()));
-    Assert.assertArrayEquals(new Long[]{2L, 3L, 4L}, (Long[]) eval.value());
   }
 
   @Test
@@ -204,7 +195,106 @@ public class ParserTest
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
     validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "then", "else"));
+    validateParser("cast(x, 'STRING')", "(cast [x, STRING])", ImmutableList.of("x"));
+    validateParser("cast(x, 'LONG')", "(cast [x, LONG])", ImmutableList.of("x"));
+    validateParser("cast(x, 'DOUBLE')", "(cast [x, DOUBLE])", ImmutableList.of("x"));
+    validateParser("cast(x, 'STRING_ARRAY')", "(cast [x, STRING_ARRAY])", ImmutableList.of("x"), ImmutableSet.of(), ImmutableSet.of("x"));
+    validateParser("cast(x, 'LONG_ARRAY')", "(cast [x, LONG_ARRAY])", ImmutableList.of("x"), ImmutableSet.of(), ImmutableSet.of("x"));
+    validateParser("cast(x, 'DOUBLE_ARRAY')", "(cast [x, DOUBLE_ARRAY])", ImmutableList.of("x"), ImmutableSet.of(), ImmutableSet.of("x"));
+    validateParser(
+        "array_length(x)",
+        "(array_length [x])",
+        ImmutableList.of("x"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+    validateParser(
+        "array_concat(x, y)",
+        "(array_concat [x, y])",
+        ImmutableList.of("x", "y"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x", "y")
+    );
+    validateParser(
+        "array_append(x, y)",
+        "(array_append [x, y])",
+        ImmutableList.of("x", "y"),
+        ImmutableSet.of("y"),
+        ImmutableSet.of("x")
+    );
   }
+
+  @Test
+  public void testApplyFunctions()
+  {
+    validateParser(
+        "map((x) -> x + 1, x)",
+        "(map ([x] -> (+ x 1)), [x])",
+        ImmutableList.of("x"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+    validateParser(
+        "x + map((x) -> x + 1, y)",
+        "(+ x (map ([x] -> (+ x 1)), [y]))",
+        ImmutableList.of("x", "y"),
+        ImmutableSet.of("x"),
+        ImmutableSet.of("y")
+    );
+    validateParser(
+        "x + map((x) -> x + 1, x)",
+        "(+ x (map ([x] -> (+ x 1)), [x]))",
+        ImmutableList.of("x"),
+        ImmutableSet.of("x"),
+        ImmutableSet.of("x")
+    );
+    validateParser(
+        "map((x) -> concat(x, y), z)",
+        "(map ([x] -> (concat [x, y])), [z])",
+        ImmutableList.of("z", "y"),
+        ImmutableSet.of("y"),
+        ImmutableSet.of("z")
+    );
+    // 'y' is accumulator, and currently unknown
+    validateParser(
+        "fold((x, acc) -> acc + x, x, y)",
+        "(fold ([x, acc] -> (+ acc x)), [x, y])",
+        ImmutableList.of("x", "y"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+
+    validateParser(
+        "fold((x, acc) -> acc + x, map((x) -> x + 1, x), y)",
+        "(fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])",
+        ImmutableList.of("x", "y"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+    validateParser(
+        "array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))",
+        "(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])",
+        ImmutableList.of("z", "x", "y"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x", "z")
+    );
+    validateParser(
+        "map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y)))",
+        "(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])])",
+        ImmutableList.of("z", "x", "y"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x", "z")
+    );
+
+    validateParser(
+        "array_append(map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))), a)",
+        "(array_append [(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])]), a])",
+        ImmutableList.of("z", "x", "y", "a"),
+        ImmutableSet.of("a"),
+        ImmutableSet.of("x", "z")
+    );
+  }
+
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
@@ -214,9 +304,28 @@ public class ParserTest
 
   private void validateParser(String expression, String expected, List<String> identifiers)
   {
+    validateParser(expression, expected, identifiers, ImmutableSet.copyOf(identifiers), Collections.emptySet());
+  }
+
+  private void validateParser(String expression, String expected, List<String> identifiers, Set<String> scalars)
+  {
+    validateParser(expression, expected, identifiers, scalars, Collections.emptySet());
+  }
+
+  private void validateParser(
+      String expression,
+      String expected,
+      List<String> identifiers,
+      Set<String> scalars,
+      Set<String> arrays
+  )
+  {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    final Expr.BindingDetails deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(parsed));
+    Assert.assertEquals(expression, identifiers, deets.getRequiredColumns());
+    Assert.assertEquals(expression, scalars, deets.getScalarVariables());
+    Assert.assertEquals(expression, arrays, deets.getArrayVariables());
   }
 
   private void validateConstantExpression(String expression, Object expected)

@@ -58,6 +58,15 @@ interface Function
     return ImmutableSet.copyOf(args);
   }
 
+  /**
+   * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to an array
+   * value
+   */
+  default Set<Expr> getArrayInputs(List<Expr> args)
+  {
+    return Collections.emptySet();
+  }
+
   abstract class SingleParam implements Function
   {
     @Override
@@ -933,7 +942,7 @@ interface Function
     }
   }
 
-  class CastFunc extends DoubleParam implements ArrayFunction
+  class CastFunc extends DoubleParam
   {
     @Override
     public String name()
@@ -955,12 +964,6 @@ interface Function
         throw new IAE("invalid type '%s'", y.asString());
       }
       return x.castTo(castTo);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      // side effect of array function interface, nothing to do
     }
 
     @Override
@@ -1562,10 +1565,7 @@ interface Function
       }
     }
 
-    /**
-     * Given a list of arguments to this {@link ArrayFunction}, get the set of arguments that must evaluate to an array
-     * value
-     */
+    @Override
     default Set<Expr> getArrayInputs(List<Expr> args)
     {
       validateArguments(args);

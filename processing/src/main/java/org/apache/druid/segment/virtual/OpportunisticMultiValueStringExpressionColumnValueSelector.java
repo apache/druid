@@ -34,19 +34,20 @@ import java.util.stream.Collectors;
 public class OpportunisticMultiValueStringExpressionColumnValueSelector extends ExpressionColumnValueSelector
 {
   private final List<String> unknownColumns;
-  private final Set<String> arrayInputs;
+  private final Expr.BindingDetails baseExprBindingDetails;
   private final Set<String> ignoredColumns;
   private final Int2ObjectMap<Expr> transformedCache;
 
   public OpportunisticMultiValueStringExpressionColumnValueSelector(
       Expr expression,
+      Expr.BindingDetails baseExprBindingDetails,
       Expr.ObjectBinding bindings,
       Set<String> unknownColumnsSet
   )
   {
     super(expression, bindings);
     this.unknownColumns = new ArrayList<>(unknownColumnsSet);
-    this.arrayInputs = Parser.findArrayFnBindings(expression);
+    this.baseExprBindingDetails = baseExprBindingDetails;
     this.ignoredColumns = new HashSet<>();
     this.transformedCache = new Int2ObjectArrayMap(unknownColumns.size());
   }
@@ -55,7 +56,9 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
   public ExprEval getObject()
   {
     List<String> arrayBindings =
-        unknownColumns.stream().filter(x -> !arrayInputs.contains(x) && isBindingArray(x)).collect(Collectors.toList());
+        unknownColumns.stream()
+                      .filter(x -> !baseExprBindingDetails.getArrayVariables().contains(x) && isBindingArray(x))
+                      .collect(Collectors.toList());
 
     if (ignoredColumns.size() > 0) {
       unknownColumns.removeAll(ignoredColumns);
@@ -79,7 +82,6 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
     Object binding = bindings.get(x);
     if (binding != null) {
       if (binding instanceof String[] && ((String[]) binding).length > 1) {
-        //      if (binding instanceof String[]) {
         return true;
       } else if (binding instanceof Number) {
         ignoredColumns.add(x);

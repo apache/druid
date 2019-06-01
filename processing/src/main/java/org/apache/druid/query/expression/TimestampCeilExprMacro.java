@@ -29,7 +29,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
@@ -90,6 +92,12 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
       Expr newArg = arg.visit(shuttle);
       return shuttle.visit(new TimestampCeilExpr(ImmutableList.of(newArg)));
     }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      return arg.analyzeInputs();
+    }
   }
 
   private static PeriodGranularity getGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
@@ -133,6 +141,21 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     {
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
       return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      Set<String> scalars = new HashSet<>();
+      BindingDetails accumulator = new BindingDetails();
+      for (Expr arg : args) {
+        final String identifier = arg.getIdentifierIfIdentifier();
+        if (identifier != null) {
+          scalars.add(identifier);
+        }
+        accumulator = accumulator.merge(arg.analyzeInputs());
+      }
+      return accumulator.mergeWithScalars(scalars);
     }
   }
 }

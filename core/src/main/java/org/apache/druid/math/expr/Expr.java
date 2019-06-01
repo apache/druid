@@ -20,18 +20,25 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -66,6 +73,16 @@ public interface Expr
   }
 
   /**
+   * Returns the string identifier of an {@link IdentifierExpr}, else null
+   */
+  @Nullable
+  default String getIdentifierIfIdentifier()
+  {
+    // overridden by things that are identifiers
+    return null;
+  }
+
+  /**
    * Evaluate the {@link Expr} with the bindings which supply {@link IdentifierExpr} with their values, producing an
    * {@link ExprEval} with the result.
    */
@@ -84,6 +101,8 @@ public interface Expr
    * {@link Expr} with the results from the {@link Shuttle}.
    */
   Expr visit(Shuttle shuttle);
+
+  BindingDetails analyzeInputs();
 
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
@@ -120,6 +139,86 @@ public interface Expr
      */
     Expr visit(Expr expr);
   }
+
+  class BindingDetails
+  {
+    private final Set<String> freeVariables;
+    private final Set<String> scalarVariables;
+    private final Set<String> arrayVariables;
+
+    public BindingDetails()
+    {
+      this(Collections.emptySet(), Collections.emptySet(), Collections.emptySet());
+    }
+
+    public BindingDetails(String identifier)
+    {
+      this(ImmutableSet.of(identifier), Collections.emptySet(), Collections.emptySet());
+    }
+
+    public BindingDetails(Set<String> freeVariables, Set<String> scalarVariables, Set<String> arrayVariables)
+    {
+      this.freeVariables = freeVariables;
+      this.scalarVariables = scalarVariables;
+      this.arrayVariables = arrayVariables;
+    }
+
+    public List<String> getRequiredColumns()
+    {
+      return new ArrayList<>(freeVariables);
+    }
+
+    public Set<String> getFreeVariables()
+    {
+      return freeVariables;
+    }
+
+    public Set<String> getScalarVariables()
+    {
+      return scalarVariables;
+    }
+
+    public Set<String> getArrayVariables()
+    {
+      return arrayVariables;
+    }
+
+    public BindingDetails merge(BindingDetails other)
+    {
+      return new BindingDetails(
+          Sets.union(freeVariables, other.freeVariables),
+          Sets.union(scalarVariables, other.scalarVariables),
+          Sets.union(arrayVariables, other.arrayVariables)
+      );
+    }
+
+    public BindingDetails mergeWith(Set<String> moreScalars, Set<String> moreArrays)
+    {
+      return new BindingDetails(
+          Sets.union(freeVariables, Sets.union(moreScalars, moreArrays)),
+          Sets.union(scalarVariables, moreScalars),
+          Sets.union(arrayVariables, moreArrays)
+      );
+    }
+
+    public BindingDetails mergeWithScalars(Set<String> moreScalars)
+    {
+      return new BindingDetails(
+          Sets.union(freeVariables, moreScalars),
+          Sets.union(scalarVariables, moreScalars),
+          arrayVariables
+      );
+    }
+
+    public BindingDetails mergeWithArrays(Set<String> moreArrays)
+    {
+      return new BindingDetails(
+          Sets.union(freeVariables, moreArrays),
+          scalarVariables,
+          Sets.union(arrayVariables, moreArrays)
+      );
+    }
+  }
 }
 
 abstract class ConstantExpr implements Expr
@@ -140,6 +239,12 @@ abstract class ConstantExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
+  }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    return new BindingDetails();
   }
 }
 
@@ -201,7 +306,7 @@ class LongArrayExpr extends ConstantArrayExpr
   @Override
   public String toString()
   {
-    return Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", "));
+    return Arrays.toString(value);
   }
 
   @Nonnull
@@ -261,7 +366,7 @@ class StringArrayExpr extends ConstantArrayExpr
   @Override
   public String toString()
   {
-    return String.join(", ", value);
+    return Arrays.toString(value);
   }
 
   @Nonnull
@@ -321,7 +426,7 @@ class DoubleArrayExpr extends ConstantArrayExpr
   @Override
   public String toString()
   {
-    return Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", "));
+    return Arrays.toString(value);
   }
 
   @Nonnull
@@ -345,6 +450,19 @@ class IdentifierExpr implements Expr
   public String toString()
   {
     return value;
+  }
+
+  @Nullable
+  @Override
+  public String getIdentifierIfIdentifier()
+  {
+    return value;
+  }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    return new BindingDetails(value);
   }
 
   @Nonnull
@@ -381,7 +499,7 @@ class LambdaExpr implements Expr
   @Override
   public String toString()
   {
-    return "(" + args + " -> " + expr + ")";
+    return StringUtils.format("(%s -> %s)", args, expr);
   }
 
   public String getIdentifier()
@@ -427,6 +545,18 @@ class LambdaExpr implements Expr
     Expr newBody = expr.visit(shuttle);
     return shuttle.visit(new LambdaExpr(newArgs, newBody));
   }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
+    BindingDetails bodyDetails = expr.analyzeInputs();
+    return new BindingDetails(
+        Sets.difference(bodyDetails.getFreeVariables(), lambdaArgs),
+        Sets.difference(bodyDetails.getScalarVariables(), lambdaArgs),
+        Sets.difference(bodyDetails.getArrayVariables(), lambdaArgs)
+    );
+  }
 }
 
 class FunctionExpr implements Expr
@@ -445,7 +575,7 @@ class FunctionExpr implements Expr
   @Override
   public String toString()
   {
-    return "(" + name + " " + args + ")";
+    return StringUtils.format("(%s %s)", name, args);
   }
 
   @Nonnull
@@ -470,6 +600,33 @@ class FunctionExpr implements Expr
     List<Expr> newArgs = args.stream().map(shuttle::visit).collect(Collectors.toList());
     return shuttle.visit(new FunctionExpr(function, name, newArgs));
   }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    final Set<String> scalarVariables = new HashSet<>();
+    final Set<String> arrayVariables = new HashSet<>();
+    final Set<Expr> scalarArgs = function.getScalarInputs(args);
+    final Set<Expr> arrayArgs = function.getArrayInputs(args);
+    BindingDetails accumulator = new BindingDetails();
+
+    for (Expr arg : args) {
+      accumulator = accumulator.merge(arg.analyzeInputs());
+    }
+    for (Expr arg : scalarArgs) {
+      String s = arg.getIdentifierIfIdentifier();
+      if (s != null) {
+        scalarVariables.add(s);
+      }
+    }
+    for (Expr arg : arrayArgs) {
+      String s = arg.getIdentifierIfIdentifier();
+      if (s != null) {
+        arrayVariables.add(s);
+      }
+    }
+    return accumulator.mergeWith(scalarVariables, arrayVariables);
+  }
 }
 
 class ApplyFunctionExpr implements Expr
@@ -490,7 +647,7 @@ class ApplyFunctionExpr implements Expr
   @Override
   public String toString()
   {
-    return "(" + name + " " + lambdaExpr + ", " + argsExpr + ")";
+    return StringUtils.format("(%s %s, %s)", name, lambdaExpr, argsExpr);
   }
 
   @Nonnull
@@ -516,6 +673,26 @@ class ApplyFunctionExpr implements Expr
     LambdaExpr newLambda = (LambdaExpr) lambdaExpr.visit(shuttle);
     List<Expr> newArgs = argsExpr.stream().map(shuttle::visit).collect(Collectors.toList());
     return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, newArgs));
+  }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    BindingDetails accumulator = new BindingDetails();
+    for (Expr arg : argsExpr) {
+      accumulator = accumulator.merge(arg.analyzeInputs());
+    }
+
+    final Set<String> arrayVariables = new HashSet<>();
+    Set<Expr> arrayArgs = function.getArrayInputs(argsExpr);
+
+    for (Expr arg : arrayArgs) {
+      String s = arg.getIdentifierIfIdentifier();
+      if (s != null) {
+        arrayVariables.add(s);
+      }
+    }
+    return accumulator.merge(lambdaExpr.analyzeInputs()).mergeWithArrays(arrayVariables);
   }
 }
 
@@ -545,6 +722,20 @@ abstract class UnaryExpr implements Expr
       return shuttle.visit(copy(newExpr));
     }
     return shuttle.visit(this);
+  }
+
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    // currently all unary operators only operate on scalar inputs
+    final Set<String> scalars;
+    final String identifierMaybe = expr.getIdentifierIfIdentifier();
+    if (identifierMaybe != null) {
+      scalars = ImmutableSet.of(identifierMaybe);
+    } else {
+      scalars = Collections.emptySet();
+    }
+    return expr.analyzeInputs().mergeWithScalars(scalars);
   }
 }
 
@@ -581,7 +772,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public String toString()
   {
-    return "-" + expr;
+    return StringUtils.format("-%s", expr);
   }
 }
 
@@ -614,7 +805,7 @@ class UnaryNotExpr extends UnaryExpr
   @Override
   public String toString()
   {
-    return "!" + expr;
+    return StringUtils.format("!%s", expr);
   }
 }
 
@@ -623,8 +814,8 @@ class UnaryNotExpr extends UnaryExpr
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;
-  protected Expr left;
-  protected Expr right;
+  protected final Expr left;
+  protected final Expr right;
 
   BinaryOpExprBase(String op, Expr left, Expr right)
   {
@@ -655,11 +846,28 @@ abstract class BinaryOpExprBase implements Expr
   @Override
   public String toString()
   {
-    return "(" + op + " " + left + " " + right + ")";
+    return StringUtils.format("(%s %s %s)", op, left, right);
   }
 
   protected abstract BinaryOpExprBase copy(Expr left, Expr right);
 
+  @Override
+  public BindingDetails analyzeInputs()
+  {
+    // currently all binary operators operate on scalar inputs
+    final Set<String> scalars = new HashSet<>();
+    final String leftIdentifer = left.getIdentifierIfIdentifier();
+    final String rightIdentifier = right.getIdentifierIfIdentifier();
+    if (leftIdentifer != null) {
+      scalars.add(leftIdentifer);
+    }
+    if (rightIdentifier != null) {
+      scalars.add(rightIdentifier);
+    }
+    return left.analyzeInputs()
+               .merge(right.analyzeInputs())
+               .mergeWithScalars(scalars);
+  }
 }
 
 abstract class BinaryEvalOpExprBase extends BinaryOpExprBase

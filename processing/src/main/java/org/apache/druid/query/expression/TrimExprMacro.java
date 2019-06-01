@@ -19,13 +19,16 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -162,6 +165,16 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       Expr newStringExpr = stringExpr.visit(shuttle);
       return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars));
     }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      final String identifier = stringExpr.getIdentifierIfIdentifier();
+      if (identifier == null) {
+        return stringExpr.analyzeInputs();
+      }
+      return stringExpr.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
+    }
   }
 
   private static class TrimDynamicCharsExpr implements Expr
@@ -240,6 +253,21 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       Expr newStringExpr = stringExpr.visit(shuttle);
       Expr newCharsExpr = charsExpr.visit(shuttle);
       return shuttle.visit(new TrimDynamicCharsExpr(mode, newStringExpr, newCharsExpr));
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      final String stringIdentifier = stringExpr.getIdentifierIfIdentifier();
+      final Set<String> scalars = new HashSet<>();
+      if (stringIdentifier != null) {
+        scalars.add(stringIdentifier);
+      }
+      final String charsIdentifier = charsExpr.getIdentifierIfIdentifier();
+      if (charsIdentifier != null) {
+        scalars.add(charsIdentifier);
+      }
+      return stringExpr.analyzeInputs().merge(charsExpr.analyzeInputs()).mergeWithScalars(scalars);
     }
   }
 

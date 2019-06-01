@@ -89,19 +89,19 @@ public class ApplyFunctionTest
   }
 
   @Test
-  public void testFoldr()
+  public void testFold()
   {
-    assertExpr("foldr((x, y) -> x + y, [1, 1, 1, 1, 1], 0)", 5L);
-    assertExpr("foldr((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
-    assertExpr("foldr((a, acc) -> concat(a, acc), a, '')", "foobarbazbarfoo");
-    assertExpr("foldr((a, acc) -> array_append(acc, a), a, [])", new String[]{"foo", "bar", "baz", "foobar"});
-    assertExpr("foldr((a, acc) -> array_append(acc, a), b, cast([], 'LONG_ARRAY'))", new Long[]{1L, 2L, 3L, 4L, 5L});
+    assertExpr("fold((x, y) -> x + y, [1, 1, 1, 1, 1], 0)", 5L);
+    assertExpr("fold((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
+    assertExpr("fold((a, acc) -> concat(a, acc), a, '')", "foobarbazbarfoo");
+    assertExpr("fold((a, acc) -> array_append(acc, a), a, [])", new String[]{"foo", "bar", "baz", "foobar"});
+    assertExpr("fold((a, acc) -> array_append(acc, a), b, cast([], 'LONG_ARRAY'))", new Long[]{1L, 2L, 3L, 4L, 5L});
   }
 
   @Test
-  public void testCartesianFoldr()
+  public void testCartesianFold()
   {
-    assertExpr("cartesian_foldr((x, y, acc) -> x + y + acc, [1, 1, 1, 1, 1], [1, 1], 0)", 20L);
+    assertExpr("cartesian_fold((x, y, acc) -> x + y + acc, [1, 1, 1, 1, 1], [1, 1], 0)", 20L);
   }
 
   @Test
@@ -116,10 +116,10 @@ public class ApplyFunctionTest
   @Test
   public void testAllMatch()
   {
-    assertExpr("all(x -> x > 0, [1 2 3 4])", "true");
-    assertExpr("all(x -> x > 1, [1 2 3 4])", "false");
-    assertExpr("all(x -> x, map(x -> x > 0, [1 2 3 4]))", "true");
-    assertExpr("all(x -> x, map(x -> x > 1, [1 2 3 4]))", "false");
+    assertExpr("all(x -> x > 0, [1, 2, 3, 4])", "true");
+    assertExpr("all(x -> x > 1, [1, 2, 3, 4])", "false");
+    assertExpr("all(x -> x, map(x -> x > 0, [1, 2, 3, 4]))", "true");
+    assertExpr("all(x -> x, map(x -> x > 1, [1, 2, 3, 4]))", "false");
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

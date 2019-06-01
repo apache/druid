@@ -180,9 +180,9 @@ public interface ApplyFunction
     }
   }
 
-  abstract class BaseFoldrFunction implements ApplyFunction
+  abstract class BaseFoldFunction implements ApplyFunction
   {
-    ExprEval applyFoldr(LambdaExpr lambdaExpr, Object accumulator, int length, IndexableFoldLambdaBinding bindings)
+    ExprEval applyFold(LambdaExpr lambdaExpr, Object accumulator, int length, IndexableFoldLambdaBinding bindings)
     {
       for (int i = 0; i < length; i++) {
         ExprEval evaluated = lambdaExpr.eval(bindings.accumulateWithIndex(i, accumulator));
@@ -192,9 +192,9 @@ public interface ApplyFunction
     }
   }
 
-  class FoldrFunction extends BaseFoldrFunction
+  class FoldFunction extends BaseFoldFunction
   {
-    static final String NAME = "foldr";
+    static final String NAME = "fold";
 
     @Override
     public String name()
@@ -219,7 +219,7 @@ public interface ApplyFunction
       Object accumlator = accEval.value();
 
       FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(array, accumlator, lambdaExpr, bindings);
-      return applyFoldr(lambdaExpr, accumlator, array.length, lambdaBinding);
+      return applyFold(lambdaExpr, accumlator, array.length, lambdaBinding);
     }
 
     @Override
@@ -230,9 +230,9 @@ public interface ApplyFunction
     }
   }
 
-  class CartesianFoldrFunction extends BaseFoldrFunction
+  class CartesianFoldFunction extends BaseFoldFunction
   {
-    static final String NAME = "cartesian_foldr";
+    static final String NAME = "cartesian_fold";
 
     @Override
     public String name()
@@ -276,7 +276,7 @@ public interface ApplyFunction
 
       CartesianFoldLambdaBinding lambdaBindings =
           new CartesianFoldLambdaBinding(product, accumlator, lambdaExpr, bindings);
-      return applyFoldr(lambdaExpr, accumlator, product.size(), lambdaBindings);
+      return applyFold(lambdaExpr, accumlator, product.size(), lambdaBindings);
     }
 
     @Override

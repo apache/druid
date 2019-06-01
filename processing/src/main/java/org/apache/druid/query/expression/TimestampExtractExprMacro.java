@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -141,6 +142,16 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new TimestampExtractExpr(newArg));
+      }
+
+      @Override
+      public BindingDetails analyzeInputs()
+      {
+        final String identifier = arg.getIdentifierIfIdentifier();
+        if (identifier == null) {
+          return arg.analyzeInputs();
+        }
+        return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
       }
     }
 
