@@ -21,15 +21,16 @@ import { render } from 'react-testing-library';
 
 import {TableCell} from './table-cell';
 
-describe('describe nullTable', () => {
-  it('nullTable snapshot', () => {
-    const nullTableCell =
-    <TableCell
-      value={'test'}
+describe('table cell', () => {
+  it('matches snapshot', () => {
+    const longString = new Array(100).join('test');
+    const tableCell = <TableCell
+      value={longString}
       unparseable={false}
       timestamp={false}
-    />
-    const { container, getByText } = render(nullTableCell);
+    />;
+
+    const { container, getByText } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
