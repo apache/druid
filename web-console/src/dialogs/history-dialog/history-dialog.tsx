@@ -45,33 +45,33 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
     if (historyRecords.length === 0) {
       content = <div className="no-record">No history records available</div>;
     } else {
-       content = <>
-          <span className="history-dialog-title">History</span>
-          <div className="history-record-entries">
-            {
-              historyRecords.map((record: any) => {
-                const auditInfo = record.auditInfo;
-                const auditTime = record.auditTime;
-                const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+      content = <>
+        <span className="history-dialog-title">History</span>
+        <div className="history-record-entries">
+          {
+            historyRecords.map((record: any) => {
+              const auditInfo = record.auditInfo;
+              const auditTime = record.auditTime;
+              const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
 
-                return <div key={record.auditTime} className="history-record-entry">
-                  <Card>
-                    <div className="history-record-title">
-                      <span className="history-record-title-change">Change</span>
-                      <span>{formattedTime}</span>
-                    </div>
-                    <Divider/>
-                    <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
-                    <JSONCollapse
-                      stringValue={record.payload}
-                      buttonText="Payload"
-                    />
-                  </Card>
-                </div>;
-              })
-            }
-          </div>
-         </>;
+              return <div key={record.auditTime} className="history-record-entry">
+                <Card>
+                  <div className="history-record-title">
+                    <span className="history-record-title-change">Change</span>
+                    <span>{formattedTime}</span>
+                  </div>
+                  <Divider/>
+                  <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
+                  <JSONCollapse
+                    stringValue={record.payload}
+                    buttonText="Payload"
+                  />
+                </Card>
+              </div>;
+            })
+          }
+        </div>
+       </>;
     }
     return <div className="history-record-container">
       {content}
