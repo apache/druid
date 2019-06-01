@@ -28,7 +28,7 @@ describe('json input', () => {
       onChange={(newJSONValue: any) => {}}
       value={'test'}
     />;
-    const { container, getByText } = render(jsonCollapse);
+    const { container } = render(jsonCollapse);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

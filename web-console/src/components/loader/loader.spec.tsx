@@ -27,7 +27,7 @@ describe('loader', () => {
       loading
       loadingText={'test'}
     />;
-    const { container, getByText } = render(loader);
+    const { container } = render(loader);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

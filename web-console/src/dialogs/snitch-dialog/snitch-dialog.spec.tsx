@@ -29,7 +29,7 @@ describe('snitch dialog', () => {
         onSave={() => null}
         isOpen
       />;
-    const { container, getByText } = render(snitchDialog, { container: document.body });
+    const { container } = render(snitchDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

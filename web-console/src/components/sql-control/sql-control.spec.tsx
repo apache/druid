@@ -30,7 +30,7 @@ describe('sql control', () => {
       queryElapsed={2}
     />;
 
-    const { container, getByText } = render(sqlControl);
+    const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

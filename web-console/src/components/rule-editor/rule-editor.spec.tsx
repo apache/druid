@@ -32,7 +32,7 @@ describe('rule editor', () => {
       moveUp={null}
       moveDown={null}
     />;
-    const { container, getByText } = render(ruleEditor);
+    const { container } = render(ruleEditor);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

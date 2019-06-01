@@ -31,7 +31,7 @@ describe('array input', () => {
       onChange={() => null}
     />;
 
-    const { container, getByText } = render(arrayInput);
+    const { container } = render(arrayInput);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

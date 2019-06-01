@@ -27,7 +27,7 @@ describe('action cell', () => {
       onDetail={() => null}
       actions={[]}
     />;
-    const { container, getByText } = render(actionCell);
+    const { container } = render(actionCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -31,7 +31,7 @@ describe('supervisor table action dialog', () => {
         onClose={() => null}
         isOpen
       />;
-    const { container, getByText } = render(supervisorTableActionDialog, { container: document.body });
+    const { container } = render(supervisorTableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -34,7 +34,7 @@ describe('decribe clearable-input', () => {
         <div>Hello World</div>
       </ClearableInput>;
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

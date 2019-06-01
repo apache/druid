@@ -30,7 +30,7 @@ describe('history dialog', () => {
         historyRecords={[{auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name : 'test' })}, {auditTime: 'test', auditInfo: 'test',  payload: JSON.stringify({ name : 'test' })}]}
         isOpen
       />;
-    const { container, getByText } = render(historyDialog, { container: document.body });
+    const { container } = render(historyDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

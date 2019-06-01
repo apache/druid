@@ -33,7 +33,7 @@ describe('compaction dialog', () => {
         datasource={'test'}
         configData={'test'}
       />;
-    const { container, getByText } = render(compactionDialog, { container: document.body });
+    const { container } = render(compactionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

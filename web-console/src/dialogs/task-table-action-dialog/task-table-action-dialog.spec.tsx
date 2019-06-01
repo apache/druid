@@ -33,7 +33,7 @@ describe('task table action dialog', () => {
         onClose={() => null}
         isOpen
       />;
-    const { container, getByText } = render(taskTableActionDialog, { container: document.body });
+    const { container } = render(taskTableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

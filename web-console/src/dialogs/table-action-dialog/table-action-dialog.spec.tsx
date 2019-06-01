@@ -31,7 +31,7 @@ describe('table action dialog', () => {
         onClose={() => null}
         isOpen
       />;
-    const { container, getByText } = render(tableActionDialog, { container: document.body });
+    const { container } = render(tableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

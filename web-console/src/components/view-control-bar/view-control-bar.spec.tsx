@@ -28,7 +28,7 @@ describe('view control bar snapshot', () => {
         <div>Hello world</div>
       </ViewControlBar>;
 
-    const { container, getByText } = render(viewControlBar);
+    const { container } = render(viewControlBar);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

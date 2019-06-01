@@ -31,7 +31,7 @@ describe('query plan dialog', () => {
         explainError={{name: 'test', message: 'test'}}
         onClose={() => null}
       />;
-    const { container, getByText } = render(queryPlanDialog, { container: document.body });
+    const { container } = render(queryPlanDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

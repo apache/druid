@@ -28,7 +28,7 @@ describe('external link', () => {
         <div>hello world</div>
       </ExternalLink>;
 
-    const { container, getByText } = render(externalLink);
+    const { container } = render(externalLink);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

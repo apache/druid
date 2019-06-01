@@ -28,7 +28,7 @@ describe('decribe center-message', () => {
         <div>Hello World</div>
       </CenterMessage>;
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

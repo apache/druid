@@ -29,7 +29,7 @@ describe('coordinator dynamic config', () => {
       <CoordinatorDynamicConfigDialog
         onClose={() => null}
       />;
-    const { container, getByText } = render(coordinatorDynamicConfig, { container: document.body });
+    const { container } = render(coordinatorDynamicConfig, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

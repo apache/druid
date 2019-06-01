@@ -30,7 +30,7 @@ describe('spec dialog', () => {
         onClose={() => null}
         title={'test'}
       />;
-    const { container, getByText } = render(specDialog, { container: document.body });
+    const { container } = render(specDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

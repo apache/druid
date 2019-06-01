@@ -25,7 +25,7 @@ describe('menuCheckBox ', () => {
   it('makes snapshot', () => {
     const menuCheckbox =
     <MenuCheckbox/>;
-    const { container, getByText } = render(menuCheckbox);
+    const { container } = render(menuCheckbox);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

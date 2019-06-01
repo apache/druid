@@ -39,7 +39,7 @@ describe('lookup edit dialog', () => {
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
       />;
 
-    const { container, getByText } = render(lookupEditDialog, { container: document.body });
+    const { container } = render(lookupEditDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

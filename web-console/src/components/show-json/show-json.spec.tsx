@@ -29,7 +29,7 @@ describe('rule editor', () => {
         endpoint={'test'}
         downloadFilename={'test'}
       />;
-    const { container, getByText } = render(showJson);
+    const { container } = render(showJson);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

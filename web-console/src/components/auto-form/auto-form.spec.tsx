@@ -36,7 +36,7 @@ describe('auto-form snapshot', () => {
         model={String}
         onChange={(newModel: Record<string, any>) => {}}
       />;
-    const { container, getByText } = render(autoForm);
+    const { container } = render(autoForm);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

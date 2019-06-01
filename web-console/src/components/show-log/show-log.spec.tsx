@@ -29,7 +29,7 @@ describe('show log', () => {
         endpoint={'test'}
         downloadFilename={'test'}
       />;
-    const { container, getByText } = render(showLog);
+    const { container } = render(showLog);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

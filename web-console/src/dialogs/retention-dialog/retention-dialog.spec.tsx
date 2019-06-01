@@ -34,7 +34,7 @@ describe('retention dialog', () => {
         onCancel={() => null}
         onSave={() => null}
       />;
-    const { container, getByText } = render(retentionDialog, { container: document.body });
+    const { container } = render(retentionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

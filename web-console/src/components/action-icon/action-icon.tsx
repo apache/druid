@@ -24,7 +24,7 @@ import './action-icon.scss';
 
 export interface ActionIconProps extends React.Props<any> {
   className?: string;
-  icon?: IconName;
+  icon: IconName;
   onClick?: () => void;
 }
 

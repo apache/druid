@@ -33,7 +33,7 @@ describe('async action dialog', () => {
         successText={'test'}
         failText={'test'}
       />;
-    const { container, getByText } = render(asyncActionDialog, { container: document.body });
+    const { container } = render(asyncActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

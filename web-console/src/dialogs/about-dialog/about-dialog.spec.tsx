@@ -29,7 +29,7 @@ describe('about dialog', () => {
      <AboutDialog
        onClose={() => null}
      />;
-    const { container, getByText } = render(aboutDialog, { container: document.body });
+    const { container } = render(aboutDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

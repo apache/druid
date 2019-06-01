@@ -29,7 +29,7 @@ describe('table column', () => {
         onChange={(column: string) => {}}
         tableColumnsHidden={['a', 'b', 'c']}
       />;
-    const { container, getByText } = render(tableColumn);
+    const { container } = render(tableColumn);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
