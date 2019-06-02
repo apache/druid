@@ -21,7 +21,7 @@ import * as React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 
-import { NullTableCell, SqlControl } from '../../components';
+import { SqlControl, TableCell } from '../../components';
 import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
@@ -192,7 +192,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           return {
             Header: h,
             accessor: String(i),
-            Cell: row => <NullTableCell value={row.value}/>
+            Cell: row => <TableCell value={row.value}/>
           };
         })
       }

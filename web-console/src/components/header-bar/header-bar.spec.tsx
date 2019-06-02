@@ -19,10 +19,10 @@
 import { shallow } from 'enzyme';
 import * as React from 'react';
 
-import {HeaderBar} from './header-bar';
+import { HeaderBar } from './header-bar';
 
-describe('describe header bar', () => {
-  it('header bar snapshot', () => {
+describe('header bar', () => {
+  it('matches snapshot', () => {
     const headerBar = shallow(
       <HeaderBar
         active={'load-data'}

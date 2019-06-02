@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe external link external link snapshot 1`] = `
+exports[`external link matches snapshot 1`] = `
 <a
   href="http://test/"
   target="_blank"

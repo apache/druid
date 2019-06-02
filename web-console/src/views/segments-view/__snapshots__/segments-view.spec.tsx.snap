@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe segments-view segments view snapshot 1`] = `
+exports[`segments-view matches snapshot 1`] = `
 <div
   className="segments-view app-view"
 >
@@ -18,7 +18,7 @@ exports[`describe segments-view segments view snapshot 1`] = `
       onClick={[Function]}
       text="Go to SQL"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Segment ID",

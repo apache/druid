@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+.table-column-selector {
+  position: absolute;
+  right: 0;
+  margin: 0;
+}
 
-import {TableColumnSelection} from './table-column-selection';
-
-describe('describe table column', () => {
-  it('table column snapshot', () => {
-    const tableColumn =
-      <TableColumnSelection
-        columns={['a', 'b', 'c']}
-        onChange={(column: string) => {}}
-        tableColumnsHidden={['a', 'b', 'c']}
-      />;
-    const { container, getByText } = render(tableColumn);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+// This will be mounted in a portal
+.table-column-selector-menu {
+  .bp3-form-group {
+    margin-bottom: 0;
+  }
+}

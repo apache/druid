@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,30 +17,15 @@
  */
 
 import * as React from 'react';
+import { render } from 'react-testing-library';
 
-import './null-table-cell.scss';
+import { ActionIcon } from './action-icon';
+import { IconNames } from '@blueprintjs/icons';
 
-export interface NullTableCellProps extends React.Props<any> {
-  value?: any;
-  timestamp?: boolean;
-  unparseable?: boolean;
-}
-
-export class NullTableCell extends React.Component<NullTableCellProps, {}> {
-  render() {
-    const { value, timestamp, unparseable } = this.props;
-    if (unparseable) {
-      return <span className="null-table-cell unparseable">{`error`}</span>;
-    } else if (value !== '' && value != null) {
-      if (timestamp) {
-        return <span className="null-table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
-      } else if (Array.isArray(value)) {
-        return `[${value.join(', ')}]`;
-      } else {
-        return value;
-      }
-    } else {
-      return <span className="null-table-cell null">null</span>;
-    }
-  }
-}
+describe('action icon', () => {
+  it('matches snapshot', () => {
+    const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD}/>;
+    const { container } = render(actionIcon);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
