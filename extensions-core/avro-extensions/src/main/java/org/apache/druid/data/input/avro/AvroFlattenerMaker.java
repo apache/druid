@@ -126,9 +126,9 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private Object transformValue(final Object field)
   {
-    if (field instanceof GenericData.Array) {
-      return Lists.transform((List<?>) field, String::valueOf);
-    }
+//    if (field instanceof GenericData.Array) {
+//      return Lists.transform((List<?>) field, String::valueOf);
+//    }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
