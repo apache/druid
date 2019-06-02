@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
@@ -68,13 +67,11 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
         escapeChar
     );
 
-    class LikeExtractExpr implements Expr
+    class LikeExtractExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
     {
-      private final Expr arg;
-
       private LikeExtractExpr(Expr arg)
       {
-        this.arg = arg;
+        super(arg);
       }
 
       @Nonnull
@@ -85,27 +82,10 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
-      {
-        arg.visit(visitor);
-        visitor.visit(this);
-      }
-
-      @Override
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new LikeExtractExpr(newArg));
-      }
-
-      @Override
-      public BindingDetails analyzeInputs()
-      {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier == null) {
-          return arg.analyzeInputs();
-        }
-        return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
       }
     }
     return new LikeExtractExpr(arg);

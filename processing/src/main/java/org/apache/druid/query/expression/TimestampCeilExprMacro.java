@@ -29,9 +29,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
@@ -56,14 +54,13 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampCeilExpr implements Expr
+  private static class TimestampCeilExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
   {
-    private final Expr arg;
     private final Granularity granularity;
 
-    public TimestampCeilExpr(final List<Expr> args)
+    TimestampCeilExpr(final List<Expr> args)
     {
-      this.arg = args.get(0);
+      super(args.get(0));
       this.granularity = getGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -80,23 +77,10 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      arg.visit(visitor);
-      visitor.visit(this);
-    }
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
       Expr newArg = arg.visit(shuttle);
       return shuttle.visit(new TimestampCeilExpr(ImmutableList.of(newArg)));
-    }
-
-    @Override
-    public BindingDetails analyzeInputs()
-    {
-      return arg.analyzeInputs();
     }
   }
 
@@ -110,13 +94,11 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  private static class TimestampCeilDynamicExpr implements Expr
+  private static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
   {
-    private final List<Expr> args;
-
-    public TimestampCeilDynamicExpr(final List<Expr> args)
+    TimestampCeilDynamicExpr(final List<Expr> args)
     {
-      this.args = args;
+      super(args);
     }
 
     @Nonnull
@@ -128,34 +110,10 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
-    }
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
       return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
-    }
-
-    @Override
-    public BindingDetails analyzeInputs()
-    {
-      Set<String> scalars = new HashSet<>();
-      BindingDetails accumulator = new BindingDetails();
-      for (Expr arg : args) {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier != null) {
-          scalars.add(identifier);
-        }
-        accumulator = accumulator.merge(arg.analyzeInputs());
-      }
-      return accumulator.mergeWithScalars(scalars);
     }
   }
 }

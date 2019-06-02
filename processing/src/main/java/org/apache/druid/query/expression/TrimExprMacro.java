@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -97,16 +96,15 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TrimStaticCharsExpr implements Expr
+  private static class TrimStaticCharsExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
   {
     private final TrimMode mode;
-    private final Expr stringExpr;
     private final char[] chars;
 
     public TrimStaticCharsExpr(final TrimMode mode, final Expr stringExpr, final char[] chars)
     {
+      super(stringExpr);
       this.mode = mode;
-      this.stringExpr = stringExpr;
       this.chars = chars;
     }
 
@@ -114,7 +112,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final ExprEval stringEval = stringExpr.eval(bindings);
+      final ExprEval stringEval = arg.eval(bindings);
 
       if (chars.length == 0 || stringEval.value() == null) {
         return stringEval;
@@ -153,27 +151,10 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      stringExpr.visit(visitor);
-      visitor.visit(this);
-    }
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newStringExpr = stringExpr.visit(shuttle);
+      Expr newStringExpr = arg.visit(shuttle);
       return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars));
-    }
-
-    @Override
-    public BindingDetails analyzeInputs()
-    {
-      final String identifier = stringExpr.getIdentifierIfIdentifier();
-      if (identifier == null) {
-        return stringExpr.analyzeInputs();
-      }
-      return stringExpr.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
     }
   }
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -72,13 +71,11 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         null
     );
 
-    class LookupExpr implements Expr
+    class LookupExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
     {
-      private final Expr arg;
-
       private LookupExpr(Expr arg)
       {
-        this.arg = arg;
+        super(arg);
       }
 
       @Nonnull
@@ -89,27 +86,10 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
-      {
-        arg.visit(visitor);
-        visitor.visit(this);
-      }
-
-      @Override
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new LookupExpr(newArg));
-      }
-
-      @Override
-      public BindingDetails analyzeInputs()
-      {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier == null) {
-          return arg.analyzeInputs();
-        }
-        return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
       }
     }
 

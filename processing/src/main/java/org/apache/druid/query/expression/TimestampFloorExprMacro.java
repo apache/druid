@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -29,9 +28,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
@@ -66,14 +63,13 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  public static class TimestampFloorExpr implements Expr
+  public static class TimestampFloorExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
   {
-    private final Expr arg;
     private final PeriodGranularity granularity;
 
-    public TimestampFloorExpr(final List<Expr> args)
+    TimestampFloorExpr(final List<Expr> args)
     {
-      this.arg = args.get(0);
+      super(args.get(0));
       this.granularity = computeGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -106,38 +102,18 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      arg.visit(visitor);
-      visitor.visit(this);
-    }
-
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
       Expr newArg = arg.visit(shuttle);
       return shuttle.visit(new TimestampFloorExpr(ImmutableList.of(newArg)));
     }
-
-    @Override
-    public BindingDetails analyzeInputs()
-    {
-      final String identifier = arg.getIdentifierIfIdentifier();
-      if (identifier == null) {
-        return arg.analyzeInputs();
-      }
-      return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
-    }
   }
 
-  public static class TimestampFloorDynamicExpr implements Expr
+  public static class TimestampFloorDynamicExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
   {
-    private final List<Expr> args;
-
-    public TimestampFloorDynamicExpr(final List<Expr> args)
+    TimestampFloorDynamicExpr(final List<Expr> args)
     {
-      this.args = args;
+      super(args);
     }
 
     @Nonnull
@@ -149,34 +125,10 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
-    }
-
-    @Override
     public Expr visit(Shuttle shuttle)
     {
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
       return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
-    }
-
-    @Override
-    public BindingDetails analyzeInputs()
-    {
-      Set<String> scalars = new HashSet<>();
-      BindingDetails accumulator = new BindingDetails();
-      for (Expr arg : args) {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier != null) {
-          scalars.add(identifier);
-        }
-        accumulator = accumulator.merge(arg.analyzeInputs());
-      }
-      return accumulator.mergeWithScalars(scalars);
     }
   }
 }

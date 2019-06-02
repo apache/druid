@@ -20,12 +20,15 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ExprMacroTable
@@ -79,5 +82,67 @@ public class ExprMacroTable
     String name();
 
     Expr apply(List<Expr> args);
+  }
+
+  public static abstract class BaseSingleScalarArgumentExprMacroFunctionExpr implements Expr
+  {
+    protected final Expr arg;
+
+    public BaseSingleScalarArgumentExprMacroFunctionExpr(Expr arg)
+    {
+      this.arg = arg;
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      arg.visit(visitor);
+      visitor.visit(this);
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      final String identifier = arg.getIdentifierIfIdentifier();
+      if (identifier == null) {
+        return arg.analyzeInputs();
+      }
+      return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
+    }
+  }
+
+  public static abstract class BaseScalarExprMacroFunctionExpr implements Expr
+  {
+    protected final List<Expr> args;
+
+    public BaseScalarExprMacroFunctionExpr(final List<Expr> args)
+    {
+      this.args = args;
+    }
+
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      for (Expr arg : args) {
+        arg.visit(visitor);
+      }
+      visitor.visit(this);
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      Set<String> scalars = new HashSet<>();
+      BindingDetails accumulator = new BindingDetails();
+      for (Expr arg : args) {
+        final String identifier = arg.getIdentifierIfIdentifier();
+        if (identifier != null) {
+          scalars.add(identifier);
+        }
+        accumulator = accumulator.merge(arg.analyzeInputs());
+      }
+      return accumulator.mergeWithScalars(scalars);
+    }
   }
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expressions;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -68,13 +67,11 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
       throw new RuntimeException("Failed to deserialize bloom filter", ioe);
     }
 
-    class BloomExpr implements Expr
+    class BloomExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
     {
-      private final Expr arg;
-
       private BloomExpr(Expr arg)
       {
-        this.arg = arg;
+        super(arg);
       }
 
       @Nonnull
@@ -119,28 +116,12 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
         return filter.testBytes(null, 0, 0);
       }
 
-      @Override
-      public void visit(final Visitor visitor)
-      {
-        arg.visit(visitor);
-        visitor.visit(this);
-      }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new BloomExpr(newArg));
-      }
-
-      @Override
-      public BindingDetails analyzeInputs()
-      {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier == null) {
-          return arg.analyzeInputs();
-        }
-        return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
       }
     }
 
