@@ -84,7 +84,7 @@ public class ExprMacroTable
     Expr apply(List<Expr> args);
   }
 
-  public static abstract class BaseSingleScalarArgumentExprMacroFunctionExpr implements Expr
+  public abstract static class BaseSingleScalarArgumentExprMacroFunctionExpr implements Expr
   {
     protected final Expr arg;
 
@@ -111,7 +111,7 @@ public class ExprMacroTable
     }
   }
 
-  public static abstract class BaseScalarExprMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarExprMacroFunctionExpr implements Expr
   {
     protected final List<Expr> args;
 
