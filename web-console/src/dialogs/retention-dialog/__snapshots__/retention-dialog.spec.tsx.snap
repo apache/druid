@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe retention dialog retention dialog snapshot 1`] = `
+exports[`retention dialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >

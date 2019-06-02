@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe sql view sql view snapshot 1`] = `
+exports[`sql view matches snapshot 1`] = `
 <t
   customClassName="sql-view app-view"
   onDragEnd={null}

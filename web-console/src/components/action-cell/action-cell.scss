@@ -19,12 +19,6 @@
 .action-cell {
   & > * {
     margin-right: 10px;
-    color: #48aff0;
-    cursor: pointer;
-
-    &:hover {
-      color: #4891d2;
-    }
 
     &:last-child {
       margin-right: 0;
