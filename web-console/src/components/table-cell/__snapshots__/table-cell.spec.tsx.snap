@@ -1,0 +1,67 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`table cell matches snapshot array long 1`] = `
+<span
+  class="table-cell truncated"
+>
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ...323 omitted... 7, 98, 99]
+  <span
+    class="bp3-icon bp3-icon-clipboard action-icon"
+    icon="clipboard"
+  >
+    <svg
+      data-icon="clipboard"
+      height="16"
+      viewBox="0 0 16 16"
+      width="16"
+    >
+      <desc>
+        clipboard
+      </desc>
+      <path
+        d="M11 2c0-.55-.45-1-1-1h.22C9.88.4 9.24 0 8.5 0S7.12.4 6.78 1H7c-.55 0-1 .45-1 1v1h5V2zm2 0h-1v2H5V2H4c-.55 0-1 .45-1 1v12c0 .55.45 1 1 1h9c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1z"
+        fill-rule="evenodd"
+      />
+    </svg>
+  </span>
+</span>
+`;
+
+exports[`table cell matches snapshot array short 1`] = `[a, b, c]`;
+
+exports[`table cell matches snapshot null 1`] = `
+<span
+  class="table-cell null"
+>
+  null
+</span>
+`;
+
+exports[`table cell matches snapshot simple 1`] = `Hello World`;
+
+exports[`table cell matches snapshot truncate 1`] = `
+<span
+  class="table-cell truncated"
+>
+  testtesttesttesttesttesttesttesttesttesttesttesttesttestt ...329 omitted... sttesttest
+  <span
+    class="bp3-icon bp3-icon-clipboard action-icon"
+    icon="clipboard"
+  >
+    <svg
+      data-icon="clipboard"
+      height="16"
+      viewBox="0 0 16 16"
+      width="16"
+    >
+      <desc>
+        clipboard
+      </desc>
+      <path
+        d="M11 2c0-.55-.45-1-1-1h.22C9.88.4 9.24 0 8.5 0S7.12.4 6.78 1H7c-.55 0-1 .45-1 1v1h5V2zm2 0h-1v2H5V2H4c-.55 0-1 .45-1 1v12c0 .55.45 1 1 1h9c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1z"
+        fill-rule="evenodd"
+      />
+    </svg>
+  </span>
+</span>
+`;

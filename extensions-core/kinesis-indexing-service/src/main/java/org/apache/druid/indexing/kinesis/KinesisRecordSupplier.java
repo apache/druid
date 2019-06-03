@@ -45,6 +45,7 @@ import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -67,6 +68,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -579,12 +581,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Set<String> getPartitionIds(String stream)
   {
-    checkIfClosed();
-    return kinesis.describeStream(stream)
-                  .getStreamDescription()
-                  .getShards()
-                  .stream()
-                  .map(Shard::getShardId).collect(Collectors.toSet());
+    return wrapExceptions(() -> kinesis.describeStream(stream)
+                                       .getStreamDescription()
+                                       .getShards()
+                                       .stream()
+                                       .map(Shard::getShardId).collect(Collectors.toSet()));
   }
 
   @Override
@@ -624,12 +625,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         sequenceNumber != null ? sequenceNumber : iteratorEnum.toString()
     );
 
-    resource.shardIterator = kinesis.getShardIterator(
+    resource.shardIterator = wrapExceptions(() -> kinesis.getShardIterator(
         partition.getStream(),
         partition.getPartitionId(),
         iteratorEnum.toString(),
         sequenceNumber
-    ).getShardIterator();
+    ).getShardIterator());
 
     checkPartitionsStarted = true;
   }
@@ -655,10 +656,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     // filter records in buffer and only retain ones whose partition was not seeked
     BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
-    records
-        .stream()
-        .filter(x -> !partitions.contains(x.getStreamPartition()))
-        .forEachOrdered(newQ::offer);
+
+    records.stream()
+           .filter(x -> !partitions.contains(x.getStreamPartition()))
+           .forEachOrdered(newQ::offer);
 
     records = newQ;
 
@@ -670,20 +671,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Nullable
   private String getSequenceNumberInternal(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
   {
-
-    String shardIterator = null;
-    try {
-      shardIterator = kinesis.getShardIterator(
-          partition.getStream(),
-          partition.getPartitionId(),
-          iteratorEnum.toString()
-      ).getShardIterator();
-    }
-    catch (ResourceNotFoundException e) {
-      log.warn(e, "Caught ResourceNotFoundException while getting shardIterator");
-    }
-
-    return getSequenceNumberInternal(partition, shardIterator);
+    return wrapExceptions(() -> getSequenceNumberInternal(
+        partition,
+        kinesis.getShardIterator(partition.getStream(), partition.getPartitionId(), iteratorEnum.toString())
+               .getShardIterator()
+    ));
   }
 
   @Nullable
@@ -771,6 +763,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       final byte[] retVal = new byte[buffer.remaining()];
       buffer.duplicate().get(retVal);
       return retVal;
+    }
+  }
+
+  private static <T> T wrapExceptions(Callable<T> callable)
+  {
+    try {
+      return callable.call();
+    }
+    catch (Exception e) {
+      throw new StreamException(e);
     }
   }
 

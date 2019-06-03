@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -125,7 +126,8 @@ public class MaterializedViewSupervisorTest
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
-        createMock(ChatHandlerProvider.class)
+        createMock(ChatHandlerProvider.class),
+        new SupervisorStateManagerConfig()
     );
     supervisor = (MaterializedViewSupervisor) spec.createSupervisor();
   }
@@ -282,7 +284,8 @@ public class MaterializedViewSupervisorTest
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
-        createMock(ChatHandlerProvider.class)
+        createMock(ChatHandlerProvider.class),
+        new SupervisorStateManagerConfig()
     );
     MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
 

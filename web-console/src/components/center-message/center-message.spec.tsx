@@ -22,13 +22,13 @@ import { render } from 'react-testing-library';
 import { CenterMessage } from './center-message';
 
 describe('decribe center-message', () => {
-  it('center-message snapshot', () => {
+  it('matches snapshot', () => {
     const centerMessage =
       <CenterMessage>
         <div>Hello World</div>
       </CenterMessage>;
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

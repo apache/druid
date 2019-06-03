@@ -16,19 +16,22 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+.table-cell {
+  &.null {
+    font-style: italic;
+  }
 
-import {JSONInput} from './json-input';
+  &.unparseable {
+    color: #9E2B0E;
+  }
 
-describe('describe json input', () => {
-  it('json input snapshot', () => {
-    const jsonCollapse =
-    <JSONInput
-      onChange={(newJSONValue: any) => {}}
-      value={'test'}
-    />;
-    const { container, getByText } = render(jsonCollapse);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  &.timestamp {
+    font-weight: bold;
+  }
+
+  &.truncated {
+    .action-icon {
+      margin-left: 5px;
+    }
+  }
+}

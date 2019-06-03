@@ -24,7 +24,7 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelection, ViewControlBar} from '../../components';
+import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog, TaskTableActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -296,7 +296,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onAction: () => this.props.goToLoadDataView(id)
         });
     }
-    actions.push({
+    actions.push(
+      {
         icon: IconNames.STEP_BACKWARD,
         title: 'Reset',
         onAction: () => this.setState({ resetSupervisorId: id })
@@ -312,8 +313,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSupervisorId: id })
       }
-      );
-    // @ts-ignore
+    );
     return actions;
   }
 
@@ -729,9 +729,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               text="Submit supervisor"
               onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
             />
-            <TableColumnSelection
+            <TableColumnSelector
               columns={supervisorTableColumns}
-              onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
+              onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)}
               tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
             />
           </ViewControlBar>
@@ -762,9 +762,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
               <Button icon={IconNames.PLUS} text="Submit task"/>
             </Popover>
-            <TableColumnSelection
+            <TableColumnSelector
               columns={taskTableColumns}
-              onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
+              onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelector(column)}
               tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
             />
           </ViewControlBar>
