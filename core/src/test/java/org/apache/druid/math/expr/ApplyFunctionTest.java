@@ -122,6 +122,16 @@ public class ApplyFunctionTest
     assertExpr("all(x -> x, map(x -> x > 1, [1, 2, 3, 4]))", "false");
   }
 
+  @Test
+  public void testScoping()
+  {
+    assertExpr("map(b -> b + 1, b)", new Long[]{2L, 3L, 4L, 5L, 6L});
+    assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), 0)", 20L);
+    assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), fold((b, acc) -> acc + b, map(b -> b + 1, b), 0))", 40L);
+    assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), 0) + fold((b, acc) -> acc + b, map(b -> b + 1, b), 0)", 40L);
+    assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), fold((b, acc) -> acc + b, map(b -> b + 1, b), 0) + fold((b, acc) -> acc + b, map(b -> b + 1, b), 0))", 60L);
+  }
+
   private void assertExpr(final String expression, final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());

@@ -260,9 +260,12 @@ public class Parser
     switch (expr.function.name()) {
       case ApplyFunction.MapFunction.NAME:
       case ApplyFunction.CartesianMapFunction.NAME:
-        // map(x -> x + y, x) => cartesian_map((x, y) -> x + y, x, y)
-        // cartesian_map((x, y) -> x + y + z, x, y) => cartesian_map((x, y, z) -> x + y + z, x, y, z)
-        final List<IdentifierExpr> lambdaIds = new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
+        // map(x -> x + y, x) =>
+        //  cartesian_map((x, y) -> x + y, x, y)
+        // cartesian_map((x, y) -> x + y + z, x, y) =>
+        //  cartesian_map((x, y, z) -> x + y + z, x, y, z)
+        final List<IdentifierExpr> lambdaIds =
+            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
         lambdaIds.addAll(expr.lambdaExpr.getIdentifierExprs());
         lambdaIds.addAll(unappliedLambdaBindings);
         final LambdaExpr newLambda = new LambdaExpr(lambdaIds, expr.lambdaExpr.getExpr());
@@ -275,9 +278,12 @@ public class Parser
         // i'm lazy and didn't add 'cartesian_filter', 'cartesian_any', and 'cartesian_and', so instead steal the match
         // expressions lambda and translate it into a 'cartesian_map', and apply that to the match function with a new
         // identity expression lambda since the input is an array of boolean expression results (or should be..)
-        // filter(x -> x > y, x) => filter(x -> x, cartesian_map((x,y) -> x > y, x, y))
-        // any(x -> x > y, x) => any(x -> x, cartesian_map((x, y) -> x > y, x, y))
-        // all(x -> x > y, x) => all(x -> x, cartesian_map((x, y) -> x > y, x, y))
+        // filter(x -> x > y, x) =>
+        //  filter(x -> x, cartesian_map((x,y) -> x > y, x, y))
+        // any(x -> x > y, x) =>
+        //  any(x -> x, cartesian_map((x, y) -> x > y, x, y))
+        // all(x -> x > y, x) =>
+        //  all(x -> x, cartesian_map((x, y) -> x > y, x, y))
         ApplyFunction newArrayFn = new ApplyFunction.CartesianMapFunction();
         IdentifierExpr identityExprIdentifier = new IdentifierExpr("_");
         LambdaExpr identityExpr = new LambdaExpr(ImmutableList.of(identityExprIdentifier), identityExprIdentifier);
@@ -286,11 +292,14 @@ public class Parser
         break;
       case ApplyFunction.FoldFunction.NAME:
       case ApplyFunction.CartesianFoldFunction.NAME:
-        // fold((x, acc) -> acc + x + y, x, acc) => cartesian_fold((x, y, acc) -> acc + x + y, x, y, acc)
-        // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) => cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
+        // fold((x, acc) -> acc + x + y, x, acc) =>
+        //  cartesian_fold((x, y, acc) -> acc + x + y, x, y, acc)
+        // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) =>
+        //  cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
 
         final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedArgs.size());
-        final List<IdentifierExpr> newFoldLambdaIdentifiers = new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
+        final List<IdentifierExpr> newFoldLambdaIdentifiers =
+            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
         final List<IdentifierExpr> existingFoldLambdaIdentifiers = expr.lambdaExpr.getIdentifierExprs();
         // accumulator argument is last argument, slice it off when constructing new arg list and lambda args identifiers
         for (int i = 0; i < expr.argsExpr.size() - 1; i++) {
@@ -316,10 +325,10 @@ public class Parser
 
   public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
   {
-    final Set<String> inconsistentIdentifierUsage =
+    final Set<String> conflicted =
         Sets.intersection(bindingDetails.getScalarVariables(), bindingDetails.getArrayVariables());
-    if (inconsistentIdentifierUsage.size() != 0) {
-      throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, inconsistentIdentifierUsage);
+    if (conflicted.size() != 0) {
+      throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }
   }
 
