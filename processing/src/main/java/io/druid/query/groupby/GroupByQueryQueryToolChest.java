@@ -50,6 +50,7 @@ import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -408,7 +409,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       @Override
-      public Function<Row, Object> prepareForCache()
+      public Function<Row, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Row, Object>()
         {
@@ -426,6 +427,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               for (AggregatorFactory agg : aggs) {
                 retVal.add(event.get(agg.getName()));
               }
+              if (isResultLevelCache) {
+                for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                  retVal.add(event.get(postAgg.getName()));
+                }
+              }
               return retVal;
             }
 
@@ -435,7 +441,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       @Override
-      public Function<Object, Row> pullFromCache()
+      public Function<Object, Row> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Row>()
         {
@@ -460,7 +466,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               final AggregatorFactory factory = aggsIter.next();
               event.put(factory.getName(), factory.deserialize(results.next()));
             }
-
+            if (isResultLevelCache) {
+              Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+              while (postItr.hasNext() && results.hasNext()) {
+                event.put(postItr.next().getName(), results.next());
+              }
+            }
             if (dimsIter.hasNext() || aggsIter.hasNext() || results.hasNext()) {
               throw new ISE(
                   "Found left over objects while reading from cache!! dimsIter[%s] aggsIter[%s] results[%s]",

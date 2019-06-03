@@ -243,7 +243,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       }
 
       @Override
-      public Function<Result<SelectResultValue>, Object> prepareForCache()
+      public Function<Result<SelectResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<SelectResultValue>, Object>()
         {
@@ -272,7 +272,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       }
 
       @Override
-      public Function<Object, Result<SelectResultValue>> pullFromCache()
+      public Function<Object, Result<SelectResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<SelectResultValue>>()
         {

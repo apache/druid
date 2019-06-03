@@ -78,7 +78,7 @@ public class TopNQueryQueryToolChestTest
             )
         );
 
-    final Result<TopNResultValue> result = new Result<>(
+    final Result<TopNResultValue> result1 = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TopNResultValue(
@@ -91,8 +91,8 @@ public class TopNQueryQueryToolChestTest
         )
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(
-        result
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
+        result1
     );
 
     ObjectMapper objectMapper = TestHelper.makeJsonMapper();
@@ -101,9 +101,36 @@ public class TopNQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TopNResultValue> fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
+    Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assert.assertEquals(result1, fromCacheResult);
+
+    final Result<TopNResultValue> result2 = new Result<>(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        new TopNResultValue(
+            Arrays.asList(
+                ImmutableMap.<String, Object>of(
+                    "test", "val1",
+                    "metric1", 2,
+                    "post", 10
+                )
+            )
+        )
+    );
+
+    Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
+        result2
+    );
+
+    Object fromResultCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
+    Assert.assertEquals(result2, fromResultCacheResult);
+
   }
 
   @Test

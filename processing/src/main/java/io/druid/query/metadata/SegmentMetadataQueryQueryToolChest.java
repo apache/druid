@@ -198,7 +198,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
 
       @Override
-      public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache()
+      public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<SegmentAnalysis, SegmentAnalysis>()
         {
@@ -211,7 +211,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
 
       @Override
-      public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache()
+      public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<SegmentAnalysis, SegmentAnalysis>()
         {

@@ -174,7 +174,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       }
 
       @Override
-      public Function<Result<TimeseriesResultValue>, Object> prepareForCache()
+      public Function<Result<TimeseriesResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<TimeseriesResultValue>, Object>()
         {
@@ -188,14 +188,18 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             for (AggregatorFactory agg : aggs) {
               retVal.add(results.getMetric(agg.getName()));
             }
-
+            if (isResultLevelCache) {
+              for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                retVal.add(results.getMetric(postAgg.getName()));
+              }
+            }
             return retVal;
           }
         };
       }
 
       @Override
-      public Function<Object, Result<TimeseriesResultValue>> pullFromCache()
+      public Function<Object, Result<TimeseriesResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
@@ -215,6 +219,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
+            }
+            if (isResultLevelCache) {
+              Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+              while (postItr.hasNext() && resultIter.hasNext()) {
+                retVal.put(postItr.next().getName(), resultIter.next());
+              }
             }
 
             return new Result<TimeseriesResultValue>(

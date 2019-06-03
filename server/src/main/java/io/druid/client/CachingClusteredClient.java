@@ -497,7 +497,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return;
       }
 
-      final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
+      final Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache();
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
       for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
         final byte[] cachedResult = cachedResultPair.rhs;
@@ -597,7 +597,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               .withQuerySegmentSpec(segmentsOfServerSpec),
           responseContext
       );
-      final Function<T, Object> cacheFn = strategy.prepareForCache();
+      final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
       return resultsBySegments
           .map(result -> {
             final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();

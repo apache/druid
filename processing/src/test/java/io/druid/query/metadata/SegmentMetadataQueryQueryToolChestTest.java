@@ -94,7 +94,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         null
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(result);
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result);
 
     ObjectMapper objectMapper = new DefaultObjectMapper();
     SegmentAnalysis fromCacheValue = objectMapper.readValue(
@@ -102,7 +102,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    SegmentAnalysis fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
+    SegmentAnalysis fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
   }
