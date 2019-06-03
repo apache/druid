@@ -60,7 +60,7 @@ public class Parser
           functionMap.put(StringUtils.toLowerCase(function.name()), function);
         }
         catch (Exception e) {
-          log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
+          log.error(e, "failed to instantiate %s.. ignoring", clazz.getName());
         }
       }
     }
@@ -74,23 +74,36 @@ public class Parser
           applyFunctionMap.put(StringUtils.toLowerCase(function.name()), function);
         }
         catch (Exception e) {
-          log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
+          log.error(e, "failed to instantiate %s.. ignoring", clazz.getName());
         }
       }
     }
     APPLY_FUNCTIONS = ImmutableMap.copyOf(applyFunctionMap);
   }
 
+  /**
+   * Get {@link Function} by {@link Function#name()}
+   */
   public static Function getFunction(String name)
   {
     return FUNCTIONS.get(StringUtils.toLowerCase(name));
   }
 
+  /**
+   * Get {@link ApplyFunction} by {@link ApplyFunction#name()}
+   */
   public static ApplyFunction getApplyFunction(String name)
   {
     return APPLY_FUNCTIONS.get(StringUtils.toLowerCase(name));
   }
 
+  /**
+   * Parse a string into a flattened {@link Expr}. There is some overhead to this, and these objects are all immutable,
+   * so re-use instead of re-creating whenever possible.
+   * @param in expression to parse
+   * @param macroTable additional extensions to expression language
+   * @return
+   */
   public static Expr parse(String in, ExprMacroTable macroTable)
   {
     return parse(in, macroTable, true);
@@ -110,50 +123,48 @@ public class Parser
     return withFlatten ? flatten(listener.getAST()) : listener.getAST();
   }
 
+  /**
+   * Flatten an {@link Expr}, evaluating expressions on constants where possible to simplify the {@link Expr}.
+   */
   public static Expr flatten(Expr expr)
   {
-    if (expr instanceof BinaryOpExprBase) {
-      BinaryOpExprBase binary = (BinaryOpExprBase) expr;
-      Expr left = flatten(binary.left);
-      Expr right = flatten(binary.right);
-      if (Evals.isAllConstants(left, right)) {
-        expr = expr.eval(null).toExpr();
-      } else if (left != binary.left || right != binary.right) {
-        return Evals.binaryOp(binary, left, right);
-      }
-    } else if (expr instanceof UnaryExpr) {
-      UnaryExpr unary = (UnaryExpr) expr;
-      Expr eval = flatten(unary.expr);
-      if (eval instanceof ConstantExpr) {
-        expr = expr.eval(null).toExpr();
-      } else if (eval != unary.expr) {
-        if (expr instanceof UnaryMinusExpr) {
-          expr = new UnaryMinusExpr(eval);
-        } else if (expr instanceof UnaryNotExpr) {
-          expr = new UnaryNotExpr(eval);
-        } else {
-          expr = unary; // unknown type..
+    return expr.visit(childExpr -> {
+      if (childExpr instanceof BinaryOpExprBase) {
+        BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
+        if (Evals.isAllConstants(binary.left, binary.right)) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof UnaryExpr) {
+        UnaryExpr unary = (UnaryExpr) childExpr;
+
+        if (unary.expr instanceof ConstantExpr) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof FunctionExpr) {
+        FunctionExpr functionExpr = (FunctionExpr) childExpr;
+        List<Expr> args = functionExpr.args;
+        if (Evals.isAllConstants(args)) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof ApplyFunctionExpr) {
+        ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
+        List<Expr> args = applyFunctionExpr.argsExpr;
+        if (Evals.isAllConstants(args)) {
+          return childExpr.eval(null).toExpr();
         }
       }
-    } else if (expr instanceof FunctionExpr) {
-      FunctionExpr functionExpr = (FunctionExpr) expr;
-      List<Expr> args = functionExpr.args;
-      boolean flattened = false;
-      List<Expr> flattening = Lists.newArrayListWithCapacity(args.size());
-      for (Expr arg : args) {
-        Expr flatten = flatten(arg);
-        flattened |= flatten != arg;
-        flattening.add(flatten);
-      }
-      if (Evals.isAllConstants(flattening)) {
-        expr = expr.eval(null).toExpr();
-      } else if (flattened) {
-        expr = new FunctionExpr(functionExpr.function, functionExpr.name, flattening);
-      }
-    }
-    return expr;
+      return childExpr;
+    });
   }
 
+  /**
+   * Applies a transformation to an {@link Expr} given a list of known (or uknown) multi-value input columns that are
+   * used in a scalar manner, walking the {@link Expr} tree and lifting array variables into the {@link LambdaExpr} of
+   * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr} {@link Function.ArrayFunction}
+   * @param expr expression to visit and rewrite
+   * @param unapplied
+   * @return
+   */
   public static Expr applyUnappliedIdentifiers(Expr expr, List<String> unapplied)
   {
     Preconditions.checkArgument(unapplied.size() > 0);
@@ -164,34 +175,29 @@ public class Parser
 
     // any unapplied identifiers that are inside a lambda expression need that lambda expression to be rewritten
     Expr newExpr = expr.visit(
-        new Expr.Shuttle()
-        {
-          @Override
-          public Expr visit(Expr expr)
-          {
-            if (expr instanceof ApplyFunctionExpr) {
-              // try to lift unapplied arguments into the apply function lambda
-              return liftApplyLambda((ApplyFunctionExpr) expr, unapplied);
-            } else if (expr instanceof FunctionExpr && ((FunctionExpr) expr).function instanceof Function.ArrayFunction) {
-              // check array function arguments for unapplied identifiers to transform if necessary
-              FunctionExpr fnExpr = (FunctionExpr) expr;
-              Function.ArrayFunction arrayFn = (Function.ArrayFunction) fnExpr.function;
-              Set<Expr> arrayInputs = arrayFn.getArrayInputs(fnExpr.args);
-              List<Expr> newArgs = new ArrayList<>();
-              for (Expr arg : fnExpr.args) {
-                if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
-                  Expr newArg = applyUnappliedIdentifiers(arg, unapplied);
-                  newArgs.add(newArg);
-                } else {
-                  newArgs.add(arg);
-                }
+        childExpr -> {
+          if (childExpr instanceof ApplyFunctionExpr) {
+            // try to lift unapplied arguments into the apply function lambda
+            return liftApplyLambda((ApplyFunctionExpr) childExpr, unapplied);
+          } else if (childExpr instanceof FunctionExpr && ((FunctionExpr) childExpr).function instanceof Function.ArrayFunction) {
+            // check array function arguments for unapplied identifiers to transform if necessary
+            FunctionExpr fnExpr = (FunctionExpr) childExpr;
+            Function.ArrayFunction arrayFn = (Function.ArrayFunction) fnExpr.function;
+            Set<Expr> arrayInputs = arrayFn.getArrayInputs(fnExpr.args);
+            List<Expr> newArgs = new ArrayList<>();
+            for (Expr arg : fnExpr.args) {
+              if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
+                Expr newArg = applyUnappliedIdentifiers(arg, unapplied);
+                newArgs.add(newArg);
+              } else {
+                newArgs.add(arg);
               }
-
-              FunctionExpr newFnExpr = new FunctionExpr(arrayFn, arrayFn.name(), newArgs);
-              return newFnExpr;
             }
-            return expr;
+
+            FunctionExpr newFnExpr = new FunctionExpr(arrayFn, arrayFn.name(), newArgs);
+            return newFnExpr;
           }
+          return childExpr;
         }
     );
 
@@ -323,6 +329,9 @@ public class Parser
     return newExpr;
   }
 
+  /**
+   * Validate that an expression uses input bindings in a type consistent manner.
+   */
   public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
   {
     final Set<String> conflicted =
@@ -332,11 +341,18 @@ public class Parser
     }
   }
 
+  /**
+   * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
+   */
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
     return bindings::get;
   }
 
+  /**
+   * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
+   * {@link Expr}
+   */
   public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
   {
     return (String name) -> {
