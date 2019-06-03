@@ -19,12 +19,10 @@
 
 package org.apache.druid.data.input.avro;
 
-import com.google.common.collect.Lists;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.java.util.common.StringUtils;
@@ -126,9 +124,6 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private Object transformValue(final Object field)
   {
-//    if (field instanceof GenericData.Array) {
-//      return Lists.transform((List<?>) field, String::valueOf);
-//    }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
