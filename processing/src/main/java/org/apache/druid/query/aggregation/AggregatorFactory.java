@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -50,6 +51,11 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
 
   public abstract Comparator getComparator();
+
+  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  {
+    return getComparator();
+  }
 
   /**
    * A method that knows how to combine the outputs of {@link Aggregator#get} produced via {@link #factorize} or {@link

@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -97,6 +98,12 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   public Comparator getComparator()
   {
     return StringFirstAggregatorFactory.VALUE_COMPARATOR;
+  }
+
+  @Override
+  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  {
+    return StringFirstAggregatorFactory.makeComparator(columnSpec.getDimensionComparator());
   }
 
   @Override

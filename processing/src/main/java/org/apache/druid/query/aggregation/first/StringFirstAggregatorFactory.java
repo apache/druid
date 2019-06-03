@@ -32,6 +32,8 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -95,6 +97,25 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   private final String name;
   protected final int maxStringBytes;
 
+  public static Comparator<SerializablePairLongString> makeComparator(StringComparator stringComparator)
+  {
+    return (o1, o2) -> {
+      int comparation;
+
+      // First we check if the objects are null
+      if (o1 == null && o2 == null) {
+        comparation = 0;
+      } else if (o1 == null) {
+        comparation = -1;
+      } else if (o2 == null) {
+        comparation = 1;
+      } else {
+        comparation = stringComparator.compare(o1.rhs, o2.rhs);
+      }
+      return comparation;
+    };
+  }
+
   @JsonCreator
   public StringFirstAggregatorFactory(
       @JsonProperty("name") String name,
@@ -139,6 +160,12 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   public Comparator getComparator()
   {
     return VALUE_COMPARATOR;
+  }
+
+  @Override
+  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  {
+    return makeComparator(columnSpec.getDimensionComparator());
   }
 
   @Override
