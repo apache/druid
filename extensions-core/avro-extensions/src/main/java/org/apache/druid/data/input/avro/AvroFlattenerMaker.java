@@ -55,17 +55,17 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       Schema.Type.DOUBLE
   );
 
-  public static boolean isPrimitive(Schema schema)
+  private static boolean isPrimitive(Schema schema)
   {
     return ROOT_TYPES.contains(schema.getType());
   }
 
-  public static boolean isPrimitiveArray(Schema schema)
+  private static boolean isPrimitiveArray(Schema schema)
   {
     return schema.getType().equals(Schema.Type.ARRAY) && isPrimitive(schema.getElementType());
   }
 
-  public static boolean isOptionalPrimitive(Schema schema)
+  private static boolean isOptionalPrimitive(Schema schema)
   {
     return schema.getType().equals(Schema.Type.UNION) &&
            schema.getTypes().size() == 2 &&
@@ -77,7 +77,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
            );
   }
 
-  static boolean isFieldPrimitive(Schema.Field field)
+  private static boolean isFieldPrimitive(Schema.Field field)
   {
     return isPrimitive(field.schema()) ||
            isPrimitiveArray(field.schema()) ||
@@ -87,6 +87,9 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private final boolean binaryAsString;
 
+  /**
+   * @param binaryAsString boolean to encode the byte[] as a string.
+   */
   public AvroFlattenerMaker(final boolean binaryAsString)
   {
     this.binaryAsString = binaryAsString;
@@ -130,11 +133,9 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       } else {
         return ((ByteBuffer) field).array();
       }
-    }
-    if (field instanceof Utf8) {
+    } else if (field instanceof Utf8) {
       return field.toString();
-    }
-    if (field instanceof List) {
+    } else if (field instanceof List) {
       return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
     return field;
