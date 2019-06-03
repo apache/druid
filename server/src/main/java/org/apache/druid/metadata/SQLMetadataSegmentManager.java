@@ -71,7 +71,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -450,12 +449,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
-      if (dataSourcesSnapshot != null) {
-        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
-        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.remove(dataSource));
-        replaceDataSourcesSnapshot(dataSourcesMap);
-      }
-
       if (removed == 0) {
         return false;
       }
@@ -472,29 +465,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(String dataSourceName, final String segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId);
-
-      // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
-      // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
-      List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      if (dataSourcesSnapshot != null) {
-        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
-        BiFunction<String, ImmutableDruidDataSource, ImmutableDruidDataSource> fn = (dsName, dataSource) -> {
-          for (SegmentId possibleSegmentId : possibleSegmentIds) {
-            DruidDataSource druidDataSource = new DruidDataSource(dataSource.getName(), dataSource.getProperties());
-            if (druidDataSource.removeSegment(possibleSegmentId) != null) {
-              dataSource = druidDataSource.toImmutableDruidDataSource();
-              break;
-            }
-          }
-          return dataSource;
-        };
-
-        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.computeIfPresent(dataSourceName, fn));
-        replaceDataSourcesSnapshot(dataSourcesMap);
-      }
-
-      return removed;
+      return removeSegmentFromTable(segmentId);
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -506,20 +477,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(SegmentId segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId.toString());
-      if (dataSourcesSnapshot != null) {
-        final Map<String, ImmutableDruidDataSource> dataSourcesMap = dataSourcesSnapshot.getDataSourcesMap();
-        BiFunction<String, ImmutableDruidDataSource, ImmutableDruidDataSource> fn = (dsName, dataSource) -> {
-          DruidDataSource druidDataSource = new DruidDataSource(dataSource.getName(), dataSource.getProperties());
-          if (druidDataSource.removeSegment(segmentId) != null) {
-            dataSource = druidDataSource.toImmutableDruidDataSource();
-          }
-          return dataSource;
-        };
-
-        Optional.ofNullable(dataSourcesMap).ifPresent(m -> m.computeIfPresent(segmentId.getDataSource(), fn));
-      }
-      return removed;
+      return removeSegmentFromTable(segmentId.toString());
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -757,21 +715,23 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
-
-    replaceDataSourcesSnapshot(newDataSources.entrySet()
-                                             .stream()
-                                             .collect(Collectors.toMap(
-                                                 e -> e.getKey(),
-                                                 e -> e.getValue().toImmutableDruidDataSource()
-                                             )));
-  }
-
-  /**
-   * replace "dataSourcesSnapshot" atomically
-   */
-  private void replaceDataSourcesSnapshot(Map<String, ImmutableDruidDataSource> dataSources)
-  {
-    dataSourcesSnapshot = new DataSourcesSnapshot(dataSources);
+    /**
+     * dataSourcesSnapshot is updated only here, please note that if datasources or segments are enabled or disabled
+     * outside of poll, the dataSourcesSnapshot can become invalid until the next poll cycle.
+     * {@link DataSourcesSnapshot} computes the overshadowed segments, which makes it an expensive operation if the
+     * snapshot is invalidated on each segment removal, especially if a user issues a lot of single segment remove
+     * calls in rapid succession. So the snapshot update is not done outside of poll at this time.
+     * Updates outside of poll(), were primarily for the user experience, so users would immediately see the effect of
+     * a segment remove call reflected in MetadataResource API calls. These updates outside of schecduled poll may be
+     * added back in removeDataSource and removeSegment methods after the on-demand polling changes from
+     * https://github.com/apache/incubator-druid/pull/7653 are in.
+     */
+    dataSourcesSnapshot = new DataSourcesSnapshot(newDataSources.entrySet()
+                                                                .stream()
+                                                                .collect(Collectors.toMap(
+                                                                    e -> e.getKey(),
+                                                                    e -> e.getValue().toImmutableDruidDataSource()
+                                                                )));
   }
 
   /**
