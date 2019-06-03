@@ -30,7 +30,6 @@ import java.util.Map;
 /**
  * Empty implementation of {@link BasicAuthorizerMetadataStorageUpdater}.
  * Void methods do nothing, other return empty maps or empty arrays depending on the return type.
- * The class is needed if a node should not support authorizer metadata storage update.
  */
 public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorizerMetadataStorageUpdater
 {

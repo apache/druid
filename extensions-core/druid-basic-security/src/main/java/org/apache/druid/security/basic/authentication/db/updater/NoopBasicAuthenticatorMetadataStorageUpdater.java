@@ -29,7 +29,6 @@ import java.util.Map;
 /**
  * Empty implementation of {@link BasicAuthenticatorMetadataStorageUpdater}.
  * Void methods do nothing, other return empty maps or empty arrays depending on the return type.
- * The class is needed if a node should not support authenticator metadata storage update.
  */
 public class NoopBasicAuthenticatorMetadataStorageUpdater implements BasicAuthenticatorMetadataStorageUpdater
 {
