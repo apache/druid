@@ -1144,7 +1144,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
-          final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
+          // At this point the desire is to reset the supervisor, so this conversion
+          // to startMetadata is required to prevent the supervisor from becoming unable
+          // to schedule new indexing tasks in the situation where the sequence number
+          // metatdata types are mismatched.
+          final DataSourceMetadata newMetadata = currentMetadata.asStartMetadata()
+              .minus(resetMetadata.asStartMetadata());
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
           }
