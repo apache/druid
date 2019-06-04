@@ -805,7 +805,13 @@ public abstract class ExprEval<T>
       }
       return Arrays.stream(value).map(value -> {
         Long lv = GuavaUtils.tryParseLong(value);
-        return lv != null ? lv : Doubles.tryParse(value).longValue();
+        if (lv == null) {
+          Double d = Doubles.tryParse(value);
+          if (d != null) {
+            lv = d.longValue();
+          }
+        }
+        return lv;
       }).toArray(Long[]::new);
     }
 

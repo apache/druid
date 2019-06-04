@@ -70,7 +70,7 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
       if (transformedCache.containsKey(key)) {
         return transformedCache.get(key).eval(bindings);
       }
-      Expr transformed = Parser.applyUnappliedIdentifiers(expression, arrayBindings);
+      Expr transformed = Parser.applyUnappliedIdentifiers(expression, baseExprBindingDetails, arrayBindings);
       transformedCache.put(key, transformed);
       return transformed.eval(bindings);
     }

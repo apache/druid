@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.RE;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,32 +52,28 @@ public interface ApplyFunction
       Long[] longsOut = null;
       Double[] doublesOut = null;
 
-      ExprType outputType = null;
-      Object out = null;
+      ExprType elementType = null;
       for (int i = 0; i < length; i++) {
 
         ExprEval evaluated = expr.eval(bindings.withIndex(i));
-        if (outputType == null) {
-          outputType = evaluated.type();
-          switch (outputType) {
+        if (elementType == null) {
+          elementType = evaluated.type();
+          switch (elementType) {
             case STRING:
               stringsOut = new String[length];
-              out = stringsOut;
               break;
             case LONG:
               longsOut = new Long[length];
-              out = longsOut;
               break;
             case DOUBLE:
               doublesOut = new Double[length];
-              out = doublesOut;
               break;
             default:
-              throw new RE("Unhandled map function output type [%s]", outputType);
+              throw new RE("Unhandled map function output type [%s]", elementType);
           }
         }
 
-        switch (outputType) {
+        switch (elementType) {
           case STRING:
             stringsOut[i] = evaluated.asString();
             break;
@@ -88,7 +85,17 @@ public interface ApplyFunction
             break;
         }
       }
-      return ExprEval.bestEffortOf(out);
+
+      switch (elementType) {
+        case STRING:
+          return ExprEval.ofStringArray(stringsOut);
+        case LONG:
+          return ExprEval.ofLongArray(longsOut);
+        case DOUBLE:
+          return ExprEval.ofDoubleArray(doublesOut);
+        default:
+          throw new RE("Unhandled map function output type [%s]", elementType);
+      }
     }
   }
 
@@ -427,7 +434,7 @@ public interface ApplyFunction
       for (String lambdaIdentifier : expr.getIdentifiers()) {
         lambdaBindings.put(lambdaIdentifier, null);
       }
-      this.bindings = bindings;
+      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
     }
 
     @Nullable
@@ -463,7 +470,7 @@ public interface ApplyFunction
     {
       this.lambdaIdentifier = expr.getIdentifier();
       this.arrayValues = arrayValues;
-      this.bindings = bindings;
+      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
     }
 
     @Nullable
@@ -500,7 +507,7 @@ public interface ApplyFunction
         lambdaIdentifiers.put(ids.get(i), i);
       }
 
-      this.bindings = bindings;
+      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
     }
 
     @Nullable
@@ -542,7 +549,7 @@ public interface ApplyFunction
       this.accumulatorIdentifier = ids.get(1);
       this.arrayValues = arrayValues;
       this.accumulatorValue = initialAccumulator;
-      this.bindings = bindings;
+      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
     }
 
     @Nullable
@@ -584,7 +591,7 @@ public interface ApplyFunction
         lambdaIdentifiers.put(ids.get(i), i);
       }
       this.accumulatorIdentifier = ids.get(ids.size() - 1);
-      this.bindings = bindings;
+      this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
       this.accumulatorValue = accumulatorValue;
     }
 

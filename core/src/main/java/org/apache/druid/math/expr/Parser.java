@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -150,7 +149,9 @@ public class Parser
         ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
         List<Expr> args = applyFunctionExpr.argsExpr;
         if (Evals.isAllConstants(args)) {
-          return childExpr.eval(null).toExpr();
+          if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
+            return childExpr.eval(null).toExpr();
+          }
         }
       }
       return childExpr;
@@ -162,12 +163,17 @@ public class Parser
    * used in a scalar manner, walking the {@link Expr} tree and lifting array variables into the {@link LambdaExpr} of
    * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr} {@link Function.ArrayFunction}
    * @param expr expression to visit and rewrite
-   * @param unapplied
+   * @param toApply
    * @return
    */
-  public static Expr applyUnappliedIdentifiers(Expr expr, List<String> unapplied)
+  public static Expr applyUnappliedIdentifiers(Expr expr, Expr.BindingDetails bindingDetails, List<String> toApply)
   {
-    Preconditions.checkArgument(unapplied.size() > 0);
+    if (toApply.size() == 0) {
+      return expr;
+    }
+    List<String> unapplied = toApply.stream()
+                                     .filter(x -> bindingDetails.getFreeVariables().contains(x))
+                                     .collect(Collectors.toList());
 
     ApplyFunction fn;
     final LambdaExpr lambdaExpr;
@@ -179,22 +185,21 @@ public class Parser
           if (childExpr instanceof ApplyFunctionExpr) {
             // try to lift unapplied arguments into the apply function lambda
             return liftApplyLambda((ApplyFunctionExpr) childExpr, unapplied);
-          } else if (childExpr instanceof FunctionExpr && ((FunctionExpr) childExpr).function instanceof Function.ArrayFunction) {
+          } else if (childExpr instanceof FunctionExpr) {
             // check array function arguments for unapplied identifiers to transform if necessary
             FunctionExpr fnExpr = (FunctionExpr) childExpr;
-            Function.ArrayFunction arrayFn = (Function.ArrayFunction) fnExpr.function;
-            Set<Expr> arrayInputs = arrayFn.getArrayInputs(fnExpr.args);
+            Set<Expr> arrayInputs = fnExpr.function.getArrayInputs(fnExpr.args);
             List<Expr> newArgs = new ArrayList<>();
             for (Expr arg : fnExpr.args) {
               if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
-                Expr newArg = applyUnappliedIdentifiers(arg, unapplied);
+                Expr newArg = applyUnappliedIdentifiers(arg, bindingDetails, unapplied);
                 newArgs.add(newArg);
               } else {
                 newArgs.add(arg);
               }
             }
 
-            FunctionExpr newFnExpr = new FunctionExpr(arrayFn, arrayFn.name(), newArgs);
+            FunctionExpr newFnExpr = new FunctionExpr(fnExpr.function, fnExpr.function.name(), newArgs);
             return newFnExpr;
           }
           return childExpr;
@@ -216,7 +221,7 @@ public class Parser
     if (remainingUnappliedArgs.size() == 1) {
       fn = new ApplyFunction.MapFunction();
       IdentifierExpr lambdaArg = new IdentifierExpr(remainingUnappliedArgs.iterator().next());
-      lambdaExpr = new LambdaExpr(ImmutableList.of(lambdaArg), expr);
+      lambdaExpr = new LambdaExpr(ImmutableList.of(lambdaArg), newExpr);
       args = ImmutableList.of(lambdaArg);
     } else {
       fn = new ApplyFunction.CartesianMapFunction();
@@ -227,7 +232,7 @@ public class Parser
         identifiers.add(arg);
         args.add(arg);
       }
-      lambdaExpr = new LambdaExpr(identifiers, expr);
+      lambdaExpr = new LambdaExpr(identifiers, newExpr);
     }
 
     Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, args);
@@ -303,9 +308,9 @@ public class Parser
         // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) =>
         //  cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
 
-        final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedArgs.size());
+        final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> newFoldLambdaIdentifiers =
-            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
+            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> existingFoldLambdaIdentifiers = expr.lambdaExpr.getIdentifierExprs();
         // accumulator argument is last argument, slice it off when constructing new arg list and lambda args identifiers
         for (int i = 0; i < expr.argsExpr.size() - 1; i++) {
@@ -316,7 +321,7 @@ public class Parser
         newFoldLambdaIdentifiers.addAll(unappliedLambdaBindings);
         // add accumulator last
         newFoldLambdaIdentifiers.add(existingFoldLambdaIdentifiers.get(existingFoldLambdaIdentifiers.size() - 1));
-        newArgs.addAll(unappliedLambdaBindings);
+        newFoldArgs.add(expr.argsExpr.get(expr.argsExpr.size() - 1));
         final LambdaExpr newFoldLambda = new LambdaExpr(newFoldLambdaIdentifiers, expr.lambdaExpr.getExpr());
 
         newFn = new ApplyFunction.CartesianFoldFunction();

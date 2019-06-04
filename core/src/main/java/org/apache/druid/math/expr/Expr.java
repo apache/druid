@@ -102,6 +102,9 @@ public interface Expr
    */
   Expr visit(Shuttle shuttle);
 
+  /**
+   * Examing the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link BindingDetails}
+   */
   BindingDetails analyzeInputs();
 
   /**
@@ -140,6 +143,11 @@ public interface Expr
     Expr visit(Expr expr);
   }
 
+  /**
+   * Information about the context in which {@link IdentifierExpr} are used in a greater {@link Expr}, listing
+   * the 'free variables' (total set of required input columns or values) and distinguishing between which identifiers
+   * are used as scalar values and which are used as array values.
+   */
   class BindingDetails
   {
     private final Set<String> freeVariables;
@@ -163,21 +171,33 @@ public interface Expr
       this.arrayVariables = arrayVariables;
     }
 
+    /**
+     * Get the list of required column inputs to evaluate an expression
+     */
     public List<String> getRequiredColumns()
     {
       return new ArrayList<>(freeVariables);
     }
 
+    /**
+     * Total set of 'free' identifiers of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
+     */
     public Set<String> getFreeVariables()
     {
       return freeVariables;
     }
 
+    /**
+     * Set of identifiers which are used with scalar operators and functions
+     */
     public Set<String> getScalarVariables()
     {
       return scalarVariables;
     }
 
+    /**
+     * Set of identifiers which are used with array typed functions and apply functions.
+     */
     public Set<String> getArrayVariables()
     {
       return arrayVariables;

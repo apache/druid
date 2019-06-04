@@ -189,7 +189,7 @@ public class ExpressionSelectors
                .collect(Collectors.toList());
     final Expr finalExpr;
     if (needsApplied.size() > 0) {
-      finalExpr = Parser.applyUnappliedIdentifiers(expression, needsApplied);
+      finalExpr = Parser.applyUnappliedIdentifiers(expression, exprDetails, needsApplied);
     } else {
       finalExpr = expression;
     }
