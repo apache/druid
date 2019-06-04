@@ -4,7 +4,13 @@ exports[`table cell matches snapshot array long 1`] = `
 <span
   class="table-cell truncated"
 >
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ...323 omitted... 7, 98, 99]
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  <span
+    class="omitted"
+  >
+    ...323 omitted...
+  </span>
+  7, 98, 99]
   <span
     class="bp3-icon bp3-icon-clipboard action-icon"
     icon="clipboard"
@@ -43,7 +49,13 @@ exports[`table cell matches snapshot truncate 1`] = `
 <span
   class="table-cell truncated"
 >
-  testtesttesttesttesttesttesttesttesttesttesttesttesttestt ...329 omitted... sttesttest
+  testtesttesttesttesttesttesttesttesttesttesttesttesttestt
+  <span
+    class="omitted"
+  >
+    ...329 omitted...
+  </span>
+  sttesttest
   <span
     class="bp3-icon bp3-icon-clipboard action-icon"
     icon="clipboard"

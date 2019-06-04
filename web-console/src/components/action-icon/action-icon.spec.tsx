@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
 import { ActionIcon } from './action-icon';
-import { IconNames } from '@blueprintjs/icons';
 
 describe('action icon', () => {
   it('matches snapshot', () => {
