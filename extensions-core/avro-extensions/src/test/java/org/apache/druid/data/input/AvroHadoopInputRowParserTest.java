@@ -75,7 +75,7 @@ public class AvroHadoopInputRowParserTest
     assertInputRowCorrect(inputRow, DIMENSIONS);
   }
 
-  public static GenericRecord buildAvroFromFile() throws IOException
+  private static GenericRecord buildAvroFromFile() throws IOException
   {
     return buildAvroFromFile(
         buildSomeAvroDatum()
