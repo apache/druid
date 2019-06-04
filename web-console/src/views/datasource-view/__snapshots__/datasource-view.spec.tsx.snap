@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe data source view data source view snapshot 1`] = `
+exports[`data source view matches snapshot 1`] = `
 <div
   className="data-sources-view app-view"
 >
@@ -22,7 +22,7 @@ exports[`describe data source view data source view snapshot 1`] = `
       label="Show disabled"
       onChange={[Function]}
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Datasource",
@@ -57,7 +57,7 @@ exports[`describe data source view data source view snapshot 1`] = `
     TrComponent={[Function]}
     TrGroupComponent={[Function]}
     aggregatedKey="_aggregated"
-    className="-striped -highlight"
+    className=""
     collapseOnDataChange={true}
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
@@ -71,6 +71,7 @@ exports[`describe data source view data source view snapshot 1`] = `
         "Header": undefined,
         "Pivot": undefined,
         "PivotValue": undefined,
+        "Placeholder": undefined,
         "aggregate": undefined,
         "className": "",
         "filterAll": false,
@@ -83,6 +84,7 @@ exports[`describe data source view data source view snapshot 1`] = `
         "getProps": [Function],
         "headerClassName": "",
         "headerStyle": Object {},
+        "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
@@ -156,6 +158,7 @@ exports[`describe data source view data source view snapshot 1`] = `
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
+    defaultPage={0}
     defaultPageSize={50}
     defaultResized={Array []}
     defaultSortDesc={false}
@@ -206,6 +209,7 @@ exports[`describe data source view data source view snapshot 1`] = `
     onFetchData={[Function]}
     onFilteredChange={[Function]}
     originalKey="_original"
+    pageJumpText="jump to page"
     pageSizeOptions={
       Array [
         5,
@@ -223,6 +227,7 @@ exports[`describe data source view data source view snapshot 1`] = `
     previousText="Previous"
     resizable={true}
     resolveData={[Function]}
+    rowsSelectorText="rows per page"
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}

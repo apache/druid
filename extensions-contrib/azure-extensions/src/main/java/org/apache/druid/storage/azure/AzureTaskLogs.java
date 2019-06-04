@@ -53,7 +53,7 @@ public class AzureTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskLogKey(taskid);
     log.info("Pushing task log %s to: %s", logFile, taskKey);
-    pushTaskFile(taskid, logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
   }
 
   @Override
@@ -61,10 +61,10 @@ public class AzureTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskReportsKey(taskid);
     log.info("Pushing task reports %s to: %s", reportFile, taskKey);
-    pushTaskFile(taskid, reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
   }
 
-  private void pushTaskFile(final String taskId, final File logFile, String taskKey)
+  private void pushTaskFile(final File logFile, String taskKey)
   {
     try {
       AzureUtils.retryAzureOperation(

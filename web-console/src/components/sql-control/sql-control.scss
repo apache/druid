@@ -16,21 +16,31 @@
  * limitations under the License.
  */
 
+@import "../../variables";
 
 .sql-control {
+  .ace-container {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom: 30px + $standard-padding;
 
-  .ace_scroller {
-    background-color: #232C35;
-  }
+    .ace_scroller {
+      background-color: #232C35;
+    }
 
-  .ace_gutter-layer {
-    background-color: #27313c;
+    .ace_gutter-layer {
+      background-color: #27313c;
+    }
   }
 
   .buttons {
-    position: relative;
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    height: 30px;
 
-    button{
+    button {
       margin-right: 15px;
     }
 

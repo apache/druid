@@ -130,6 +130,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
           enableLiveAutocompletion: false,
           tabSize: 2
         }}
+        style={{}}
       />
 
       <div className={Classes.DIALOG_FOOTER}>

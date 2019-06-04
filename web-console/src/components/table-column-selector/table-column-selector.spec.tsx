@@ -16,16 +16,20 @@
  * limitations under the License.
  */
 
-.null-table-cell {
-  &.null {
-    font-style: italic;
-  }
+import * as React from 'react';
+import { render } from 'react-testing-library';
 
-  &.unparseable {
-    color: #9E2B0E;
-  }
+import { TableColumnSelector } from './table-column-selector';
 
-  &.timestamp {
-    font-weight: bold;
-  }
-}
+describe('table column', () => {
+  it('matches snapshot', () => {
+    const tableColumn =
+      <TableColumnSelector
+        columns={['a', 'b', 'c']}
+        onChange={(column: string) => {}}
+        tableColumnsHidden={['a', 'b', 'c']}
+      />;
+    const { container } = render(tableColumn);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe home view home viexw snapshot 1`] = `
+exports[`home view matches snapshot 1`] = `
 <div
   className="home-view app-view"
 >
@@ -124,7 +124,7 @@ exports[`describe home view home viexw snapshot 1`] = `
           icon="database"
         />
          
-        Data servers
+        Servers
       </Component>
       <p>
         Loading...

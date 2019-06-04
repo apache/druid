@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe array input array input snapshot 1`] = `
+exports[`array input matches snapshot 1`] = `
 <textarea
   class="bp3-input bp3-fill test"
   placeholder="test"

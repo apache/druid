@@ -321,7 +321,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(getInterval(), getMajorVersion(), shardSpec.getPartitionNum());
+    return id.toDescriptor();
   }
 
   public DataSegment withLoadSpec(Map<String, Object> loadSpec)

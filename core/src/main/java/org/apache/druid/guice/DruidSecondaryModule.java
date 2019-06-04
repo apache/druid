@@ -34,8 +34,6 @@ import org.skife.config.ConfigurationObjectFactory;
 import javax.validation.Validator;
 import java.util.Properties;
 
-/**
- */
 public class DruidSecondaryModule implements Module
 {
   private final Properties properties;

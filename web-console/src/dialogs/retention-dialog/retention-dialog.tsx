@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
-import { Rule, RuleEditor } from '../../components/rule-editor/rule-editor';
+import { Rule, RuleEditor } from '../../components';
 import { QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 

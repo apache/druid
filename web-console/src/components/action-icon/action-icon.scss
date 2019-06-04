@@ -16,19 +16,11 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+.action-icon {
+  color: #48aff0;
+  cursor: pointer;
 
-import {JSONInput} from './json-input';
-
-describe('describe json input', () => {
-  it('json input snapshot', () => {
-    const jsonCollapse =
-    <JSONInput
-      onChange={(newJSONValue: any) => {}}
-      value={'test'}
-    />;
-    const { container, getByText } = render(jsonCollapse);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  &:hover {
+    color: #4891d2;
+  }
+}
