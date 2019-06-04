@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -461,18 +462,22 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     return true;
   }
 
+  /**
+   * This method does not update {@code dataSourcesSnapshot}, see the comments in {@code doPoll()} about
+   * snapshot update. The segment removal will be reflected after next poll cyccle runs.
+   */
   @Override
-  public boolean removeSegment(String dataSourceName, final String segmentId)
+  public boolean removeSegment(String dataSourceName, final String identifier)
   {
-    try {
-      return removeSegmentFromTable(segmentId);
-    }
-    catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
-    }
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, identifier);
+    Preconditions.checkNotNull(segmentId);
+    return removeSegment(segmentId);
   }
 
+  /**
+   * This method does not update {@code dataSourcesSnapshot}, see the comments in {@code doPoll()} about
+   * snapshot update. The segment removal will be reflected after next poll cyccle runs.
+   */
   @Override
   public boolean removeSegment(SegmentId segmentId)
   {
@@ -715,17 +720,15 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
-    /**
-     * dataSourcesSnapshot is updated only here, please note that if datasources or segments are enabled or disabled
-     * outside of poll, the dataSourcesSnapshot can become invalid until the next poll cycle.
-     * {@link DataSourcesSnapshot} computes the overshadowed segments, which makes it an expensive operation if the
-     * snapshot is invalidated on each segment removal, especially if a user issues a lot of single segment remove
-     * calls in rapid succession. So the snapshot update is not done outside of poll at this time.
-     * Updates outside of poll(), were primarily for the user experience, so users would immediately see the effect of
-     * a segment remove call reflected in MetadataResource API calls. These updates outside of schecduled poll may be
-     * added back in removeDataSource and removeSegment methods after the on-demand polling changes from
-     * https://github.com/apache/incubator-druid/pull/7653 are in.
-     */
+    // dataSourcesSnapshot is updated only here, please note that if datasources or segments are enabled or disabled
+    // outside of poll, the dataSourcesSnapshot can become invalid until the next poll cycle.
+    // DataSourcesSnapshot computes the overshadowed segments, which makes it an expensive operation if the
+    // snapshot is invalidated on each segment removal, especially if a user issues a lot of single segment remove
+    // calls in rapid succession. So the snapshot update is not done outside of poll at this time.
+    // Updates outside of poll(), were primarily for the user experience, so users would immediately see the effect of
+    // a segment remove call reflected in MetadataResource API calls. These updates outside of scheduled poll may be
+    // added back in removeDataSource and removeSegment methods after the on-demand polling changes from
+    // https://github.com/apache/incubator-druid/pull/7653 are in.
     dataSourcesSnapshot = new DataSourcesSnapshot(newDataSources.entrySet()
                                                                 .stream()
                                                                 .collect(Collectors.toMap(
