@@ -191,7 +191,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? sequenceLastUpdated : null,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 
@@ -380,5 +384,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return spec.getIoConfig();
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
   }
 }

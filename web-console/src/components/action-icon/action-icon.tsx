@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,29 +16,26 @@
  * limitations under the License.
  */
 
+import { Icon, IconName } from '@blueprintjs/core';
+import classNames from 'classnames';
 import * as React from 'react';
 
-import './null-table-cell.scss';
+import './action-icon.scss';
 
-export interface NullTableCellProps extends React.Props<any> {
-  value?: any;
-  timestamp?: boolean;
-  unparseable?: boolean;
+export interface ActionIconProps extends React.Props<any> {
+  className?: string;
+  icon: IconName;
+  onClick?: () => void;
 }
 
-export class NullTableCell extends React.Component<NullTableCellProps, {}> {
+export class ActionIcon extends React.Component<ActionIconProps, {}> {
   render() {
-    const { value, timestamp, unparseable } = this.props;
-    if (unparseable) {
-      return <span className="null-table-cell unparseable">{`error`}</span>;
-    } else if (value !== '' && value != null) {
-      if (timestamp) {
-        return <span className="null-table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
-      } else {
-        return value;
-      }
-    } else {
-      return <span className="null-table-cell null">null</span>;
-    }
+    const { className, icon, onClick } = this.props;
+
+    return <Icon
+      className={classNames('action-icon', className)}
+      icon={icon}
+      onClick={onClick}
+    />;
   }
 }

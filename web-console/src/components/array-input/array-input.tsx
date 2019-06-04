@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 import { ITagInputProps, TextArea } from '@blueprintjs/core';
 import * as React from 'react';
 

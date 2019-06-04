@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -58,7 +59,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject @Named("kinesis") AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject @Named("kinesis") AWSCredentialsConfig awsCredentialsConfig,
+      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     super(
@@ -106,7 +108,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         mapper,
         emitter,
         monitorSchedulerConfig,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
@@ -170,7 +173,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         emitter,
         monitorSchedulerConfig,
         rowIngestionMetersFactory,
-        awsCredentialsConfig
+        awsCredentialsConfig,
+        supervisorStateManagerConfig
     );
   }
 }

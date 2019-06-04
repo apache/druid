@@ -48,7 +48,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -71,7 +71,8 @@ public class HllSketchSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -80,7 +81,6 @@ public class HllSketchSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
@@ -148,7 +148,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+        VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             columnArg,
             sqlTypeName

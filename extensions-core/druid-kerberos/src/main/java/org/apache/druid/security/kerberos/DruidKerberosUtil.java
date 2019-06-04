@@ -137,7 +137,7 @@ public class DruidKerberosUtil
       return null;
     }
     boolean isSSL = "https".equals(uri.getScheme());
-    List<HttpCookie> cookies = cookieStore.getCookies();
+    List<HttpCookie> cookies = cookieStore.get(uri);
 
     for (HttpCookie c : cookies) {
       // If this is a secured cookie and the current connection is non-secured,

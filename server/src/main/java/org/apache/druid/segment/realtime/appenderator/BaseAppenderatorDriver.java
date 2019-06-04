@@ -80,7 +80,7 @@ import java.util.stream.Stream;
 public abstract class BaseAppenderatorDriver implements Closeable
 {
   /**
-   * Segments allocated for an intervval.
+   * Segments allocated for an interval.
    * There should be at most a single active (appending) segment at any time.
    */
   static class SegmentsOfInterval

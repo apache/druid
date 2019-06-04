@@ -19,17 +19,16 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {NullTableCell} from './null-table-cell';
+import { JSONInput } from './json-input';
 
-describe('describe nullTable', () => {
-  it('nullTable snapshot', () => {
-    const nullTableCell =
-    <NullTableCell
+describe('json input', () => {
+  it('matches snapshot', () => {
+    const jsonCollapse =
+    <JSONInput
+      onChange={(newJSONValue: any) => {}}
       value={'test'}
-      unparseable={false}
-      timestamp={false}
-    />
-    const { container, getByText } = render(nullTableCell);
+    />;
+    const { container } = render(jsonCollapse);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

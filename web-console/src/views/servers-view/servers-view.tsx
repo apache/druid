@@ -26,7 +26,7 @@ import { Filter } from 'react-table';
 
 import {
   ActionCell,
-  TableColumnSelection,
+  TableColumnSelector,
   ViewControlBar
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
@@ -562,9 +562,9 @@ ORDER BY "rank" DESC, "server" DESC`);
             onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
           />
         }
-        <TableColumnSelection
+        <TableColumnSelector
           columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

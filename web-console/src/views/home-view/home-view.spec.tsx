@@ -16,18 +16,13 @@
  * limitations under the License.
  */
 
-
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 import * as React from 'react';
 
-import {HomeView} from './home-view';
+import { HomeView } from './home-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe home view', () => {
-  it('home viexw snapshot', () => {
+describe('home view', () => {
+  it('matches snapshot', () => {
     const homeView = shallow(
       <HomeView
         noSqlMode={false}

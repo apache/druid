@@ -187,6 +187,31 @@ public class SupervisorResource
   }
 
   @GET
+  @Path("/{id}/health")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response specGetHealth(@PathParam("id") final String id)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<Boolean> healthy = manager.isSupervisorHealthy(id);
+          if (!healthy.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format("[%s] does not exist or health check not implemented", id)
+                           ))
+                           .build();
+          }
+
+          return Response.status(healthy.get() ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
+                         .entity(ImmutableMap.of("healthy", healthy.get()))
+                         .build();
+        }
+    );
+  }
+
+  @GET
   @Path("/{id}/stats")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
@@ -311,7 +336,8 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id)
+      @PathParam("id") final String id
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {

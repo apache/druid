@@ -44,7 +44,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -66,7 +66,8 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final DruidQuerySignature querySignature,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -75,7 +76,6 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
@@ -179,7 +179,7 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
           k
       );
     } else {
-      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           input,
           SqlTypeName.FLOAT

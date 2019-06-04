@@ -65,7 +65,6 @@ public class DruidCoordinatorSegmentCompactorTest
     @Override
     public String compactSegments(
         List<DataSegment> segments,
-        boolean keepSegmentGranularity,
         @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
         ClientCompactQueryTuningConfig tuningConfig,
@@ -186,64 +185,8 @@ public class DruidCoordinatorSegmentCompactorTest
   }
 
   @Test
-  public void testRunWithoutKeepSegmentGranularity()
+  public void testRun()
   {
-    final boolean keepSegmentGranularity = false;
-    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
-
-    final Supplier<String> expectedVersionSupplier = new Supplier<String>()
-    {
-      private int i = 0;
-
-      @Override
-      public String get()
-      {
-        return "newVersion_" + i++;
-      }
-    };
-    int expectedCompactTaskCount = 1;
-    int expectedRemainingSegments = 180;
-
-    // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
-    assertCompactSegments(
-        compactor,
-        keepSegmentGranularity,
-        Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", 8, 9),
-        expectedRemainingSegments,
-        expectedCompactTaskCount,
-        expectedVersionSupplier
-    );
-
-    // compact for 2017-01-08T00:00:00.000Z/2017-01-08T12:00:00.000Z
-    expectedRemainingSegments -= 20;
-    assertCompactSegments(
-        compactor,
-        keepSegmentGranularity,
-        Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
-        expectedRemainingSegments,
-        expectedCompactTaskCount,
-        expectedVersionSupplier
-    );
-
-    for (int endDay = 5; endDay > 1; endDay -= 1) {
-      expectedRemainingSegments -= 40;
-      assertCompactSegments(
-          compactor,
-          keepSegmentGranularity,
-          Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
-          expectedRemainingSegments,
-          expectedCompactTaskCount,
-          expectedVersionSupplier
-      );
-    }
-
-    assertLastSegmentNotCompacted(compactor, keepSegmentGranularity);
-  }
-
-  @Test
-  public void testRunWithKeepSegmentGranularity()
-  {
-    final boolean keepSegmentGranularity = true;
     final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
@@ -262,7 +205,6 @@ public class DruidCoordinatorSegmentCompactorTest
     // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
     assertCompactSegments(
         compactor,
-        keepSegmentGranularity,
         Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 9, 9),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -271,7 +213,6 @@ public class DruidCoordinatorSegmentCompactorTest
     expectedRemainingSegments -= 20;
     assertCompactSegments(
         compactor,
-        keepSegmentGranularity,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 8, 9),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -282,7 +223,6 @@ public class DruidCoordinatorSegmentCompactorTest
     expectedRemainingSegments -= 20;
     assertCompactSegments(
         compactor,
-        keepSegmentGranularity,
         Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -291,7 +231,6 @@ public class DruidCoordinatorSegmentCompactorTest
     expectedRemainingSegments -= 20;
     assertCompactSegments(
         compactor,
-        keepSegmentGranularity,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 4, 5),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -302,7 +241,6 @@ public class DruidCoordinatorSegmentCompactorTest
       expectedRemainingSegments -= 20;
       assertCompactSegments(
           compactor,
-          keepSegmentGranularity,
           Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", endDay, endDay),
           expectedRemainingSegments,
           expectedCompactTaskCount,
@@ -311,7 +249,6 @@ public class DruidCoordinatorSegmentCompactorTest
       expectedRemainingSegments -= 20;
       assertCompactSegments(
           compactor,
-          keepSegmentGranularity,
           Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
           expectedRemainingSegments,
           expectedCompactTaskCount,
@@ -319,22 +256,21 @@ public class DruidCoordinatorSegmentCompactorTest
       );
     }
 
-    assertLastSegmentNotCompacted(compactor, keepSegmentGranularity);
+    assertLastSegmentNotCompacted(compactor);
   }
 
-  private CoordinatorStats runCompactor(DruidCoordinatorSegmentCompactor compactor, boolean keepSegmentGranularity)
+  private CoordinatorStats runCompactor(DruidCoordinatorSegmentCompactor compactor)
   {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
         .withDataSources(dataSources)
-        .withCompactionConfig(CoordinatorCompactionConfig.from(createCompactionConfigs(keepSegmentGranularity)))
+        .withCompactionConfig(CoordinatorCompactionConfig.from(createCompactionConfigs()))
         .build();
     return compactor.run(params).getCoordinatorStats();
   }
 
   private void assertCompactSegments(
       DruidCoordinatorSegmentCompactor compactor,
-      boolean keepSegmentGranularity,
       Interval expectedInterval,
       int expectedRemainingSegments,
       int expectedCompactTaskCount,
@@ -342,7 +278,7 @@ public class DruidCoordinatorSegmentCompactorTest
   )
   {
     for (int i = 0; i < 3; i++) {
-      final CoordinatorStats stats = runCompactor(compactor, keepSegmentGranularity);
+      final CoordinatorStats stats = runCompactor(compactor);
       Assert.assertEquals(
           expectedCompactTaskCount,
           stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
@@ -383,7 +319,7 @@ public class DruidCoordinatorSegmentCompactorTest
     }
   }
 
-  private void assertLastSegmentNotCompacted(DruidCoordinatorSegmentCompactor compactor, boolean keepSegmentGranularity)
+  private void assertLastSegmentNotCompacted(DruidCoordinatorSegmentCompactor compactor)
   {
     // Segments of the latest interval should not be compacted
     for (int i = 0; i < 3; i++) {
@@ -406,7 +342,7 @@ public class DruidCoordinatorSegmentCompactorTest
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     addMoreData(dataSource, 9);
 
-    CoordinatorStats stats = runCompactor(compactor, keepSegmentGranularity);
+    CoordinatorStats stats = runCompactor(compactor);
     Assert.assertEquals(
         1,
         stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
@@ -414,7 +350,7 @@ public class DruidCoordinatorSegmentCompactorTest
 
     addMoreData(dataSource, 10);
 
-    stats = runCompactor(compactor, keepSegmentGranularity);
+    stats = runCompactor(compactor);
     Assert.assertEquals(
         1,
         stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
@@ -439,7 +375,7 @@ public class DruidCoordinatorSegmentCompactorTest
     }
   }
 
-  private static List<DataSourceCompactionConfig> createCompactionConfigs(boolean keepSegmentGranularity)
+  private static List<DataSourceCompactionConfig> createCompactionConfigs()
   {
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
@@ -447,7 +383,6 @@ public class DruidCoordinatorSegmentCompactorTest
       compactionConfigs.add(
           new DataSourceCompactionConfig(
               dataSource,
-              keepSegmentGranularity,
               0,
               50L,
               50L,

@@ -19,17 +19,16 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {ShowLog} from './show-log';
+import { ShowLog } from './show-log';
 
-
-describe('describe show log', () => {
+describe('show log', () => {
   it('describe show log', () => {
     const showLog =
       <ShowLog
         endpoint={'test'}
         downloadFilename={'test'}
       />;
-    const { container, getByText } = render(showLog);
+    const { container } = render(showLog);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

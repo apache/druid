@@ -247,7 +247,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         numPartitions,
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 
@@ -311,5 +315,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
   }
 }

@@ -45,9 +45,9 @@ const comment = `// This file is auto generated and should not be modified`;
 const disableTSlint = '/* tslint:disable */';
 
 const interfaceStr = `export interface FunctionDescription {
-    syntax: string;
-    description: string;
-  }`;
+  syntax: string;
+  description: string;
+}`;
 
 const heading = `${license}\n\n${comment}\n\n${interfaceStr}\n\n${disableTSlint}\n\n`;
 

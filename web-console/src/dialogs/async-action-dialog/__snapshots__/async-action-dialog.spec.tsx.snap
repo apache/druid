@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe async action dialog async action dialog snapshot 1`] = `
+exports[`async action dialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >

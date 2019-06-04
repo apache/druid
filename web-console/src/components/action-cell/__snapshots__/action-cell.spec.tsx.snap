@@ -1,11 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe action cell action cell snapshot 1`] = `
+exports[`action cell matches snapshot 1`] = `
 <div
   class="action-cell"
 >
   <span
-    class="bp3-icon bp3-icon-search-template"
+    class="bp3-icon bp3-icon-search-template action-icon"
     icon="search-template"
   >
     <svg

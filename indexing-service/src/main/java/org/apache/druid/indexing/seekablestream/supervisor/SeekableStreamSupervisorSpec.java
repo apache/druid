@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -57,6 +58,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   protected final ServiceEmitter emitter;
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final boolean suspended;
+  protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
@@ -72,7 +74,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -89,6 +92,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.suspended = suspended != null ? suspended : false;
+    this.supervisorStateManagerConfig = supervisorStateManagerConfig;
   }
 
   @JsonProperty
@@ -151,6 +155,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public SeekableStreamSupervisorSpec createRunningSpec()
   {
     return toggleSuspend(false);
+  }
+
+  public SupervisorStateManagerConfig getSupervisorStateManagerConfig()
+  {
+    return supervisorStateManagerConfig;
   }
 
   @Override
