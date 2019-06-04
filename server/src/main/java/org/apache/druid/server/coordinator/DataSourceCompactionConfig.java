@@ -37,13 +37,11 @@ public class DataSourceCompactionConfig
 
   // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
   private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  private static final boolean DEFAULT_KEEP_SEGMENT_GRANULARITY = true;
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
   private static final int DEFAULT_NUM_INPUT_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
-  private final boolean keepSegmentGranularity;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
   @Nullable
@@ -60,7 +58,6 @@ public class DataSourceCompactionConfig
   @JsonCreator
   public DataSourceCompactionConfig(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("keepSegmentGranularity") @Nullable Boolean keepSegmentGranularity,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
@@ -72,9 +69,6 @@ public class DataSourceCompactionConfig
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.keepSegmentGranularity = keepSegmentGranularity == null
-                                  ? DEFAULT_KEEP_SEGMENT_GRANULARITY
-                                  : keepSegmentGranularity;
     this.taskPriority = taskPriority == null
                         ? DEFAULT_COMPACTION_TASK_PRIORITY
                         : taskPriority;
@@ -152,12 +146,6 @@ public class DataSourceCompactionConfig
   }
 
   @JsonProperty
-  public boolean isKeepSegmentGranularity()
-  {
-    return keepSegmentGranularity;
-  }
-
-  @JsonProperty
   public int getTaskPriority()
   {
     return taskPriority;
@@ -219,8 +207,7 @@ public class DataSourceCompactionConfig
       return false;
     }
     DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
-    return keepSegmentGranularity == that.keepSegmentGranularity &&
-           taskPriority == that.taskPriority &&
+    return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            maxNumSegmentsToCompact == that.maxNumSegmentsToCompact &&
            Objects.equals(dataSource, that.dataSource) &&
@@ -235,7 +222,6 @@ public class DataSourceCompactionConfig
   {
     return Objects.hash(
         dataSource,
-        keepSegmentGranularity,
         taskPriority,
         inputSegmentSizeBytes,
         targetCompactionSizeBytes,

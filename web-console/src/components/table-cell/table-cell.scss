@@ -30,8 +30,23 @@
   }
 
   &.truncated {
+    position: relative;
+    width: 100%;
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-right: 16px;
+
+    .omitted {
+      margin: 0 0.2em;
+      font-style: italic;
+    }
+
     .action-icon {
-      margin-left: 5px;
+      position: absolute;
+      top: 0;
+      right: 0;
     }
   }
 }

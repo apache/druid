@@ -34,7 +34,6 @@ public class ClientCompactQuery implements ClientQuery
   private final String dataSource;
   private final List<DataSegment> segments;
   private final Interval interval;
-  private final boolean keepSegmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
@@ -45,7 +44,6 @@ public class ClientCompactQuery implements ClientQuery
       @JsonProperty("dataSource") String dataSource,
       @Nullable @JsonProperty("interval") final Interval interval,
       @Nullable @JsonProperty("segments") final List<DataSegment> segments,
-      @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
@@ -54,7 +52,6 @@ public class ClientCompactQuery implements ClientQuery
     this.dataSource = dataSource;
     this.segments = segments;
     this.interval = interval;
-    this.keepSegmentGranularity = keepSegmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
@@ -87,12 +84,6 @@ public class ClientCompactQuery implements ClientQuery
   }
 
   @JsonProperty
-  public boolean isKeepSegmentGranularity()
-  {
-    return keepSegmentGranularity;
-  }
-
-  @JsonProperty
   @Nullable
   public Long getTargetCompactionSizeBytes()
   {
@@ -121,8 +112,7 @@ public class ClientCompactQuery implements ClientQuery
       return false;
     }
     ClientCompactQuery that = (ClientCompactQuery) o;
-    return keepSegmentGranularity == that.keepSegmentGranularity &&
-           Objects.equals(dataSource, that.dataSource) &&
+    return Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(segments, that.segments) &&
            Objects.equals(interval, that.interval) &&
            Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
@@ -137,7 +127,6 @@ public class ClientCompactQuery implements ClientQuery
         dataSource,
         segments,
         interval,
-        keepSegmentGranularity,
         targetCompactionSizeBytes,
         tuningConfig,
         context
@@ -151,7 +140,6 @@ public class ClientCompactQuery implements ClientQuery
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
            ", interval=" + interval +
-           ", keepSegmentGranularity=" + keepSegmentGranularity +
            ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
            ", context=" + context +
