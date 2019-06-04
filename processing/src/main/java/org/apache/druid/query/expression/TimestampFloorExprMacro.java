@@ -63,13 +63,13 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  public static class TimestampFloorExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+  public static class TimestampFloorExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
   {
     private final PeriodGranularity granularity;
 
     TimestampFloorExpr(final List<Expr> args)
     {
-      super(args.get(0));
+      super(args);
       this.granularity = computeGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -78,7 +78,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
      */
     public Expr getArg()
     {
-      return arg;
+      return args.get(0);
     }
 
     /**
@@ -93,7 +93,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      ExprEval eval = arg.eval(bindings);
+      ExprEval eval = args.get(0).eval(bindings);
       if (eval.isNumericNull()) {
         // Return null if the argument if null.
         return ExprEval.of(null);
@@ -104,8 +104,9 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newArg = arg.visit(shuttle);
-      return shuttle.visit(new TimestampFloorExpr(ImmutableList.of(newArg)));
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+
+      return shuttle.visit(new TimestampFloorExpr(newArgs));
     }
   }
 

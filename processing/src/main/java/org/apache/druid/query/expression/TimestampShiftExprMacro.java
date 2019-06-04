@@ -72,7 +72,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     return args.get(2).eval(bindings).asInt();
   }
 
-  private static class TimestampShiftExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+  private static class TimestampShiftExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
   {
     private final Chronology chronology;
     private final Period period;
@@ -80,7 +80,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     TimestampShiftExpr(final List<Expr> args)
     {
-      super(args.get(0));
+      super(args);
       final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
       period = granularity.getPeriod();
       chronology = ISOChronology.getInstance(granularity.getTimeZone());
@@ -91,14 +91,14 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      return ExprEval.of(chronology.add(period, arg.eval(bindings).asLong(), step));
+      return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
     }
 
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newArg = arg.visit(shuttle);
-      return shuttle.visit(new TimestampShiftExpr(ImmutableList.of(newArg)));
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampShiftExpr(newArgs));
     }
   }
 

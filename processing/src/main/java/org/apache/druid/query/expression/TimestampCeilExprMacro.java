@@ -54,13 +54,13 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampCeilExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+  private static class TimestampCeilExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
   {
     private final Granularity granularity;
 
     TimestampCeilExpr(final List<Expr> args)
     {
-      super(args.get(0));
+      super(args);
       this.granularity = getGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -73,14 +73,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
         // Return null if the argument if null.
         return ExprEval.of(null);
       }
-      return ExprEval.of(granularity.bucketEnd(DateTimes.utc(arg.eval(bindings).asLong())).getMillis());
+      return ExprEval.of(granularity.bucketEnd(DateTimes.utc(args.get(0).eval(bindings).asLong())).getMillis());
     }
 
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newArg = arg.visit(shuttle);
-      return shuttle.visit(new TimestampCeilExpr(ImmutableList.of(newArg)));
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampCeilExpr(newArgs));
     }
   }
 
