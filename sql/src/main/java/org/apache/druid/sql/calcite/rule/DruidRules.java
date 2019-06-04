@@ -60,11 +60,6 @@ public class DruidRules
             PartialDruidQuery::withSelectProject
         ),
         new DruidQueryRule<>(
-            Sort.class,
-            PartialDruidQuery.Stage.SELECT_SORT,
-            PartialDruidQuery::withSelectSort
-        ),
-        new DruidQueryRule<>(
             Aggregate.class,
             PartialDruidQuery.Stage.AGGREGATE,
             PartialDruidQuery::withAggregate

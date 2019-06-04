@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 
@@ -44,6 +45,10 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
+  private final boolean healthy;
+  private final SupervisorStateManager.State state;
+  private final SupervisorStateManager.State detailedState;
+  private final List<SupervisorStateManager.ExceptionEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -55,7 +60,11 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable Map<PartitionIdType, SequenceOffsetType> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
-      boolean suspended
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     this.dataSource = dataSource;
@@ -70,6 +79,10 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     this.aggregateLag = aggregateLag;
     this.offsetsLastUpdated = offsetsLastUpdated;
     this.suspended = suspended;
+    this.healthy = healthy;
+    this.state = state;
+    this.detailedState = detailedState;
+    this.recentErrors = recentErrors;
   }
 
   public void addTask(TaskReportData data)
@@ -108,9 +121,15 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   }
 
   @JsonProperty
-  public boolean getSuspended()
+  public boolean isSuspended()
   {
     return suspended;
+  }
+
+  @JsonProperty
+  public boolean isHealthy()
+  {
+    return healthy;
   }
 
   @JsonProperty
@@ -153,5 +172,23 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   public DateTime getOffsetsLastUpdated()
   {
     return offsetsLastUpdated;
+  }
+
+  @JsonProperty
+  public SupervisorStateManager.State getState()
+  {
+    return state;
+  }
+
+  @JsonProperty
+  public SupervisorStateManager.State getDetailedState()
+  {
+    return detailedState;
+  }
+
+  @JsonProperty
+  public List<SupervisorStateManager.ExceptionEvent> getRecentErrors()
+  {
+    return recentErrors;
   }
 }

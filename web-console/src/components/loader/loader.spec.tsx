@@ -19,16 +19,15 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import { Loader} from './loader';
+import { Loader } from './loader';
 
-describe('describe loader', () => {
-  it('loader snapshot', () => {
-    const loader =
-    <Loader
-      loading={true}
+describe('loader', () => {
+  it('matches snapshot', () => {
+    const loader = <Loader
+      loading
       loadingText={'test'}
     />;
-    const { container, getByText } = render(loader);
+    const { container } = render(loader);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

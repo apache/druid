@@ -841,8 +841,25 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
     case 'index:http':
     case 'index:static-s3':
     case 'index:static-google-blobstore':
-      const objectType = ingestionComboType === 'index:http' ? 'http' : 'S3';
       return [
+        {
+          name: 'firehose.fetchTimeout',
+          label: 'Fetch timeout',
+          type: 'number',
+          defaultValue: 60000,
+          info: <>
+            <p>Timeout for fetching the object.</p>
+          </>
+        },
+        {
+          name: 'firehose.maxFetchRetry',
+          label: 'Max fetch retry',
+          type: 'number',
+          defaultValue: 3,
+          info: <>
+            <p>Maximum retry for fetching the object.</p>
+          </>
+        },
         {
           name: 'firehose.maxCacheCapacityBytes',
           label: 'Max cache capacity bytes',
@@ -865,27 +882,9 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
           name: 'firehose.prefetchTriggerBytes',
           label: 'Prefetch trigger bytes',
           type: 'number',
+          placeholder: 'maxFetchCapacityBytes / 2',
           info: <>
-            <p>Threshold to trigger prefetching {objectType} objects.</p>
-            <p>Default: maxFetchCapacityBytes / 2</p>
-          </>
-        },
-        {
-          name: 'firehose.fetchTimeout',
-          label: 'Fetch timeout',
-          type: 'number',
-          defaultValue: 60000,
-          info: <>
-            <p>Timeout for fetching a http object.</p>
-          </>
-        },
-        {
-          name: 'firehose.maxFetchRetry',
-          label: 'Max fetch retry',
-          type: 'number',
-          defaultValue: 3,
-          info: <>
-            <p>Maximum retry for fetching a {objectType} object.</p>
+            <p>Threshold to trigger prefetching the objects.</p>
           </>
         }
       ];

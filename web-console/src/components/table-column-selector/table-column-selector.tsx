@@ -22,21 +22,21 @@ import * as React from 'react';
 
 import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
-import './table-column-selection.scss';
+import './table-column-selector.scss';
 
-interface TableColumnSelectionProps extends React.Props<any> {
+interface TableColumnSelectorProps extends React.Props<any> {
   columns: string[];
   onChange: (column: string) => void;
   tableColumnsHidden: string[];
 }
 
-interface TableColumnSelectionState {
+interface TableColumnSelectorState {
 
 }
 
-export class TableColumnSelection extends React.Component<TableColumnSelectionProps, TableColumnSelectionState> {
+export class TableColumnSelector extends React.Component<TableColumnSelectorProps, TableColumnSelectorState> {
 
-  constructor(props: TableColumnSelectionProps) {
+  constructor(props: TableColumnSelectorProps) {
     super(props);
     this.state = {
 
@@ -45,7 +45,7 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
 
   render() {
     const { columns, onChange, tableColumnsHidden } = this.props;
-    const checkboxes = <Menu className="table-column-selection-menu">
+    const checkboxes = <Menu className="table-column-selector-menu">
       {columns.map(column => (
         <MenuCheckbox
           label={column}
@@ -57,11 +57,11 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
     </Menu>;
 
     return <Popover
-      className="table-column-selection"
+      className="table-column-selector"
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
     >
-      <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
+      <Button rightIcon={IconNames.CARET_DOWN} text="Columns"/>
     </Popover>;
   }
 }

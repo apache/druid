@@ -36,6 +36,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Represents Druid's concept of a "group by": dimensions, aggregations, post-aggregations, and 'having' filters. This
+ * is always something that can be handled by a groupBy query, and in some cases, it may be handleable by a timeseries
+ * or topN query type as well.
+ *
+ * This corresponds to a Calcite Aggregate + optional Filter + optional Project.
+ *
+ * It does not include sorting, limiting, or post-sorting projections: for this, see the {@link Sorting} class.
+ */
 public class Grouping
 {
   private final List<DimensionExpression> dimensions;

@@ -19,10 +19,10 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {Rule, RuleEditor} from './rule-editor';
+import { Rule, RuleEditor } from './rule-editor';
 
-describe('describe rule editor', () => {
-  it('rule editor snapshot', () => {
+describe('rule editor', () => {
+  it('matches snapshot', () => {
     const ruleEditor =
     <RuleEditor
       rule={{type: 'loadForever' }}
@@ -32,7 +32,7 @@ describe('describe rule editor', () => {
       moveUp={null}
       moveDown={null}
     />;
-    const { container, getByText } = render(ruleEditor);
+    const { container } = render(ruleEditor);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

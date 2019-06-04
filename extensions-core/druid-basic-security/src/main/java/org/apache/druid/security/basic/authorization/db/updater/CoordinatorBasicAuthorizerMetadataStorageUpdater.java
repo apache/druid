@@ -107,7 +107,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       BasicAuthorizerCacheNotifier cacheNotifier,
-      ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
+      ConfigManager configManager // -V6022: ConfigManager creates the db table we need, set a dependency here
   )
   {
     this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthorizerMetadataStorageUpdater-Exec--%d");

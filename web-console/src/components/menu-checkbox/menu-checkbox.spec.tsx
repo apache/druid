@@ -19,13 +19,13 @@
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {MenuCheckbox} from './menu-checkbox';
+import { MenuCheckbox } from './menu-checkbox';
 
-describe('describe menuCheckBox ', () => {
-  it('menuCheckbox snapshot', () => {
+describe('menu checkbox', () => {
+  it('matches snapshot', () => {
     const menuCheckbox =
     <MenuCheckbox/>;
-    const { container, getByText } = render(menuCheckbox);
+    const { container } = render(menuCheckbox);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

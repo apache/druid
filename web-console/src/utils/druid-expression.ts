@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 const UNSAFE_CHAR = /[^a-z0-9 ,._\-;:(){}\[\]<>!@#$%^&*`~?]/ig;
 
 function escape(str: string): string {

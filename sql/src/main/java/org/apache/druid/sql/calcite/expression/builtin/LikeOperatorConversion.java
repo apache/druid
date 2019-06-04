@@ -31,7 +31,8 @@ import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -55,14 +56,15 @@ public class LikeOperatorConversion extends DirectOperatorConversion
   @Override
   public DimFilter toDruidFilter(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       RexNode rexNode
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
     final DruidExpression druidExpression = Expressions.toDruidExpression(
         plannerContext,
-        querySignature.getRowSignature(),
+        rowSignature,
         operands.get(0)
     );
     if (druidExpression == null) {
@@ -76,21 +78,21 @@ public class LikeOperatorConversion extends DirectOperatorConversion
           operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
-    } else {
-      VirtualColumn v = querySignature.getOrCreateVirtualColumnForExpression(
+    } else if (virtualColumnRegistry != null) {
+      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           druidExpression,
           operands.get(0).getType().getSqlTypeName()
       );
-      if (v == null) {
-        return null;
-      }
+
       return new LikeDimFilter(
           v.getOutputName(),
           RexLiteral.stringValue(operands.get(1)),
           operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
           null
       );
+    } else {
+      return null;
     }
   }
 }

@@ -31,8 +31,8 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, NullTableCell } from '../../components/index';
-import { AsyncActionDialog } from '../../dialogs/index';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, TableCell } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -755,9 +755,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
               Cell: row => {
                 if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
+                  return <TableCell unparseable/>;
                 }
-                return <NullTableCell value={row.value}/>;
+                return <TableCell value={row.value}/>;
               },
               headerClassName: classNames({
                 flattened: flattenField
@@ -782,7 +782,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1048,12 +1047,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
               Cell: row => {
                 if (columnName === '__error__') {
-                  return <NullTableCell value={row.original.error}/>;
+                  return <TableCell value={row.original.error}/>;
                 }
                 if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
+                  return <TableCell unparseable/>;
                 }
-                return <NullTableCell value={row.value} timestamp={timestamp}/>;
+                return <TableCell value={row.value} timestamp={timestamp}/>;
               },
               minWidth: timestamp ? 200 : 100,
               resizable: !timestamp
@@ -1062,7 +1061,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1249,13 +1247,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               className: columnClassName,
               id: String(i),
               accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+              Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
             };
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1487,13 +1484,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               className: columnClassName,
               id: String(i),
               accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+              Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
             };
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1763,7 +1759,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 className: columnClassName,
                 id: String(i),
                 accessor: row => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value}/>
+                Cell: row => <TableCell value={row.value}/>
               };
             } else {
               const timestamp = columnName === '__time';
@@ -1808,14 +1804,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 className: columnClassName,
                 id: String(i),
                 accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+                Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
               };
             }
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }

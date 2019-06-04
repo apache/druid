@@ -87,6 +87,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
           enableSnippets: true,
           tabSize: 2
         }}
+        style={{}}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

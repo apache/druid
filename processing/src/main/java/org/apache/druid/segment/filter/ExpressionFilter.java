@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
@@ -41,19 +43,19 @@ import java.util.Set;
 
 public class ExpressionFilter implements Filter
 {
-  private final Expr expr;
-  private final Set<String> requiredBindings;
+  private final Supplier<Expr> expr;
+  private final Supplier<Set<String>> requiredBindings;
 
-  public ExpressionFilter(final Expr expr)
+  public ExpressionFilter(final Supplier<Expr> expr)
   {
     this.expr = expr;
-    this.requiredBindings = ImmutableSet.copyOf(Parser.findRequiredBindings(expr));
+    this.requiredBindings = Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(expr.get())));
   }
 
   @Override
   public ValueMatcher makeMatcher(final ColumnSelectorFactory factory)
   {
-    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(factory, expr);
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(factory, expr.get());
     return new ValueMatcher()
     {
       @Override
@@ -76,14 +78,14 @@ public class ExpressionFilter implements Filter
   @Override
   public boolean supportsBitmapIndex(final BitmapIndexSelector selector)
   {
-    if (requiredBindings.isEmpty()) {
+    if (requiredBindings.get().isEmpty()) {
       // Constant expression.
       return true;
-    } else if (requiredBindings.size() == 1) {
+    } else if (requiredBindings.get().size() == 1) {
       // Single-column expression. We can use bitmap indexes if this column has an index and does not have
       // multiple values. The lack of multiple values is important because expression filters treat multi-value
       // arrays as nulls, which doesn't permit index based filtering.
-      final String column = Iterables.getOnlyElement(requiredBindings);
+      final String column = Iterables.getOnlyElement(requiredBindings.get());
       return selector.getBitmapIndex(column) != null && !selector.hasMultipleValues(column);
     } else {
       // Multi-column expression.
@@ -94,9 +96,9 @@ public class ExpressionFilter implements Filter
   @Override
   public <T> T getBitmapResult(final BitmapIndexSelector selector, final BitmapResultFactory<T> bitmapResultFactory)
   {
-    if (requiredBindings.isEmpty()) {
+    if (requiredBindings.get().isEmpty()) {
       // Constant expression.
-      if (expr.eval(ExprUtils.nilBindings()).asBoolean()) {
+      if (expr.get().eval(ExprUtils.nilBindings()).asBoolean()) {
         return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
       } else {
         return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
@@ -104,12 +106,12 @@ public class ExpressionFilter implements Filter
     } else {
       // Can assume there's only one binding and it has a bitmap index, otherwise supportsBitmapIndex would have
       // returned false and the caller should not have called us.
-      final String column = Iterables.getOnlyElement(requiredBindings);
+      final String column = Iterables.getOnlyElement(requiredBindings.get());
       return Filters.matchPredicate(
           column,
           selector,
           bitmapResultFactory,
-          value -> expr.eval(identifierName -> {
+          value -> expr.get().eval(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
             // convert null to Empty before passing to expressions if needed.

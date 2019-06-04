@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe json collapse  json collapse snapshot 1`] = `
+exports[`json collapse matches snapshot 1`] = `
 <div
   class="json-collapse"
 >

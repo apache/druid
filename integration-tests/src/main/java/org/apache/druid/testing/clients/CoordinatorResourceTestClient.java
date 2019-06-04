@@ -241,11 +241,6 @@ public class CoordinatorResourceTestClient
       );
     }
 
-    Map<String, Object> results = jsonMapper.readValue(
-        response.getContent(),
-        new TypeReference<Map<String, Object>>(){}
-    );
-
     StatusResponseHolder response2 = httpClient.go(
         new Request(HttpMethod.POST, new URL(url)).setContent(
             "application/json",

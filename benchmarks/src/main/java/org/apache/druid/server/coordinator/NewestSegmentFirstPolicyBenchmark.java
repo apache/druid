@@ -90,7 +90,6 @@ public class NewestSegmentFirstPolicyBenchmark
           dataSource,
           new DataSourceCompactionConfig(
               dataSource,
-              false,
               0,
               targetCompactionSizeBytes,
               targetCompactionSizeBytes,

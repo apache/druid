@@ -16,15 +16,13 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { render } from 'react-testing-library';
 
-import {CompactionDialog} from './compaction-dialog';
+import { CompactionDialog } from './compaction-dialog';
 
-
-describe('describe compaction dialog', () => {
-  it('compaction dialog snapshot', () => {
+describe('compaction dialog', () => {
+  it('matches snapshot', () => {
     const compactionDialog =
       <CompactionDialog
         onClose={() => null}
@@ -33,7 +31,7 @@ describe('describe compaction dialog', () => {
         datasource={'test'}
         configData={'test'}
       />;
-    const { container, getByText } = render(compactionDialog, { container: document.body });
+    const { container } = render(compactionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });
