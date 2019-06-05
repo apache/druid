@@ -21,8 +21,11 @@ package org.apache.druid.utils;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Spliterator;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -66,6 +69,17 @@ public final class CollectionUtils
         return size;
       }
     };
+  }
+
+  /**
+   * Returns a transformed map from the given input map where the value is modified based on the given valueMapper
+   * function.
+   */
+  public static <K, V, V2> Map<K, V2> transformValues(Map<K, V> map, Function<V, V2> valueMapper)
+  {
+    final Map<K, V2> result = new HashMap<>();
+    map.forEach((k, v) -> result.put(k, valueMapper.apply(v)));
+    return result;
   }
 
   private CollectionUtils()

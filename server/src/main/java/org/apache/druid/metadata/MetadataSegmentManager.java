@@ -59,14 +59,9 @@ public interface MetadataSegmentManager
   boolean removeDataSource(String dataSource);
 
   /**
-   * Prefer {@link #removeSegment(SegmentId)} to this method when possible.
-   *
-   * This method is not removed because {@link org.apache.druid.server.http.DataSourcesResource#deleteDatasourceSegment}
-   * uses it and if it migrates to {@link #removeSegment(SegmentId)} the performance will be worse.
+   * Removes the given segmentId from metadata store. Returns true if one or more rows were affected.
    */
-  boolean removeSegment(String dataSource, String segmentId);
-
-  boolean removeSegment(SegmentId segmentId);
+  boolean removeSegment(String segmentId);
 
   long disableSegments(String dataSource, Collection<String> segmentIds);
 

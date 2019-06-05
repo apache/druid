@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -42,6 +41,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -467,22 +467,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    * snapshot update. The segment removal will be reflected after next poll cyccle runs.
    */
   @Override
-  public boolean removeSegment(String dataSourceName, final String identifier)
-  {
-    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, identifier);
-    Preconditions.checkNotNull(segmentId);
-    return removeSegment(segmentId);
-  }
-
-  /**
-   * This method does not update {@code dataSourcesSnapshot}, see the comments in {@code doPoll()} about
-   * snapshot update. The segment removal will be reflected after next poll cyccle runs.
-   */
-  @Override
-  public boolean removeSegment(SegmentId segmentId)
+  public boolean removeSegment(String segmentId)
   {
     try {
-      return removeSegmentFromTable(segmentId.toString());
+      return removeSegmentFromTable(segmentId);
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -729,13 +717,20 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     // a segment remove call reflected in MetadataResource API calls. These updates outside of scheduled poll may be
     // added back in removeDataSource and removeSegment methods after the on-demand polling changes from
     // https://github.com/apache/incubator-druid/pull/7653 are in.
-    dataSourcesSnapshot = new DataSourcesSnapshot(newDataSources.entrySet()
-                                                                .stream()
-                                                                .collect(Collectors.toMap(
-                                                                    e -> e.getKey(),
-                                                                    e -> e.getValue().toImmutableDruidDataSource()
-                                                                )));
+    final Map<String, ImmutableDruidDataSource> updatedDataSources = CollectionUtils.transformValues(
+        newDataSources,
+        v -> v.toImmutableDruidDataSource()
+    );
+    dataSourcesSnapshot = new DataSourcesSnapshot(updatedDataSources);
   }
+
+  /**
+   * But in this case, it's actually better to extract the first part as a method
+   * Map<K, V2> transformValues(Map<K, V> map, Function<V, V2> valueMapper) in CollectionUtils
+   *   because this boilerplate code appears in several places in the codebase
+   */
+
+
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
