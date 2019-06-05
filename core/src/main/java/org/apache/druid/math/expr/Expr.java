@@ -42,7 +42,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Base interface of Druid expression language abstract syntax tree
+ * Base interface of Druid expression language abstract syntax tree nodes
  */
 public interface Expr
 {
@@ -89,14 +89,14 @@ public interface Expr
 
   /**
    * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
-   * ensuring the {@link Visitor} can reach all of it's {@link Expr} children.
+   * ensuring the {@link Visitor} can visit all of it's {@link Expr} children before visiting itself.
    */
   void visit(Visitor visitor);
 
   /**
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}.Each {@link Expr} is responsible for
-   * ensuring the {@link Shuttle} can reach all of it's {@link Expr} children, as well as updating it's children
-   * {@link Expr} with the results from the {@link Shuttle}.
+   * ensuring the {@link Shuttle} can visit all of it's {@link Expr} children, as well as updating it's children
+   * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
    */
   Expr visit(Shuttle shuttle);
 
@@ -239,6 +239,11 @@ public interface Expr
   }
 }
 
+/**
+ * Base type for all constant expressions. {@link ConstantExpr} allow for direct value extraction without evaluating
+ * {@link Expr.ObjectBinding}. {@link ConstantExpr} are terminal nodes of an expression tree, and have no children
+ * {@link Expr}.
+ */
 abstract class ConstantExpr implements Expr
 {
   @Override
@@ -446,39 +451,44 @@ class DoubleArrayExpr extends ConstantExpr
   }
 }
 
+/**
+ * This {@link Expr} node is used to represent a variable in the expression language. At evaluation time, the string
+ * identifier will be used to retrieve the runtime value for the variable from {@link Expr.ObjectBinding}.
+ * {@link IdentifierExpr} are terminal nodes of an expression tree, and have no children {@link Expr}.
+ */
 class IdentifierExpr implements Expr
 {
-  private final String value;
+  private final String identifier;
 
   IdentifierExpr(String value)
   {
-    this.value = value;
+    this.identifier = value;
   }
 
   @Override
   public String toString()
   {
-    return value;
+    return identifier;
   }
 
   @Nullable
   @Override
   public String getIdentifierIfIdentifier()
   {
-    return value;
+    return identifier;
   }
 
   @Override
   public BindingDetails analyzeInputs()
   {
-    return new BindingDetails(value);
+    return new BindingDetails(identifier);
   }
 
   @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.bestEffortOf(bindings.get(value));
+    return ExprEval.bestEffortOf(bindings.get(identifier));
   }
 
   @Override
@@ -568,6 +578,11 @@ class LambdaExpr implements Expr
   }
 }
 
+/**
+ * {@link Expr} node for a {@link Function} call. {@link FunctionExpr} has children {@link Expr} in the form of the
+ * list of arguments that are passed to the {@link Function} along with the {@link Expr.ObjectBinding} when it is
+ * evaluated.
+ */
 class FunctionExpr implements Expr
 {
   final Function function;
@@ -638,6 +653,11 @@ class FunctionExpr implements Expr
   }
 }
 
+/**
+ * This {@link Expr} node is representative of an {@link ApplyFunction}, and has children in the form of a
+ * {@link LambdaExpr} and the list of {@link Expr} arguments that are combined with {@link Expr.ObjectBinding} to
+ * evaluate the {@link LambdaExpr}.
+ */
 class ApplyFunctionExpr implements Expr
 {
   final ApplyFunction function;
@@ -715,6 +735,9 @@ class ApplyFunctionExpr implements Expr
   }
 }
 
+/**
+ * Base type for all single argument operators, with a single {@link Expr} child for the operand.
+ */
 abstract class UnaryExpr implements Expr
 {
   final Expr expr;
@@ -828,8 +851,13 @@ class UnaryNotExpr extends UnaryExpr
   }
 }
 
-// all concrete subclass of this should have constructor with the form of <init>(String, Expr, Expr)
-// if it's not possible, just be sure Evals.binaryOp() can handle that
+/**
+ * Base type for all binary operators, this {@link Expr} has two children {@link Expr} for the left and right side
+ * operands.
+ *
+ * Note: all concrete subclass of this should have constructor with the form of <init>(String, Expr, Expr)
+ * if it's not possible, just be sure Evals.binaryOp() can handle that
+ */
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;
@@ -889,6 +917,10 @@ abstract class BinaryOpExprBase implements Expr
   }
 }
 
+/**
+ * Base class for numerical binary operators, with additional methods defined to evaluate primitive values directly
+ * instead of wrapped with {@link ExprEval}
+ */
 abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 {
   BinaryEvalOpExprBase(String op, Expr left, Expr right)
