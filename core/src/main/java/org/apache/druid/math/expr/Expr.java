@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
@@ -30,7 +29,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.skife.jdbi.v2.sqlobject.Bind;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +39,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
