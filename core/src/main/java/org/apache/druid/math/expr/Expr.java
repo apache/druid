@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.skife.jdbi.v2.sqlobject.Bind;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -46,22 +49,20 @@ import java.util.stream.Collectors;
  */
 public interface Expr
 {
+  /**
+   * Indicates expression is a constant whose literal value can be extracted by {@link Expr#getLiteralValue()},
+   * making evaluating with arguments and bindings unecessary
+   */
   default boolean isLiteral()
   {
     // Overridden by things that are literals.
     return false;
   }
 
-  default boolean isArray()
-  {
-    // Overridden by things that are arrays.
-    return false;
-  }
-
   /**
    * Returns the value of expr if expr is a literal, or throws an exception otherwise.
    *
-   * @return expr's literal value
+   * @return {@link ConstantExpr}'s literal value
    *
    * @throws IllegalStateException if expr is not a literal
    */
@@ -268,15 +269,6 @@ abstract class ConstantExpr implements Expr
   }
 }
 
-abstract class ConstantArrayExpr extends ConstantExpr
-{
-  @Override
-  public boolean isArray()
-  {
-    return true;
-  }
-}
-
 class LongExpr extends ConstantExpr
 {
   private final Long value;
@@ -307,7 +299,7 @@ class LongExpr extends ConstantExpr
   }
 }
 
-class LongArrayExpr extends ConstantArrayExpr
+class LongArrayExpr extends ConstantExpr
 {
   private final Long[] value;
 
@@ -367,7 +359,7 @@ class StringExpr extends ConstantExpr
   }
 }
 
-class StringArrayExpr extends ConstantArrayExpr
+class StringArrayExpr extends ConstantExpr
 {
   private final String[] value;
 
@@ -427,7 +419,7 @@ class DoubleExpr extends ConstantExpr
   }
 }
 
-class DoubleArrayExpr extends ConstantArrayExpr
+class DoubleArrayExpr extends ConstantExpr
 {
   private final Double[] value;
 
@@ -655,6 +647,9 @@ class ApplyFunctionExpr implements Expr
   final String name;
   final LambdaExpr lambdaExpr;
   final List<Expr> argsExpr;
+  final BindingDetails bindingDetails;
+  final BindingDetails lambdaBindingDetails;
+  final List<BindingDetails> argsBindingDetails;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
@@ -662,6 +657,27 @@ class ApplyFunctionExpr implements Expr
     this.name = name;
     this.argsExpr = args;
     this.lambdaExpr = expr;
+
+    argsBindingDetails = new ArrayList<>();
+    BindingDetails accumulator = new BindingDetails();
+    for (Expr arg : argsExpr) {
+      BindingDetails argDetails = arg.analyzeInputs();
+      argsBindingDetails.add(argDetails);
+      accumulator = accumulator.merge(argDetails);
+    }
+
+    final Set<String> arrayVariables = new HashSet<>();
+    Set<Expr> arrayArgs = function.getArrayInputs(argsExpr);
+
+    for (Expr arg : arrayArgs) {
+      String s = arg.getIdentifierIfIdentifier();
+      if (s != null) {
+        arrayVariables.add(s);
+      }
+    }
+
+    lambdaBindingDetails = lambdaExpr.analyzeInputs();
+    bindingDetails = accumulator.merge(lambdaBindingDetails).mergeWithArrays(arrayVariables);
   }
 
   @Override
@@ -698,21 +714,7 @@ class ApplyFunctionExpr implements Expr
   @Override
   public BindingDetails analyzeInputs()
   {
-    BindingDetails accumulator = new BindingDetails();
-    for (Expr arg : argsExpr) {
-      accumulator = accumulator.merge(arg.analyzeInputs());
-    }
-
-    final Set<String> arrayVariables = new HashSet<>();
-    Set<Expr> arrayArgs = function.getArrayInputs(argsExpr);
-
-    for (Expr arg : arrayArgs) {
-      String s = arg.getIdentifierIfIdentifier();
-      if (s != null) {
-        arrayVariables.add(s);
-      }
-    }
-    return accumulator.merge(lambdaExpr.analyzeInputs()).mergeWithArrays(arrayVariables);
+    return bindingDetails;
   }
 }
 

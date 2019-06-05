@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
+ * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
  */
 public abstract class ExprEval<T>
 {
@@ -116,7 +117,7 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
-  // Cached String values. Protected so they can be used by subclasses.
+  // Cached String values
   private boolean stringValueValid = false;
   private String stringValue;
 

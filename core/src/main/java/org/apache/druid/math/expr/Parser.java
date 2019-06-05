@@ -160,7 +160,7 @@ public class Parser
   /**
    * Applies a transformation to an {@link Expr} given a list of known (or uknown) multi-value input columns that are
    * used in a scalar manner, walking the {@link Expr} tree and lifting array variables into the {@link LambdaExpr} of
-   * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr} {@link Function.ArrayFunction}
+   * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr}
    * @param expr expression to visit and rewrite
    * @param toApply
    * @return
@@ -249,22 +249,36 @@ public class Parser
    */
   private static ApplyFunctionExpr liftApplyLambda(ApplyFunctionExpr expr, List<String> unappliedArgs)
   {
-    Expr.BindingDetails lambdaBinding = expr.lambdaExpr.analyzeInputs();
+
+    // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
+    List<String> unappliedInThisApply =
+        unappliedArgs.stream()
+                     .filter(u -> !expr.bindingDetails.getArrayVariables().contains(u))
+                     .collect(Collectors.toList());
+
+    List<Expr> newArgs = new ArrayList<>();
+    for (int i = 0; i < expr.argsExpr.size(); i++) {
+      newArgs.add(applyUnappliedIdentifiers(
+          expr.argsExpr.get(i),
+          expr.argsBindingDetails.get(i),
+          unappliedInThisApply)
+      );
+    }
+
     // this will _not_ include the lambda identifiers.. anything in this list needs to be applied
-    List<IdentifierExpr> unappliedLambdaBindings = lambdaBinding.getFreeVariables()
+    List<IdentifierExpr> unappliedLambdaBindings = expr.lambdaBindingDetails.getFreeVariables()
                                                          .stream()
                                                          .filter(unappliedArgs::contains)
                                                          .map(IdentifierExpr::new)
                                                          .collect(Collectors.toList());
 
     if (unappliedLambdaBindings.size() == 0) {
-      return expr;
+      return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
     }
 
     final ApplyFunction newFn;
     final ApplyFunctionExpr newExpr;
 
-    final List<Expr> newArgs = new ArrayList<>(expr.argsExpr);
     newArgs.addAll(unappliedLambdaBindings);
 
     switch (expr.function.name()) {

@@ -328,6 +328,7 @@ public class ParserTest
   public void testApplyUnapplied()
   {
     validateApplyUnapplied("x + 1", "(+ x 1)", "(+ x 1)", ImmutableList.of());
+    validateApplyUnapplied("x + 1", "(+ x 1)", "(+ x 1)", ImmutableList.of("z"));
     validateApplyUnapplied("x + y", "(+ x y)", "(map ([x] -> (+ x y)), [x])", ImmutableList.of("x"));
     validateApplyUnapplied(
         "x + y",
@@ -341,6 +342,12 @@ public class ParserTest
         "(map ([x] -> (+ x y)), [x])",
         "(cartesian_map ([x, y] -> (+ x y)), [x, y])",
         ImmutableList.of("y")
+    );
+    validateApplyUnapplied(
+        "map(x -> x + 1, x + 1)",
+        "(map ([x] -> (+ x 1)), [(+ x 1)])",
+        "(map ([x] -> (+ x 1)), [(map ([x] -> (+ x 1)), [x])])",
+        ImmutableList.of("x")
     );
     validateApplyUnapplied(
         "fold((x, acc) -> acc + x + y, x, 0)",
@@ -427,7 +434,9 @@ public class ParserTest
   )
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    final Expr transformed = Parser.applyUnappliedIdentifiers(parsed, parsed.analyzeInputs(), identifiers);
+    Expr.BindingDetails deets = parsed.analyzeInputs();
+    Parser.validateExpr(parsed, deets);
+    final Expr transformed = Parser.applyUnappliedIdentifiers(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
   }
