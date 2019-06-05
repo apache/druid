@@ -67,7 +67,7 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
       throw new RuntimeException("Failed to deserialize bloom filter", ioe);
     }
 
-    class BloomExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class BloomExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private BloomExpr(Expr arg)
       {

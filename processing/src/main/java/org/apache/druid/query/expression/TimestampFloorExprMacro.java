@@ -62,7 +62,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  public static class TimestampFloorExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  public static class TimestampFloorExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final PeriodGranularity granularity;
 
@@ -109,7 +109,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  public static class TimestampFloorDynamicExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  public static class TimestampFloorDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     TimestampFloorDynamicExpr(final List<Expr> args)
     {

@@ -67,7 +67,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
         escapeChar
     );
 
-    class LikeExtractExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class LikeExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private LikeExtractExpr(Expr arg)
       {

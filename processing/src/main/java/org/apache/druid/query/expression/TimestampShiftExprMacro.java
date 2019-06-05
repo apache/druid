@@ -71,7 +71,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     return args.get(2).eval(bindings).asInt();
   }
 
-  private static class TimestampShiftExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  private static class TimestampShiftExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final Chronology chronology;
     private final Period period;
@@ -101,7 +101,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampShiftDynamicExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  private static class TimestampShiftDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     TimestampShiftDynamicExpr(final List<Expr> args)
     {

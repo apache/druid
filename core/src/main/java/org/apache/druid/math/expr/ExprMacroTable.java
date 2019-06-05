@@ -31,6 +31,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Mechanism by which Druid expressions can define new functions for the Druid expression language. When
+ * {@link ExprListenerImpl} is creating a {@link FunctionExpr}, {@link ExprMacroTable} will first be checked to find
+ * the function by name, falling back to {@link Parser#getFunction(String)} to map to a built-in {@link Function} if
+ * none is defined in the macro table.
+ */
 public class ExprMacroTable
 {
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
@@ -84,11 +90,14 @@ public class ExprMacroTable
     Expr apply(List<Expr> args);
   }
 
-  public abstract static class BaseSingleScalarArgumentExprMacroFunctionExpr implements Expr
+  /**
+   * Base class for single argument {@link ExprMacro} function {@link Expr}
+   */
+  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
   {
     protected final Expr arg;
 
-    public BaseSingleScalarArgumentExprMacroFunctionExpr(Expr arg)
+    public BaseScalarUnivariateMacroFunctionExpr(Expr arg)
     {
       this.arg = arg;
     }
@@ -111,11 +120,14 @@ public class ExprMacroTable
     }
   }
 
-  public abstract static class BaseScalarExprMacroFunctionExpr implements Expr
+  /**
+   * Base class for multi-argument {@link ExprMacro} function {@link Expr}
+   */
+  public abstract static class BaseScalarMacroFunctionExpr implements Expr
   {
     protected final List<Expr> args;
 
-    public BaseScalarExprMacroFunctionExpr(final List<Expr> args)
+    public BaseScalarMacroFunctionExpr(final List<Expr> args)
     {
       this.args = args;
     }

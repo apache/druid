@@ -82,7 +82,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     final ISOChronology chronology = ISOChronology.getInstance(timeZone);
 
-    class TimestampExtractExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class TimestampExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private TimestampExtractExpr(Expr arg)
       {

@@ -71,7 +71,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         null
     );
 
-    class LookupExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class LookupExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private LookupExpr(Expr arg)
       {

@@ -54,7 +54,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampCeilExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  private static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final Granularity granularity;
 
@@ -99,7 +99,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  private static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarExprMacroFunctionExpr
+  private static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     TimestampCeilDynamicExpr(final List<Expr> args)
     {

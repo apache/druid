@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Implementation of antlr parse tree listener, transforms {@link ParseTree} to {@link Expr}, based on the grammar
+ * defined in <a href="../../../../../../src/main/antlr4/org/apache/druid/math/expr/antlr/Expr.g4">Expr.g4</a>. All
+ * {@link Expr} are created on 'exit' so that children {@link Expr} are already constructed.
  */
 public class ExprListenerImpl extends ExprBaseListener
 {

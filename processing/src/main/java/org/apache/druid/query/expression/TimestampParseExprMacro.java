@@ -64,7 +64,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
         ? createDefaultParser(timeZone)
         : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
-    class TimestampParseExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class TimestampParseExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private TimestampParseExpr(Expr arg)
       {

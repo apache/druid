@@ -58,7 +58,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
-    class RegexpExtractExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
       private RegexpExtractExpr(Expr arg)
       {

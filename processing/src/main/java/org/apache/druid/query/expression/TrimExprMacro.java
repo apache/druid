@@ -96,7 +96,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TrimStaticCharsExpr extends ExprMacroTable.BaseSingleScalarArgumentExprMacroFunctionExpr
+  private static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   {
     private final TrimMode mode;
     private final char[] chars;
