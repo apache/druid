@@ -36,18 +36,42 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+/**
+ * Base interface describing the mechanism used to evaluate an {@link ApplyFunctionExpr}, which 'applies' a
+ * {@link LambdaExpr} to one or more array {@link Expr}
+ */
 public interface ApplyFunction
 {
+  /**
+   * Name of the function
+   */
   String name();
 
+  /**
+   * Apply {@link LambdaExpr} to argument list of {@link Expr} given a set of outer {@link Expr.ObjectBinding}. These
+   * outer bindings will be used to form the scope for the bindings used to evaluate the {@link LambdaExpr}, which use
+   * the array inputs to supply scalar values to use as bindings for {@link IdentifierExpr} in the lambda body.
+   */
   ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings);
 
+  /**
+   * Get list of input arguments which must evaluate to an array {@link ExprType}
+   */
   Set<Expr> getArrayInputs(List<Expr> args);
 
+  /**
+   * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
+   * mapped to the values of an {@link IndexableMapLambdaObjectBinding} which is created from the outer
+   * {@link Expr.ObjectBinding} and the values of the array {@link Expr} argument(s)
+   */
   abstract class BaseMapFunction implements ApplyFunction
   {
-    ExprEval applyMap(LambdaExpr expr, int length, IndexableMapLambdaObjectBinding bindings)
+    /**
+     * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
+     */
+    ExprEval applyMap(LambdaExpr expr, IndexableMapLambdaObjectBinding bindings)
     {
+      final int length = bindings.getLength();
       String[] stringsOut = null;
       Long[] longsOut = null;
       Double[] doublesOut = null;
@@ -99,6 +123,9 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Map the scalar values of a single array input {@link Expr} to a single argument {@link LambdaExpr}
+   */
   class MapFunction extends BaseMapFunction
   {
     static final String NAME = "map";
@@ -125,7 +152,7 @@ public interface ApplyFunction
       }
 
       MapLambdaBinding lambdaBinding = new MapLambdaBinding(array, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, array.length, lambdaBinding);
+      return applyMap(lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -139,6 +166,9 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Map the cartesian product of 'n' array input arguments to an 'n' argument {@link LambdaExpr}
+   */
   class CartesianMapFunction extends BaseMapFunction
   {
     static final String NAME = "cartesian_map";
@@ -177,7 +207,7 @@ public interface ApplyFunction
 
       List<List<Object>> product = CartesianList.create(arrayInputs);
       CartesianMapLambdaBinding lambdaBinding = new CartesianMapLambdaBinding(product, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, product.size(), lambdaBinding);
+      return applyMap(lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -187,11 +217,19 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Base class for family of {@link ApplyFunction} which aggregate a scalar or array value given one or more array
+   * input {@link Expr} arguments and an array or scalar "accumulator" argument with an initial value
+   */
   abstract class BaseFoldFunction implements ApplyFunction
   {
-    ExprEval applyFold(LambdaExpr lambdaExpr, Object accumulator, int length, IndexableFoldLambdaBinding bindings)
+    /**
+     * Accumulate a value by evaluating a {@link LambdaExpr} for each index position of an
+     * {@link IndexableFoldLambdaBinding}
+     */
+    ExprEval applyFold(LambdaExpr lambdaExpr, Object accumulator, IndexableFoldLambdaBinding bindings)
     {
-      for (int i = 0; i < length; i++) {
+      for (int i = 0; i < bindings.getLength(); i++) {
         ExprEval evaluated = lambdaExpr.eval(bindings.accumulateWithIndex(i, accumulator));
         accumulator = evaluated.value();
       }
@@ -199,6 +237,10 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Accumulate a value for a single array input with a 2 argument {@link LambdaExpr}. The 'array' input expression is
+   * the first argument, the initial value for the accumlator expression is the 2nd argument.
+   */
   class FoldFunction extends BaseFoldFunction
   {
     static final String NAME = "fold";
@@ -226,17 +268,22 @@ public interface ApplyFunction
       Object accumlator = accEval.value();
 
       FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(array, accumlator, lambdaExpr, bindings);
-      return applyFold(lambdaExpr, accumlator, array.length, lambdaBinding);
+      return applyFold(lambdaExpr, accumlator, lambdaBinding);
     }
 
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      // accumulator argument cannot be inferred, so ignore it until we think of something better to do
+      // accumulator argument cannot currently be inferred, so ignore it until we think of something better to do
       return ImmutableSet.of(args.get(0));
     }
   }
 
+  /**
+   * Accumulate a value for the cartesian product of 'n' array inputs arguments with an 'n + 1' argument
+   * {@link LambdaExpr}. The 'array' input expressions are the first 'n' arguments, the initial value for the accumlator
+   * expression is the final argument.
+   */
   class CartesianFoldFunction extends BaseFoldFunction
   {
     static final String NAME = "cartesian_fold";
@@ -283,7 +330,7 @@ public interface ApplyFunction
 
       CartesianFoldLambdaBinding lambdaBindings =
           new CartesianFoldLambdaBinding(product, accumlator, lambdaExpr, bindings);
-      return applyFold(lambdaExpr, accumlator, product.size(), lambdaBindings);
+      return applyFold(lambdaExpr, accumlator, lambdaBindings);
     }
 
     @Override
@@ -294,6 +341,9 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Filter an array to all elements that evaluate to a 'truthy' value for a {@link LambdaExpr}
+   */
   class FilterFunction implements ApplyFunction
   {
     static final String NAME = "filter";
@@ -354,6 +404,10 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Base class for family of {@link ApplyFunction} which evaluate elements elements of a single array input against
+   * a {@link LambdaExpr} to evaluate to a final 'truthy' value
+   */
   abstract class MatchFunction implements ApplyFunction
   {
     @Override
@@ -385,6 +439,10 @@ public interface ApplyFunction
     public abstract ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings);
   }
 
+  /**
+   * Evaluates to true if any element of the array input {@link Expr} causes the {@link LambdaExpr} to evaluate to a
+   * 'truthy' value
+   */
   class AnyMatchFunction extends MatchFunction
   {
     static final String NAME = "any";
@@ -404,6 +462,10 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Evaluates to true if all element of the array input {@link Expr} causes the {@link LambdaExpr} to evaluate to a
+   * 'truthy' value
+   */
   class AllMatchFunction extends MatchFunction
   {
     static final String NAME = "all";
@@ -423,6 +485,11 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Simple, mutable, {@link Expr.ObjectBinding} for a {@link LambdaExpr} which provides a {@link Map} for storing
+   * arbitrary values to use as values for {@link IdentifierExpr} in the body of the lambda that are arguments to the
+   * lambda
+   */
   class SettableLambdaBinding implements Expr.ObjectBinding
   {
     private final Expr.ObjectBinding bindings;
@@ -454,11 +521,29 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * {@link Expr.ObjectBinding} which can be iterated by an integer index position for {@link BaseMapFunction}.
+   * Evaluating an {@link IdentifierExpr} against these bindings will return the value(s) of the array at the current
+   * index for any lambda identifiers, and fall through to the base {@link Expr.ObjectBinding} for all bindings provided
+   * by an outer scope.
+   */
   interface IndexableMapLambdaObjectBinding extends Expr.ObjectBinding
   {
+    /**
+     * Total number of bindings in this binding
+     */
+    int getLength();
+
+    /**
+     * Update index position
+     */
     IndexableMapLambdaObjectBinding withIndex(int index);
   }
 
+  /**
+   * {@link IndexableMapLambdaObjectBinding} for a {@link MapFunction}. Lambda argument binding is stored in an object
+   * array, retrieving binding values for the lambda identifier returns the value at the current index.
+   */
   class MapLambdaBinding implements IndexableMapLambdaObjectBinding
   {
     private final Expr.ObjectBinding bindings;
@@ -484,6 +569,12 @@ public interface ApplyFunction
     }
 
     @Override
+    public int getLength()
+    {
+      return arrayValues.length;
+    }
+
+    @Override
     public MapLambdaBinding withIndex(int index)
     {
       this.index = index;
@@ -491,6 +582,11 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * {@link IndexableMapLambdaObjectBinding} for a {@link CartesianMapFunction}. Lambda argument bindings stored as a
+   * cartesian product in the form of a list of lists of objects, where the inner list is the in order list of values
+   * for each {@link LambdaExpr} argument
+   */
   class CartesianMapLambdaBinding implements IndexableMapLambdaObjectBinding
   {
     private final Expr.ObjectBinding bindings;
@@ -521,6 +617,12 @@ public interface ApplyFunction
     }
 
     @Override
+    public int getLength()
+    {
+      return lambdaInputs.size();
+    }
+
+    @Override
     public CartesianMapLambdaBinding withIndex(int index)
     {
       this.index = index;
@@ -528,11 +630,29 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * {@link Expr.ObjectBinding} which can be iterated by an integer index position for {@link BaseFoldFunction}.
+   * Evaluating an {@link IdentifierExpr} against these bindings will return the value(s) of the array at the current
+   * index for any lambda array identifiers, the value of the 'accumulator' for the lambda accumulator identifier,
+   * and fall through to the base {@link Expr.ObjectBinding} for all bindings provided by an outer scope.
+   */
   interface IndexableFoldLambdaBinding extends Expr.ObjectBinding
   {
+    /**
+     * Total number of bindings in this binding
+     */
+    int getLength();
+
+    /**
+     * Update the index and accumulator value
+     */
     IndexableFoldLambdaBinding accumulateWithIndex(int index, Object accumulator);
   }
 
+  /**
+   * {@link IndexableFoldLambdaBinding} for a {@link FoldFunction}. Like {@link MapLambdaBinding}
+   * but with additional information to track and provide binding values for an accumulator.
+   */
   class FoldLambdaBinding implements IndexableFoldLambdaBinding
   {
     private final Expr.ObjectBinding bindings;
@@ -565,6 +685,12 @@ public interface ApplyFunction
     }
 
     @Override
+    public int getLength()
+    {
+      return arrayValues.length;
+    }
+
+    @Override
     public FoldLambdaBinding accumulateWithIndex(int index, Object acc)
     {
       this.index = index;
@@ -573,6 +699,10 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * {@link IndexableFoldLambdaBinding} for a {@link CartesianFoldFunction}. Like {@link CartesianMapLambdaBinding}
+   * but with additional information to track and provide binding values for an accumulator.
+   */
   class CartesianFoldLambdaBinding implements IndexableFoldLambdaBinding
   {
     private final Expr.ObjectBinding bindings;
@@ -605,6 +735,12 @@ public interface ApplyFunction
         return accumulatorValue;
       }
       return bindings.get(name);
+    }
+
+    @Override
+    public int getLength()
+    {
+      return lambdaInputs.size();
     }
 
     @Override
