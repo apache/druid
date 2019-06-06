@@ -27,6 +27,10 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Basic expression {@link ColumnValueSelector}. Evaluates {@link Expr} into {@link ExprEval} against
+ * {@link Expr.ObjectBinding} which are backed by the underlying expression input {@link ColumnValueSelector}s
+ */
 public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
 {
   final Expr.ObjectBinding bindings;

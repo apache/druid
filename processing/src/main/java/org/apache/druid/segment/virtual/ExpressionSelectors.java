@@ -180,7 +180,6 @@ public class ExpressionSelectors
       finalExpr = expression;
     }
 
-
     final Expr.ObjectBinding bindings = createBindings(exprDetails, columnSelectorFactory);
 
     if (bindings.equals(ExprUtils.nilBindings())) {
@@ -257,39 +256,7 @@ public class ExpressionSelectors
     } else if (extractionFn == null) {
 
       if (multiVal) {
-        class MultiValueDimensionSelector extends BaseMultiValueExpressionDimensionSelector
-        {
-          private MultiValueDimensionSelector()
-          {
-            super(baseSelector);
-          }
-
-          @Override
-          String getValue(ExprEval evaluated)
-          {
-            assert !evaluated.isArray();
-            return NullHandling.emptyToNullIfNeeded(evaluated.asString());
-          }
-
-          @Override
-          List<String> getArray(ExprEval evaluated)
-          {
-            assert evaluated.isArray();
-            return Arrays.stream(evaluated.asStringArray())
-                         .map(NullHandling::emptyToNullIfNeeded)
-                         .collect(Collectors.toList());
-          }
-
-          @Override
-          String getArrayValue(ExprEval evaluated, int i)
-          {
-            assert evaluated.isArray();
-            String[] stringArray = evaluated.asStringArray();
-            assert i < stringArray.length;
-            return NullHandling.emptyToNullIfNeeded(stringArray[i]);
-          }
-        }
-        return new MultiValueDimensionSelector();
+        return new MultiValueExpressionDimensionSelector(baseSelector);
       } else {
         class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
         {
@@ -310,7 +277,7 @@ public class ExpressionSelectors
       }
     } else {
       if (multiVal) {
-        class ExtractionMultiValueDimensionSelector extends BaseMultiValueExpressionDimensionSelector
+        class ExtractionMultiValueDimensionSelector extends MultiValueExpressionDimensionSelector
         {
           ExtractionMultiValueDimensionSelector()
           {

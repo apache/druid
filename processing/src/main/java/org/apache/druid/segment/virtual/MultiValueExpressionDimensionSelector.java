@@ -32,14 +32,20 @@ import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-public abstract class BaseMultiValueExpressionDimensionSelector implements DimensionSelector
+/**
+ * Basic multi-value dimension selector for an {@link org.apache.druid.math.expr.Expr} evaluating
+ * {@link ColumnValueSelector}.
+ */
+public class MultiValueExpressionDimensionSelector implements DimensionSelector
 {
   private final ColumnValueSelector<ExprEval> baseSelector;
 
-  public BaseMultiValueExpressionDimensionSelector(ColumnValueSelector<ExprEval> baseSelector)
+  public MultiValueExpressionDimensionSelector(ColumnValueSelector<ExprEval> baseSelector)
   {
     this.baseSelector = baseSelector;
   }
@@ -49,11 +55,27 @@ public abstract class BaseMultiValueExpressionDimensionSelector implements Dimen
     return baseSelector.getObject();
   }
 
-  abstract String getValue(ExprEval evaluated);
+  String getValue(ExprEval evaluated)
+  {
+    assert !evaluated.isArray();
+    return NullHandling.emptyToNullIfNeeded(evaluated.asString());
+  }
 
-  abstract List<String> getArray(ExprEval evaluated);
+  List<String> getArray(ExprEval evaluated)
+  {
+    assert evaluated.isArray();
+    return Arrays.stream(evaluated.asStringArray())
+                 .map(NullHandling::emptyToNullIfNeeded)
+                 .collect(Collectors.toList());
+  }
 
-  abstract String getArrayValue(ExprEval evaluated, int i);
+  String getArrayValue(ExprEval evaluated, int i)
+  {
+    assert evaluated.isArray();
+    String[] stringArray = evaluated.asStringArray();
+    assert i < stringArray.length;
+    return NullHandling.emptyToNullIfNeeded(stringArray[i]);
+  }
 
   @Override
   public IndexedInts getRow()
