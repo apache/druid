@@ -155,11 +155,24 @@ public class SupervisorResource
           } else if (full != null) {
             List<Map<String, ?>> all =
                 authorizedSupervisorIds.stream()
-                                       .map(x -> ImmutableMap.<String, Object>builder()
-                                           .put("id", x)
-                                           .put("spec", manager.getSupervisorSpec(x).get())
-                                           .build()
+                                       .map(x -> {
+                                              Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                                              Optional<SupervisorStateManager.State> theState =
+                                                  manager.getSupervisorState(x);
+
+                                              if (theSpec.isPresent() && theState.isPresent()) {
+                                                return ImmutableMap.<String, Object>builder()
+                                                    .put("id", x)
+                                                    .put("state", theState.get().getBasicState())
+                                                    .put("detailedState", theState.get())
+                                                    .put("healthy", theState.get().isHealthy())
+                                                    .put("spec", theSpec.get())
+                                                    .build();
+                                              }
+                                              return null;
+                                            }
                                        )
+                                       .filter(Objects::nonNull)
                                        .collect(Collectors.toList());
             return Response.ok(all).build();
           }
