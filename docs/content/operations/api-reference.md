@@ -510,9 +510,9 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|Basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
-|`detailedState`|String|Supervisor specific state. (See documentation of specific supervisor for details)|
-|`healthy`|Boolean|True or false indicator of overal supervisor health|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overal supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
 * `/druid/indexer/v1/supervisor?state=true`
@@ -522,9 +522,9 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|Basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
-|`detailedState`|String|Supervisor specific state. (See documentation of specific supervisor for details)|
-|`healthy`|Boolean|True or false indicator of overal supervisor health|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overal supervisor health|
 
 * `/druid/indexer/v1/supervisor/<supervisorId>`
 
