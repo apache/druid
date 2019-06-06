@@ -130,51 +130,34 @@ public class SupervisorResource
               manager,
               manager.getSupervisorIds()
           );
+          final boolean includeFull = full != null;
+          final boolean includeState = state != null && state;
 
-
-          if (state != null && state) {
-            List<Map<String, ?>> allStates =
-                authorizedSupervisorIds.stream()
-                                       .map(x -> {
-                                              Optional<SupervisorStateManager.State> theState =
-                                                  manager.getSupervisorState(x);
-                                              if (theState.isPresent()) {
-                                                return ImmutableMap.<String, Object>builder()
-                                                    .put("id", x)
-                                                    .put("state", theState.get().getBasicState())
-                                                    .put("detailedState", theState.get())
-                                                    .put("healthy", theState.get().isHealthy())
-                                                    .build();
-                                              }
-                                              return null;
-                                            }
-                                       )
-                                       .filter(Objects::nonNull)
-                                       .collect(Collectors.toList());
+          if (includeFull || includeState) {
+            List<Map<String, ?>> allStates = authorizedSupervisorIds
+                .stream()
+                .map(x -> {
+                       Optional<SupervisorStateManager.State> theState =
+                           manager.getSupervisorState(x);
+                       ImmutableMap.Builder<String, Object> theBuilder = ImmutableMap.builder();
+                       theBuilder.put("id", x);
+                       if (theState.isPresent()) {
+                         theBuilder.put("state", theState.get().getBasicState());
+                         theBuilder.put("detailedState", theState.get());
+                         theBuilder.put("healthy", theState.get().isHealthy());
+                       }
+                       if (includeFull) {
+                         Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                         if (theSpec.isPresent()) {
+                           theBuilder.put("spec", theSpec.get());
+                         }
+                       }
+                       return theBuilder.build();
+                     }
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
             return Response.ok(allStates).build();
-          } else if (full != null) {
-            List<Map<String, ?>> all =
-                authorizedSupervisorIds.stream()
-                                       .map(x -> {
-                                              Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
-                                              Optional<SupervisorStateManager.State> theState =
-                                                  manager.getSupervisorState(x);
-
-                                              if (theSpec.isPresent() && theState.isPresent()) {
-                                                return ImmutableMap.<String, Object>builder()
-                                                    .put("id", x)
-                                                    .put("state", theState.get().getBasicState())
-                                                    .put("detailedState", theState.get())
-                                                    .put("healthy", theState.get().isHealthy())
-                                                    .put("spec", theSpec.get())
-                                                    .build();
-                                              }
-                                              return null;
-                                            }
-                                       )
-                                       .filter(Objects::nonNull)
-                                       .collect(Collectors.toList());
-            return Response.ok(all).build();
           }
 
           return Response.ok(authorizedSupervisorIds).build();
