@@ -53,20 +53,19 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   )
   {
     super(expression, bindings);
-    this.unknownColumns = new ArrayList<>(unknownColumnsSet);
+    this.unknownColumns = unknownColumnsSet.stream()
+                                           .filter(x -> !baseExprBindingDetails.getArrayVariables().contains(x))
+                                           .collect(Collectors.toList());
     this.baseExprBindingDetails = baseExprBindingDetails;
     this.ignoredColumns = new HashSet<>();
-    this.transformedCache = new Int2ObjectArrayMap(unknownColumns.size());
+    this.transformedCache = new Int2ObjectArrayMap<>(unknownColumns.size());
   }
 
   @Override
   public ExprEval getObject()
   {
     // check to find any arrays for this row
-    List<String> arrayBindings =
-        unknownColumns.stream()
-                      .filter(x -> !baseExprBindingDetails.getArrayVariables().contains(x) && isBindingArray(x))
-                      .collect(Collectors.toList());
+    List<String> arrayBindings = unknownColumns.stream().filter(this::isBindingArray).collect(Collectors.toList());
 
     // eliminate anything that will never be an array
     if (ignoredColumns.size() > 0) {
