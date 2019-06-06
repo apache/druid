@@ -512,6 +512,17 @@ Returns a list of objects of the currently active supervisors.
 |`id`|String|supervisor unique identifier|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
+* `/druid/indexer/v1/supervisor?state=true`
+
+Returns a list of objects of the currently active supervisors and their current state.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`state`|String|Basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|Supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|True or false indicator of overal supervisor health|
+
 * `/druid/indexer/v1/supervisor/<supervisorId>`
 
 Returns the current spec for the supervisor with the provided ID.
