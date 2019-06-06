@@ -42,121 +42,120 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 @RunWith(Parameterized.class)
 public class TimeseriesQueryQueryToolChestTest
 {
-  private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
+    private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
 
-  @Parameterized.Parameters(name = "descending={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
-  {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
-  }
+    @Parameterized.Parameters(name = "descending={0}")
+    public static Iterable<Object[]> constructorFeeder()
+    {
+        return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
+    }
 
-  private final boolean descending;
+    private final boolean descending;
 
-  public TimeseriesQueryQueryToolChestTest(boolean descending)
-  {
-    this.descending = descending;
-  }
+    public TimeseriesQueryQueryToolChestTest(boolean descending)
+    {
+        this.descending = descending;
+    }
 
-  @Test
-  public void testCacheStrategy() throws Exception
-  {
-    CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> strategy =
-        TOOL_CHEST.getCacheStrategy(
-            new TimeseriesQuery(
-                new TableDataSource("dummy"),
-                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
-                descending,
-                VirtualColumns.EMPTY,
-                null,
-                Granularities.ALL,
-                ImmutableList.of(
-                    new CountAggregatorFactory("metric1"),
-                    new LongSumAggregatorFactory("metric0", "metric0")
-                ),
-                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
-                null
-            )
+    @Test
+    public void testCacheStrategy() throws Exception
+    {
+        CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> strategy =
+                TOOL_CHEST.getCacheStrategy(
+                        new TimeseriesQuery(
+                                new TableDataSource("dummy"),
+                                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+                                descending,
+                                VirtualColumns.EMPTY,
+                                null,
+                                Granularities.ALL,
+                                ImmutableList.of(
+                                        new CountAggregatorFactory("metric1"),
+                                        new LongSumAggregatorFactory("metric0", "metric0")
+                                ),
+                                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+                                null
+                        )
+                );
+
+        final Result<TimeseriesResultValue> result1 = new Result<>(
+                // test timestamps that result in integer size millis
+                DateTimes.utc(123L),
+                new TimeseriesResultValue(
+                        ImmutableMap.of("metric1", 2, "metric0", 3)
+                )
         );
 
-    final Result<TimeseriesResultValue> result1 = new Result<>(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        new TimeseriesResultValue(
-            ImmutableMap.of("metric1", 2, "metric0", 3)
-        )
-    );
+        Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
 
-    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
+        ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+        Object fromCacheValue = objectMapper.readValue(
+                objectMapper.writeValueAsBytes(preparedValue),
+                strategy.getCacheObjectClazz()
+        );
 
-    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Object fromCacheValue = objectMapper.readValue(
-        objectMapper.writeValueAsBytes(preparedValue),
-        strategy.getCacheObjectClazz()
-    );
+        Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+        Assert.assertEquals(result1, fromCacheResult);
 
-    Assert.assertEquals(result1, fromCacheResult);
+        final Result<TimeseriesResultValue> result2 = new Result<>(
+                // test timestamps that result in integer size millis
+                DateTimes.utc(123L),
+                new TimeseriesResultValue(
+                        ImmutableMap.of("metric1", 2, "metric0", 3, "post", 10)
+                )
+        );
 
-    final Result<TimeseriesResultValue> result2 = new Result<>(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        new TimeseriesResultValue(
-            ImmutableMap.of("metric1", 2, "metric0", 3, "post", 10)
-        )
-    );
+        Object preparedResultLevelCacheValue = strategy.prepareForCache(true).apply(result2);
+        Object fromResultLevelCacheValue = objectMapper.readValue(
+                objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
+                strategy.getCacheObjectClazz()
+        );
 
-    Object preparedResultLevelCacheValue = strategy.prepareForCache(true).apply(result2);
-    Object fromResultLevelCacheValue = objectMapper.readValue(
-        objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
-        strategy.getCacheObjectClazz()
-    );
+        Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
+        Assert.assertEquals(result2, fromResultLevelCacheRes);
+    }
 
-    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
-    Assert.assertEquals(result2, fromResultLevelCacheRes);
-  }
+    @Test
+    public void testCacheKey()
+    {
+        final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                .dataSource("dummy")
+                .intervals("2015-01-01/2015-01-02")
+                .descending(descending)
+                .granularity(Granularities.ALL)
+                .aggregators(
+                        ImmutableList.of(
+                                new CountAggregatorFactory("metric1"),
+                                new LongSumAggregatorFactory("metric0", "metric0")
+                        )
+                )
+                .build();
 
-  @Test
-  public void testCacheKey() throws Exception
-  {
-    final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                         .dataSource("dummy")
-                                         .intervals("2015-01-01/2015-01-02")
-                                         .descending(descending)
-                                         .granularity(Granularities.ALL)
-                                         .aggregators(
-                                             ImmutableList.of(
-                                                 new CountAggregatorFactory("metric1"),
-                                                 new LongSumAggregatorFactory("metric0", "metric0")
-                                             )
-                                         )
-                                         .build();
+        final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                .dataSource("dummy")
+                .intervals("2015-01-01/2015-01-02")
+                .descending(descending)
+                .granularity(Granularities.ALL)
+                .aggregators(
+                        ImmutableList.of(
+                                new LongSumAggregatorFactory("metric0", "metric0"),
+                                new CountAggregatorFactory("metric1")
+                        )
+                )
+                .build();
 
-    final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                         .dataSource("dummy")
-                                         .intervals("2015-01-01/2015-01-02")
-                                         .descending(descending)
-                                         .granularity(Granularities.ALL)
-                                         .aggregators(
-                                             ImmutableList.of(
-                                                 new LongSumAggregatorFactory("metric0", "metric0"),
-                                                 new CountAggregatorFactory("metric1")
-                                             )
-                                         )
-                                         .build();
-
-    // Test for https://github.com/druid-io/druid/issues/4093.
-    Assert.assertFalse(
-        Arrays.equals(
-            TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
-            TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
-        )
-    );
-  }
+        // Test for https://github.com/druid-io/druid/issues/4093.
+        Assert.assertFalse(
+                Arrays.equals(
+                        TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
+                        TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
+                )
+        );
+    }
 }

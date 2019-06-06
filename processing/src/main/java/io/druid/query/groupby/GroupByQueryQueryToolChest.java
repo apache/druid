@@ -454,18 +454,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
-            Map<String, Object> event = Maps.newLinkedHashMap();
+            final Map<String, Object> event = Maps.newLinkedHashMap();
             Iterator<DimensionSpec> dimsIter = dims.iterator();
             while (dimsIter.hasNext() && results.hasNext()) {
               final DimensionSpec factory = dimsIter.next();
               event.put(factory.getOutputName(), results.next());
             }
-
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
-            while (aggsIter.hasNext() && results.hasNext()) {
-              final AggregatorFactory factory = aggsIter.next();
-              event.put(factory.getName(), factory.deserialize(results.next()));
-            }
+
+            CacheStrategy.fetchAggregatorsFromCache(
+                aggsIter,
+                results,
+                isResultLevelCache,
+                (aggName, aggValueObject) -> {
+                  event.put(aggName, aggValueObject);
+                  return null;
+                }
+            );
+
             if (isResultLevelCache) {
               Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
               while (postItr.hasNext() && results.hasNext()) {

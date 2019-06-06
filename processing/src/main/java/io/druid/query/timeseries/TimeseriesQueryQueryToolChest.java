@@ -209,17 +209,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           public Result<TimeseriesResultValue> apply(@Nullable Object input)
           {
             List<Object> results = (List<Object>) input;
-            Map<String, Object> retVal = Maps.newLinkedHashMap();
+            final Map<String, Object> retVal = Maps.newLinkedHashMap();
 
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
-            while (aggsIter.hasNext() && resultIter.hasNext()) {
-              final AggregatorFactory factory = aggsIter.next();
-              retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
-            }
+            CacheStrategy.fetchAggregatorsFromCache(
+                aggsIter,
+                resultIter,
+                isResultLevelCache,
+                (aggName, aggValueObject) -> {
+                  retVal.put(aggName, aggValueObject);
+                  return null;
+                }
+            );
+
             if (isResultLevelCache) {
               Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
               while (postItr.hasNext() && resultIter.hasNext()) {
