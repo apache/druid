@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
@@ -43,7 +44,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -164,24 +164,10 @@ public class ExpressionSelectors
       }
     }
 
-    final Set<String> actualArrays = new HashSet<>();
-    final Set<String> unknownIfArrays = new HashSet<>();
-    for (String column : columns) {
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-      if (capabilities != null) {
-        if (capabilities.hasMultipleValues()) {
-          actualArrays.add(column);
-        } else if (
-            !capabilities.isComplete() &&
-            capabilities.getType().equals(ValueType.STRING) &&
-            !exprDetails.getArrayVariables().contains(column)
-        ) {
-          unknownIfArrays.add(column);
-        }
-      } else {
-        unknownIfArrays.add(column);
-      }
-    }
+    final Pair<Set<String>, Set<String>> arrayUsage =
+        examineColumnSelectorFactoryArrays(columnSelectorFactory, exprDetails, columns);
+    final Set<String> actualArrays = arrayUsage.lhs;
+    final Set<String> unknownIfArrays = arrayUsage.rhs;
 
     final List<String> needsApplied =
         columns.stream()
@@ -202,18 +188,25 @@ public class ExpressionSelectors
       return new ConstantExprEvalSelector(expression.eval(bindings));
     }
 
+    // if any unknown column input types, fall back to an expression selector that examines input bindings on a
+    // per row basis
     if (unknownIfArrays.size() > 0) {
-      return new OpportunisticMultiValueStringExpressionColumnValueSelector(
+      return new RowBasedExpressionColumnValueSelector(
           finalExpr,
           exprDetails,
           bindings,
           unknownIfArrays
       );
     }
-    // No special optimization.
+
+    // generic expression value selector for fully known input types
     return new ExpressionColumnValueSelector(finalExpr, bindings);
   }
 
+  /**
+   * Makes a single or multi-value {@link DimensionSelector} wrapper around a {@link ColumnValueSelector} created by
+   * {@link ExpressionSelectors#makeExprEvalSelector(ColumnSelectorFactory, Expr)} as appropriate
+   */
   public static DimensionSelector makeDimensionSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
@@ -244,24 +237,11 @@ public class ExpressionSelectors
       }
     }
 
-    final Set<String> actualArrays = new HashSet<>();
-    final Set<String> unknownIfArrays = new HashSet<>();
-    for (String column : columns) {
-      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
-      if (capabilities != null) {
-        if (capabilities.hasMultipleValues()) {
-          actualArrays.add(column);
-        } else if (
-            !capabilities.isComplete() &&
-            capabilities.getType().equals(ValueType.STRING) &&
-            !exprDetails.getArrayVariables().contains(column)
-        ) {
-          unknownIfArrays.add(column);
-        }
-      } else {
-        unknownIfArrays.add(column);
-      }
-    }
+    final Pair<Set<String>, Set<String>> arrayUsage =
+        examineColumnSelectorFactoryArrays(columnSelectorFactory, exprDetails, columns);
+    final Set<String> actualArrays = arrayUsage.lhs;
+    final Set<String> unknownIfArrays = arrayUsage.rhs;
+
 
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
     final boolean multiVal = actualArrays.size() > 0 ||
@@ -392,6 +372,11 @@ public class ExpressionSelectors
     }
   }
 
+  /**
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingDetails} which
+   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
+   * are used as array or scalar inputs
+   */
   private static Expr.ObjectBinding createBindings(
       Expr.BindingDetails bindingDetails,
       ColumnSelectorFactory columnSelectorFactory
@@ -472,7 +457,6 @@ public class ExpressionSelectors
   }
 
   @VisibleForTesting
-  @Nonnull
   static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
   {
     Preconditions.checkNotNull(selector, "selector");
@@ -533,7 +517,6 @@ public class ExpressionSelectors
     }
   }
 
-  @Nonnull
   private static Object coerceListDimToStringArray(List val)
   {
     Object[] arrayVal = val.stream().map(Object::toString).toArray(String[]::new);
@@ -541,5 +524,37 @@ public class ExpressionSelectors
       return arrayVal;
     }
     return new String[]{null};
+  }
+
+  /**
+   * Returns pair of columns which are definitely multi-valued, or 'actual' arrays, and those which we are unable to
+   * discern from the {@link ColumnSelectorFactory#getColumnCapabilities(String)}, or 'unknown' arrays.
+   */
+  private static Pair<Set<String>, Set<String>> examineColumnSelectorFactoryArrays(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr.BindingDetails exprDetails,
+      List<String> columns
+  )
+  {
+    final Set<String> actualArrays = new HashSet<>();
+    final Set<String> unknownIfArrays = new HashSet<>();
+    for (String column : columns) {
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
+      if (capabilities != null) {
+        if (capabilities.hasMultipleValues()) {
+          actualArrays.add(column);
+        } else if (
+            !capabilities.isComplete() &&
+            capabilities.getType().equals(ValueType.STRING) &&
+            !exprDetails.getArrayVariables().contains(column)
+        ) {
+          unknownIfArrays.add(column);
+        }
+      } else {
+        unknownIfArrays.add(column);
+      }
+    }
+
+    return new Pair<>(actualArrays, unknownIfArrays);
   }
 }

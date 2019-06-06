@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,24 +83,23 @@ public interface Expr
    * Evaluate the {@link Expr} with the bindings which supply {@link IdentifierExpr} with their values, producing an
    * {@link ExprEval} with the result.
    */
-  @Nonnull
   ExprEval eval(ObjectBinding bindings);
 
   /**
    * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
-   * ensuring the {@link Visitor} can visit all of it's {@link Expr} children before visiting itself.
+   * ensuring the {@link Visitor} can visit all of its {@link Expr} children before visiting itself.
    */
   void visit(Visitor visitor);
 
   /**
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}.Each {@link Expr} is responsible for
-   * ensuring the {@link Shuttle} can visit all of it's {@link Expr} children, as well as updating it's children
+   * ensuring the {@link Shuttle} can visit all of its {@link Expr} children, as well as updating its children
    * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
    */
   Expr visit(Shuttle shuttle);
 
   /**
-   * Examing the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link BindingDetails}
+   * Examine the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link BindingDetails}
    */
   BindingDetails analyzeInputs();
 
@@ -280,7 +278,6 @@ class LongExpr extends ConstantExpr
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -293,7 +290,6 @@ class LongExpr extends ConstantExpr
     return String.valueOf(value);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -310,7 +306,6 @@ class LongArrayExpr extends ConstantExpr
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -323,7 +318,6 @@ class LongArrayExpr extends ConstantExpr
     return Arrays.toString(value);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -333,9 +327,10 @@ class LongArrayExpr extends ConstantExpr
 
 class StringExpr extends ConstantExpr
 {
+  @Nullable
   private final String value;
 
-  StringExpr(String value)
+  StringExpr(@Nullable String value)
   {
     this.value = NullHandling.emptyToNullIfNeeded(value);
   }
@@ -347,13 +342,13 @@ class StringExpr extends ConstantExpr
     return value;
   }
 
+  @Nullable
   @Override
   public String toString()
   {
     return value;
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -370,7 +365,6 @@ class StringArrayExpr extends ConstantExpr
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -383,7 +377,6 @@ class StringArrayExpr extends ConstantExpr
     return Arrays.toString(value);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -400,7 +393,6 @@ class DoubleExpr extends ConstantExpr
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -413,7 +405,6 @@ class DoubleExpr extends ConstantExpr
     return String.valueOf(value);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -430,7 +421,6 @@ class DoubleArrayExpr extends ConstantExpr
     this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -443,7 +433,6 @@ class DoubleArrayExpr extends ConstantExpr
     return Arrays.toString(value);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -484,7 +473,6 @@ class IdentifierExpr implements Expr
     return new BindingDetails(identifier);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -542,7 +530,6 @@ class LambdaExpr implements Expr
     return expr;
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -602,7 +589,6 @@ class FunctionExpr implements Expr
     return StringUtils.format("(%s %s)", name, args);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -703,7 +689,6 @@ class ApplyFunctionExpr implements Expr
     return StringUtils.format("(%s %s, %s)", name, lambdaExpr, argsExpr);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -794,7 +779,6 @@ class UnaryMinusExpr extends UnaryExpr
     return new UnaryMinusExpr(expr);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -831,7 +815,6 @@ class UnaryNotExpr extends UnaryExpr
     return new UnaryNotExpr(expr);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -928,7 +911,6 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     super(op, left, right);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -1339,7 +1321,6 @@ class BinAndExpr extends BinaryOpExprBase
     return new BinAndExpr(op, left, right);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -1361,7 +1342,6 @@ class BinOrExpr extends BinaryOpExprBase
     return new BinOrExpr(op, left, right);
   }
 
-  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {

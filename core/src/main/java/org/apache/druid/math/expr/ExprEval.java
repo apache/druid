@@ -108,7 +108,7 @@ public abstract class ExprEval<T>
       return new DoubleArrayExprEval((Double[]) val);
     }
     if (val instanceof Float[]) {
-      return new DoubleArrayExprEval(Arrays.stream((Float[]) val).map(x -> x.doubleValue()).toArray(Double[]::new));
+      return new DoubleArrayExprEval(Arrays.stream((Float[]) val).map(Float::doubleValue).toArray(Double[]::new));
     }
     if (val instanceof String[]) {
       return new StringArrayExprEval((String[]) val);
@@ -119,6 +119,7 @@ public abstract class ExprEval<T>
 
   // Cached String values
   private boolean stringValueValid = false;
+  @Nullable
   private String stringValue;
 
   @Nullable
@@ -131,6 +132,7 @@ public abstract class ExprEval<T>
 
   public abstract ExprType type();
 
+  @Nullable
   public T value()
   {
     return value;
@@ -170,12 +172,16 @@ public abstract class ExprEval<T>
 
   public abstract boolean asBoolean();
 
+  @Nullable
   public abstract Object[] asArray();
 
+  @Nullable
   public abstract String[] asStringArray();
 
+  @Nullable
   public abstract Long[] asLongArray();
 
+  @Nullable
   public abstract Double[] asDoubleArray();
 
   public abstract ExprEval castTo(ExprType castTo);
@@ -254,6 +260,7 @@ public abstract class ExprEval<T>
       return Evals.asBoolean(asDouble());
     }
 
+    @Nullable
     @Override
     public Object[] asArray()
     {
@@ -310,6 +317,7 @@ public abstract class ExprEval<T>
       return Evals.asBoolean(asLong());
     }
 
+    @Nullable
     @Override
     public Object[] asArray()
     {

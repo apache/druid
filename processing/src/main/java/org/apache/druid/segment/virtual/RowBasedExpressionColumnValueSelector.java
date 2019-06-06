@@ -31,14 +31,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class OpportunisticMultiValueStringExpressionColumnValueSelector extends ExpressionColumnValueSelector
+/**
+ * Expression column value selector that examines a set of 'unknown' type input bindings on a row by row basis,
+ * transforming the expression to handle multi-value list typed inputs as they are encountered.
+ *
+ * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link String[]}, so
+ * numbers are eliminated from the set of 'unknown' bindings to check as they are encountered.
+ */
+public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValueSelector
 {
   private final List<String> unknownColumns;
   private final Expr.BindingDetails baseExprBindingDetails;
   private final Set<String> ignoredColumns;
   private final Int2ObjectMap<Expr> transformedCache;
 
-  public OpportunisticMultiValueStringExpressionColumnValueSelector(
+  public RowBasedExpressionColumnValueSelector(
       Expr expression,
       Expr.BindingDetails baseExprBindingDetails,
       Expr.ObjectBinding bindings,
@@ -55,16 +62,20 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
   @Override
   public ExprEval getObject()
   {
+    // check to find any arrays for this row
     List<String> arrayBindings =
         unknownColumns.stream()
                       .filter(x -> !baseExprBindingDetails.getArrayVariables().contains(x) && isBindingArray(x))
                       .collect(Collectors.toList());
 
+    // eliminate anything that will never be an array
     if (ignoredColumns.size() > 0) {
       unknownColumns.removeAll(ignoredColumns);
       ignoredColumns.clear();
     }
 
+    // if there are arrays, we need to transform the expression to one that applies each value of the array to the
+    // base expression, we keep a cache of transformed expressions to minimize extra work
     if (arrayBindings.size() > 0) {
       final int key = arrayBindings.hashCode();
       if (transformedCache.containsKey(key)) {
@@ -74,9 +85,14 @@ public class OpportunisticMultiValueStringExpressionColumnValueSelector extends 
       transformedCache.put(key, transformed);
       return transformed.eval(bindings);
     }
+    // no arrays for this row, evaluate base expression
     return expression.eval(bindings);
   }
 
+  /**
+   * Check if row value binding for identifier is an array, adding identifiers that retrieve {@link Number} to a set
+   * of 'unknowns' to eliminate by side effect
+   */
   private boolean isBindingArray(String x)
   {
     Object binding = bindings.get(x);
