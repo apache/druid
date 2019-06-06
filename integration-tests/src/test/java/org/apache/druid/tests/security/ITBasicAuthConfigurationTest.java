@@ -27,14 +27,12 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.guice.annotations.Client;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Action;
@@ -54,9 +52,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import javax.ws.rs.core.MediaType;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -68,15 +63,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.testing.clients.AbstractQueryResourceTestClient.makeRequest;
+import static org.apache.druid.testing.clients.AbstractQueryResourceTestClient.makeRequestWithExpectedStatus;
+
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
-
-  private static final TypeReference LOAD_STATUS_TYPE_REFERENCE =
-      new TypeReference<Map<String, Boolean>>()
-      {
-      };
 
   private static final TypeReference SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
@@ -113,8 +106,6 @@ public class ITBasicAuthConfigurationTest
   @Inject
   @Client
   HttpClient httpClient;
-
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
@@ -525,8 +516,8 @@ public class ITBasicAuthConfigurationTest
     LOG.info("URL: " + url);
     try {
       Properties connectionProperties = new Properties();
-      connectionProperties.put("user", "admin");
-      connectionProperties.put("password", "wrongpassword");
+      connectionProperties.setProperty("user", "admin");
+      connectionProperties.setProperty("password", "wrongpassword");
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -571,7 +562,7 @@ public class ITBasicAuthConfigurationTest
         null
     );
     String content = holder.getContent();
-    Map<String, Boolean> loadStatus = jsonMapper.readValue(content, LOAD_STATUS_TYPE_REFERENCE);
+    Map<String, Boolean> loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
 
     Assert.assertNotNull(loadStatus.get("basic"));
     Assert.assertTrue(loadStatus.get("basic"));
@@ -583,71 +574,10 @@ public class ITBasicAuthConfigurationTest
         null
     );
     content = holder.getContent();
-    loadStatus = jsonMapper.readValue(content, LOAD_STATUS_TYPE_REFERENCE);
+    loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
 
     Assert.assertNotNull(loadStatus.get("basic"));
     Assert.assertTrue(loadStatus.get("basic"));
-  }
-
-  private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
-  {
-    return makeRequestWithExpectedStatus(
-        httpClient,
-        method,
-        url,
-        content,
-        HttpResponseStatus.OK
-    );
-  }
-
-  private StatusResponseHolder makeRequestWithExpectedStatus(
-      HttpClient httpClient,
-      HttpMethod method,
-      String url,
-      byte[] content,
-      HttpResponseStatus expectedStatus
-  )
-  {
-    try {
-      Request request = new Request(method, new URL(url));
-      if (content != null) {
-        request.setContent(MediaType.APPLICATION_JSON, content);
-      }
-      int retryCount = 0;
-
-      StatusResponseHolder response;
-
-      while (true) {
-        response = httpClient.go(
-            request,
-            responseHandler
-        ).get();
-
-        if (!response.getStatus().equals(expectedStatus)) {
-          String errMsg = StringUtils.format(
-              "Error while making request to url[%s] status[%s] content[%s]",
-              url,
-              response.getStatus(),
-              response.getContent()
-          );
-          // it can take time for the auth config to propagate, so we retry
-          if (retryCount > 10) {
-            throw new ISE(errMsg);
-          } else {
-            LOG.error(errMsg);
-            LOG.error("retrying in 3000ms, retryCount: " + retryCount);
-            retryCount++;
-            Thread.sleep(3000);
-          }
-        } else {
-          break;
-        }
-      }
-      return response;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private void createUserAndRoleWithPermissions(

@@ -44,6 +44,7 @@ import java.util.function.BooleanSupplier;
  * DI configuration phase.
  */
 @Singleton
+@Path("/status/")
 @ResourceFilters(StateResourceFilter.class)
 public class SelfDiscoveryResource
 {
@@ -78,7 +79,7 @@ public class SelfDiscoveryResource
 
   /** See the description of this endpoint in api-reference.md. */
   @GET
-  @Path("/status/selfDiscoveredStatus")
+  @Path("/selfDiscoveredStatus")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSelfDiscoveredStatus()
   {
@@ -87,8 +88,9 @@ public class SelfDiscoveryResource
 
   /** See the description of this endpoint in api-reference.md. */
   @GET
-  @Path("/status/selfDiscovered")
+  @Path("/selfDiscovered")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response getSelfDiscovered()
   {
     if (selfDiscovered.getAsBoolean()) {

@@ -25,6 +25,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import java.nio.charset.Charset;
 
 /**
+ * Can be singleton: https://github.com/apache/incubator-druid/issues/7833
  */
 public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
 {
