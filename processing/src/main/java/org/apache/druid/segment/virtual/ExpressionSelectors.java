@@ -279,7 +279,7 @@ public class ExpressionSelectors
       if (multiVal) {
         class ExtractionMultiValueDimensionSelector extends MultiValueExpressionDimensionSelector
         {
-          ExtractionMultiValueDimensionSelector()
+          private ExtractionMultiValueDimensionSelector()
           {
             super(baseSelector);
           }
@@ -423,6 +423,10 @@ public class ExpressionSelectors
     }
   }
 
+  /**
+   * Create a supplier to feed {@link Expr.ObjectBinding} for a dimension selector, coercing values to always appear as
+   * arrays if specified.
+   */
   @VisibleForTesting
   static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
   {
@@ -447,6 +451,11 @@ public class ExpressionSelectors
     };
   }
 
+
+  /**
+   * Create a fallback supplier to feed {@link Expr.ObjectBinding} for a selector, used if column cannot be reliably
+   * detected as a primitive type
+   */
   @Nullable
   static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
   {
@@ -484,6 +493,9 @@ public class ExpressionSelectors
     }
   }
 
+  /**
+   * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
+   */
   private static Object coerceListDimToStringArray(List val)
   {
     Object[] arrayVal = val.stream().map(Object::toString).toArray(String[]::new);
