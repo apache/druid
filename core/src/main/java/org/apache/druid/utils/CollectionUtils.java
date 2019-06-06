@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Spliterator;
