@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 
 public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator<DimensionSelector>
 {
-
   StringBloomFilterAggregator(DimensionSelector selector, int maxNumEntries, boolean onHeap)
   {
     super(selector, maxNumEntries, onHeap);
@@ -34,6 +33,11 @@ public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator
 
   @Override
   public void bufferAdd(ByteBuffer buf)
+  {
+    stringBufferAdd(buf, selector);
+  }
+
+  static void stringBufferAdd(ByteBuffer buf, DimensionSelector selector)
   {
     if (selector.getRow().size() > 1) {
       selector.getRow().forEach(v -> {
