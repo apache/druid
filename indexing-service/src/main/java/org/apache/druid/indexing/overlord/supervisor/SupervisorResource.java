@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -118,6 +119,7 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetAll(
       @QueryParam("full") String full,
+      @QueryParam("state") Boolean state,
       @Context final HttpServletRequest req
   )
   {
@@ -129,9 +131,28 @@ public class SupervisorResource
               manager.getSupervisorIds()
           );
 
-          if (full == null) {
-            return Response.ok(authorizedSupervisorIds).build();
-          } else {
+
+          if (state != null && state) {
+            List<Map<String, ?>> allStates =
+                authorizedSupervisorIds.stream()
+                                       .map(x -> {
+                                              Optional<SupervisorStateManager.State> theState =
+                                                  manager.getSupervisorState(x);
+                                              if (theState.isPresent()) {
+                                                return ImmutableMap.<String, Object>builder()
+                                                    .put("id", x)
+                                                    .put("state", theState.get().getBasicState())
+                                                    .put("detailedState", theState.get())
+                                                    .put("healthy", theState.get().isHealthy())
+                                                    .build();
+                                              }
+                                              return null;
+                                            }
+                                       )
+                                       .filter(Objects::nonNull)
+                                       .collect(Collectors.toList());
+            return Response.ok(allStates).build();
+          } else if (full != null) {
             List<Map<String, ?>> all =
                 authorizedSupervisorIds.stream()
                                        .map(x -> ImmutableMap.<String, Object>builder()
@@ -142,6 +163,8 @@ public class SupervisorResource
                                        .collect(Collectors.toList());
             return Response.ok(all).build();
           }
+
+          return Response.ok(authorizedSupervisorIds).build();
         }
     );
   }

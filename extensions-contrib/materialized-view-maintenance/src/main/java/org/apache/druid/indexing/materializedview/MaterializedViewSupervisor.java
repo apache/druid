@@ -241,6 +241,12 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
+  public SupervisorStateManager.State getState()
+  {
+    return stateManager.getSupervisorState();
+  }
+
+  @Override
   public Boolean isHealthy()
   {
     return stateManager.isHealthy();
