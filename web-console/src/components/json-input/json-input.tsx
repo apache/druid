@@ -87,6 +87,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
         showLineNumbers: false,
         tabSize: 2
       }}
+      style={{}}
     />;
   }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {Button, Classes, HTMLSelect} from '@blueprintjs/core';
+import { Button, Classes, HTMLSelect } from '@blueprintjs/core';
 import * as React from 'react';
 
 import './react-table-custom-pagination.scss';

@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-.table-column-selection {
-  position: absolute;
-  right: 0;
-  margin: 0;
-}
+import { IconNames } from '@blueprintjs/icons';
+import * as React from 'react';
+import { render } from 'react-testing-library';
 
-// This will be mounted in a portal
-.table-column-selection-menu {
-  .bp3-form-group {
-    margin-bottom: 0;
-  }
-}
+import { ActionIcon } from './action-icon';
+
+describe('action icon', () => {
+  it('matches snapshot', () => {
+    const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD}/>;
+    const { container } = render(actionIcon);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

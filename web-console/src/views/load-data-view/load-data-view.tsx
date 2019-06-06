@@ -31,8 +31,8 @@ import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, NullTableCell } from '../../components/index';
-import { AsyncActionDialog } from '../../dialogs/index';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, TableCell } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -143,8 +143,8 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   return timestampSpecs[0] || getEmptyTimestampSpec();
 }
 
-type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec';
-const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec'];
+type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
+const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
 
 const SECTIONS: { name: string, stages: Stage[] }[] = [
   { name: 'Connect and parse raw data', stages: ['connect', 'parser', 'timestamp'] },
@@ -163,19 +163,20 @@ const VIEW_TITLE: Record<Stage, string> = {
   'partition': 'Partition',
   'tuning': 'Tune',
   'publish': 'Publish',
-  'json-spec': 'Edit JSON spec'
+  'json-spec': 'Edit JSON spec',
+  'loading': 'Loading'
 };
 
 export interface LoadDataViewProps extends React.Props<any> {
-  initSpec: IngestionSpec | null;
-  goToTask: (taskId: string | null, openDialog?: string) => void;
+  initSupervisorId?: string | null;
+  initTaskId?: string | null;
+  goToTask: (taskId: string | null, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
   stage: Stage;
   spec: IngestionSpec;
   cacheKey: string | undefined;
-
   // dialogs / modals
   showResetConfirm: boolean;
   newRollup: boolean | null;
@@ -225,9 +226,8 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   constructor(props: LoadDataViewProps) {
     super(props);
 
-    let spec = props.initSpec || parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
+    let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
-
     this.state = {
       stage: 'connect',
       spec,
@@ -281,8 +281,14 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   componentDidMount(): void {
     this.getOverlordModules();
-    this.updateStage('connect');
+    if (this.props.initTaskId) {
+      this.updateStage('loading');
+      this.getTaskJson();
+    } else if (this.props.initSupervisorId) {
+      this.updateStage('loading');
+      this.getSupervisorJson(); } else this.updateStage('connect');
   }
+
 
   async getOverlordModules() {
     let overlordModules: string[];
@@ -327,8 +333,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   render() {
     const { stage, spec } = this.state;
-
-    if (!Object.keys(spec).length) {
+    if (!Object.keys(spec).length && !this.props.initSupervisorId && !this.props.initTaskId) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
         {this.renderInitStage()}
       </div>;
@@ -350,11 +355,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       {stage === 'publish' && this.renderPublishStage()}
 
       {stage === 'json-spec' && this.renderJsonSpecStage()}
+      {stage === 'loading' && this.renderLoading()}
 
       {this.renderResetConfirm()}
     </div>;
   }
-
   renderStepNav() {
     const { stage } = this.state;
 
@@ -750,9 +755,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
               Cell: row => {
                 if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
+                  return <TableCell unparseable/>;
                 }
-                return <NullTableCell value={row.value}/>;
+                return <TableCell value={row.value}/>;
               },
               headerClassName: classNames({
                 flattened: flattenField
@@ -777,7 +782,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1043,21 +1047,20 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
               Cell: row => {
                 if (columnName === '__error__') {
-                  return <NullTableCell value={row.original.error}/>;
+                  return <TableCell value={row.original.error}/>;
                 }
                 if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
+                  return <TableCell unparseable/>;
                 }
-                return <NullTableCell value={row.value} timestamp={timestamp}/>;
+                return <TableCell value={row.value} timestamp={timestamp}/>;
               },
               minWidth: timestamp ? 200 : 100,
               resizable: !timestamp
-          };
+            };
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1244,13 +1247,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               className: columnClassName,
               id: String(i),
               accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+              Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
             };
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1482,13 +1484,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               className: columnClassName,
               id: String(i),
               accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+              Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
             };
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -1758,7 +1759,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 className: columnClassName,
                 id: String(i),
                 accessor: row => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value}/>
+                Cell: row => <TableCell value={row.value}/>
               };
             } else {
               const timestamp = columnName === '__time';
@@ -1803,14 +1804,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 className: columnClassName,
                 id: String(i),
                 accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
+                Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
               };
             }
           })}
           defaultPageSize={50}
           showPagination={false}
           sortable={false}
-          className="-striped -highlight"
         />
       </div>;
     }
@@ -2348,6 +2348,35 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   // ==================================================================
+  private getSupervisorJson = async (): Promise<void> =>  {
+    try {
+      const resp = await axios.get(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
+      this.updateSpec(resp.data);
+      this.updateStage('json-spec');
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to get supervisor spec: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER
+      });
+    }
+  }
+
+  private getTaskJson = async (): Promise<void> =>  {
+    try {
+      const resp = await axios.get(`/druid/indexer/v1/task/${this.props.initTaskId}`);
+      this.updateSpec(resp.data.payload.spec);
+      this.updateStage('json-spec');
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to get task spec: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER
+      });
+    }
+  }
+
+  renderLoading() {
+    return <Loader loading/>;
+  }
 
   renderJsonSpecStage() {
     const { goToTask } = this.props;

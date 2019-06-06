@@ -19,7 +19,7 @@
 import { IDialogProps } from '@blueprintjs/core';
 import * as React from 'react';
 
-import { ShowJson } from '../../components/show-json/show-json';
+import { ShowJson } from '../../components';
 import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 

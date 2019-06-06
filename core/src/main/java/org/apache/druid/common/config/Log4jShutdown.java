@@ -158,7 +158,9 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
     private synchronized boolean compareAndSet(State expected, State transition)
     {
       if (current == expected) {
-        return transition(transition);
+        current = transition;
+        notifyAll();
+        return true;
       }
       return false;
     }
@@ -187,13 +189,6 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
         }
       }
       return current;
-    }
-
-    private synchronized boolean transition(State transition)
-    {
-      current = transition;
-      notifyAll();
-      return true;
     }
 
     private synchronized State get()
