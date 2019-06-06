@@ -64,7 +64,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING') returns expr with specified type. exception can be thrown |
+|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'LONG_ARRAY', or 'DOUBLE_ARRAY' or 'STRING_ARRAY') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
@@ -169,8 +169,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | `array_overlap(arr1,arr2)` | returns true if arr1 and arr2 have any elements in common |
 | `array_offset_of(expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
 | `array_ordinal_of(expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
-| `array_append(arr1,expr)` | appends expr to arr
-| `array_concat(arr1,arr2)` | concatenates 2 arrays |
+| `array_append(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
+| `array_concat(arr1,arr2)` | concatenates 2 arrays, the resulting array type determined by the type of the first array |
 | `array_to_string(arr,str)` | joins all elements of arr by the delimiter specified by str |
 | `string_to_array(str1,str2)` | splits str1 into an array on the delimiter specified by str2 |
 
