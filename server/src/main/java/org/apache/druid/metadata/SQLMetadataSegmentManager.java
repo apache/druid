@@ -106,6 +106,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final SQLMetadataConnector connector;
 
   // Volatile since this reference is reassigned in "poll" and then read from in other threads.
+  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty dataSources map and
+  // empty overshadowedSegments set).
   // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
   // null and nonnull multiple times as stop() and start() are called.
   @Nullable
@@ -717,20 +719,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     // a segment remove call reflected in MetadataResource API calls. These updates outside of scheduled poll may be
     // added back in removeDataSource and removeSegment methods after the on-demand polling changes from
     // https://github.com/apache/incubator-druid/pull/7653 are in.
-    final Map<String, ImmutableDruidDataSource> updatedDataSources = CollectionUtils.transformValues(
+    final Map<String, ImmutableDruidDataSource> updatedDataSources = CollectionUtils.mapValues(
         newDataSources,
         v -> v.toImmutableDruidDataSource()
     );
     dataSourcesSnapshot = new DataSourcesSnapshot(updatedDataSources);
   }
-
-  /**
-   * But in this case, it's actually better to extract the first part as a method
-   * Map<K, V2> transformValues(Map<K, V> map, Function<V, V2> valueMapper) in CollectionUtils
-   *   because this boilerplate code appears in several places in the codebase
-   */
-
-
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
