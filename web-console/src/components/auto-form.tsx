@@ -174,11 +174,15 @@ export class AutoForm<T extends Record<string, any>> extends React.Component<Aut
       </Menu> :
       undefined;
 
+    const modalValue = deepGet(model as any, field.name);
     return <InputGroup
-      value={deepGet(model as any, field.name) || field.defaultValue || ''}
+      value={modalValue != null ? modalValue : (field.defaultValue || '')}
       onChange={(e: any) => {
         const v = e.target.value;
-        this.fieldChange(field, v === '' ? undefined : v);
+        this.fieldChange(field, v);
+      }}
+      onBlur={() => {
+        if (modalValue === '') this.fieldChange(field, undefined);
       }}
       placeholder={field.placeholder}
       rightElement={
