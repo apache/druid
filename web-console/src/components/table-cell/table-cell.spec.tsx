@@ -33,6 +33,17 @@ describe('table cell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot null timestamp', () => {
+    const tableCell = <TableCell
+      value={null}
+      unparseable={false}
+      timestamp
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot simple', () => {
     const tableCell = <TableCell
       value="Hello World"
