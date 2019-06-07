@@ -23,11 +23,16 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ApplyFunctionTest
 {
   private Expr.ObjectBinding bindings;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()
@@ -59,6 +64,7 @@ public class ApplyFunctionTest
 
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, [1, 2, 3, 4, 5]))", new Long[] {3L, 4L, 5L, 6L, 7L});
     assertExpr("map((x) -> x + 1, map((x) -> x + 1, b))", new Long[] {3L, 4L, 5L, 6L, 7L});
+    assertExpr("map(() -> 1, [1, 2, 3, 4, 5])", new Long[] {1L, 1L, 1L, 1L, 1L});
   }
 
   @Test
@@ -66,7 +72,7 @@ public class ApplyFunctionTest
   {
     assertExpr("cartesian_map((x, y) -> concat(x, y), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'])", new String[] {"foobar", "foobaz", "barbar", "barbaz", "bazbar", "bazbaz", "foobarbar", "foobarbaz"});
     assertExpr("cartesian_map((x, y, z) -> concat(concat(x, y), z), ['foo', 'bar', 'baz', 'foobar'], ['bar', 'baz'], ['omg'])", new String[] {"foobaromg", "foobazomg", "barbaromg", "barbazomg", "bazbaromg", "bazbazomg", "foobarbaromg", "foobarbazomg"});
-
+    assertExpr("cartesian_map(() -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
     if (NullHandling.replaceWithDefault()) {
@@ -130,6 +136,24 @@ public class ApplyFunctionTest
     assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), fold((b, acc) -> acc + b, map(b -> b + 1, b), 0))", 40L);
     assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), 0) + fold((b, acc) -> acc + b, map(b -> b + 1, b), 0)", 40L);
     assertExpr("fold((b, acc) -> acc + b, map(b -> b + 1, b), fold((b, acc) -> acc + b, map(b -> b + 1, b), 0) + fold((b, acc) -> acc + b, map(b -> b + 1, b), 0))", 60L);
+  }
+
+  @Test
+  public void testInvalidArgCount()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("lambda expression argument count does not match fold argument count");
+    assertExpr("fold(() -> 1, [1, 1, 1, 1, 1], 0)", null);
+
+    expectedException.expectMessage("lambda expression argument count does not match cartesian_fold argument count");
+    assertExpr("cartesian_fold(() -> 1, [1, 1, 1, 1, 1], [1, 1], 0)", null);
+
+    expectedException.expectMessage("lambda expression argument count does not match any argument count");
+    assertExpr("any(() -> 1, [1, 2, 3, 4])", null);
+
+    expectedException.expectMessage("lambda expression argument count does not match all argument count");
+    assertExpr("all(() -> 0, [1, 2, 3, 4])", null);
+
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

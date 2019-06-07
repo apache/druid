@@ -509,10 +509,19 @@ class LambdaExpr implements Expr
     return StringUtils.format("(%s -> %s)", args, expr);
   }
 
+  public int identifierCount()
+  {
+    return args.size();
+  }
+
+  @Nullable
   public String getIdentifier()
   {
-    Preconditions.checkState(args.size() == 1, "LambdaExpr has no or multiple arguments");
-    return args.get(0).toString();
+    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments");
+    if (args.size() == 1) {
+      return args.get(0).toString();
+    }
+    return null;
   }
 
   public List<String> getIdentifiers()
@@ -661,6 +670,10 @@ class ApplyFunctionExpr implements Expr
     this.argsExpr = args;
     this.lambdaExpr = expr;
 
+    function.validateArguments(expr, args);
+
+    // apply function expressions are examined during expression selector creation, so precompute and cache the
+    // binding details of children
     argsBindingDetails = new ArrayList<>();
     BindingDetails accumulator = new BindingDetails();
     for (Expr arg : argsExpr) {

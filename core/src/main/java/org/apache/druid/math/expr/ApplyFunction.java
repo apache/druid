@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -58,6 +59,8 @@ public interface ApplyFunction
    * Get list of input arguments which must evaluate to an array {@link ExprType}
    */
   Set<Expr> getArrayInputs(List<Expr> args);
+
+  void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
@@ -139,7 +142,6 @@ public interface ApplyFunction
     @Override
     public ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings)
     {
-      Preconditions.checkArgument(argsExpr.size() == 1);
       Expr arrayExpr = argsExpr.get(0);
       ExprEval arrayEval = arrayExpr.eval(bindings);
 
@@ -158,11 +160,22 @@ public interface ApplyFunction
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      if (args.size() != 1) {
-        throw new IAE("ApplyFunction[%s] needs 1 argument", name());
+      if (args.size() == 1) {
+        return ImmutableSet.of(args.get(0));
       }
+      return Collections.emptySet();
+    }
 
-      return ImmutableSet.of(args.get(0));
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(args.size() == 1);
+      if (lambdaExpr.identifierCount() > 0) {
+        Preconditions.checkArgument(
+            args.size() == lambdaExpr.identifierCount(),
+            StringUtils.format("lambda expression argument count does not match %s argument count", name())
+        );
+      }
     }
   }
 
@@ -215,6 +228,18 @@ public interface ApplyFunction
     {
       return ImmutableSet.copyOf(args);
     }
+
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(args.size() > 0);
+      if (lambdaExpr.identifierCount() > 0) {
+        Preconditions.checkArgument(
+            args.size() == lambdaExpr.identifierCount(),
+            StringUtils.format("lambda expression argument count does not match %s argument count", name())
+        );
+      }
+    }
   }
 
   /**
@@ -254,7 +279,6 @@ public interface ApplyFunction
     @Override
     public ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings)
     {
-      Preconditions.checkArgument(argsExpr.size() == 2);
       Expr arrayExpr = argsExpr.get(0);
       Expr accExpr = argsExpr.get(1);
 
@@ -276,6 +300,16 @@ public interface ApplyFunction
     {
       // accumulator argument cannot currently be inferred, so ignore it until we think of something better to do
       return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(args.size() == 2);
+      Preconditions.checkArgument(
+          args.size() == lambdaExpr.identifierCount(),
+          StringUtils.format("lambda expression argument count does not match %s argument count", name())
+      );
     }
   }
 
@@ -339,6 +373,15 @@ public interface ApplyFunction
       // accumulator argument cannot be inferred, so ignore it until we think of something better to do
       return ImmutableSet.copyOf(args.subList(0, args.size() - 1));
     }
+
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(
+          args.size() == lambdaExpr.identifierCount(),
+          StringUtils.format("lambda expression argument count does not match %s argument count", name())
+      );
+    }
   }
 
   /**
@@ -357,7 +400,6 @@ public interface ApplyFunction
     @Override
     public ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings)
     {
-      Preconditions.checkArgument(argsExpr.size() == 1);
       Expr arrayExpr = argsExpr.get(0);
       ExprEval arrayEval = arrayExpr.eval(bindings);
 
@@ -398,6 +440,16 @@ public interface ApplyFunction
       return ImmutableSet.of(args.get(0));
     }
 
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(args.size() == 1);
+      Preconditions.checkArgument(
+          args.size() == lambdaExpr.identifierCount(),
+          StringUtils.format("lambda expression argument count does not match %s argument count", name())
+      );
+    }
+
     private <T> Stream<T> filter(T[] array, LambdaExpr expr, SettableLambdaBinding binding)
     {
       return Arrays.stream(array).filter(s -> expr.eval(binding.withBinding(expr.getIdentifier(), s)).asBoolean());
@@ -413,7 +465,6 @@ public interface ApplyFunction
     @Override
     public ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings)
     {
-      Preconditions.checkArgument(argsExpr.size() == 1);
       Expr arrayExpr = argsExpr.get(0);
       ExprEval arrayEval = arrayExpr.eval(bindings);
 
@@ -434,6 +485,16 @@ public interface ApplyFunction
       }
 
       return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public void validateArguments(LambdaExpr lambdaExpr, List<Expr> args)
+    {
+      Preconditions.checkArgument(args.size() == 1);
+      Preconditions.checkArgument(
+          args.size() == lambdaExpr.identifierCount(),
+          StringUtils.format("lambda expression argument count does not match %s argument count", name())
+      );
     }
 
     public abstract ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings);
@@ -547,22 +608,25 @@ public interface ApplyFunction
   class MapLambdaBinding implements IndexableMapLambdaObjectBinding
   {
     private final Expr.ObjectBinding bindings;
+    @Nullable
     private final String lambdaIdentifier;
     private final Object[] arrayValues;
     private int index = 0;
+    private final boolean scoped;
 
     MapLambdaBinding(Object[] arrayValues, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
       this.lambdaIdentifier = expr.getIdentifier();
       this.arrayValues = arrayValues;
       this.bindings = bindings != null ? bindings : Collections.emptyMap()::get;
+      this.scoped = lambdaIdentifier != null;
     }
 
     @Nullable
     @Override
     public Object get(String name)
     {
-      if (name.equals(lambdaIdentifier)) {
+      if (scoped && name.equals(lambdaIdentifier)) {
         return arrayValues[index];
       }
       return bindings.get(name);
@@ -592,12 +656,14 @@ public interface ApplyFunction
     private final Expr.ObjectBinding bindings;
     private final Object2IntMap<String> lambdaIdentifiers;
     private final List<List<Object>> lambdaInputs;
+    private final boolean scoped;
     private int index = 0;
 
     CartesianMapLambdaBinding(List<List<Object>> inputs, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
       this.lambdaInputs = inputs;
       List<String> ids = expr.getIdentifiers();
+      this.scoped = ids.size() > 0;
       this.lambdaIdentifiers = new Object2IntArrayMap<>(ids.size());
       for (int i = 0; i < ids.size(); i++) {
         lambdaIdentifiers.put(ids.get(i), i);
@@ -610,7 +676,7 @@ public interface ApplyFunction
     @Override
     public Object get(String name)
     {
-      if (lambdaIdentifiers.containsKey(name)) {
+      if (scoped && lambdaIdentifiers.containsKey(name)) {
         return lambdaInputs.get(index).get(lambdaIdentifiers.getInt(name));
       }
       return bindings.get(name);
