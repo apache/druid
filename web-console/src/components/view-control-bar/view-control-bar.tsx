@@ -24,7 +24,7 @@ export interface ViewControlBarProps {
   label: string;
 }
 
-export class ViewControlBar extends React.Component<ViewControlBarProps, {}> {
+export class ViewControlBar extends React.PureComponent<ViewControlBarProps, {}> {
   constructor(props: ViewControlBarProps) {
     super(props);
   }

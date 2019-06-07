@@ -28,7 +28,7 @@ export interface ArrayInputProps {
   disabled?: boolean;
 }
 
-export class ArrayInput extends React.Component<ArrayInputProps, { stringValue: string }> {
+export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringValue: string }> {
   constructor(props: ArrayInputProps) {
     super(props);
     this.state = {

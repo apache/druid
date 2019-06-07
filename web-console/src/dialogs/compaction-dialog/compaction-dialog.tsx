@@ -36,7 +36,7 @@ export interface CompactionDialogState {
   allJSONValid: boolean;
 }
 
-export class CompactionDialog extends React.Component<CompactionDialogProps, CompactionDialogState> {
+export class CompactionDialog extends React.PureComponent<CompactionDialogProps, CompactionDialogState> {
   constructor(props: CompactionDialogProps) {
     super(props);
     this.state = {

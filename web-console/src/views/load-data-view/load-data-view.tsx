@@ -222,7 +222,7 @@ export interface LoadDataViewState {
   selectedMetricSpec: MetricSpec | null;
 }
 
-export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
+export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
   constructor(props: LoadDataViewProps) {
     super(props);
 

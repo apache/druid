@@ -62,7 +62,7 @@ interface SqlQueryResult {
   queryElapsed: number;
 }
 
-export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
+export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
   static trimSemicolon(query: string): string {
     // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
     return query.replace(/;+(\s*)$/, '$1');

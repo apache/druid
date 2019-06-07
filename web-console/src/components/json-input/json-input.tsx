@@ -34,7 +34,7 @@ interface JSONInputState {
   stringValue: string;
 }
 
-export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputState> {
   constructor(props: JSONInputProps) {
     super(props);
     this.state = {

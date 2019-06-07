@@ -40,7 +40,7 @@ export interface LookupEditDialogProps extends React.Props<any> {
 export interface LookupEditDialogState {
 }
 
-export class LookupEditDialog extends React.Component<LookupEditDialogProps, LookupEditDialogState> {
+export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps, LookupEditDialogState> {
 
   constructor(props: LookupEditDialogProps) {
     super(props);

@@ -54,7 +54,7 @@ export interface ConsoleApplicationState {
   capabilitiesLoading: boolean;
 }
 
-export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
+export class ConsoleApplication extends React.PureComponent<ConsoleApplicationProps, ConsoleApplicationState> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
   private capabilitiesQueryManager: QueryManager<string, string>;

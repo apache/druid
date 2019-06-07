@@ -33,7 +33,7 @@ export interface SpecDialogState {
   spec: string;
 }
 
-export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState> {
+export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogState> {
   static validJson(json: string): boolean {
     try {
       JSON.parse(json);

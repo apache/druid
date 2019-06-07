@@ -29,7 +29,7 @@ interface JSONCollapseState {
   isOpen: boolean;
 }
 
-export class JSONCollapse extends React.Component<JSONCollapseProps, JSONCollapseState> {
+export class JSONCollapse extends React.PureComponent<JSONCollapseProps, JSONCollapseState> {
   constructor(props: any) {
     super(props);
     this.state = {

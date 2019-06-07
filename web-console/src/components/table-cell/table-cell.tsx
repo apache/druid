@@ -39,7 +39,7 @@ interface ShortParts {
   suffix: string;
 }
 
-export class TableCell extends React.Component<NullTableCellProps, {}> {
+export class TableCell extends React.PureComponent<NullTableCellProps, {}> {
   static MAX_CHARS_TO_SHOW = 50;
 
   static possiblyTruncate(str: string): React.ReactNode {

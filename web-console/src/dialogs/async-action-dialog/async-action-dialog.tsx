@@ -47,7 +47,7 @@ export interface AsyncAlertDialogState {
   working: boolean;
 }
 
-export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, AsyncAlertDialogState> {
+export class AsyncActionDialog extends React.PureComponent<AsyncAlertDialogProps, AsyncAlertDialogState> {
   constructor(props: AsyncAlertDialogProps) {
     super(props);
     this.state = {

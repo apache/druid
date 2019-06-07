@@ -37,7 +37,7 @@ export interface CoordinatorDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+export class CoordinatorDynamicConfigDialog extends React.PureComponent<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: CoordinatorDynamicConfigDialogProps) {
