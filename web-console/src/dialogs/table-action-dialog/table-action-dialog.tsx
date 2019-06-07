@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Icon, IconName, IDialogProps, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import './table-action-dialog.scss';
 

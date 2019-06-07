@@ -19,7 +19,7 @@
 import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import { UrlBaser } from '../../singletons/url-baser';
 import { getHeadProp, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';

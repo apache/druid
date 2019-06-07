@@ -19,7 +19,7 @@
 import { Button, FormGroup, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';

@@ -17,7 +17,7 @@
  */
 
 import { IDialogProps } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import { ShowJson, ShowLog } from '../../components';
 import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';

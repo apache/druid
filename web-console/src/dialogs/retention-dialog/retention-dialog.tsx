@@ -19,7 +19,7 @@
 import { Button, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import { Rule, RuleEditor } from '../../components';
 import { QueryManager } from '../../utils';

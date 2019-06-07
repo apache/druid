@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
-import * as copy from 'copy-to-clipboard';
-import * as React from 'react';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';

@@ -19,7 +19,7 @@
 import { Button, Card, Collapse, ControlGroup, FormGroup, HTMLSelect, InputGroup, NumericInput, TagInput } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import './rule-editor.scss';
 

@@ -19,7 +19,7 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';

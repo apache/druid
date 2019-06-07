@@ -18,8 +18,8 @@
 
 import 'es6-shim/es6-shim';
 import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import React from 'react';
+import ReactDOM from 'react-dom';
 
 import './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';

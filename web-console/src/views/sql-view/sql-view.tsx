@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import * as Hjson from 'hjson';
-import * as React from 'react';
+import Hjson from 'hjson';
+import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 

@@ -18,9 +18,9 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as FileSaver from 'file-saver';
-import * as numeral from 'numeral';
-import * as React from 'react';
+import FileSaver from 'file-saver';
+import numeral from 'numeral';
+import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {

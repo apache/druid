@@ -17,7 +17,7 @@
  */
 
 import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import { JSONCollapse } from '../../components';
 
