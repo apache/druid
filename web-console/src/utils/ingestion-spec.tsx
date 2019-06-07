@@ -147,6 +147,18 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
   return newSpec;
 }
 
+/**
+ * Make sure that the types are set in the root, ioConfig, and tuningConfig
+ * @param spec
+ */
+export function normalizeSpecType(spec: IngestionSpec) {
+  const specType = getSpecType(spec);
+  if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
+  if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
+  if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
+  return spec;
+}
+
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'format',
