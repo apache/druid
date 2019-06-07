@@ -384,7 +384,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(segment.getId());
+        segmentManager.removeSegment(segment.getId().toString());
       }
     }
     // data of the latest interval will be built firstly.
