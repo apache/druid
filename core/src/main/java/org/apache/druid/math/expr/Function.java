@@ -76,16 +76,26 @@ interface Function
   }
 
   /**
+   * Validate function arguments
+   */
+  void validateArguments(List<Expr> args);
+
+  /**
    * Base class for a single variable input {@link Function} implementation
    */
   abstract class UnivariateFunction implements Function
   {
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
     }
@@ -99,11 +109,16 @@ interface Function
   abstract class BivariateFunction implements Function
   {
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
       return eval(expr1.eval(bindings), expr2.eval(bindings));
@@ -199,7 +214,8 @@ interface Function
    */
   abstract class ArrayScalarFunction implements Function
   {
-    void validateArguments(List<Expr> args)
+    @Override
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
@@ -209,7 +225,6 @@ interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      validateArguments(args);
       return ImmutableSet.of(args.get(1));
     }
 
@@ -222,7 +237,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      validateArguments(args);
       final ExprEval arrayExpr = args.get(0).eval(bindings);
       final ExprEval scalarExpr = args.get(1).eval(bindings);
       if (arrayExpr.asArray() == null) {
@@ -239,7 +253,8 @@ interface Function
    */
   abstract class ArraysFunction implements Function
   {
-    void validateArguments(List<Expr> args)
+    @Override
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
@@ -255,14 +270,12 @@ interface Function
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      validateArguments(args);
       return ImmutableSet.copyOf(args);
     }
 
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      validateArguments(args);
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
 
@@ -287,16 +300,17 @@ interface Function
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public void validateArguments(List<Expr> args)
     {
-      final int radix;
-      if (args.size() == 1) {
-        radix = 10;
-      } else if (args.size() == 2) {
-        radix = args.get(1).eval(bindings).asInt();
-      } else {
+      if (args.size() != 1 && args.size() != 2) {
         throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final int radix = args.size() == 1 ? 10 : args.get(1).eval(bindings).asInt();
 
       final String input = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
       if (input == null) {
@@ -333,11 +347,15 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      return ExprEval.of(PI);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() > 0) {
         throw new IAE("Function[%s] needs 0 argument", name());
       }
-
-      return ExprEval.of(PI);
     }
   }
 
@@ -649,10 +667,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
-
       ExprEval value1 = args.get(0).eval(bindings);
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
         throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
@@ -666,6 +680,14 @@ interface Function
           throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
         }
         return eval(value1, value2.asInt());
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
     }
 
@@ -979,12 +1001,16 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      ExprEval x = args.get(0).eval(bindings);
+      return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
-
-      ExprEval x = args.get(0).eval(bindings);
-      return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
     }
   }
 
@@ -1002,10 +1028,6 @@ interface Function
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
-      if (args.size() < 2) {
-        throw new IAE("Function[%s] must have at least 2 arguments", name());
-      }
-
       for (int i = 0; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
           // ELSE else_result.
@@ -1017,6 +1039,14 @@ interface Function
       }
 
       return ExprEval.of(null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 2) {
+        throw new IAE("Function[%s] must have at least 2 arguments", name());
+      }
     }
   }
 
@@ -1034,10 +1064,6 @@ interface Function
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
-      if (args.size() < 3) {
-        throw new IAE("Function[%s] must have at least 3 arguments", name());
-      }
-
       for (int i = 1; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
           // ELSE else_result.
@@ -1049,6 +1075,14 @@ interface Function
       }
 
       return ExprEval.of(null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 3) {
+        throw new IAE("Function[%s] must have at least 3 arguments", name());
+      }
     }
   }
 
@@ -1124,9 +1158,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
       ExprEval value = args.get(0).eval(bindings);
       if (value.type() != ExprType.STRING) {
         throw new IAE("first argument should be string type but got %s type", value.type());
@@ -1148,6 +1179,14 @@ interface Function
         throw new IAE(e, "invalid value %s", value.asString());
       }
       return toValue(date);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
     }
 
     protected ExprEval toValue(DateTime date)
@@ -1182,11 +1221,16 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      final ExprEval eval = args.get(0).eval(bindings);
+      return eval.value() == null ? args.get(1).eval(bindings) : eval;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
-      final ExprEval eval = args.get(0).eval(bindings);
-      return eval.value() == null ? args.get(1).eval(bindings) : eval;
     }
   }
 
@@ -1225,6 +1269,12 @@ interface Function
         return ExprEval.of(builder.toString());
       }
     }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      // anything goes
+    }
   }
 
   class StrlenFunc implements Function
@@ -1238,12 +1288,16 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      final String arg = args.get(0).eval(bindings).asString();
+      return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
-
-      final String arg = args.get(0).eval(bindings).asString();
-      return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
     }
   }
 
@@ -1258,10 +1312,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() < 1) {
-        throw new IAE("Function[%s] needs 1 or more arguments", name());
-      }
-
       final String formatString = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
 
       if (formatString == null) {
@@ -1274,6 +1324,14 @@ interface Function
       }
 
       return ExprEval.of(StringUtils.nonStrictFormat(formatString, formatArgs));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 1) {
+        throw new IAE("Function[%s] needs 1 or more arguments", name());
+      }
     }
   }
 
@@ -1288,10 +1346,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() < 2 || args.size() > 3) {
-        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
-      }
-
       final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
       final String needle = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
 
@@ -1309,6 +1363,14 @@ interface Function
 
       return ExprEval.of(haystack.indexOf(needle, fromIndex));
     }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 2 || args.size() > 3) {
+        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
+      }
+    }
   }
 
   class SubstringFunc implements Function
@@ -1322,10 +1384,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-
       final String arg = args.get(0).eval(bindings).asString();
 
       if (arg == null) {
@@ -1346,6 +1404,14 @@ interface Function
         // If starting index of substring is greater then the length of string, the result will be a zero length string.
         // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
         return ExprEval.of(NullHandling.defaultStringValue());
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
   }
@@ -1404,10 +1470,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-
       final String arg = args.get(0).eval(bindings).asString();
       final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
       final String replacement = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
@@ -1415,6 +1477,14 @@ interface Function
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(StringUtils.replace(arg, pattern, replacement));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
     }
   }
 
@@ -1429,15 +1499,19 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(StringUtils.toLowerCase(arg));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
     }
   }
 
@@ -1452,15 +1526,19 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(StringUtils.toUpperCase(arg));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
     }
   }
 
@@ -1512,12 +1590,16 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(expr.value() == null, ExprType.LONG);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() == null, ExprType.LONG);
     }
   }
 
@@ -1532,12 +1614,16 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(expr.value() != null, ExprType.LONG);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
-
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() != null, ExprType.LONG);
     }
   }
 
@@ -1552,10 +1638,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
       String pad = args.get(2).eval(bindings).asString();
@@ -1566,6 +1648,14 @@ interface Function
         return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.lpad(base, len, pad));
       }
 
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
     }
   }
 
@@ -1580,10 +1670,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
       String pad = args.get(2).eval(bindings).asString();
@@ -1594,6 +1680,14 @@ interface Function
         return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.rpad(base, len, pad));
       }
 
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
     }
   }
 
@@ -1608,10 +1702,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 3) {
-        throw new IAE("Function[%s] needs 3 arguments", name());
-      }
-
       Long left = args.get(0).eval(bindings).asLong();
       Long right = args.get(1).eval(bindings).asLong();
       DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
@@ -1622,6 +1712,14 @@ interface Function
         return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
       }
 
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
     }
   }
 
@@ -1636,9 +1734,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
       if (array == null) {
@@ -1659,6 +1754,14 @@ interface Function
     }
 
     @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       return Collections.emptySet();
@@ -1673,7 +1776,8 @@ interface Function
       return "string_to_array";
     }
 
-    void validateArguments(List<Expr> args)
+    @Override
+    public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
@@ -1683,8 +1787,6 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      validateArguments(args);
-
       final ExprEval expr = args.get(0).eval(bindings);
       final String arrayString = expr.asString();
       if (arrayString == null) {
@@ -1698,7 +1800,6 @@ interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      validateArguments(args);
       return ImmutableSet.copyOf(args);
     }
   }

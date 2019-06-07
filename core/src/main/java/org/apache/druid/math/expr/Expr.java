@@ -590,6 +590,7 @@ class FunctionExpr implements Expr
     this.function = function;
     this.name = name;
     this.args = args;
+    function.validateArguments(args);
   }
 
   @Override
