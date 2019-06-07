@@ -80,7 +80,7 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
-export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
+export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;

@@ -83,7 +83,7 @@ export interface DatasourcesViewState {
   dropReloadInterval: string;
 }
 
-export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
+export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
   static DISABLED_COLOR = '#0a1500';
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';

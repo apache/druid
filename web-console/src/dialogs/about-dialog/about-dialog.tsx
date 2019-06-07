@@ -30,7 +30,7 @@ export interface AboutDialogProps extends React.Props<any> {
 export interface AboutDialogState {
 }
 
-export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogState> {
+export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDialogState> {
   constructor(props: AboutDialogProps) {
     super(props);
     this.state = {};

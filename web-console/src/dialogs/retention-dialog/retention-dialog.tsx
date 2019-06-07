@@ -51,7 +51,7 @@ export interface RetentionDialogState {
   historyRecords: any[];
 }
 
-export class RetentionDialog extends React.Component<RetentionDialogProps, RetentionDialogState> {
+export class RetentionDialog extends React.PureComponent<RetentionDialogProps, RetentionDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: RetentionDialogProps) {

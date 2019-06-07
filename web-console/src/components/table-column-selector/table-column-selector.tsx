@@ -34,7 +34,7 @@ interface TableColumnSelectorState {
 
 }
 
-export class TableColumnSelector extends React.Component<TableColumnSelectorProps, TableColumnSelectorState> {
+export class TableColumnSelector extends React.PureComponent<TableColumnSelectorProps, TableColumnSelectorState> {
 
   constructor(props: TableColumnSelectorProps) {
     super(props);

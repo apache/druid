@@ -109,7 +109,7 @@ function statusToColor(status: string): string {
   }
 }
 
-export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
+export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;

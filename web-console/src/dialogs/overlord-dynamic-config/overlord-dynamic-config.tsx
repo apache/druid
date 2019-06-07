@@ -38,7 +38,7 @@ export interface OverlordDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
+export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: OverlordDynamicConfigDialogProps) {

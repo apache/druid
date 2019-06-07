@@ -61,7 +61,7 @@ export interface LookupsViewState {
   deleteLookupTier: string | null;
 }
 
-export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
+export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
   private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;
 

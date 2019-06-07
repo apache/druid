@@ -44,7 +44,7 @@ interface ReactTableCustomPaginationState {
   page: string | number;
 }
 
-export class ReactTableCustomPagination extends React.Component<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
+export class ReactTableCustomPagination extends React.PureComponent<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
   constructor(props: ReactTableCustomPaginationProps) {
     super(props);
 

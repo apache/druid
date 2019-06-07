@@ -68,7 +68,7 @@ export interface AutoFormState<T> {
   jsonInputsValidity: any;
 }
 
-export class AutoForm<T extends Record<string, any>> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
+export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>, AutoFormState<T>> {
   static makeLabelName(label: string): string {
     let newLabel = label.split(/(?=[A-Z])/).join(' ').toLowerCase().replace(/\./g, ' ');
     newLabel = newLabel[0].toUpperCase() + newLabel.slice(1);

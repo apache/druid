@@ -34,7 +34,7 @@ interface TableActionDialogProps extends IDialogProps {
   bottomButtons?: React.ReactNode;
 }
 
-export class TableActionDialog extends React.Component<TableActionDialogProps, {}> {
+export class TableActionDialog extends React.PureComponent<TableActionDialogProps, {}> {
   constructor(props: TableActionDialogProps) {
     super(props);
     this.state = {};

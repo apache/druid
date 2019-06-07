@@ -79,7 +79,7 @@ export interface SqlControlState {
 }
 
 @HotkeysTarget
-export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
+export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlState> {
   constructor(props: SqlControlProps, context: any) {
     super(props, context);
     this.state = {

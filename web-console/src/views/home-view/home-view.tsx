@@ -76,7 +76,7 @@ export interface HomeViewState {
   serverCountError: string | null;
 }
 
-export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
+export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> {
   private statusQueryManager: QueryManager<string, any>;
   private datasourceQueryManager: QueryManager<string, any>;
   private segmentQueryManager: QueryManager<string, any>;

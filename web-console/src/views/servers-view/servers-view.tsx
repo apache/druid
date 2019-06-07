@@ -108,7 +108,7 @@ interface MiddleManagerQueryResultRow {
 
 interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>, Partial<MiddleManagerQueryResultRow> {}
 
-export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
+export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
   private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
 

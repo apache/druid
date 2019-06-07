@@ -33,7 +33,7 @@ export interface QueryPlanDialogState {
 
 }
 
-export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, QueryPlanDialogState> {
+export class QueryPlanDialog extends React.PureComponent<QueryPlanDialogProps, QueryPlanDialogState> {
 
   constructor(props: QueryPlanDialogProps) {
     super(props);

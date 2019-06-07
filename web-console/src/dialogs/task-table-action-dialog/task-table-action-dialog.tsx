@@ -33,7 +33,7 @@ interface TaskTableActionDialogState {
   activeTab: 'payload' | 'status' | 'reports' | 'log';
 }
 
-export class TaskTableActionDialog extends React.Component<TaskTableActionDialogProps, TaskTableActionDialogState> {
+export class TaskTableActionDialog extends React.PureComponent<TaskTableActionDialogProps, TaskTableActionDialogState> {
   constructor(props: TaskTableActionDialogProps) {
     super(props);
     this.state = {

@@ -46,7 +46,7 @@ export interface ShowLogState {
   tail: boolean;
 }
 
-export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
+export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   public log = React.createRef<HTMLTextAreaElement>();
 
   constructor(props: ShowLogProps, context: any) {

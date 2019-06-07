@@ -33,7 +33,7 @@ interface SupervisorTableActionDialogState {
   activeTab: 'payload' | 'status' | 'stats' | 'history';
 }
 
-export class SupervisorTableActionDialog extends React.Component<SupervisorTableActionDialogProps, SupervisorTableActionDialogState> {
+export class SupervisorTableActionDialog extends React.PureComponent<SupervisorTableActionDialogProps, SupervisorTableActionDialogState> {
   constructor(props: SupervisorTableActionDialogProps) {
     super(props);
     this.state = {

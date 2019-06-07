@@ -36,7 +36,7 @@ export interface ShowJsonState {
   jsonValue: string;
 }
 
-export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
+export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
   constructor(props: ShowJsonProps, context: any) {
     super(props, context);
     this.state = {

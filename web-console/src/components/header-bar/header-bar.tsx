@@ -60,7 +60,7 @@ export interface HeaderBarState {
   overlordDynamicConfigDialogOpen: boolean;
 }
 
-export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
+export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarState> {
   constructor(props: HeaderBarProps) {
     super(props);
     this.state = {
