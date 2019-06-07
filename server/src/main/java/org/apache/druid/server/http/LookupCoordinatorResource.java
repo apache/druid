@@ -178,6 +178,35 @@ public class LookupCoordinatorResource
 
   @DELETE
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Path("/config/{tier}")
+  public Response deleteTier(
+      @PathParam("tier") String tier,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
+  )
+  {
+    try {
+      if (Strings.isNullOrEmpty(tier)) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(new NullPointerException("`tier` required")))
+                       .build();
+      }
+
+      if (lookupCoordinatorManager.deleteTier(tier, new AuditInfo(author, comment, req.getRemoteAddr()))) {
+        return Response.status(Response.Status.ACCEPTED).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error deleting tier [%s]", tier);
+      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @DELETE
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Path("/config/{tier}/{lookup}")
   public Response deleteLookup(
       @PathParam("tier") String tier,

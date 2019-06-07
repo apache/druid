@@ -287,6 +287,48 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
+  public void testSimpleDeleteTier()
+  {
+    final String author = "some author";
+    final String comment = "some comment";
+    final String ip = "127.0.0.1";
+
+    final HttpServletRequest request = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(request.getRemoteAddr()).andReturn(ip).once();
+
+    final Capture<AuditInfo> auditInfoCapture = Capture.newInstance();
+    final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
+        LookupCoordinatorManager.class);
+    EasyMock.expect(lookupCoordinatorManager.deleteTier(
+        EasyMock.eq(LOOKUP_TIER),
+        EasyMock.capture(auditInfoCapture)
+    )).andReturn(true).once();
+
+    EasyMock.replay(lookupCoordinatorManager, request);
+
+    final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
+        lookupCoordinatorManager,
+        mapper,
+        mapper
+    );
+    final Response response = lookupCoordinatorResource.deleteTier(
+        LOOKUP_TIER,
+        author,
+        comment,
+        request
+    );
+
+    Assert.assertEquals(202, response.getStatus());
+    Assert.assertTrue(auditInfoCapture.hasCaptured());
+    final AuditInfo auditInfo = auditInfoCapture.getValue();
+    Assert.assertEquals(author, auditInfo.getAuthor());
+    Assert.assertEquals(comment, auditInfo.getComment());
+    Assert.assertEquals(ip, auditInfo.getIp());
+
+    EasyMock.verify(lookupCoordinatorManager, request);
+  }
+
+  @Test
   public void testSimpleDelete()
   {
     final String author = "some author";
