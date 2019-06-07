@@ -2397,7 +2397,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           value={spec}
           onChange={(s) => {
             if (!s) return;
-            this.updateSpec(s);
+            this.updateSpec(normalizeSpecType(s));
           }}
           height="100%"
         />
