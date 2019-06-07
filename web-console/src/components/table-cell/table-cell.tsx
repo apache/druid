@@ -89,7 +89,11 @@ export class TableCell extends React.Component<NullTableCellProps, {}> {
         return TableCell.possiblyTruncate(String(value));
       }
     } else {
-      return <span className="table-cell null">null</span>;
+      if (timestamp) {
+        return <span className="table-cell unparseable">unparseable timestamp</span>;
+      } else {
+        return <span className="table-cell null">null</span>;
+      }
     }
   }
 }
