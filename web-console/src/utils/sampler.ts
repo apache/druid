@@ -29,8 +29,7 @@ import {
   ParseSpec,
   Transform, TransformSpec
 } from './ingestion-spec';
-import { deepGet, deepSet, shallowCopy, whitelistKeys } from './object-change';
-import { QueryState } from './query-state';
+import { deepGet, deepSet, whitelistKeys } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {

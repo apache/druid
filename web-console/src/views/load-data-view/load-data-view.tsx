@@ -86,7 +86,7 @@ import {
   issueWithIoConfig,
   issueWithParser,
   joinFilter,
-  MetricSpec,
+  MetricSpec, normalizeSpecType,
   Parser,
   ParseSpec,
   parseSpecHasFlatten,
@@ -284,9 +284,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (this.props.initTaskId) {
       this.updateStage('loading');
       this.getTaskJson();
+
     } else if (this.props.initSupervisorId) {
       this.updateStage('loading');
-      this.getSupervisorJson(); } else this.updateStage('connect');
+      this.getSupervisorJson();
+
+    } else {
+      this.updateStage('connect');
+    }
   }
 
 
@@ -2349,9 +2354,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
   private getSupervisorJson = async (): Promise<void> =>  {
+    const { initSupervisorId } = this.props;
+
     try {
-      const resp = await axios.get(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
-      this.updateSpec(resp.data);
+      const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
+      this.updateSpec(normalizeSpecType(resp.data));
       this.updateStage('json-spec');
     } catch (e) {
       AppToaster.show({
@@ -2362,9 +2369,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private getTaskJson = async (): Promise<void> =>  {
+    const { initTaskId } = this.props;
+
     try {
-      const resp = await axios.get(`/druid/indexer/v1/task/${this.props.initTaskId}`);
-      this.updateSpec(resp.data.payload.spec);
+      const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
+      this.updateSpec(normalizeSpecType(resp.data.payload.spec));
       this.updateStage('json-spec');
     } catch (e) {
       AppToaster.show({
@@ -2388,7 +2397,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           value={spec}
           onChange={(s) => {
             if (!s) return;
-            this.updateSpec(s);
+            this.updateSpec(normalizeSpecType(s));
           }}
           height="100%"
         />
