@@ -11,6 +11,7 @@
     "strictFunctionTypes": false,
     "skipLibCheck": true,
     "importHelpers": true,
+    "esModuleInterop": true,
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",

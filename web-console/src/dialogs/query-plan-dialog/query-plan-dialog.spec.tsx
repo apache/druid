@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
 import { QueryPlanDialog } from './query-plan-dialog';

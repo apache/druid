@@ -31,7 +31,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config/coordinator-dynamic-config';

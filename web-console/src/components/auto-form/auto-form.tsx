@@ -29,7 +29,7 @@ import {
   Position
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';

@@ -18,7 +18,7 @@
 
 import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 

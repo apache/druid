@@ -19,8 +19,8 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as copy from 'copy-to-clipboard';
-import * as React from 'react';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { ActionIcon } from '../action-icon/action-icon';

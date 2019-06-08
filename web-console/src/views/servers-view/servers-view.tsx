@@ -20,7 +20,7 @@ import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 

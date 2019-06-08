@@ -18,7 +18,7 @@
 
 import { Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import { ActionIcon } from '../action-icon/action-icon';

@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import { validJson } from '../../utils';

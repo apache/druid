@@ -26,7 +26,7 @@ import {
 } from '@blueprintjs/core';
 import { IconName } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 

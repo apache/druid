@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader/loader';

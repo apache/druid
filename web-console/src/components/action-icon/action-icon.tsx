@@ -18,7 +18,7 @@
 
 import { Icon, IconName } from '@blueprintjs/core';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import './action-icon.scss';
 

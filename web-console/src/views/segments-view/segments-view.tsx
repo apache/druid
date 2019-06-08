@@ -20,7 +20,7 @@ import { Button, Intent } from '@blueprintjs/core';
 import { H5 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 

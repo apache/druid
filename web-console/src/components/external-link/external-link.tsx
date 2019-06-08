@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 
 export interface ExternalLinkProps extends React.Props<any> {
   href: string;

@@ -18,7 +18,7 @@
 
 import { Code } from '@blueprintjs/core';
 import { number } from 'prop-types';
-import * as React from 'react';
+import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';

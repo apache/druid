@@ -28,15 +28,15 @@ import {
 import { Hotkey, Hotkeys, HotkeysTarget } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as ace from 'brace';
+import ace from 'brace';
 import 'brace/ext/language_tools';
 import 'brace/mode/hjson';
 import 'brace/mode/sql';
 import 'brace/theme/solarized_dark';
-import * as Hjson from 'hjson';
-import * as React from 'react';
+import Hjson from 'hjson';
+import React from 'react';
 import AceEditor from 'react-ace';
-import * as ReactDOMServer from 'react-dom/server';
+import ReactDOMServer from 'react-dom/server';
 
 import { SQLFunctionDoc } from '../../../lib/sql-function-doc';
 import { AppToaster } from '../../singletons/toaster';

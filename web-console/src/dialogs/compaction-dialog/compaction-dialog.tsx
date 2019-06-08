@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import { AutoForm } from '../../components';
 

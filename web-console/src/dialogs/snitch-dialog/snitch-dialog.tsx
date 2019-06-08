@@ -27,7 +27,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames = require('classnames');
-import * as React from 'react';
+import React from 'react';
 
 import { HistoryDialog } from '../history-dialog/history-dialog';
 
