@@ -21,7 +21,7 @@ import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 
-import { SqlControl, TableCell } from '../../components';
+import { TableCell } from '../../components';
 import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
@@ -33,6 +33,8 @@ import {
   queryDruidSql, QueryManager,
   SemiJoinQueryExplanation
 } from '../../utils';
+
+import { SqlControl } from './sql-control/sql-control';
 
 import './sql-view.scss';
 

@@ -260,7 +260,7 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
       }
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
+      cacheKey: sampleColumns.cacheKey || cacheKey
     })
   };
 

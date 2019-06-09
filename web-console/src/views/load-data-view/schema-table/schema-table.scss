@@ -16,20 +16,30 @@
  * limitations under the License.
  */
 
-export * from './action-cell/action-cell';
-export * from './array-input/array-input';
-export * from './auto-form/auto-form';
-export * from './center-message/center-message';
-export * from './external-link/external-link';
-export * from './header-bar/header-bar';
-export * from './json-collapse/json-collapse';
-export * from './json-input/json-input';
-export * from './loader/loader';
-export * from './menu-checkbox/menu-checkbox';
-export * from './table-cell/table-cell';
-export * from './rule-editor/rule-editor';
-export * from './show-json/show-json';
-export * from './show-log/show-log';
-export * from './table-column-selector/table-column-selector';
-export * from './view-control-bar/view-control-bar';
-export * from './clearable-input/clearable-input';
+.schema-table {
+  .rt-th {
+    &.dimension {
+      background: rgba(38, 170, 201, 0.5);
+
+      &.long { background: rgba(19, 129, 201, 0.5); }
+      &.float { background: rgba(25, 145, 201, 0.5); }
+    }
+
+    &.metric {
+      background: rgba(201, 191, 55, 0.5);
+    }
+  }
+
+  .rt-td {
+    &.dimension {
+      background: rgba(38, 170, 201, 0.1);
+
+      &.long { background: rgba(19, 129, 201, 0.1); }
+      &.float { background: rgba(25, 145, 201, 0.1); }
+    }
+
+    &.metric {
+      background: rgba(201, 191, 55, 0.1);
+    }
+  }
+}

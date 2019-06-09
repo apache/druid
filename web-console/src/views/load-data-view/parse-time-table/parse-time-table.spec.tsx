@@ -17,24 +17,35 @@
  */
 
 import React from 'react';
+import { render } from 'react-testing-library';
 
-import './view-control-bar.scss';
+import { getEmptyTimestampSpec } from '../../../utils/ingestion-spec';
 
-export interface ViewControlBarProps {
-  label: string;
-}
+import { ParseTimeTable } from './parse-time-table';
 
-export class ViewControlBar extends React.PureComponent<ViewControlBarProps> {
-  constructor(props: ViewControlBarProps) {
-    super(props);
-  }
+describe('parse time table', () => {
+  it('matches snapshot', () => {
+    const sampleData = {
+      header: ['c1'],
+      rows: [
+        {
+          raw: `{"c1":"hello"}`,
+          parsed: { c1: 'hello' }
+        }
+      ]
+    };
 
-  render() {
-    const { label, children } = this.props;
+    const parseTimeTable = <ParseTimeTable
+      sampleBundle={{
+        headerAndRows: sampleData,
+        timestampSpec: getEmptyTimestampSpec()
+      }}
+      columnFilter=""
+      possibleTimestampColumnsOnly={false}
+      onTimestampColumnSelect={() => null}
+    />;
 
-    return <div className="view-control-bar">
-      <div className="control-label">{label}</div>
-      {children}
-    </div>;
-  }
-}
+    const { container } = render(parseTimeTable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

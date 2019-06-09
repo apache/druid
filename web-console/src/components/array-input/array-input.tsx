@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { ITagInputProps, TextArea } from '@blueprintjs/core';
+import { TextArea } from '@blueprintjs/core';
 import React from 'react';
 
 export interface ArrayInputProps {

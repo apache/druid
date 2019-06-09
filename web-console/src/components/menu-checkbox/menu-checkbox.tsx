@@ -21,7 +21,7 @@ import React from 'react';
 
 import './menu-checkbox.scss';
 
-export class MenuCheckbox extends React.PureComponent<ICheckboxProps, {}> {
+export class MenuCheckbox extends React.PureComponent<ICheckboxProps> {
 
   render() {
     return <li className="menu-checkbox">

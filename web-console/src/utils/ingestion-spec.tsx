@@ -26,6 +26,10 @@ import { ExternalLink } from '../components/external-link/external-link';
 import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
 
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
+
 export interface IngestionSpec {
   type?: IngestionType;
   dataSchema: DataSchema;
@@ -61,7 +65,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
 }
 
 export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
-  const ioConfig = deepGet(spec, 'ioConfig') || {};
+  const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
     case 'kafka':
@@ -70,7 +74,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
 
     case 'index':
     case 'index_parallel':
-      const firehose = deepGet(spec, 'ioConfig.firehose') || {};
+      const firehose = deepGet(spec, 'ioConfig.firehose') || EMPTY_OBJECT;
       switch (firehose.type) {
         case 'local':
         case 'http':
@@ -124,7 +128,7 @@ export function isParallel(spec: IngestionSpec): boolean {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || [];
+  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
@@ -1104,7 +1108,7 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
           return filenameFromPath(firehose.baseDir);
 
         case 'static-s3':
-          return filenameFromPath((firehose.uris || [])[0] || (firehose.prefixes || [])[0]);
+          return filenameFromPath((firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0]);
 
         case 'http':
           return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
@@ -1587,7 +1591,7 @@ export interface DimensionFiltersWithRest {
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : [];
+  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : EMPTY_ARRAY;
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension === 'string');
   const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
 
@@ -1599,7 +1603,7 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
 
 export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  let newFields = dimensionFilters || [];
+  let newFields = dimensionFilters || EMPTY_ARRAY;
   if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
   if (!newFields.length) return null;
