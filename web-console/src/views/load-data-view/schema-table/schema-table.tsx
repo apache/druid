@@ -59,7 +59,6 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
 
     const dimensionMetricSortedHeader = sortWithPrefixSuffix(headerAndRows.header, ['__time'], metricsSpec.map(getMetricSpecName));
 
-    console.log('render me');
     return <ReactTable
       className="schema-table -striped -highlight"
       data={headerAndRows.rows}
