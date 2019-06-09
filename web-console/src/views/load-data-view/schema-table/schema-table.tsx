@@ -76,7 +76,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
             Header: (
               <div
                 className="clickable"
-                onClick={() => onDimensionOrMetricSelect(null, -1, metricSpec, selectedMetricSpecIndex)}
+                onClick={() => onDimensionOrMetricSelect(null, -1, metricSpec, metricSpecIndex)}
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
