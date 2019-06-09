@@ -19,7 +19,7 @@
 import React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
-import { Loader } from '../components/loader/loader';
+import { Loader } from '../components';
 import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';

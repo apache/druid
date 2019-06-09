@@ -30,7 +30,7 @@ export interface ActionCellProps extends React.Props<any> {
   actions?: BasicAction[];
 }
 
-export class ActionCell extends React.PureComponent<ActionCellProps, {}> {
+export class ActionCell extends React.PureComponent<ActionCellProps> {
   static COLUMN_ID = 'actions';
   static COLUMN_LABEL = 'Actions';
   static COLUMN_WIDTH = 70;

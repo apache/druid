@@ -28,7 +28,7 @@ export interface ActionIconProps extends React.Props<any> {
   onClick?: () => void;
 }
 
-export class ActionIcon extends React.PureComponent<ActionIconProps, {}> {
+export class ActionIcon extends React.PureComponent<ActionIconProps> {
   render() {
     const { className, icon, onClick } = this.props;
 

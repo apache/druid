@@ -16,20 +16,36 @@
  * limitations under the License.
  */
 
-export * from './action-cell/action-cell';
-export * from './array-input/array-input';
-export * from './auto-form/auto-form';
-export * from './center-message/center-message';
-export * from './external-link/external-link';
-export * from './header-bar/header-bar';
-export * from './json-collapse/json-collapse';
-export * from './json-input/json-input';
-export * from './loader/loader';
-export * from './menu-checkbox/menu-checkbox';
-export * from './table-cell/table-cell';
-export * from './rule-editor/rule-editor';
-export * from './show-json/show-json';
-export * from './show-log/show-log';
-export * from './table-column-selector/table-column-selector';
-export * from './view-control-bar/view-control-bar';
-export * from './clearable-input/clearable-input';
+import React from 'react';
+import { render } from 'react-testing-library';
+
+import { SchemaTable } from './schema-table';
+
+describe('schema table', () => {
+  it('matches snapshot', () => {
+    const sampleData = {
+      header: ['c1'],
+      rows: [
+        {
+          raw: `{"c1":"hello"}`,
+          parsed: { c1: 'hello' }
+        }
+      ]
+    };
+
+    const schemaTable = <SchemaTable
+      sampleBundle={{
+        headerAndRows: sampleData,
+        dimensionsSpec: {},
+        metricsSpec: []
+      }}
+      columnFilter=""
+      selectedDimensionSpecIndex={-1}
+      selectedMetricSpecIndex={-1}
+      onDimensionOrMetricSelect={() => null}
+    />;
+
+    const { container } = render(schemaTable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

@@ -29,20 +29,15 @@ import { Hotkey, Hotkeys, HotkeysTarget } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import ace from 'brace';
-import 'brace/ext/language_tools';
-import 'brace/mode/hjson';
-import 'brace/mode/sql';
-import 'brace/theme/solarized_dark';
 import Hjson from 'hjson';
 import React from 'react';
 import AceEditor from 'react-ace';
 import ReactDOMServer from 'react-dom/server';
 
-import { SQLFunctionDoc } from '../../../lib/sql-function-doc';
-import { AppToaster } from '../../singletons/toaster';
-import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../variables';
-
-import { MenuCheckbox } from './../menu-checkbox/menu-checkbox';
+import { SQLFunctionDoc } from '../../../../lib/sql-function-doc';
+import { MenuCheckbox } from '../../../components';
+import { AppToaster } from '../../../singletons/toaster';
+import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 import './sql-control.scss';
 
