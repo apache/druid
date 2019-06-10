@@ -18,9 +18,9 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as FileSaver from 'file-saver';
-import * as numeral from 'numeral';
-import * as React from 'react';
+import FileSaver from 'file-saver';
+import numeral from 'numeral';
+import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
@@ -88,9 +88,10 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
+  if (value === undefined ) {
     return true;
   }
+  if (value === null) return false;
   const haystack = String(value.toLowerCase());
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
@@ -112,6 +113,13 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
 
 // ----------------------------
 
+export function caseInsensitiveContains(testString: string, searchString: string): boolean {
+  if (!searchString) return true;
+  return testString.toLowerCase().includes(searchString.toLowerCase());
+}
+
+// ----------------------------
+
 export function countBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
@@ -121,11 +129,15 @@ export function countBy<T>(array: T[], fn: (x: T, index: number) => string = Str
   return counts;
 }
 
-export function lookupBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, T> {
-  const lookup: Record<string, T> = {};
+function identity(x: any): any {
+  return x;
+}
+
+export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
+  const lookup: Record<string, Q> = {};
   for (let i = 0; i < array.length; i++) {
-    const key = fn(array[i], i);
-    lookup[key] = array[i];
+    const a = array[i];
+    lookup[keyFn(a, i)] = valueFn(a, i);
   }
   return lookup;
 }
@@ -172,6 +184,17 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
+export function memoize<T, U>(fn: (x: T) => U): (x: T) => U {
+  let lastInput: T;
+  let lastOutput: U;
+  return (x: T) => {
+    if (x === lastInput) return lastOutput;
+    lastInput = x;
+    lastOutput = fn(lastInput);
+    return lastOutput;
+  };
+}
+
 export function parseJson(json: string): any {
   try {
     return JSON.parse(json);
@@ -205,6 +228,10 @@ export function parseStringToJSON(s: string): JSON | null {
   } else {
     return JSON.parse(s);
   }
+}
+
+export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
+  return xs.filter(Boolean) as any;
 }
 
 export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {

@@ -339,7 +339,7 @@ public class TaskQueue
   public boolean add(final Task task) throws EntryExistsException
   {
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException(StringUtils.format("Task %s is already exists", task.getId()));
+      throw new EntryExistsException(StringUtils.format("Task %s already exists", task.getId()));
     }
 
     giant.lock();

@@ -510,7 +510,21 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor?state=true`
+
+Returns a list of objects of the currently active supervisors and their current state.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 
 * `/druid/indexer/v1/supervisor/<supervisorId>`
 
@@ -720,8 +734,8 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 <div class="note caution">
-This API is deprecated and will be removed in future releases. Please use <a href="/querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="/querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
+This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 
@@ -731,7 +745,7 @@ Returns the metrics of the datasource.
 
 <div class="note caution">
 This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 

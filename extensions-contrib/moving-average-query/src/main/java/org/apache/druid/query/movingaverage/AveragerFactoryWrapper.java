@@ -25,6 +25,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 
@@ -125,8 +126,9 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
    * Not implemented. Throws UnsupportedOperationException.
    */
   @SuppressWarnings("unchecked")
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return af.finalizeComputation((T) object);
   }

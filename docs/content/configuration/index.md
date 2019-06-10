@@ -541,13 +541,14 @@ The below table shows some important configurations for S3. See [S3 Deep Storage
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.s3.accessKey`|The access key to use to access S3.|none|
-|`druid.s3.secretKey`|The secret key to use to access S3.|none|
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.baseKey`|S3 object key prefix for storage.|none|
 |`druid.storage.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. This may require to set additional permissions. See [S3 permissions settings](../development/extensions-core/s3.html#s3-permissions-settings).|false|
 |`druid.storage.archiveBucket`|S3 bucket name for archiving when running the *archive task*.|none|
 |`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
+|`druid.storage.sse.type`|Server-side encryption type. Should be one of `s3`, `kms`, and `custom`. See the below [Server-side encryption section](../development/extensions-core/s3.html#server-side-encryption) for more details.|None|
+|`druid.storage.sse.kms.keyId`|AWS KMS key ID. This is used only when `druid.storage.sse.type` is `kms` and can be empty to use the default key ID.|None|
+|`druid.storage.sse.custom.base64EncodedKey`|Base64-encoded key. Should be specified if `druid.storage.sse.type` is `custom`.|None|
 |`druid.storage.useS3aSchema`|If true, use the "s3a" filesystem when using Hadoop-based ingestion. If false, the "s3n" filesystem will be used. Only affects Hadoop-based ingestion.|false|
 
 #### HDFS Deep Storage
@@ -845,7 +846,6 @@ A description of the compaction config is:
 |Property|Description|Required|
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
-|`keepSegmentGranularity`|Set [keepSegmentGranularity](../ingestion/compaction.html) to true for compactionTask.|no (default = true)|
 |`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
 |`targetCompactionSizeBytes`|The target segment size, for each segment, after compaction. The actual sizes of compacted segments might be slightly larger or smaller than this value. Each compaction task may generate more than one output segment, and it will try to keep each output segment close to this configured size. This configuration cannot be used together with `maxRowsPerSegment`.|no (default = 419430400)|
@@ -941,6 +941,17 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|PT30S|
 |`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
 |`druid.indexer.autoscale.workerPort`|The port that MiddleManagers will run on.|8080|
+
+##### Supervisors
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.supervisor.healthinessThreshold`|The number of successful runs before an unhealthy supervisor is again considered healthy.|3|
+|`druid.supervisor.unhealthinessThreshold`|The number of failed runs before the supervisor is considered unhealthy.|3|
+|`druid.supervisor.taskHealthinessThreshold`|The number of consecutive task successes before an unhealthy supervisor is again considered healthy.|3|
+|`druid.supervisor.taskUnhealthinessThreshold`|The number of consecutive task failures before the supervisor is considered unhealthy.|3|
+|`druid.supervisor.storeStackTrace`|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint.|false|
+|`druid.supervisor.maxStoredExceptionEvents`|The maximum number of exception events that can be returned through the supervisor `/status` endpoint.|`max(healthinessThreshold, unhealthinessThreshold)`|
 
 #### Overlord Dynamic Configuration
 
@@ -1409,7 +1420,7 @@ The Druid SQL server is configured through the following properties on the Broke
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|false|
+|`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|true|
 |`druid.sql.avatica.enable`|Whether to enable JDBC querying at `/druid/v2/sql/avatica/`.|true|
 |`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|50|
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum number of rows to return in a single JDBC frame. Setting this property to -1 indicates that no row limit should be applied. Clients can optionally specify a row limit in their requests; if a client specifies a row limit, the lesser value of the client-provided limit and `maxRowsPerFrame` will be used.|5,000|

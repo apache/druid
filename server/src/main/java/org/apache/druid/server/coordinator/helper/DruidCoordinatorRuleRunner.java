@@ -19,8 +19,9 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -35,6 +36,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -84,8 +86,14 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // find available segments which are not overshadowed by other segments in DB
     // only those would need to be loaded/dropped
     // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    final Set<DataSegment> overshadowed = ImmutableDruidDataSource
-        .determineOvershadowedSegments(params.getAvailableSegments());
+    // If metadata store hasn't been polled yet, use empty overshadowed list
+    final DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
+    Set<SegmentId> overshadowed = ImmutableSet.of();
+    if (dataSourcesSnapshot != null) {
+      overshadowed = Optional
+          .ofNullable(dataSourcesSnapshot.getOvershadowedSegments())
+          .orElse(ImmutableSet.of());
+    }
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
@@ -103,7 +111,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
     for (DataSegment segment : params.getAvailableSegments()) {
-      if (overshadowed.contains(segment)) {
+      if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
         continue;
       }

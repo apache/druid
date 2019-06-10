@@ -1,0 +1,301 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`data source view matches snapshot 1`] = `
+<div
+  className="data-sources-view app-view"
+>
+  <ViewControlBar
+    label="Datasources"
+  >
+    <Blueprint3.Button
+      icon="refresh"
+      onClick={[Function]}
+      text="Refresh"
+    />
+    <Blueprint3.Button
+      icon="application"
+      onClick={[Function]}
+      text="Go to SQL"
+    />
+    <Blueprint3.Switch
+      checked={false}
+      label="Show disabled"
+      onChange={[Function]}
+    />
+    <TableColumnSelector
+      columns={
+        Array [
+          "Datasource",
+          "Availability",
+          "Retention",
+          "Compaction",
+          "Size",
+          "Num rows",
+          "Actions",
+        ]
+      }
+      onChange={[Function]}
+      tableColumnsHidden={Array []}
+    />
+  </ViewControlBar>
+  <ReactTable
+    AggregatedComponent={[Function]}
+    ExpanderComponent={[Function]}
+    FilterComponent={[Function]}
+    LoadingComponent={[Function]}
+    NoDataComponent={[Function]}
+    PadRowComponent={[Function]}
+    PaginationComponent={[Function]}
+    PivotValueComponent={[Function]}
+    ResizerComponent={[Function]}
+    TableComponent={[Function]}
+    TbodyComponent={[Function]}
+    TdComponent={[Function]}
+    TfootComponent={[Function]}
+    ThComponent={[Function]}
+    TheadComponent={[Function]}
+    TrComponent={[Function]}
+    TrGroupComponent={[Function]}
+    aggregatedKey="_aggregated"
+    className=""
+    collapseOnDataChange={true}
+    collapseOnPageChange={true}
+    collapseOnSortingChange={true}
+    column={
+      Object {
+        "Aggregated": undefined,
+        "Cell": undefined,
+        "Expander": undefined,
+        "Filter": undefined,
+        "Footer": undefined,
+        "Header": undefined,
+        "Pivot": undefined,
+        "PivotValue": undefined,
+        "Placeholder": undefined,
+        "aggregate": undefined,
+        "className": "",
+        "filterAll": false,
+        "filterMethod": undefined,
+        "filterable": undefined,
+        "footerClassName": "",
+        "footerStyle": Object {},
+        "getFooterProps": [Function],
+        "getHeaderProps": [Function],
+        "getProps": [Function],
+        "headerClassName": "",
+        "headerStyle": Object {},
+        "minResizeWidth": 11,
+        "minWidth": 100,
+        "resizable": undefined,
+        "show": true,
+        "sortMethod": undefined,
+        "sortable": undefined,
+        "style": Object {},
+      }
+    }
+    columns={
+      Array [
+        Object {
+          "Cell": [Function],
+          "Header": "Datasource",
+          "accessor": "datasource",
+          "show": true,
+          "width": 150,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Availability",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "availability",
+          "show": true,
+          "sortMethod": [Function],
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Retention",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "retention",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Compaction",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "compaction",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Size",
+          "accessor": "size",
+          "filterable": false,
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Num rows",
+          "accessor": "num_rows",
+          "filterable": false,
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Actions",
+          "accessor": "datasource",
+          "filterable": false,
+          "id": "actions",
+          "show": true,
+          "width": 70,
+        },
+      ]
+    }
+    data={Array []}
+    defaultExpanded={Object {}}
+    defaultFilterMethod={[Function]}
+    defaultFiltered={Array []}
+    defaultPage={0}
+    defaultPageSize={50}
+    defaultResized={Array []}
+    defaultSortDesc={false}
+    defaultSortMethod={[Function]}
+    defaultSorted={Array []}
+    expanderDefaults={
+      Object {
+        "filterable": false,
+        "resizable": false,
+        "sortable": false,
+        "width": 35,
+      }
+    }
+    filterable={true}
+    filtered={Array []}
+    freezeWhenExpanded={false}
+    getLoadingProps={[Function]}
+    getNoDataProps={[Function]}
+    getPaginationProps={[Function]}
+    getProps={[Function]}
+    getResizerProps={[Function]}
+    getTableProps={[Function]}
+    getTbodyProps={[Function]}
+    getTdProps={[Function]}
+    getTfootProps={[Function]}
+    getTfootTdProps={[Function]}
+    getTfootTrProps={[Function]}
+    getTheadFilterProps={[Function]}
+    getTheadFilterThProps={[Function]}
+    getTheadFilterTrProps={[Function]}
+    getTheadGroupProps={[Function]}
+    getTheadGroupThProps={[Function]}
+    getTheadGroupTrProps={[Function]}
+    getTheadProps={[Function]}
+    getTheadThProps={[Function]}
+    getTheadTrProps={[Function]}
+    getTrGroupProps={[Function]}
+    getTrProps={[Function]}
+    groupedByPivotKey="_groupedByPivot"
+    indexKey="_index"
+    loading={true}
+    loadingText="Loading..."
+    multiSort={true}
+    nestingLevelKey="_nestingLevel"
+    nextText="Next"
+    noDataText=""
+    ofText="of"
+    onFetchData={[Function]}
+    onFilteredChange={[Function]}
+    originalKey="_original"
+    pageJumpText="jump to page"
+    pageSizeOptions={
+      Array [
+        5,
+        10,
+        20,
+        25,
+        50,
+        100,
+      ]
+    }
+    pageText="Page"
+    pivotDefaults={Object {}}
+    pivotIDKey="_pivotID"
+    pivotValKey="_pivotVal"
+    previousText="Previous"
+    resizable={true}
+    resolveData={[Function]}
+    rowsSelectorText="rows per page"
+    rowsText="rows"
+    showPageJump={true}
+    showPageSizeOptions={true}
+    showPagination={true}
+    showPaginationBottom={true}
+    showPaginationTop={false}
+    sortable={true}
+    style={Object {}}
+    subRowsKey="_subRows"
+  />
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Drop data"
+    failText="Could not drop data"
+    intent="danger"
+    onClose={[Function]}
+    successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
+  >
+    <p>
+      Are you sure you want to drop all the data for datasource 'null'?
+    </p>
+  </AsyncActionDialog>
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Enable datasource"
+    failText="Could not enable datasource"
+    intent="primary"
+    onClose={[Function]}
+    successText="Datasource has been enabled"
+  >
+    <p>
+      Are you sure you want to enable datasource 'null'?
+    </p>
+  </AsyncActionDialog>
+  <AsyncActionDialog
+    action={null}
+    confirmButtonDisabled={true}
+    confirmButtonText="Drop selected data"
+    failText="Could not drop data"
+    intent="primary"
+    onClose={[Function]}
+    successText="Drop request submitted"
+  >
+    <p>
+      Please select the interval that you want to drop?
+    </p>
+    <Blueprint3.FormGroup>
+      <Blueprint3.InputGroup
+        onChange={[Function]}
+        placeholder="2018-01-01T00:00:00/2018-01-03T00:00:00"
+        value=""
+      />
+    </Blueprint3.FormGroup>
+  </AsyncActionDialog>
+  <AsyncActionDialog
+    action={null}
+    confirmButtonText="Permanently delete data"
+    failText="Could not submit kill task"
+    intent="danger"
+    onClose={[Function]}
+    successText="Kill task was issued. Datasource will be deleted"
+  >
+    <p>
+      Are you sure you want to permanently delete the data in datasource 'null'?
+    </p>
+    <p>
+      This action can not be undone.
+    </p>
+  </AsyncActionDialog>
+</div>
+`;

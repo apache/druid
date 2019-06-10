@@ -25,12 +25,12 @@
   <groupId>org.apache.druid.extensions</groupId>
   <artifactId>druid-datasketches</artifactId>
   <name>druid-datasketches</name>
-  <description>Druid Aggregators based on datasketches lib http://datasketches.github.io/</description>
+  <description>Druid Aggregators based on datasketches lib https://datasketches.github.io/</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.15.0-incubating-SNAPSHOT</version>
+    <version>0.16.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -38,7 +38,13 @@
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
       <artifactId>sketches-core</artifactId>
-      <version>0.13.1</version>
+      <version>0.13.4</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>annotations</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>

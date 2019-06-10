@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.15.0-incubating-SNAPSHOT</version>
+    <version>0.16.0-incubating-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -59,7 +59,7 @@
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>install</arguments>
+              <arguments>ci</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
             </configuration>
           </execution>

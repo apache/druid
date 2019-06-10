@@ -1,0 +1,65 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`show log describe show log 1`] = `
+<div
+  class="show-log"
+>
+  <div
+    class="top-actions"
+  >
+    <label
+      class="bp3-control bp3-checkbox"
+    >
+      <input
+        type="checkbox"
+      />
+      <span
+        class="bp3-control-indicator"
+      />
+      Tail log
+    </label>
+    <div
+      class="bp3-button-group right-buttons"
+    >
+      <button
+        class="bp3-button bp3-minimal"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          Save
+        </span>
+      </button>
+      <button
+        class="bp3-button bp3-minimal"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          Copy
+        </span>
+      </button>
+      <button
+        class="bp3-button bp3-minimal"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          View full log
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="main-area"
+  >
+    <textarea
+      class="bp3-input"
+      readonly=""
+    />
+  </div>
+</div>
+`;

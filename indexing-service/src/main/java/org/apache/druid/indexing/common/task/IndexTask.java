@@ -223,11 +223,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<Throwable>(
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      buildSegmentsSavedParseExceptions = new CircularBuffer<Throwable>(
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
     }
@@ -731,8 +731,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
-    int thrownAway = 0;
-    int unparseable = 0;
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
     try (
@@ -807,12 +805,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     // These metrics are reported in generateAndPublishSegments()
-    if (thrownAway > 0) {
-      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
+    if (determinePartitionsMeters.getThrownAway() > 0) {
+      log.warn("Unable to find a matching interval for [%,d] events", determinePartitionsMeters.getThrownAway());
     }
-    if (unparseable > 0) {
-      log.warn("Unable to parse [%,d] events", unparseable);
+    if (determinePartitionsMeters.getUnparseable() > 0) {
+      log.warn("Unable to parse [%,d] events", determinePartitionsMeters.getUnparseable());
     }
+
     return hllCollectors;
   }
 
