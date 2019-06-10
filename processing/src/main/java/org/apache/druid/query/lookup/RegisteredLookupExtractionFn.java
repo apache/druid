@@ -48,7 +48,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
       @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
-      @JsonProperty("injective") final Boolean injective,
+      @Nullable @JsonProperty("injective") final Boolean injective,
       @JsonProperty("optimize") Boolean optimize
   )
   {
@@ -73,12 +73,14 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return retainMissingValue;
   }
 
+  @Nullable
   @JsonProperty("replaceMissingValueWith")
   public String getReplaceMissingValueWith()
   {
     return replaceMissingValueWith;
   }
 
+  @Nullable
   @JsonProperty("injective")
   public Boolean isInjective()
   {
@@ -151,10 +153,10 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
           delegate = new LookupExtractionFn(
               factory,
-              isRetainMissingValue(),
-              getReplaceMissingValueWith(),
-              injective == null ? factory.isOneToOne() : injective,
-              isOptimize()
+              retainMissingValue,
+              replaceMissingValueWith,
+              injective,
+              optimize
           );
         }
       }

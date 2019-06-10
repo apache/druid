@@ -62,13 +62,11 @@ public class KillTaskTest extends IngestionTestBase
 
     Assert.assertTrue(
         getMetadataSegmentManager().removeSegment(
-            DATA_SOURCE,
             newSegment(Intervals.of("2019-02-01/2019-03-01"), version).getId().toString()
         )
     );
     Assert.assertTrue(
         getMetadataSegmentManager().removeSegment(
-            DATA_SOURCE,
             newSegment(Intervals.of("2019-03-01/2019-04-01"), version).getId().toString()
         )
     );

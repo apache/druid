@@ -19,7 +19,7 @@
 import { Button, FormGroup, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
@@ -83,7 +83,7 @@ export interface DatasourcesViewState {
   dropReloadInterval: string;
 }
 
-export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
+export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
   static DISABLED_COLOR = '#0a1500';
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';

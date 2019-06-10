@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 
 export interface ExternalLinkProps extends React.Props<any> {
   href: string;
 }
 
-export class ExternalLink extends React.Component<ExternalLinkProps, {}> {
+export class ExternalLink extends React.PureComponent<ExternalLinkProps> {
   render() {
     const { href, children } = this.props;
 

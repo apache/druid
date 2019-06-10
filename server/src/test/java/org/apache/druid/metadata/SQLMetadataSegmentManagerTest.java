@@ -294,7 +294,7 @@ public class SQLMetadataSegmentManagerTest
     publisher.publishSegment(newSegment);
 
     Assert.assertNull(manager.getDataSource(newDataSource));
-    Assert.assertTrue(manager.removeSegment(newSegment.getId()));
+    Assert.assertTrue(manager.removeSegment(newSegment.getId().toString()));
   }
 
   @Test

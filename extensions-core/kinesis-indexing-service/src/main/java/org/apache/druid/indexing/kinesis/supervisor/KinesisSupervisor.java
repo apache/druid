@@ -316,10 +316,4 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     return true;
   }
-
-  @Override
-  public Boolean isHealthy()
-  {
-    return stateManager.isHealthy();
-  }
 }

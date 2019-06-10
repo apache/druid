@@ -17,7 +17,7 @@
  */
 
 import { Button, IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 export interface BasicAction {
   icon?: IconName;

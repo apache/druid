@@ -385,10 +385,4 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   {
     return spec.getIoConfig();
   }
-
-  @Override
-  public Boolean isHealthy()
-  {
-    return stateManager.isHealthy();
-  }
 }

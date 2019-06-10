@@ -19,8 +19,8 @@
 import { Button, Icon, Intent, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
-import * as React from 'react';
+import classNames from 'classnames';
+import React from 'react';
 import ReactTable from 'react-table';
 
 import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
@@ -61,7 +61,7 @@ export interface LookupsViewState {
   deleteLookupTier: string | null;
 }
 
-export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
+export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
   private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;
 

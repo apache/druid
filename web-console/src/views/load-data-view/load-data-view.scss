@@ -151,11 +151,6 @@
             border-radius: 2px;
           }
 
-          &.flattened,
-          &.transformed {
-            background: rgba(201, 128, 22, 0.2);
-          }
-
           .clickable {
             cursor: pointer;
           }
@@ -163,47 +158,11 @@
           &.timestamp {
             background: rgba(19, 129, 201, 0.5);
           }
-
-          &.dimension {
-            background: rgba(38, 170, 201, 0.5);
-
-            &.long { background: rgba(19, 129, 201, 0.5); }
-            &.float { background: rgba(25, 145, 201, 0.5); }
-          }
-
-          &.metric {
-            background: rgba(201, 191, 55, 0.5);
-          }
         }
 
         .rt-td {
-          &.flattened,
-          &.transformed {
-            background: rgba(201, 128, 22, 0.05);
-          }
-
           &.timestamp {
             background: rgba(19, 129, 201, 0.15);
-          }
-
-          &.dimension {
-            background: rgba(38, 170, 201, 0.1);
-
-            &.long { background: rgba(19, 129, 201, 0.1); }
-            &.float { background: rgba(25, 145, 201, 0.1); }
-          }
-
-          &.metric {
-            background: rgba(201, 191, 55, 0.1);
-          }
-        }
-
-        .parse-detail {
-          padding: 10px;
-
-          .parse-error {
-            color: #9E2B0E;
-            margin-bottom: 12px;
           }
         }
       }

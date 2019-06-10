@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import { validJson } from '../../utils';
@@ -40,7 +40,7 @@ export interface LookupEditDialogProps extends React.Props<any> {
 export interface LookupEditDialogState {
 }
 
-export class LookupEditDialog extends React.Component<LookupEditDialogProps, LookupEditDialogState> {
+export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps, LookupEditDialogState> {
 
   constructor(props: LookupEditDialogProps) {
     super(props);

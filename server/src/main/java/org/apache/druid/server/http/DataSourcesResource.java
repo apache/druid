@@ -434,7 +434,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (databaseSegmentManager.removeSegment(segmentId)) {
       return Response.ok().build();
     }
     return Response.noContent().build();

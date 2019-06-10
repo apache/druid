@@ -19,8 +19,8 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
-import * as React from 'react';
+import classNames from 'classnames';
+import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink } from './components/external-link/external-link';
@@ -54,7 +54,7 @@ export interface ConsoleApplicationState {
   capabilitiesLoading: boolean;
 }
 
-export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
+export class ConsoleApplication extends React.PureComponent<ConsoleApplicationProps, ConsoleApplicationState> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
   private capabilitiesQueryManager: QueryManager<string, string>;

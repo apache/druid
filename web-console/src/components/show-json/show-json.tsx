@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
-import * as copy from 'copy-to-clipboard';
-import * as React from 'react';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -29,6 +29,7 @@ import './show-json.scss';
 
 export interface ShowJsonProps extends React.Props<any> {
   endpoint: string;
+  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
@@ -36,7 +37,7 @@ export interface ShowJsonState {
   jsonValue: string;
 }
 
-export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
+export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
   constructor(props: ShowJsonProps, context: any) {
     super(props, context);
     this.state = {
@@ -47,12 +48,14 @@ export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
   }
 
   private getJsonInfo = async (): Promise<void> => {
-    const { endpoint } = this.props;
+    const { endpoint, transform } = this.props;
+
     try {
       const resp = await axios.get(endpoint);
-      const data = resp.data;
+      let data = resp.data;
+      if (transform) data = transform(data);
       this.setState({
-        jsonValue: typeof (data) === 'string' ? data : JSON.stringify(data, undefined, 2)
+        jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2)
       });
     } catch (e) {
       this.setState({

@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
-import { Loader } from '../components/loader/loader';
+import { Loader } from '../components';
 import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
 /* tslint:disable:max-classes-per-file */
 
-class NoData extends React.Component {
+class NoData extends React.PureComponent {
   render() {
     const { children } = this.props;
     if (!children) return null;

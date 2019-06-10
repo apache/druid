@@ -43,6 +43,14 @@ exports[`table cell matches snapshot null 1`] = `
 </span>
 `;
 
+exports[`table cell matches snapshot null timestamp 1`] = `
+<span
+  class="table-cell unparseable"
+>
+  unparseable timestamp
+</span>
+`;
+
 exports[`table cell matches snapshot simple 1`] = `Hello World`;
 
 exports[`table cell matches snapshot truncate 1`] = `

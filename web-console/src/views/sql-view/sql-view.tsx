@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import * as Hjson from 'hjson';
-import * as React from 'react';
+import Hjson from 'hjson';
+import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 
-import { SqlControl, TableCell } from '../../components';
+import { TableCell } from '../../components';
 import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
@@ -33,6 +33,8 @@ import {
   queryDruidSql, QueryManager,
   SemiJoinQueryExplanation
 } from '../../utils';
+
+import { SqlControl } from './sql-control/sql-control';
 
 import './sql-view.scss';
 
@@ -62,7 +64,7 @@ interface SqlQueryResult {
   queryElapsed: number;
 }
 
-export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
+export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
   static trimSemicolon(query: string): string {
     // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
     return query.replace(/;+(\s*)$/, '$1');

@@ -19,7 +19,7 @@
 import { Button, Card, Collapse, ControlGroup, FormGroup, HTMLSelect, InputGroup, NumericInput, TagInput } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import './rule-editor.scss';
 
@@ -47,7 +47,7 @@ export interface RuleEditorState {
   isOpen: boolean;
 }
 
-export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState> {
+export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorState> {
   static ruleToString(rule: Rule): string {
     return rule.type + (rule.period ? `(${rule.period})` : '') + (rule.interval ? `(${rule.interval})` : '');
   }

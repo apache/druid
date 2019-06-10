@@ -28,21 +28,16 @@ import {
 import { Hotkey, Hotkeys, HotkeysTarget } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as ace from 'brace';
-import 'brace/ext/language_tools';
-import 'brace/mode/hjson';
-import 'brace/mode/sql';
-import 'brace/theme/solarized_dark';
-import * as Hjson from 'hjson';
-import * as React from 'react';
+import ace from 'brace';
+import Hjson from 'hjson';
+import React from 'react';
 import AceEditor from 'react-ace';
-import * as ReactDOMServer from 'react-dom/server';
+import ReactDOMServer from 'react-dom/server';
 
-import { SQLFunctionDoc } from '../../../lib/sql-function-doc';
-import { AppToaster } from '../../singletons/toaster';
-import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../variables';
-
-import { MenuCheckbox } from './../menu-checkbox/menu-checkbox';
+import { SQLFunctionDoc } from '../../../../lib/sql-function-doc';
+import { MenuCheckbox } from '../../../components';
+import { AppToaster } from '../../../singletons/toaster';
+import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 import './sql-control.scss';
 
@@ -79,7 +74,7 @@ export interface SqlControlState {
 }
 
 @HotkeysTarget
-export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
+export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlState> {
   constructor(props: SqlControlProps, context: any) {
     super(props, context);
     this.state = {

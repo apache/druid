@@ -8,7 +8,7 @@ exports[`sql control matches snapshot 1`] = `
     class="ace-container"
   >
     <div
-      class=" ace_editor ace-solarized-dark ace_dark ace_focus"
+      class=" ace_editor ace-tm ace_focus"
       id="ace-editor"
       style="width: 100%; height: 200px; font-size: 14px;"
     >

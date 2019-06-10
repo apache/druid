@@ -20,7 +20,7 @@ import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
@@ -108,7 +108,7 @@ interface MiddleManagerQueryResultRow {
 
 interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>, Partial<MiddleManagerQueryResultRow> {}
 
-export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
+export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
   private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
 

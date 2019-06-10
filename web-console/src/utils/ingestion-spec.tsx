@@ -18,13 +18,17 @@
 
 import { Code } from '@blueprintjs/core';
 import { number } from 'prop-types';
-import * as React from 'react';
+import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
 
-import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
+import { BASIC_FORMAT_VALUES, DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
+
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
 
 export interface IngestionSpec {
   type?: IngestionType;
@@ -61,7 +65,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
 }
 
 export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
-  const ioConfig = deepGet(spec, 'ioConfig') || {};
+  const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
     case 'kafka':
@@ -70,7 +74,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
 
     case 'index':
     case 'index_parallel':
-      const firehose = deepGet(spec, 'ioConfig.firehose') || {};
+      const firehose = deepGet(spec, 'ioConfig.firehose') || EMPTY_OBJECT;
       switch (firehose.type) {
         case 'local':
         case 'http':
@@ -124,7 +128,7 @@ export function isParallel(spec: IngestionSpec): boolean {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || [];
+  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
@@ -145,6 +149,19 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
   newSpec = deepSet(newSpec, 'ioConfig.type', newType);
   newSpec = deepSet(newSpec, 'tuningConfig.type', newType);
   return newSpec;
+}
+
+/**
+ * Make sure that the types are set in the root, ioConfig, and tuningConfig
+ * @param spec
+ */
+export function normalizeSpecType(spec: IngestionSpec) {
+  const specType = getSpecType(spec);
+  if (!specType) return spec;
+  if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
+  if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
+  if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
+  return spec;
 }
 
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
@@ -261,7 +278,18 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     name: 'format',
     type: 'string',
     defaultValue: 'auto',
-    suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
+    suggestions: [
+      'auto',
+      ...BASIC_FORMAT_VALUES,
+      {
+        group: 'Date and time formats',
+        suggestions: DATE_TIME_FORMAT_VALUES
+      },
+      {
+        group: 'Date only formats',
+        suggestions: DATE_FORMAT_VALUES
+      }
+    ],
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: <p>
       Please specify your timestamp format by using the suggestions menu or typing in a <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">format string</ExternalLink>.
@@ -1091,7 +1119,7 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
           return filenameFromPath(firehose.baseDir);
 
         case 'static-s3':
-          return filenameFromPath((firehose.uris || [])[0] || (firehose.prefixes || [])[0]);
+          return filenameFromPath((firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0]);
 
         case 'http':
           return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
@@ -1574,7 +1602,7 @@ export interface DimensionFiltersWithRest {
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : [];
+  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : EMPTY_ARRAY;
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension === 'string');
   const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
 
@@ -1586,7 +1614,7 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
 
 export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  let newFields = dimensionFilters || [];
+  let newFields = dimensionFilters || EMPTY_ARRAY;
   if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
   if (!newFields.length) return null;

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -66,6 +67,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategy balancerStrategy;
+  private final DataSourcesSnapshot dataSourcesSnapshot;
 
   private DruidCoordinatorRuntimeParams(
       long startTime,
@@ -81,7 +83,8 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
       DateTime balancerReferenceTimestamp,
-      BalancerStrategy balancerStrategy
+      BalancerStrategy balancerStrategy,
+      DataSourcesSnapshot dataSourcesSnapshot
   )
   {
     this.startTime = startTime;
@@ -98,6 +101,7 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     this.balancerStrategy = balancerStrategy;
+    this.dataSourcesSnapshot = dataSourcesSnapshot;
   }
 
   public long getStartTime()
@@ -171,6 +175,11 @@ public class DruidCoordinatorRuntimeParams
     return balancerStrategy;
   }
 
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
+  }
+
   public boolean hasDeletionWaitTimeElapsed()
   {
     return (System.currentTimeMillis() - getStartTime() > coordinatorDynamicConfig.getMillisToWaitBeforeDeleting());
@@ -237,6 +246,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorStats stats;
     private DateTime balancerReferenceTimestamp;
     private BalancerStrategy balancerStrategy;
+    private DataSourcesSnapshot dataSourcesSnapshot;
 
     Builder()
     {
@@ -253,6 +263,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.balancerReferenceTimestamp = DateTimes.nowUtc();
+      this.dataSourcesSnapshot = null;
     }
 
     Builder(
@@ -304,7 +315,8 @@ public class DruidCoordinatorRuntimeParams
           coordinatorCompactionConfig,
           stats,
           balancerReferenceTimestamp,
-          balancerStrategy
+          balancerStrategy,
+          dataSourcesSnapshot
       );
     }
 
@@ -432,6 +444,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withBalancerStrategy(BalancerStrategy balancerStrategy)
     {
       this.balancerStrategy = balancerStrategy;
+      return this;
+    }
+
+    public Builder withDataSourcesSnapshot(DataSourcesSnapshot snapshot)
+    {
+      this.dataSourcesSnapshot = snapshot;
       return this;
     }
   }

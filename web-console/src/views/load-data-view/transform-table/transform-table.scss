@@ -16,56 +16,16 @@
  * limitations under the License.
  */
 
-@import "../../variables";
-
-.sql-control {
-  .ace-container {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 30px + $standard-padding;
-
-    .ace_scroller {
-      background-color: #232C35;
-    }
-
-    .ace_gutter-layer {
-      background-color: #27313c;
+.transform-table {
+  .rt-th {
+    &.transformed {
+      background: rgba(201, 128, 22, 0.2);
     }
   }
 
-  .buttons {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
-    height: 30px;
-
-    button {
-      margin-right: 15px;
+  .rt-td {
+    &.transformed {
+      background: rgba(201, 128, 22, 0.05);
     }
-
-    .query-elapsed {
-      position: absolute;
-      right: 10px;
-    }
-  }
-
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
   }
 }

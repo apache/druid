@@ -17,7 +17,7 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { SegmentsView } from '../segments-view/segments-view';
 

@@ -19,8 +19,8 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as copy from 'copy-to-clipboard';
-import * as React from 'react';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { ActionIcon } from '../action-icon/action-icon';
@@ -39,7 +39,7 @@ interface ShortParts {
   suffix: string;
 }
 
-export class TableCell extends React.Component<NullTableCellProps, {}> {
+export class TableCell extends React.PureComponent<NullTableCellProps> {
   static MAX_CHARS_TO_SHOW = 50;
 
   static possiblyTruncate(str: string): React.ReactNode {
@@ -89,7 +89,11 @@ export class TableCell extends React.Component<NullTableCellProps, {}> {
         return TableCell.possiblyTruncate(String(value));
       }
     } else {
-      return <span className="table-cell null">null</span>;
+      if (timestamp) {
+        return <span className="table-cell unparseable">unparseable timestamp</span>;
+      } else {
+        return <span className="table-cell null">null</span>;
+      }
     }
   }
 }
