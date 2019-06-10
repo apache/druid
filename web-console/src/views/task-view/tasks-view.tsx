@@ -477,12 +477,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 300,
-            accessor: (row) => {
-              console.log(row);
-              const value = row.detailedState;
+            accessor: (row) => { return row.detailedState; },
+            Cell: (row) =>{
+              const value = row.original.detailedState;
               return <span>
                 <span
-                  style={{ color: stateToColor(row.state) }}
+                  style={{ color: stateToColor(row.original.state)}}
                 >
                   &#x25cf;&nbsp;
                 </span>
