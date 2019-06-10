@@ -109,17 +109,6 @@ function statusToColor(status: string): string {
   }
 }
 
-function stateToColor(status: string): string {
-  switch (status) {
-    case 'RUNNING': return '#2167d5';
-    case 'SUSPENDED': return '#d5631a';
-    case 'PENDING': return '#d5631a';
-    case 'UNHEALTHY_SUPERVISOR': return '#d5100a';
-    case 'UNHEALTHY_TASKS': return '#d5100a';
-    case 'STOPPING': return '#d5100a';
-    default: return '#0a1500';
-  }
-}
 
 export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
@@ -490,7 +479,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = payload.detailedState;
               return <span>
                 <span
-                  style={{ color: stateToColor(payload.state)}}
+                  style={{ color: payload.healthy ? '#2167d5' : '#d5100a'}}
                 >
                   &#x25cf;&nbsp;
                 </span>
@@ -498,76 +487,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               </span>;
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Detailed status')
-          },
-          {
-            Header: 'Recent errors',
-            id: 'errors',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              return payload.recentErrors.length;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Recent errors')
-          },
-          {
-            Header: 'Partitions',
-            id: 'partitions',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              return payload.partitions;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Partitions')
-          },
-          {
-            Header: 'Replicas',
-            id: 'replicas',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              return payload.replicas;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Replicas')
-          },
-          {
-            Header: 'Duration seconds',
-            id: 'seconds_duration',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              return payload.durationSeconds;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Duration seconds')
-          },
-          {
-            Header: 'Aggregate lag',
-            id: 'aggregat_lag',
-            accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              return payload.aggregateLag;
-            },
-            show: supervisorTableColumnSelectionHandler.showColumn('Aggragate lag')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
