@@ -121,6 +121,7 @@ exports[`tasks view matches snapshot 1`] = `
               "show": true,
             },
             Object {
+              "Cell": [Function],
               "Header": "Status",
               "accessor": [Function],
               "id": "status",
