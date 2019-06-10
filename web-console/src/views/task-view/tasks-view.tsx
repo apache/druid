@@ -478,7 +478,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             id: 'status',
             width: 300,
             accessor: (row) => { return row.detailedState; },
-            Cell: (row) =>{
+            Cell: (row) => {
               const value = row.original.detailedState;
               return <span>
                 <span
@@ -491,7 +491,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             },
             show: supervisorTableColumnSelectionHandler.showColumn('Status')
           },
-
           {
             Header: ActionCell.COLUMN_LABEL,
             id: ActionCell.COLUMN_ID,
