@@ -250,6 +250,13 @@ public class ParserTest
   public void testApplyFunctions()
   {
     validateParser(
+        "map(() -> 1, x)",
+        "(map ([] -> 1), [x])",
+        ImmutableList.of("x"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+    validateParser(
         "map((x) -> x + 1, x)",
         "(map ([x] -> (+ x 1)), [x])",
         ImmutableList.of("x"),

@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
@@ -41,7 +42,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Base interface of Druid expression language abstract syntax tree nodes
+ * Base interface of Druid expression language abstract syntax tree nodes. All {@link Expr} implementations are expected
+ * to be immutable.
  */
 public interface Expr
 {
@@ -146,9 +148,9 @@ public interface Expr
    */
   class BindingDetails
   {
-    private final Set<String> freeVariables;
-    private final Set<String> scalarVariables;
-    private final Set<String> arrayVariables;
+    private final ImmutableSet<String> freeVariables;
+    private final ImmutableSet<String> scalarVariables;
+    private final ImmutableSet<String> arrayVariables;
 
     public BindingDetails()
     {
@@ -162,9 +164,9 @@ public interface Expr
 
     public BindingDetails(Set<String> freeVariables, Set<String> scalarVariables, Set<String> arrayVariables)
     {
-      this.freeVariables = freeVariables;
-      this.scalarVariables = scalarVariables;
-      this.arrayVariables = arrayVariables;
+      this.freeVariables = ImmutableSet.copyOf(freeVariables);
+      this.scalarVariables = ImmutableSet.copyOf(scalarVariables);
+      this.arrayVariables = ImmutableSet.copyOf(arrayVariables);
     }
 
     /**
@@ -494,12 +496,12 @@ class IdentifierExpr implements Expr
 
 class LambdaExpr implements Expr
 {
-  private final List<IdentifierExpr> args;
+  private final ImmutableList<IdentifierExpr> args;
   private final Expr expr;
 
   LambdaExpr(List<IdentifierExpr> args, Expr expr)
   {
-    this.args = args;
+    this.args = ImmutableList.copyOf(args);
     this.expr = expr;
   }
 
@@ -583,13 +585,13 @@ class FunctionExpr implements Expr
 {
   final Function function;
   final String name;
-  final List<Expr> args;
+  final ImmutableList<Expr> args;
 
   FunctionExpr(Function function, String name, List<Expr> args)
   {
     this.function = function;
     this.name = name;
-    this.args = args;
+    this.args = ImmutableList.copyOf(args);
     function.validateArguments(args);
   }
 
@@ -659,27 +661,27 @@ class ApplyFunctionExpr implements Expr
   final ApplyFunction function;
   final String name;
   final LambdaExpr lambdaExpr;
-  final List<Expr> argsExpr;
+  final ImmutableList<Expr> argsExpr;
   final BindingDetails bindingDetails;
   final BindingDetails lambdaBindingDetails;
-  final List<BindingDetails> argsBindingDetails;
+  final ImmutableList<BindingDetails> argsBindingDetails;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
     this.function = function;
     this.name = name;
-    this.argsExpr = args;
+    this.argsExpr = ImmutableList.copyOf(args);
     this.lambdaExpr = expr;
 
     function.validateArguments(expr, args);
 
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
-    argsBindingDetails = new ArrayList<>();
+    ImmutableList.Builder<BindingDetails> argBindingDetailsBuilder = ImmutableList.builder();
     BindingDetails accumulator = new BindingDetails();
     for (Expr arg : argsExpr) {
       BindingDetails argDetails = arg.analyzeInputs();
-      argsBindingDetails.add(argDetails);
+      argBindingDetailsBuilder.add(argDetails);
       accumulator = accumulator.merge(argDetails);
     }
 
@@ -695,6 +697,7 @@ class ApplyFunctionExpr implements Expr
 
     lambdaBindingDetails = lambdaExpr.analyzeInputs();
     bindingDetails = accumulator.merge(lambdaBindingDetails).mergeWithArrays(arrayVariables);
+    argsBindingDetails = argBindingDetailsBuilder.build();
   }
 
   @Override
