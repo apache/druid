@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 /**
  * Base interface describing the mechanism used to evaluate an {@link ApplyFunctionExpr}, which 'applies' a
- * {@link LambdaExpr} to one or more array {@link Expr}
+ * {@link LambdaExpr} to one or more array {@link Expr}.  All {@link ApplyFunction} implementations are immutable.
  */
 public interface ApplyFunction
 {

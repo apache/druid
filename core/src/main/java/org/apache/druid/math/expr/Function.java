@@ -41,7 +41,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}
+ * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}. All {@link Function} implementations
+ * are immutable.
  *
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */

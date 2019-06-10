@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -42,8 +41,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Base interface of Druid expression language abstract syntax tree nodes. All {@link Expr} implementations are expected
- * to be immutable.
+ * Base interface of Druid expression language abstract syntax tree nodes. All {@link Expr} implementations are
+ * immutable.
  */
 public interface Expr
 {
@@ -172,15 +171,15 @@ public interface Expr
     /**
      * Get the list of required column inputs to evaluate an expression
      */
-    public List<String> getRequiredColumns()
+    public ImmutableList<String> getRequiredColumns()
     {
-      return new ArrayList<>(freeVariables);
+      return ImmutableList.copyOf(freeVariables);
     }
 
     /**
      * Total set of 'free' identifiers of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
      */
-    public Set<String> getFreeVariables()
+    public ImmutableSet<String> getFreeVariables()
     {
       return freeVariables;
     }
@@ -188,7 +187,7 @@ public interface Expr
     /**
      * Set of identifiers which are used with scalar operators and functions
      */
-    public Set<String> getScalarVariables()
+    public ImmutableSet<String> getScalarVariables()
     {
       return scalarVariables;
     }
@@ -196,7 +195,7 @@ public interface Expr
     /**
      * Set of identifiers which are used with array typed functions and apply functions.
      */
-    public Set<String> getArrayVariables()
+    public ImmutableSet<String> getArrayVariables()
     {
       return arrayVariables;
     }
@@ -531,7 +530,7 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
-  public List<IdentifierExpr> getIdentifierExprs()
+  public ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
   }
