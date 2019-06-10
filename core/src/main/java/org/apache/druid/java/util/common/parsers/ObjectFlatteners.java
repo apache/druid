@@ -32,8 +32,13 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class ObjectFlatteners
+public class ObjectFlatteners
 {
+  private ObjectFlatteners()
+  {
+    // No instantiation.
+  }
+
   public static <T> ObjectFlattener<T> create(
       final JSONPathSpec flattenSpec,
       final FlattenerMaker<T> flattenerMaker
