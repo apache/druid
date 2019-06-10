@@ -37,11 +37,6 @@ exports[`tasks view matches snapshot 1`] = `
               "Type",
               "Topic/Stream",
               "Detailed status",
-              "Recent errors",
-              "Replicas",
-              "Partitions",
-              "Duration seconds",
-              "Aggragate lag",
               "Actions",
             ]
           }
