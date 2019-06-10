@@ -18,9 +18,9 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as FileSaver from 'file-saver';
-import * as numeral from 'numeral';
-import * as React from 'react';
+import FileSaver from 'file-saver';
+import numeral from 'numeral';
+import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
@@ -113,6 +113,13 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
 
 // ----------------------------
 
+export function caseInsensitiveContains(testString: string, searchString: string): boolean {
+  if (!searchString) return true;
+  return testString.toLowerCase().includes(searchString.toLowerCase());
+}
+
+// ----------------------------
+
 export function countBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
@@ -176,6 +183,17 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 }
 
 // ----------------------------
+
+export function memoize<T, U>(fn: (x: T) => U): (x: T) => U {
+  let lastInput: T;
+  let lastOutput: U;
+  return (x: T) => {
+    if (x === lastInput) return lastOutput;
+    lastInput = x;
+    lastOutput = fn(lastInput);
+    return lastOutput;
+  };
+}
 
 export function parseJson(json: string): any {
   try {

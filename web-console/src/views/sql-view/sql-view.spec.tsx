@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
-import * as React from 'react';
+import React from 'react';
 
-import {SqlView} from './sql-view';
+import { SqlView } from './sql-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe sql view', () => {
-  it('sql view snapshot', () => {
+describe('sql view', () => {
+  it('matches snapshot', () => {
     const sqlView = shallow(
       <SqlView
         initSql={'test'}

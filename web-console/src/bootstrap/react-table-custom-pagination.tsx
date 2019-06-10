@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import {Button, Classes, HTMLSelect} from '@blueprintjs/core';
-import * as React from 'react';
+import { Button, Classes, HTMLSelect } from '@blueprintjs/core';
+import React from 'react';
 
 import './react-table-custom-pagination.scss';
 
@@ -44,7 +44,7 @@ interface ReactTableCustomPaginationState {
   page: string | number;
 }
 
-export class ReactTableCustomPagination extends React.Component<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
+export class ReactTableCustomPagination extends React.PureComponent<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
   constructor(props: ReactTableCustomPaginationProps) {
     super(props);
 

@@ -16,17 +16,16 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {LookupEditDialog} from '..';
+import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
 
-describe('describe overload dynamic config', () => {
-  it('overload dynamic config snapshot', () => {
+describe('overload dynamic config', () => {
+  it('matches snapshot', () => {
     const lookupEditDialog =
       <LookupEditDialog
-        isOpen={true}
+        isOpen
         onClose={() => null}
         onSubmit={() => null}
         onChange={() => null}
@@ -37,7 +36,7 @@ describe('describe overload dynamic config', () => {
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
       />;
-    const { container, getByText } = render(lookupEditDialog, { container: document.body });
+    const { container } = render(lookupEditDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

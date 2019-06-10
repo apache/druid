@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe lookups view lookups view snapshot 1`] = `
+exports[`lookups view matches snapshot 1`] = `
 <div
   className="lookups-view app-view"
 >
@@ -17,7 +17,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
       onClick={[Function]}
       text="Add"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Lookup name",

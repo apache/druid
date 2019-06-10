@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {AutoForm} from './auto-form';
+import { AutoForm } from './auto-form';
 
-
-describe('describe auto-form snapshot', () => {
-  it('auto-form snapshot', () => {
+describe('auto-form snapshot', () => {
+  it('matches snapshot', () => {
     const autoForm =
       <AutoForm
         fields={[{name: 'testOne', type: 'number'},
@@ -36,7 +35,7 @@ describe('describe auto-form snapshot', () => {
         model={String}
         onChange={(newModel: Record<string, any>) => {}}
       />;
-    const { container, getByText } = render(autoForm);
+    const { container } = render(autoForm);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

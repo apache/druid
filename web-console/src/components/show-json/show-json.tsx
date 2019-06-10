@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
-import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -29,6 +29,7 @@ import './show-json.scss';
 
 export interface ShowJsonProps extends React.Props<any> {
   endpoint: string;
+  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
@@ -36,7 +37,7 @@ export interface ShowJsonState {
   jsonValue: string;
 }
 
-export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
+export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
   constructor(props: ShowJsonProps, context: any) {
     super(props, context);
     this.state = {
@@ -47,12 +48,14 @@ export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
   }
 
   private getJsonInfo = async (): Promise<void> => {
-    const { endpoint } = this.props;
+    const { endpoint, transform } = this.props;
+
     try {
       const resp = await axios.get(endpoint);
-      const data = resp.data;
+      let data = resp.data;
+      if (transform) data = transform(data);
       this.setState({
-        jsonValue: typeof (data) === 'string' ? data : JSON.stringify(data, undefined, 2)
+        jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2)
       });
     } catch (e) {
       this.setState({
@@ -76,18 +79,17 @@ export class ShowJson extends React.Component<ShowJsonProps, ShowJsonState> {
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
           }
-          <CopyToClipboard text={jsonValue}>
-            <Button
-              text="Copy"
-              minimal
-              onClick={() => {
-                AppToaster.show({
-                  message: 'Copied JSON to clipboard',
-                  intent: Intent.SUCCESS
-                });
-              }}
-            />
-          </CopyToClipboard>
+          <Button
+            text="Copy"
+            minimal
+            onClick={() => {
+              copy(jsonValue, { format: 'text/plain' });
+              AppToaster.show({
+                message: 'JSON copied to clipboard',
+                intent: Intent.SUCCESS
+              });
+            }}
+          />
           <Button
             text="View raw"
             minimal

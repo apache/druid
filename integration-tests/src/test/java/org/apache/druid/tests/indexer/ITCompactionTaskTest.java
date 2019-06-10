@@ -57,46 +57,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testCompactionWithoutKeepSegmentGranularity() throws Exception
-  {
-    loadData();
-    final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-    intervalsBeforeCompaction.sort(null);
-    final String compactedInterval = "2013-08-31T00:00:00.000Z/2013-09-02T00:00:00.000Z";
-    if (intervalsBeforeCompaction.contains(compactedInterval)) {
-      throw new ISE("Containing a segment for the compacted interval[%s] before compaction", compactedInterval);
-    }
-    try (final Closeable closeable = unloader(fullDatasourceName)) {
-      String queryResponseTemplate;
-      try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(INDEX_QUERIES_RESOURCE);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", INDEX_QUERIES_RESOURCE);
-      }
-
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          fullDatasourceName
-      );
-
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
-      compactData(false);
-
-      // 4 segments across 2 days, compacted into 1 new segment (5 total)
-      checkCompactionFinished(5);
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
-
-      intervalsBeforeCompaction.add(compactedInterval);
-      intervalsBeforeCompaction.sort(null);
-      checkCompactionIntervals(intervalsBeforeCompaction);
-    }
-  }
-
-  @Test
-  public void testCompactionWithKeepSegmentGranularity() throws Exception
+  public void testCompaction() throws Exception
   {
     loadData();
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -119,7 +80,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
 
       queryHelper.testQueriesFromString(queryResponseTemplate, 2);
-      compactData(true);
+      compactData();
 
       // 4 segments across 2 days, compacted into 2 new segments (6 total)
       checkCompactionFinished(6);
@@ -143,12 +104,10 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void compactData(boolean keepSegmentGranularity) throws Exception
+  private void compactData() throws Exception
   {
     final String template = getResourceAsString(COMPACTION_TASK);
-    String taskSpec =
-        StringUtils.replace(template, "${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
-    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
 
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for compaction task %s", taskID);

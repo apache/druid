@@ -233,54 +233,51 @@ public class BufferArrayGrouper implements IntGrouper
 
     return new CloseableIterator<Entry<Integer>>()
     {
-      int cur;
-      boolean findNext = false;
-
-      {
-        cur = findNext();
-      }
+      // initialize to the first used slot
+      private int next = findNext(-1);
 
       @Override
       public boolean hasNext()
       {
-        if (findNext) {
-          cur = findNext();
-          findNext = false;
-        }
-        return cur >= 0;
-      }
-
-      private int findNext()
-      {
-        for (int i = cur + 1; i < cardinalityWithMissingValue; i++) {
-          if (isUsedSlot(i)) {
-            return i;
-          }
-        }
-        return -1;
+        return next >= 0;
       }
 
       @Override
       public Entry<Integer> next()
       {
-        if (cur < 0) {
+        if (next < 0) {
           throw new NoSuchElementException();
         }
 
-        findNext = true;
+        final int current = next;
+        next = findNext(current);
 
         final Object[] values = new Object[aggregators.length];
-        final int recordOffset = cur * recordSize;
+        final int recordOffset = current * recordSize;
         for (int i = 0; i < aggregators.length; i++) {
           values[i] = aggregators[i].get(valBuffer, recordOffset + aggregatorOffsets[i]);
         }
-        return new Entry<>(cur - 1, values);
+        // shift by -1 since values are initially shifted by +1 so they are all positive and
+        // GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE is -1
+        return new Entry<>(current - 1, values);
       }
 
       @Override
       public void close()
       {
         // do nothing
+      }
+
+      private int findNext(int current)
+      {
+        // shift by +1 since we're looking for the next used slot after the current position
+        for (int i = current + 1; i < cardinalityWithMissingValue; i++) {
+          if (isUsedSlot(i)) {
+            return i;
+          }
+        }
+        // no more slots
+        return -1;
       }
     };
   }

@@ -19,9 +19,9 @@
 import { Button, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
-import { Rule, RuleEditor } from '../../components/rule-editor/rule-editor';
+import { Rule, RuleEditor } from '../../components';
 import { QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
@@ -51,7 +51,7 @@ export interface RetentionDialogState {
   historyRecords: any[];
 }
 
-export class RetentionDialog extends React.Component<RetentionDialogProps, RetentionDialogState> {
+export class RetentionDialog extends React.PureComponent<RetentionDialogProps, RetentionDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: RetentionDialogProps) {

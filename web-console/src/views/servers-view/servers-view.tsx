@@ -20,13 +20,13 @@ import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import {
   ActionCell,
-  TableColumnSelection,
+  TableColumnSelector,
   ViewControlBar
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
@@ -108,7 +108,7 @@ interface MiddleManagerQueryResultRow {
 
 interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>, Partial<MiddleManagerQueryResultRow> {}
 
-export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
+export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
   private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
 
@@ -562,9 +562,9 @@ ORDER BY "rank" DESC, "server" DESC`);
             onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
           />
         }
-        <TableColumnSelection
+        <TableColumnSelector
           columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

@@ -29,7 +29,7 @@ import {
   Position
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
@@ -68,7 +68,7 @@ export interface AutoFormState<T> {
   jsonInputsValidity: any;
 }
 
-export class AutoForm<T extends Record<string, any>> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
+export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>, AutoFormState<T>> {
   static makeLabelName(label: string): string {
     let newLabel = label.split(/(?=[A-Z])/).join(' ').toLowerCase().replace(/\./g, ' ');
     newLabel = newLabel[0].toUpperCase() + newLabel.slice(1);
@@ -173,11 +173,16 @@ export class AutoForm<T extends Record<string, any>> extends React.Component<Aut
       </Menu> :
       undefined;
 
+    const modalValue = deepGet(model as any, field.name);
     return <InputGroup
-      value={deepGet(model as any, field.name) || field.defaultValue || ''}
+      value={modalValue != null ? modalValue : (field.defaultValue || '')}
       onChange={(e: any) => {
-        const v = e.target.value;
-        this.fieldChange(field, v === '' ? undefined : (sanitize ? sanitize(v) : v));
+        let v = e.target.value;
+        if (sanitize) v = sanitize(v);
+        this.fieldChange(field, v);
+      }}
+      onBlur={() => {
+        if (modalValue === '') this.fieldChange(field, undefined);
       }}
       placeholder={field.placeholder}
       rightElement={

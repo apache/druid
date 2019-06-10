@@ -19,10 +19,9 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
-import { ExternalLink } from '../../components/external-link/external-link';
+import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
@@ -38,7 +37,7 @@ export interface CoordinatorDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+export class CoordinatorDynamicConfigDialog extends React.PureComponent<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: CoordinatorDynamicConfigDialogProps) {

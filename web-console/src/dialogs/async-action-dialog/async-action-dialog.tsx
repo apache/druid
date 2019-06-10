@@ -26,7 +26,7 @@ import {
 } from '@blueprintjs/core';
 import { IconName } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
@@ -47,7 +47,7 @@ export interface AsyncAlertDialogState {
   working: boolean;
 }
 
-export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, AsyncAlertDialogState> {
+export class AsyncActionDialog extends React.PureComponent<AsyncAlertDialogProps, AsyncAlertDialogState> {
   constructor(props: AsyncAlertDialogProps) {
     super(props);
     this.state = {

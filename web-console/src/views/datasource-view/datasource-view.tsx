@@ -19,10 +19,11 @@
 import { Button, FormGroup, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { ActionCell, RuleEditor, TableColumnSelection, ViewControlBar} from '../../components';
+import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionIcon } from '../../components/action-icon/action-icon';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -82,7 +83,7 @@ export interface DatasourcesViewState {
   dropReloadInterval: string;
 }
 
-export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
+export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
   static DISABLED_COLOR = '#0a1500';
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
@@ -151,8 +152,11 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
         const seen = countBy(datasources, (x: any) => x.datasource);
 
-        const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
-        const disabled: string[] = disabledResp.data.filter((d: string) => !seen[d]);
+        let disabled: string [] = [];
+        if (this.state.showDisabled) {
+          const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled' );
+          disabled = disabledResp.data.filter((d: string) => !seen[d]);
+        }
 
         const rulesResp = await axios.get('/druid/coordinator/v1/rules');
         const rules = rulesResp.data;
@@ -395,6 +399,13 @@ GROUP BY 1`);
     });
   }
 
+  private  toggleDisabled(showDisabled: boolean) {
+    if (!showDisabled) {
+      this.datasourceQueryManager.rerunLastQuery();
+    }
+    this.setState({showDisabled: !showDisabled});
+  }
+
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
     const { goToSql } = this.props;
 
@@ -560,7 +571,7 @@ GROUP BY 1`);
                 className="clickable-cell"
               >
                 {text}&nbsp;
-                <a>&#x270E;</a>
+                <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
             show: tableColumnSelectionHandler.showColumn('Retention')
@@ -587,7 +598,7 @@ GROUP BY 1`);
                 onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
               >
                 {text}&nbsp;
-                <a>&#x270E;</a>
+                <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
             show: tableColumnSelectionHandler.showColumn('Compaction')
@@ -657,11 +668,11 @@ GROUP BY 1`);
         <Switch
           checked={showDisabled}
           label="Show disabled"
-          onChange={() => this.setState({ showDisabled: !showDisabled })}
+          onChange={() => this.toggleDisabled(showDisabled)}
         />
-        <TableColumnSelection
+        <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

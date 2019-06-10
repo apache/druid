@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {ClearableInput} from './clearable-input';
-
+import { ClearableInput } from './clearable-input';
 
 describe('decribe clearable-input', () => {
-  it('clearable-input snapshot', () => {
+  it('matches snapshot', () => {
     const centerMessage =
       <ClearableInput
         className={'testClassName'}
@@ -34,7 +33,7 @@ describe('decribe clearable-input', () => {
         <div>Hello World</div>
       </ClearableInput>;
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

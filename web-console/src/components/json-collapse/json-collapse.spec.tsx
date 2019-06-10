@@ -16,21 +16,19 @@
  * limitations under the License.
  */
 
-import {nullableTypeAnnotation} from '@babel/types';
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {JSONCollapse} from './json-collapse';
+import { JSONCollapse } from './json-collapse';
 
-
-describe('describe json collapse ', () => {
-  it('json collapse snapshot', () => {
+describe('json collapse', () => {
+  it('matches snapshot', () => {
     const jsonCollapse =
     <JSONCollapse
       buttonText={'test'}
       stringValue={JSON.stringify({ name : 'test' })}
     />;
-    const { container, getByText } = render(jsonCollapse);
+    const { container } = render(jsonCollapse);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
