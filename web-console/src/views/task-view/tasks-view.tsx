@@ -40,7 +40,7 @@ import { BasicAction } from '../../utils/basic-action';
 
 import './tasks-view.scss';
 
-const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Detailed status', ActionCell.COLUMN_LABEL];
+const supervisorTableColumns: string[] = ['Datasource', 'Type', 'Topic/Stream', 'Status', ActionCell.COLUMN_LABEL];
 const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location', 'Created time', 'Status', 'Duration', ActionCell.COLUMN_LABEL];
 
 export interface TasksViewProps extends React.Props<any> {
@@ -105,6 +105,18 @@ function statusToColor(status: string): string {
     case 'PENDING': return '#ffbf00';
     case 'SUCCESS': return '#57d500';
     case 'FAILED': return '#d5100a';
+    default: return '#0a1500';
+  }
+}
+
+function stateToColor(status: string): string {
+  switch (status) {
+    case 'UNHEALTHY_SUPERVISOR': return '#d5100a';
+    case 'UNHEALTHY_TASKS': return '#d5100a';
+    case 'PENDING': return '#ffbf00';
+    case `SUSPENDED`: return '#ffbf00';
+    case 'STOPPING': return '#d5100a';
+    case 'RUNNING': return '#2167d5';
     default: return '#0a1500';
   }
 }
@@ -181,10 +193,6 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-        const data = resp.data;
-        data.forEach( async (item: any ) => {
-          item.status = await axios.get(`/druid/indexer/v1/supervisor/${item.id}/status`);
-        });
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -466,28 +474,24 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             show: supervisorTableColumnSelectionHandler.showColumn('Topic/Stream')
           },
           {
-            Header: 'Detailed status',
+            Header: 'Status',
             id: 'status',
             width: 300,
             accessor: (row) => {
-              const { status } = row;
-              if (!status) return '';
-              const { data } = status;
-              if (!data) return '';
-              const { payload } = data;
-              if (!payload) return '';
-              const value = payload.detailedState;
+              console.log(row);
+              const value = row.detailedState;
               return <span>
                 <span
-                  style={{ color: payload.healthy ? '#2167d5' : '#d5100a'}}
+                  style={{ color: stateToColor(row.state) }}
                 >
                   &#x25cf;&nbsp;
                 </span>
                 {value}
               </span>;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Detailed status')
+            show: supervisorTableColumnSelectionHandler.showColumn('Status')
           },
+
           {
             Header: ActionCell.COLUMN_LABEL,
             id: ActionCell.COLUMN_ID,
