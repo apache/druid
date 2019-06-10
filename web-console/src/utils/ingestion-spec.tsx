@@ -23,7 +23,7 @@ import React from 'react';
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
 
-import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
+import { BASIC_FORMAT_VALUES, DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
@@ -278,7 +278,18 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     name: 'format',
     type: 'string',
     defaultValue: 'auto',
-    suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
+    suggestions: [
+      'auto',
+      ...BASIC_FORMAT_VALUES,
+      {
+        group: 'Date and time formats',
+        suggestions: DATE_TIME_FORMAT_VALUES
+      },
+      {
+        group: 'Date only formats',
+        suggestions: DATE_FORMAT_VALUES
+      }
+    ],
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: <p>
       Please specify your timestamp format by using the suggestions menu or typing in a <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">format string</ExternalLink>.

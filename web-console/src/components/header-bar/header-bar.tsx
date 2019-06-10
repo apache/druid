@@ -30,13 +30,11 @@ import {
   Position
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import classNames from 'classnames';
 import React from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config/coordinator-dynamic-config';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config/overlord-dynamic-config';
-import { getWikipediaSpec } from '../../utils/example-ingestion-spec';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
