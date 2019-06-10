@@ -35,7 +35,7 @@ expr : 'null'                                         # null
      | '[]'                                           # emptyArray
      ;
 
-lambda : (IDENTIFIER | '(' (IDENTIFIER (',' IDENTIFIER)*)? ')') '->' expr
+lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
        ;
 
 fnArgs : expr (',' expr)*                             # functionArgs
