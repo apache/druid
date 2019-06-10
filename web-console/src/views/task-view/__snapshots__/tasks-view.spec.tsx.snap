@@ -133,36 +133,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "width": 300,
             },
             Object {
-              "Header": "Recent errors",
-              "accessor": [Function],
-              "id": "errors",
-              "show": true,
-            },
-            Object {
-              "Header": "Partitions",
-              "accessor": [Function],
-              "id": "partitions",
-              "show": true,
-            },
-            Object {
-              "Header": "Replicas",
-              "accessor": [Function],
-              "id": "replicas",
-              "show": true,
-            },
-            Object {
-              "Header": "Duration seconds",
-              "accessor": [Function],
-              "id": "seconds_duration",
-              "show": true,
-            },
-            Object {
-              "Header": "Aggregate lag",
-              "accessor": [Function],
-              "id": "aggregat_lag",
-              "show": true,
-            },
-            Object {
               "Cell": [Function],
               "Header": "Actions",
               "accessor": "id",
