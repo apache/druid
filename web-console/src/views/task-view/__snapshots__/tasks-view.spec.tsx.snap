@@ -36,7 +36,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Datasource",
               "Type",
               "Topic/Stream",
-              "Detailed status",
+              "Status",
               "Actions",
             ]
           }
@@ -121,7 +121,7 @@ exports[`tasks view matches snapshot 1`] = `
               "show": true,
             },
             Object {
-              "Header": "Detailed status",
+              "Header": "Status",
               "accessor": [Function],
               "id": "status",
               "show": true,
