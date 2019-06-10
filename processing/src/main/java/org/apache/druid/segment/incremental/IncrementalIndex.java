@@ -919,7 +919,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities
   )
   {
-    DimensionData dimensionData = dimensions.get().clone();
+    DimensionData prevDimensionData = dimensions.get();
+    DimensionData dimensionData = prevDimensionData.clone();
     if (dimensionData.size() != 0) {
       throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionData.getDimensionDescs().keySet());
     }
@@ -930,6 +931,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
         dimensionData.addNewDimension(dim, capabilities, handler);
       }
+    }
+
+    while (!dimensions.compareAndSet(prevDimensionData, dimensionData)) {
+      prevDimensionData = dimensions.get();
+      dimensionData.rebase(prevDimensionData);
     }
   }
 
