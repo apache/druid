@@ -27,8 +27,8 @@ title: "Tutorial: Loading a file"
 This tutorial demonstrates how to perform a batch file load, using Apache Druid (incubating)'s native batch ingestion.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
-the [single-machine quickstart](index.html) and have it running on your local machine. You 
-don't need to have loaded any data yet.
+the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+running on your local machine. You don't need to have loaded any data yet.
 
 A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 

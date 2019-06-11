@@ -42,11 +42,14 @@ You will need:
 
 ### Hardware
 
-Druid includes several example [single-server configurations](../operations/single-server.html), along with scripts to start the Druid processes using these configurations.
+Druid includes several example [single-server configurations](../operations/single-server.html), along with scripts to
+start the Druid processes using these configurations.
 
-If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is a good choice, sized for a 4CPU/16GB RAM environment.
+If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is
+a good choice, sized for a 4CPU/16GB RAM environment.
 
-If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger configuration than `micro-quickstart`. 
+If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger
+configuration than `micro-quickstart`.
 
 ## Getting started
 
@@ -83,11 +86,14 @@ tar -xzf zookeeper-3.4.11.tar.gz
 mv zookeeper-3.4.11 zk
 ```
 
-The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the apache-druid-#{DRUIDVERSION} package root.
+The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the
+apache-druid-#{DRUIDVERSION} package root.
 
 ## Start up Druid services
 
-The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as `bin/start-single-server-small`.
+The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are
+using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as
+`bin/start-single-server-small`.
 
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
@@ -189,6 +195,7 @@ The sample data has the following columns, and an example event is shown below:
 ### Tutorials
 
 The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
+All tutorials assume that you are using the `micro-quickstart` single-machine configuration mentioned above.
 
 - [Loading a file](./tutorial-batch.html) - this tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 - [Loading stream data from Apache Kafka](./tutorial-kafka.html) - this tutorial demonstrates how to load streaming data from a Kafka topic.
