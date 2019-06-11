@@ -35,8 +35,9 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 ### Software
 
 You will need:
-  * Java 8 (8u92+)
-  * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
+
+* Java 8 (8u92+)
+* Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
 
 ### Hardware
@@ -110,6 +111,11 @@ All persistent state such as the cluster metadata store and segments for the ser
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
+Once the cluster has started you can navigate to [http://localhost:8888](http://localhost:8888) this is the router node that also serves the Druid console.
+
+![Druid console](../tutorials/img/tutorial-quickstart-01.png "Druid console")
+
+
 ### Resetting cluster state
 
 If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
@@ -180,24 +186,12 @@ The sample data has the following columns, and an example event is shown below:
 }
 ```
 
+### Tutorials
+
 The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
 
-### [Tutorial: Loading a file](./tutorial-batch.html)
-
-This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
-
-### [Tutorial: Loading stream data from Apache Kafka](./tutorial-kafka.html)
-
-This tutorial demonstrates how to load streaming data from a Kafka topic.
-
-### [Tutorial: Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html)
-
-This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
-
-### [Tutorial: Loading data using Tranquility](./tutorial-tranquility.html)
-
-This tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
-
-### [Tutorial: Writing your own ingestion spec](./tutorial-ingestion-spec.html)
-
-This tutorial demonstrates how to write a new ingestion spec and use it to load data.
+- [Loading a file](./tutorial-batch.html) - this tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
+- [Loading stream data from Apache Kafka](./tutorial-kafka.html) - this tutorial demonstrates how to load streaming data from a Kafka topic.
+- [Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html) - this tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
+- [Loading data using Tranquility](./tutorial-tranquility.html) - this tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
+- [Writing your own ingestion spec](./tutorial-ingestion-spec.html) - this tutorial demonstrates how to write a new ingestion spec and use it to load data.
