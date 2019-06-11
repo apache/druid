@@ -117,7 +117,8 @@ All persistent state such as the cluster metadata store and segments for the ser
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
-Once the cluster has started you can navigate to [http://localhost:8888](http://localhost:8888) this is the router node that also serves the Druid console.
+Once the cluster has started you can navigate to [http://localhost:8888](http://localhost:8888).
+This is the router node that also serves the Druid console.
 
 ![Druid console](../tutorials/img/tutorial-quickstart-01.png "Druid console")
 

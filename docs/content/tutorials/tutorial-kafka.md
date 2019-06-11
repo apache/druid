@@ -130,7 +130,7 @@ Paste in this spec and click `Submit`.
 }
 ```
 
-This will start the supervisor which, in turn, will spawn some tasks that will start listening for incoming data.
+This will start the supervisor that will in turn spawn some tasks that will start listening for incoming data.
 
 ![Running supervisor](../tutorials/img/tutorial-kafka-02.png "Running supervisor")
 

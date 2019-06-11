@@ -33,7 +33,7 @@ running on your local machine. You don't need to have loaded any data yet.
 A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 
 An ingestion spec can be written by hand or you can use the "Data loader" that it built into the Druid console to help iteratively build one for you by sampling your data.
-The data loader currently only supports native batch ingestion (streaming support coming soon) so we can use it for this tutorial.
+The data loader currently only supports native batch ingestion (streaming support coming soon), so we can use it for this tutorial.
 
 We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
 
@@ -51,7 +51,7 @@ Click `Preview` and make sure that the the data you are seeing is correct.
 
 ![Data loader sample](../tutorials/img/tutorial-batch-data-loader-02.png "Data loader sample")
 
-Once the data is located you can click "Next: Parse data" to go to the next step.
+Once the data is located, you can click "Next: Parse data" to go to the next step.
 The data loader will try to automatically determine the correct parser for the data.
 In this case it will successfully determine `json`.
 Feel free to play around with different parser options to get a preview of how Druid will parse your data.
@@ -66,7 +66,7 @@ In this case the data loader will guess the `time` column as the primary time co
 
 Click `Next: ...` twice to go past the `Transform` and `Filter` steps, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
 
-In the schema stage you can configure which dimensions (and metrics) will be ingested into Druid.
+In the schema stage, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
 Since our dataset is very small go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
 
@@ -90,7 +90,7 @@ Similarly you can also edit the spec directly and see it reflected in the other 
 
 ![Data loader spec](../tutorials/img/tutorial-batch-data-loader-08.png "Data loader spec")
 
-Once you are satisfied with the spec, click `Submit` and a an ingestion task will be created.
+Once you are satisfied with the spec, click `Submit` and an ingestion task will be created.
 
 You will be taken to the task view with the focus on the newly created task. 
 
@@ -98,14 +98,14 @@ You will be taken to the task view with the focus on the newly created task.
 
 In the tasks view you can click `Refresh` and couple of times until your ingestion task (hopefully) succeeds.
 
-When a tasks succeeds it means that it built one or more segments that will now be picked up by the data nodes.  
+When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.  
 
 Navigate to the `Datasource` view and click refresh until your datasource (`wikipedia`) appears.
 This could take a few seconds as the segments are being loaded.  
 
 ![Datasource view](../tutorials/img/tutorial-batch-data-loader-10.png "Datasource view")
 
-Once you see the data source there with a green (fully available) circle you can go to the `Query` view to run SQL queries against this datasource.
+Once you see the data source there with a green (fully available) circle, you can go to the `Query` view to run SQL queries against this datasource.
 
 Since this is a small dataset you can simply run a `SELECT * FROM wikipedia` query to see your results.
 
@@ -185,7 +185,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 }
 ```
 
-This spec will create a datasource named "wikipedia"
+This spec will create a datasource named "wikipedia".
 
 From the task view click on `Sumbit task` and select `Raw JSON task`.
 
