@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<FindBugsFilter>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+    <Bug pattern="MS_SHOULD_BE_FINAL" />
+    <Bug pattern="MS_PKGPROTECT" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+    <Bug pattern="EI_EXPOSE_REP" />
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
+    <Bug pattern="SE_BAD_FIELD" />
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+    <Bug pattern="REC_CATCH_EXCEPTION" />
+    <Bug pattern="WMI_WRONG_MAP_ITERATOR" />
+    <Bug pattern="MS_FINAL_PKGPROTECT" />
+    <Bug pattern="SF_SWITCH_NO_DEFAULT" />
+    <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_MIGHT_BE_INFEASIBLE" />
+    <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT" />
+    <Bug pattern="CN_IDIOM_NO_SUPER_CALL" />
+</FindBugsFilter>
