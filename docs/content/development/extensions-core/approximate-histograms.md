@@ -99,6 +99,7 @@ query.
 |`resolution`             |Number of centroids (data points) to store. The higher the resolution, the more accurate results are, but the slower the computation will be.|50|
 |`numBuckets`             |Number of output buckets for the resulting histogram. Bucket intervals are dynamic, based on the range of the underlying data. Use a post-aggregator to have finer control over the bucketing scheme|7|
 |`lowerLimit`/`upperLimit`|Restrict the approximation to the given range. The values outside this range will be aggregated into two centroids. Counts of values outside this range are still maintained. |-INF/+INF|
+|`finalizeAsBase64Binary` |If true, the finalized aggregator value will be a Base64-encoded byte array containing the serialized form of the histogram. If false, the finalized aggregator value will be a JSON representation of the histogram.|false|
 
 ## Fixed Buckets Histogram
 
