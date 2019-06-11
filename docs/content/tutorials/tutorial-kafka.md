@@ -29,8 +29,8 @@ title: "Tutorial: Load streaming data from Apache Kafka"
 This tutorial demonstrates how to load data into Apache Druid (incubating) from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
-the [single-machine quickstart](index.html) and have it running on your local machine. You 
-don't need to have loaded any data yet.
+the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+running on your local machine. You don't need to have loaded any data yet.
 
 ## Download and start Kafka
 
@@ -62,8 +62,9 @@ We will use Druid's Kafka indexing service to ingest messages from our newly cre
 service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Druid package root:
 
 ```bash
-curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8090/druid/indexer/v1/supervisor
+curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
 ```
+
 
 If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia"}`.
 
