@@ -109,6 +109,18 @@ function statusToColor(status: string): string {
   }
 }
 
+function stateToColor(status: string): string {
+  switch (status) {
+    case 'UNHEALTHY_SUPERVISOR': return '#d5100a';
+    case 'UNHEALTHY_TASKS': return '#d5100a';
+    case 'PENDING': return '#ffbf00';
+    case `SUSPENDED`: return '#ffbf00';
+    case 'STOPPING': return '#d5100a';
+    case 'RUNNING': return '#2167d5';
+    default: return '#0a1500';
+  }
+}
+
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
@@ -464,12 +476,13 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           {
             Header: 'Status',
             id: 'status',
-            accessor: (row) => row.spec.suspended ? 'Suspended' : 'Running',
-            Cell: row => {
-              const value = row.value;
+            width: 300,
+            accessor: (row) => { return row.detailedState; },
+            Cell: (row) => {
+              const value = row.original.detailedState;
               return <span>
                 <span
-                  style={{ color: value === 'Suspended' ? '#d58512' : '#2167d5' }}
+                  style={{ color: stateToColor(row.original.state)}}
                 >
                   &#x25cf;&nbsp;
                 </span>

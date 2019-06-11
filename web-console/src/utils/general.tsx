@@ -92,7 +92,7 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
     return true;
   }
   if (value === null) return false;
-  const haystack = String(value.toLowerCase());
+  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
