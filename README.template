@@ -62,8 +62,6 @@ licenses, and skip the unit tests, you would run:
 
     mvn clean install -Papache-release,dist,rat -DskipTests
 
-Note: the AWS S3 unit tests require the 'AWS_DEFAULT_REGION' environment variable to be set to function correctly.
-
 
 Community
 ---------
