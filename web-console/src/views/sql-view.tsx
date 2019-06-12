@@ -224,7 +224,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         onExplain={this.getExplain}
         queryElapsed={queryElapsed}
       />
-      {this.renderResultTable()}
+      <div className="table-container">
+        {this.renderResultTable()}
+      </div>
       {this.renderExplainDialog()}
     </div>;
   }
