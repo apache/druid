@@ -17,8 +17,8 @@
 # under the License.
 #
 
-ARG DRUID_RELEASE=druid/druid:0.14.0
-FROM $DRUID_RELEASE
+ARG VERSION=
+FROM apache/incubator-druid:$VERSION
 
 COPY sha256sums.txt /tmp
 RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \

@@ -17,34 +17,33 @@
 # under the License.
 #
 
-FROM maven:3-jdk-8 as builder
+FROM alpine as extractor
 
-COPY . /src
+ARG VERSION=
+
 WORKDIR /src
-RUN mvn install -ff -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
+COPY ./target/apache-druid-${VERSION}-bin.tar.gz .
 
-RUN \
- VER=$(mvn -B org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate -Dexpression=project.version -q -DforceStdout=true -f pom.xml 2>/dev/null) \
- && tar -zxf ./distribution/target/apache-druid-${VER}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VER} /opt/druid
-
-RUN addgroup --gid 1000 druid \
- && adduser --home /opt/druid --shell /bin/sh --no-create-home --uid 1000 --gecos '' --gid 1000 --disabled-password druid \
- && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt/druid \
- && chmod 775 /opt/druid/var
+RUN tar -zxf /src/apache-druid-${VERSION}-bin.tar.gz -C /opt \
+ && ln -s /opt/apache-druid-${VERSION} /opt/druid
 
 FROM amd64/busybox:1.30.0-glibc as busybox
+
 FROM gcr.io/distroless/java:8
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-COPY --from=builder --chown=druid /opt /opt
-COPY distribution/docker/druid.sh /druid.sh
-RUN chown -R druid:druid /opt/druid
+
+COPY --from=extractor /opt /opt
+COPY ./docker/druid.sh /druid.sh
+
+RUN addgroup --gid 1000 druid \
+ && adduser -h /opt/druid -s /bin/sh -H -u 1000 -g '' -G druid -D druid \
+ && mkdir -p /opt/druid/var \
+ && chown -R druid:druid /opt/ \
+ && chmod 775 /opt/druid/var
+
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
