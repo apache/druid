@@ -122,22 +122,8 @@ This is the router node that also serves the Druid console.
 
 ![Druid console](../tutorials/img/tutorial-quickstart-01.png "Druid console")
 
+It takes a few seconds for all the components to fully initialize and you might see some errors if you open the console immediately after starting the services.
 
-### Resetting cluster state
-
-If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
-
-Once every service has started, you are now ready to load data.
-
-#### Resetting Kafka
-
-If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html) and wish to reset the cluster state, you should additionally clear out any Kafka state.
-
-Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
-
-```bash
-rm -rf /tmp/kafka-logs
-```
 
 ## Loading Data
 
@@ -193,6 +179,7 @@ The sample data has the following columns, and an example event is shown below:
 }
 ```
 
+
 ### Data loading tutorials
 
 The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
@@ -203,3 +190,20 @@ All tutorials assume that you are using the `micro-quickstart` single-machine co
 - [Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html) - this tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
 - [Loading data using Tranquility](./tutorial-tranquility.html) - this tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
 - [Writing your own ingestion spec](./tutorial-ingestion-spec.html) - this tutorial demonstrates how to write a new ingestion spec and use it to load data.
+
+
+### Resetting cluster state
+
+If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
+
+Once every service has started, you are now ready to load data.
+
+#### Resetting Kafka
+
+If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html) and wish to reset the cluster state, you should additionally clear out any Kafka state.
+
+Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
