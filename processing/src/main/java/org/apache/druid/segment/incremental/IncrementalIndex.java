@@ -29,6 +29,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
@@ -75,7 +76,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
