@@ -32,8 +32,8 @@ running on your local machine. You don't need to have loaded any data yet.
 
 A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 
-An ingestion spec can be written by hand or you can use the "Data loader" that it built into the Druid console to help iteratively build one for you by sampling your data.
-The data loader currently only supports native batch ingestion (streaming support coming soon), so we can use it for this tutorial.
+An ingestion spec can be written by hand or you can use the "Data loader" that is built into the Druid console to help iteratively build one for you by sampling your data.
+The data loader currently only supports native batch ingestion (streaming support coming soon).
 
 We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
 
@@ -45,47 +45,47 @@ Navigate to [localhost:8888](http://localhost:8888) and click `Load data` in the
 ![Data loader init](../tutorials/img/tutorial-batch-data-loader-01.png "Data loader init")
 
 Enter the value of `quickstart/tutorial/` as the base directory and `wikiticker-2015-09-12-sampled.json.gz` as a filter.
-The separation of base directory and filter is there if you need to ingest data from multiple files.
+The separation of base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) is there if you need to ingest data from multiple files.
 
 Click `Preview` and make sure that the the data you are seeing is correct.
 
 ![Data loader sample](../tutorials/img/tutorial-batch-data-loader-02.png "Data loader sample")
 
-Once the data is located, you can click "Next: Parse data" to go to the next step.
+Once the data is located, you can click "Next: Parse data" to go to the next stage.
 The data loader will try to automatically determine the correct parser for the data.
 In this case it will successfully determine `json`.
 Feel free to play around with different parser options to get a preview of how Druid will parse your data.
 
 ![Data loader parse data](../tutorials/img/tutorial-batch-data-loader-03.png "Data loader parse data")
 
-With the `json` parser selected click `Next: Parse time` to get to the step centered around determining your primary timestamp column.
+With the `json` parser selected click `Next: Parse time` to get to the stage centered around determining your primary timestamp column.
 Druid's architecture mandates a primary timestamp column that will be called `__time`, which could always just be a `Constant value`.
 In this case the data loader will guess the `time` column as the primary time column as it is the only one with values that look like they might be time. 
 
 ![Data loader parse time](../tutorials/img/tutorial-batch-data-loader-04.png "Data loader parse time")
 
-Click `Next: ...` twice to go past the `Transform` and `Filter` steps, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
+Click `Next: ...` twice to go past the `Transform` and `Filter` stages, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
 
-In the schema stage, you can configure which dimensions (and metrics) will be ingested into Druid.
+In the `Configure schema` stage, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
 Since our dataset is very small go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
 
 ![Data loader schema](../tutorials/img/tutorial-batch-data-loader-05.png "Data loader schema")
 
-Once you are satisfied with the schema click `Next` to go to the `Partition` stage.
+Once you are satisfied with the schema click `Next` to go to the `Partition` stage where you can fine tune how the data will be partitioned into segments.
 Here you can adjust how the data will be split up into segments in Druid.
-Since this is such a small dataset there are no adjustments that need to be made in this step.  
+Since this is such a small dataset there are no adjustments that need to be made in this stage.  
 
 ![Data loader partition](../tutorials/img/tutorial-batch-data-loader-06.png "Data loader partition")
 
-Clicking past the `Tune` stage we get to the publish stage which is where we can specify what the data source will be called in Druid.
-Let's name this data source `wikipedia`.  
+Clicking past the `Tune` stage we get to the publish stage which is where we can specify what the datasource will be called in Druid.
+Let's name this datasource `wikipedia`.  
 
 ![Data loader publish](../tutorials/img/tutorial-batch-data-loader-07.png "Data loader publish")
 
 Finally click `Next` to review your spec.
 This is the spec you have constructed.
-Feel free to go back to step and see how making changes there will manifest itself in the spec.
+Feel free to go back to previous stages and see how making changes there will manifest itself in the spec.
 Similarly you can also edit the spec directly and see it reflected in the other stages.  
 
 ![Data loader spec](../tutorials/img/tutorial-batch-data-loader-08.png "Data loader spec")
@@ -96,16 +96,16 @@ You will be taken to the task view with the focus on the newly created task.
 
 ![Tasks view](../tutorials/img/tutorial-batch-data-loader-09.png "Tasks view")
 
-In the tasks view you can click `Refresh` and couple of times until your ingestion task (hopefully) succeeds.
+In the tasks view you can click `Refresh` a couple of times until your ingestion task (hopefully) succeeds.
 
 When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.  
 
-Navigate to the `Datasource` view and click refresh until your datasource (`wikipedia`) appears.
+Navigate to the `Datasources` view and click refresh until your datasource (`wikipedia`) appears.
 This could take a few seconds as the segments are being loaded.  
 
 ![Datasource view](../tutorials/img/tutorial-batch-data-loader-10.png "Datasource view")
 
-Once you see the data source there with a green (fully available) circle, you can go to the `Query` view to run SQL queries against this datasource.
+Once you see the datasource there with a green (fully available) circle, you can go to the `Query` view to run SQL queries against this datasource.
 
 Since this is a small dataset you can simply run a `SELECT * FROM wikipedia` query to see your results.
 
@@ -187,7 +187,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 This spec will create a datasource named "wikipedia".
 
-From the task view click on `Sumbit task` and select `Raw JSON task`.
+From the task view click on `Submit task` and select `Raw JSON task`.
 
 ![Tasks view add task](../tutorials/img/tutorial-batch-submit-task-01.png "Tasks view add task")
 
@@ -195,7 +195,7 @@ This will bring up the spec submission dialog where you can paste the spec above
 
 ![Query view](../tutorials/img/tutorial-batch-submit-task-02.png "Query view")
 
-Once the spec is submitted you can follow the same instructions as above to wait for the data to lead and then query it.
+Once the spec is submitted you can follow the same instructions as above to wait for the data to load and then query it.
 
 
 ## Loading data with a spec (via command line)
@@ -224,7 +224,7 @@ Completed indexing data for wikipedia. Now loading indexed data onto the cluster
 wikipedia loading complete! You may now query your data
 ```
 
-Once the spec is submitted you can follow the same instructions as above to wait for the data to lead and then query it.
+Once the spec is submitted you can follow the same instructions as above to wait for the data to load and then query it.
 
 
 ## Loading data without the script

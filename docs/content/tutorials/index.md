@@ -193,7 +193,7 @@ The sample data has the following columns, and an example event is shown below:
 }
 ```
 
-### Tutorials
+### Data loading tutorials
 
 The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
 All tutorials assume that you are using the `micro-quickstart` single-machine configuration mentioned above.
