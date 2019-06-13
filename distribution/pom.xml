@@ -50,6 +50,7 @@
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
+        <skipDockerMysql>true</skipDockerMysql>
     </properties>
 
     <build>
@@ -749,6 +750,75 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+          <id>docker</id>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>1.4.10</version>
+                <executions>
+                  <execution>
+                    <id>tag-latest</id>
+                    <goals>
+                      <goal>build</goal>
+                      <goal>tag</goal>
+                    </goals>
+                    <configuration>
+                      <repository>docker.io/apache/incubator-druid</repository>
+                      <tag>latest</tag>
+                      <dockerfile>docker/Dockerfile</dockerfile>
+                    </configuration>
+                  </execution>
+                  <execution>
+                    <id>tag-version</id>
+                    <goals>
+                      <goal>build</goal>
+                      <goal>tag</goal>
+                    </goals>
+                    <configuration>
+                      <repository>docker.io/apache/incubator-druid</repository>
+                      <tag>${project.version}</tag>
+                      <dockerfile>docker/Dockerfile</dockerfile>
+                    </configuration>
+                  </execution>
+                  <execution>
+                    <id>tag-latest-mysql</id>
+                    <goals>
+                      <goal>build</goal>
+                      <goal>tag</goal>
+                    </goals>
+                    <configuration>
+                      <repository>docker.io/apache/incubator-druid-mysql</repository>
+                      <tag>latest</tag>
+                      <dockerfile>docker/Dockerfile.mysql</dockerfile>
+                      <skip>${skipDockerMysql}</skip>
+                    </configuration>
+                  </execution>
+                  <execution>
+                    <id>tag-version-mysql</id>
+                    <goals>
+                      <goal>build</goal>
+                      <goal>tag</goal>
+                    </goals>
+                    <configuration>
+                      <repository>docker.io/apache/incubator-druid-mysql</repository>
+                      <tag>${project.version}</tag>
+                      <dockerfile>docker/Dockerfile.mysql</dockerfile>
+                      <skip>${skipDockerMysql}</skip>
+                    </configuration>
+                  </execution>
+                </executions>
+                <configuration>
+                  <buildArgs>
+                    <VERSION>${project.version}</VERSION>
+                  </buildArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
         </profile>
     </profiles>
 </project>
