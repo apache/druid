@@ -710,7 +710,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   render() {
     const { goToSql, goToLoadDataView, noSqlMode } = this.props;
-    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions } = this.state;
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
     const submitTaskMenu = <Menu>
       <MenuItem
@@ -825,7 +825,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         taskTableActionDialogId &&
         <TaskTableActionDialog
           isOpen
-          status={this.state.taskTableActionDialogStatus}
+          status={taskTableActionDialogStatus}
           taskId={taskTableActionDialogId}
           actions={taskTableActionDialogActions}
           onClose={() => this.setState({taskTableActionDialogId: null})}

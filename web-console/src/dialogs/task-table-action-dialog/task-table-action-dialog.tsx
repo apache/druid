@@ -44,7 +44,7 @@ export class TaskTableActionDialog extends React.PureComponent<TaskTableActionDi
   }
 
   render(): React.ReactNode {
-    const { taskId, actions, onClose } = this.props;
+    const { taskId, actions, onClose, status } = this.props;
     const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
@@ -108,7 +108,7 @@ export class TaskTableActionDialog extends React.PureComponent<TaskTableActionDi
       {
         activeTab === 'log' &&
         <ShowLog
-          status={this.props.status}
+          status={status}
           endpoint={`/druid/indexer/v1/task/${taskId}/log`}
           downloadFilename={`task-log-${taskId}.json`}
           tailOffset={16000}
