@@ -109,7 +109,8 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
 
     return <div className="show-log">
       <div className="top-actions">
-      { status === 'RUNNING' &&
+      {
+        status === 'RUNNING' &&
         <Checkbox
           label="Tail log"
           checked={this.state.tail}
