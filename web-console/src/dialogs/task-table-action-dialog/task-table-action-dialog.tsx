@@ -28,6 +28,7 @@ interface TaskTableActionDialogProps extends IDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
+  status: string | null ;
 }
 
 interface TaskTableActionDialogState {
@@ -107,6 +108,7 @@ export class TaskTableActionDialog extends React.PureComponent<TaskTableActionDi
       {
         activeTab === 'log' &&
         <ShowLog
+          status={this.props.status}
           endpoint={`/druid/indexer/v1/task/${taskId}/log`}
           downloadFilename={`task-log-${taskId}.json`}
           tailOffset={16000}

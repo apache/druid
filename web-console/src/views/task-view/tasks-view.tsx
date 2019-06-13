@@ -76,6 +76,7 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 
   taskTableActionDialogId: string | null;
+  taskTableActionDialogStatus: string | null;
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
@@ -154,6 +155,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       alertErrorMsg: null,
 
       taskTableActionDialogId: null,
+      taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
       supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: []
@@ -690,6 +692,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <ActionCell
                 onDetail={() => this.setState({
                   taskTableActionDialogId: id,
+                  taskTableActionDialogStatus: status,
                   taskTableActionDialogActions: taskActions
                 })}
                 actions={taskActions}
@@ -822,6 +825,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         taskTableActionDialogId &&
         <TaskTableActionDialog
           isOpen
+          status={this.state.taskTableActionDialogStatus}
           taskId={taskTableActionDialogId}
           actions={taskTableActionDialogActions}
           onClose={() => this.setState({taskTableActionDialogId: null})}

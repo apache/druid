@@ -39,6 +39,7 @@ export interface ShowLogProps extends React.Props<any> {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
+  status: string | null;
 }
 
 export interface ShowLogState {
@@ -53,9 +54,15 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     super(props, context);
     this.state = {
       logValue: '',
-      tail: false
+      tail: true
     };
     this.getLogInfo();
+  }
+
+  componentDidMount(): void {
+    if (this.props.status === 'RUNNING') {
+      this.tail();
+    }
   }
 
   private getLogInfo = async (): Promise<void> => {
@@ -97,16 +104,18 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
 
 
   render() {
-    const { endpoint, downloadFilename } = this.props;
+    const { endpoint, downloadFilename, status } = this.props;
     const { logValue } = this.state;
 
     return <div className="show-log">
       <div className="top-actions">
+      { status === 'RUNNING' &&
         <Checkbox
           label="Tail log"
           checked={this.state.tail}
           onChange={this.handleCheckboxChange}
         />
+      }
         <ButtonGroup className="right-buttons">
           {
             downloadFilename &&
