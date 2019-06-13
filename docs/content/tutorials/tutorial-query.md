@@ -42,7 +42,7 @@ Druid supports a dialect of SQL for querying.
 
 This query retrieves the 10 Wikipedia pages with the most page edits on 2015-09-12.
 
-```
+```sql
 SELECT page, COUNT(*) AS Edits
 FROM wikipedia
 WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
@@ -59,11 +59,11 @@ You can issue the above query from the console.
 ![Query autocomplete](../tutorials/img/tutorial-query-01.png "Query autocomplete")
 
 The console query view provides autocomplete together with inline function documentation.
-You can also configure extra context flags get sent with the query from the more options menu.
+You can also configure extra context flags to be sent with the query from the more options menu.
 
 ![Query options](../tutorials/img/tutorial-query-02.png "Query options")
 
-Note that the console will by default wrap your SQL queries in a limit so that you can issue queries like `SELECT * FROM wikipedia` with out much hesitation - you can turn off this behaviour. 
+Note that the console will by default wrap your SQL queries in a limit so that you can issue queries like `SELECT * FROM wikipedia` without much hesitation - you can turn off this behaviour. 
 
 ### Query SQL via dsql
 
@@ -162,7 +162,7 @@ Here is a collection of queries to try out:
 
 #### Query over time
 
-```
+```sql
 SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
 FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
 GROUP BY 1
@@ -172,7 +172,7 @@ GROUP BY 1
 
 #### General group by
 
-```
+```sql
 SELECT channel, page, SUM(added)
 FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
 GROUP BY channel, page
@@ -183,7 +183,7 @@ ORDER BY SUM(added) DESC
 
 #### Select raw data
 
-```
+```sql
 SELECT user, page
 FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00'
 LIMIT 5
