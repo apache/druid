@@ -18,21 +18,12 @@
 import os
 import subprocess
 import sys
+import argparse
 
 
 existing_jar_dict_notice = {}
 
-def main():
-    if len(sys.argv) != 3:
-      sys.stderr.write('usage: program <druid source path> <full tmp path>\n')
-      sys.exit(1)
-
-    druid_path = sys.argv[1]
-    tmp_path = sys.argv[2]
-
-    generate_reports(druid_path, tmp_path)
-
-def generate_reports(druid_path, tmp_path):
+def generate_reports(druid_path, tmp_path, exclude_ext):
     license_main_path =  tmp_path + "/license-reports"
     license_ext_path = tmp_path + "/license-reports/ext"
     os.mkdir(license_main_path)
@@ -45,7 +36,8 @@ def generate_reports(druid_path, tmp_path):
     command = "cp -r distribution/target/site {}/site".format(license_main_path)
     outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
 
-    sys.exit()
+    if exclude_ext:
+        sys.exit()
 
     print("********** Generating extension LICENSE reports.... **********")
     extension_dirs = os.listdir("extensions-core")
@@ -72,6 +64,11 @@ def generate_reports(druid_path, tmp_path):
 
 if __name__ == "__main__":
     try:
-        main()
+        parser = argparse.ArgumentParser(description='Generating dependency reports.')
+        parser.add_argument('druid_path', metavar='<Druid source path>', type=str)
+        parser.add_argument('tmp_path', metavar='<Full tmp path>', type=str)
+        parser.add_argument('--exclude-extension', dest='exclude_ext', action='store_const', const=True, default=False, help="Exclude extension report")
+        args = parser.parse_args()
+        generate_reports(args.druid_path, args.tmp_path, args.exclude_ext)
     except KeyboardInterrupt:
         print('Interrupted, closing.')
