@@ -29,4 +29,10 @@ describe('sql view', () => {
       />);
     expect(sqlView).toMatchSnapshot();
   });
+
+  it('trimSemicolon', () => {
+    expect(SqlView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
+    expect(SqlView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
+    expect(SqlView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
+  });
 });

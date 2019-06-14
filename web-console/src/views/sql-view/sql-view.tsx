@@ -67,7 +67,7 @@ interface SqlQueryResult {
 export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
   static trimSemicolon(query: string): string {
     // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
-    return query.replace(/;+(\s*)$/, '$1');
+    return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
   }
 
   private sqlQueryManager: QueryManager<QueryWithContext, SqlQueryResult>;
@@ -106,7 +106,7 @@ export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${SqlView.trimSemicolon(queryString)}) LIMIT 2000` :
+            `SELECT * FROM (${SqlView.trimSemicolon(queryString)}\n) LIMIT 2000` :
             queryString;
 
           const queryPayload: Record<string, any> = {
@@ -141,7 +141,7 @@ export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
       processQuery: async (queryWithContext: QueryWithContext) => {
         const { queryString, context } = queryWithContext;
         const explainPayload: Record<string, any> = {
-          query: `EXPLAIN PLAN FOR (${SqlView.trimSemicolon(queryString)})`,
+          query: `EXPLAIN PLAN FOR (${SqlView.trimSemicolon(queryString)}\n)`,
           resultFormat: 'object'
         };
 
