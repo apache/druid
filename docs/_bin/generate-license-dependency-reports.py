@@ -41,15 +41,18 @@ def generate_reports(druid_path, tmp_path, exclude_ext):
 
     print("********** Generating extension LICENSE reports.... **********")
     extension_dirs = os.listdir("extensions-core")
+    print("Found {}".format(extension_dirs))
     for extension_dir in extension_dirs:
         full_extension_dir = druid_path + "/extensions-core/" + extension_dir
         if not os.path.isdir(full_extension_dir):
+            print("{} is not a directory".format(full_extension_dir))
             continue
 
         print("--- Generating report for {}... ---".format(extension_dir))
 
         extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
         os.mkdir(extension_report_dir)
+        prev_work_dir = os.getcwd()
         os.chdir(full_extension_dir)
 
         try:
@@ -60,7 +63,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext):
         except:
             print("Encountered error when generating report for: " + extension_dir)
 
-        os.chdir("..")
+        os.chdir(prev_work_dir)
 
 if __name__ == "__main__":
     try:
