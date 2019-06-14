@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -65,7 +66,9 @@ import java.util.stream.Collectors;
 public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
   private final List<SpillingGrouper<KeyType>> groupers;
-  private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
+  // Here we don't use ThreadLocal in order to avoid cpu spikes when threadlocal.remove not invoked
+  // issue link: https://github.com/apache/incubator-druid/pull/7540
+  private final ConcurrentHashMap<Thread, SpillingGrouper<KeyType>> threadToGrouperMap;
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
   private volatile boolean closed = false;
@@ -168,7 +171,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     );
 
     this.groupers = new ArrayList<>(concurrencyHint);
-    this.threadLocalGrouper = ThreadLocal.withInitial(() -> groupers.get(threadNumber.getAndIncrement()));
+    this.threadToGrouperMap = new ConcurrentHashMap<>();
 
     this.bufferSupplier = bufferSupplier;
     this.columnSelectorFactory = columnSelectorFactory;
@@ -274,7 +277,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     // At this point we know spilling = true
-    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
+    final SpillingGrouper<KeyType> tlGrouper =
+        threadToGrouperMap.computeIfAbsent(Thread.currentThread(), k -> groupers.get(threadNumber.getAndIncrement()));
 
     synchronized (tlGrouper) {
       tlGrouper.setSpillingAllowed(true);
@@ -409,7 +413,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!closed) {
       closed = true;
-      threadLocalGrouper.remove();
+      threadToGrouperMap.clear();
       groupers.forEach(Grouper::close);
     }
   }
