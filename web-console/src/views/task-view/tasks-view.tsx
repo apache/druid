@@ -76,6 +76,7 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 
   taskTableActionDialogId: string | null;
+  taskTableActionDialogStatus: string | null;
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
@@ -154,6 +155,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       alertErrorMsg: null,
 
       taskTableActionDialogId: null,
+      taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
       supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: []
@@ -690,6 +692,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <ActionCell
                 onDetail={() => this.setState({
                   taskTableActionDialogId: id,
+                  taskTableActionDialogStatus: status,
                   taskTableActionDialogActions: taskActions
                 })}
                 actions={taskActions}
@@ -707,7 +710,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   render() {
     const { goToSql, goToLoadDataView, noSqlMode } = this.props;
-    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions } = this.state;
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
     const submitTaskMenu = <Menu>
       <MenuItem
@@ -822,6 +825,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         taskTableActionDialogId &&
         <TaskTableActionDialog
           isOpen
+          status={taskTableActionDialogStatus}
           taskId={taskTableActionDialogId}
           actions={taskTableActionDialogActions}
           onClose={() => this.setState({taskTableActionDialogId: null})}
