@@ -248,8 +248,19 @@ export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix:
 // ----------------------------
 
 export function downloadFile(text: string, type: string, fileName: string): void {
+  let blobType: string = '';
+  switch (type) {
+    case 'json':
+      blobType = 'application/json';
+      break;
+    case 'tsv':
+      blobType = 'text/tab-separated-values';
+      break;
+    default: // csv
+      blobType = `text/${type}`;
+  }
   const blob = new Blob([text], {
-    type: `text/${type}`
+    type: blobType
   });
   FileSaver.saveAs(blob, fileName);
 }
