@@ -11,7 +11,7 @@ cd ../../
 mkdir -p distribution/target/bigo-extensions
 rm -rf distribution/target/bigo-extensions/*
 mkdir -p distribution/target/bigo-extensions/druid-bigo-extensions
-cp -f extensions-contrib/bigo-extensions/target/druid-bigo-extensions-0.14.0-incubating.jar \
+cp -f extensions-contrib/bigo-extensions/target/druid-bigo-extensions-0.14.2-incubating.jar \
     distribution/target/bigo-extensions/druid-bigo-extensions
 cd distribution/target/bigo-extensions/druid-bigo-extensions
 
