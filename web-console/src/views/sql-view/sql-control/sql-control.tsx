@@ -317,7 +317,7 @@ export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlS
     const { queryElapsed, onDownload } = this.props;
     const { query, autoComplete, wrapQuery, editorHeight } = this.state;
     const isRune = query.trim().startsWith('{');
-    const downloadMenu = <Menu>
+    const downloadMenu = <Menu className="download-format-menu">
       <MenuItem text="csv" onClick={() => onDownload('csv')} />
       <MenuItem text="tsv" onClick={() => onDownload('tsv')} />
       <MenuItem text="JSON" onClick={() => onDownload('json')}/>
@@ -375,7 +375,7 @@ export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlS
           <Popover className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
             <Button
               icon={IconNames.DOWNLOAD}
-              text="Download"
+              minimal
             />
           </Popover>
         }

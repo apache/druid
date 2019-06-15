@@ -176,7 +176,7 @@ exports[`sql control matches snapshot 1`] = `
         class="bp3-popover-target"
       >
         <button
-          class="bp3-button"
+          class="bp3-button bp3-minimal"
           type="button"
         >
           <span
@@ -197,11 +197,6 @@ exports[`sql control matches snapshot 1`] = `
                 fill-rule="evenodd"
               />
             </svg>
-          </span>
-          <span
-            class="bp3-button-text"
-          >
-            Download
           </span>
         </button>
       </span>

@@ -200,7 +200,7 @@ export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
             outputObject[newName] = r[k];
           }
         }
-        return JSON.stringify(outputObject, null, 2);
+        return JSON.stringify(outputObject);
       }).join(lineBreak);
     }
     downloadFile(data, format, 'query_result.' + format);
