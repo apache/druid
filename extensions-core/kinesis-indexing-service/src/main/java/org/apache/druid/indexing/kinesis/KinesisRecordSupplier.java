@@ -329,8 +329,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;
 
-  public final byte[] KPL_AGGREGATE_MAGIC_NUMBERS = {(byte) 0xF3, (byte) 0x89, (byte) 0x9A, (byte) 0xC2};
-  public final int KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES = 16;
+  private final byte[] KPL_AGGREGATE_MAGIC_NUMBERS = {(byte) 0xF3, (byte) 0x89, (byte) 0x9A, (byte) 0xC2};
+  private final int KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES = 16;
 
 
   public KinesisRecordSupplier(
