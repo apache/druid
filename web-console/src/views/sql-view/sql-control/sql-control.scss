@@ -40,16 +40,17 @@
     bottom: 0;
     height: 30px;
 
-    button {
-      margin-right: 15px;
+    .query-elapsed {
+      padding: 5px;
+      position: absolute;
+      right: 25px;
     }
 
-    .query-elapsed {
+    .download-button {
       position: absolute;
-      right: 10px;
+      right: 0px;
     }
   }
-
 }
 
 .ace_tooltip {
@@ -68,4 +69,8 @@
   .function-doc-name {
     font-size: 18px;
   }
+}
+
+.bp3-menu.download-format-menu {
+  min-width: 80px;
 }

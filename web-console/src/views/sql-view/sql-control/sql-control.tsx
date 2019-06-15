@@ -21,7 +21,7 @@ import {
   ButtonGroup,
   Intent, IResizeEntry,
   Menu,
-  MenuItem,
+  MenuItem, NavbarGroup,
   Popover,
   Position, ResizeSensor
 } from '@blueprintjs/core';
@@ -57,6 +57,7 @@ export interface SqlControlProps extends React.Props<any> {
   onRun: (query: string, context: Record<string, any>, wrapQuery: boolean) => void;
   onExplain: (sqlQuery: string, context: Record<string, any>) => void;
   queryElapsed: number | null;
+  onDownload: (format: string) => void;
 }
 
 export interface SqlControlState {
@@ -313,9 +314,14 @@ export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlS
   }
 
   render() {
-    const { queryElapsed } = this.props;
+    const { queryElapsed, onDownload } = this.props;
     const { query, autoComplete, wrapQuery, editorHeight } = this.state;
     const isRune = query.trim().startsWith('{');
+    const downloadMenu = <Menu className="download-format-menu">
+      <MenuItem text="csv" onClick={() => onDownload('csv')} />
+      <MenuItem text="tsv" onClick={() => onDownload('tsv')} />
+      <MenuItem text="JSON" onClick={() => onDownload('json')}/>
+    </Menu>;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
@@ -363,6 +369,15 @@ export class SqlControl extends React.PureComponent<SqlControlProps, SqlControlS
           <span className="query-elapsed">
             {`Last query took ${(queryElapsed / 1000).toFixed(2)} seconds`}
           </span>
+        }
+        {
+          queryElapsed &&
+          <Popover className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
+            <Button
+              icon={IconNames.DOWNLOAD}
+              minimal
+            />
+          </Popover>
         }
       </div>
     </div>;

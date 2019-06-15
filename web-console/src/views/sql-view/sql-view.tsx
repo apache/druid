@@ -26,6 +26,7 @@ import { QueryPlanDialog } from '../../dialogs';
 import {
   BasicQueryExplanation,
   decodeRune,
+  downloadFile,
   HeaderRows,
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
@@ -169,6 +170,42 @@ export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
+  formatStr(s: string | number, format: 'csv' | 'tsv') {
+    if (format === 'csv') {
+      // remove line break, single quote => double quote, handle ','
+      return `"${s.toString().replace(/(?:\r\n|\r|\n)/g, ' ').replace(/"/g, '""')}"`;
+    } else { // tsv
+      // remove line break, single quote => double quote, \t => ''
+      return `${s.toString().replace(/(?:\r\n|\r|\n)/g, ' ').replace(/\t/g, '').replace(/"/g, '""')}`;
+    }
+  }
+
+  onDownload = (format: string) => {
+    const { result } = this.state;
+    if (!result) return;
+    let data: string = '';
+    let seperator: string = '';
+    const lineBreak = '\n';
+
+    if (format === 'csv' || format === 'tsv') {
+      seperator = format === 'csv' ? ',' : '\t';
+      data = result.header.map(str => this.formatStr(str, format)).join(seperator) + lineBreak;
+      data += result.rows.map(r => r.map(cell => this.formatStr(cell, format)).join(seperator)).join(lineBreak);
+    } else { // json
+      data = result.rows.map(r => {
+        const outputObject: Record<string, any> = {};
+        for (let k = 0; k < r.length; k++) {
+          const newName = result.header[k];
+          if (newName) {
+            outputObject[newName] = r[k];
+          }
+        }
+        return JSON.stringify(outputObject);
+      }).join(lineBreak);
+    }
+    downloadFile(data, format, 'query_result.' + format);
+  }
+
   renderExplainDialog() {
     const {explainDialogOpen, explainResult, loadingExplain, explainError} = this.state;
     if (!loadingExplain && explainDialogOpen) {
@@ -226,6 +263,7 @@ export class SqlView extends React.PureComponent<SqlViewProps, SqlViewState> {
             this.explainQueryManager.runQuery({ queryString, context });
           }}
           queryElapsed={queryElapsed}
+          onDownload={this.onDownload}
         />
       </div>
       <div className="bottom-pane">

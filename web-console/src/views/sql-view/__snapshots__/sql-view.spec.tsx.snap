@@ -18,6 +18,7 @@ exports[`sql view matches snapshot 1`] = `
   >
     <HotkeysTarget(SqlControl)
       initSql="test"
+      onDownload={[Function]}
       onExplain={[Function]}
       onRun={[Function]}
       queryElapsed={null}

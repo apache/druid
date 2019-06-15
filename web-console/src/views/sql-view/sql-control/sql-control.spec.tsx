@@ -28,6 +28,7 @@ describe('sql control', () => {
       onRun={(query, context, wrapQuery) => {}}
       onExplain={(sqlQuery, context) => {}}
       queryElapsed={2}
+      onDownload={() => {}}
     />;
 
     const { container } = render(sqlControl);
