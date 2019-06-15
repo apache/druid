@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
@@ -313,7 +312,7 @@ public class RealtimeIndexTask extends AbstractTask
           return lock.getVersion();
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     };
@@ -336,9 +335,8 @@ public class RealtimeIndexTask extends AbstractTask
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
-    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
-    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
-    // NOTE: the "same" segment.
+    // NOTE: (partitionNum_index.zip for HDFS data storage) to mismatch, or it can cause historical nodes to load
+    // NOTE: different instances of the "same" segment.
     final PlumberSchool plumberSchool = new RealtimePlumberSchool(
         toolbox.getEmitter(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -518,7 +516,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

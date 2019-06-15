@@ -41,7 +41,9 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -83,6 +85,8 @@ public class ExpressionsTest extends CalciteTestBase
       .add("y", ValueType.LONG)
       .add("z", ValueType.FLOAT)
       .add("s", ValueType.STRING)
+      .add("hexstr", ValueType.STRING)
+      .add("intstr", ValueType.STRING)
       .add("spacey", ValueType.STRING)
       .add("tstr", ValueType.STRING)
       .add("dstr", ValueType.STRING)
@@ -95,6 +99,8 @@ public class ExpressionsTest extends CalciteTestBase
       .put("y", 3.0)
       .put("z", -2.25)
       .put("s", "foo")
+      .put("hexstr", "EF")
+      .put("intstr", "-100")
       .put("spacey", "  hey there  ")
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
@@ -165,6 +171,53 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
+  public void testStringFormat()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%x"),
+            inputRef("b")
+        ),
+        DruidExpression.fromExpression("format('%x',\"b\")"),
+        "19"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s"),
+            integerLiteral(1234)
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\",1234)"),
+        "foo 1,234"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\")"),
+        "%s %,d; foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s"),
+            integerLiteral(1234),
+            integerLiteral(6789)
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\",1234,6789)"),
+        "foo 1,234"
+    );
+  }
+
+  @Test
   public void testStrpos()
   {
     testExpression(
@@ -195,6 +248,52 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.fromExpression("(strpos(null,'ax') + 1)"),
         NullHandling.replaceWithDefault() ? 0L : null
+    );
+  }
+
+  @Test
+  public void testParseLong()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new ParseLongOperatorConversion().calciteOperator(),
+            inputRef("intstr")
+        ),
+        DruidExpression.fromExpression("parse_long(\"intstr\")"),
+        -100L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ParseLongOperatorConversion().calciteOperator(),
+            inputRef("hexstr"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(16))
+        ),
+        DruidExpression.fromExpression("parse_long(\"hexstr\",16)"),
+        239L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ParseLongOperatorConversion().calciteOperator(),
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                rexBuilder.makeLiteral("0x"),
+                inputRef("hexstr")
+            ),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(16))
+        ),
+        DruidExpression.fromExpression("parse_long(concat('0x',\"hexstr\"),16)"),
+        239L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ParseLongOperatorConversion().calciteOperator(),
+            inputRef("hexstr")
+        ),
+        DruidExpression.fromExpression("parse_long(\"hexstr\")"),
+        NullHandling.sqlCompatible() ? null : 0L
     );
   }
 

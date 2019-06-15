@@ -87,7 +87,8 @@ The below configurations can be optionally used for tuning the firehose performa
 ### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments.
-It can be used ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+It can be used to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+This firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
 A sample ingest firehose spec is shown below -
 
 ```json
@@ -106,14 +107,15 @@ A sample ingest firehose spec is shown below -
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.html)|no|
+|maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 #### SqlFirehose
 
 SqlFirehoseFactory can be used to ingest events residing in RDBMS. The database connection information is provided as part of the ingestion spec. For each query, the results are fetched locally and indexed. If there are multiple queries from which data needs to be indexed, queries are prefetched in the background upto `maxFetchCapacityBytes` bytes.
 
 Requires one of the following extensions:
- * [MySQL Metadata Store](../ingestion/mysql.html).
- * [PostgreSQL Metadata Store](../ingestion/postgresql.html).
+ * [MySQL Metadata Store](../development/extensions-core/mysql.html).
+ * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.html).
 
 ```json
 {
@@ -191,8 +193,9 @@ When using this firehose, events can be sent by submitting a POST request to the
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "receiver"|yes|
-|serviceName|name used to announce the event receiver service endpoint|yes|
-|bufferSize| size of buffer used by firehose to store events|no default(100000)|
+|serviceName|Name used to announce the event receiver service endpoint|yes|
+|maxIdleTime|A firehose is automatically shut down after not receiving any events for this period of time, in milliseconds. If not specified, a firehose is never shut down due to being idle. Zero and negative values have the same effect.|no|
+|bufferSize|Size of buffer used by firehose to store events|no, default is 100000|
 
 Shut down time for EventReceiverFirehose can be specified by submitting a POST request to
 

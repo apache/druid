@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import * as React from 'react';
-import * as classNames from 'classnames';
-import { H5, Card, Icon } from "@blueprintjs/core";
+import { Card, H5, Icon } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { QueryManager, pluralIfNeeded, queryDruidSql, getHeadProp } from '../utils';
+import axios from 'axios';
+import * as classNames from 'classnames';
+import * as React from 'react';
+
+import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
+
 import './home-view.scss';
 
 export interface CardOptions {
@@ -165,14 +167,14 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
         const taskCountsFromSql = await queryDruidSql({ query });
-        let taskCounts = {
+        const taskCounts = {
           successTaskCount: 0,
           failedTaskCount: 0,
           runningTaskCount: 0,
           waitingTaskCount: 0,
           pendingTaskCount: 0
         };
-        for (let dataStatus of taskCountsFromSql) {
+        for (const dataStatus of taskCountsFromSql) {
           if (dataStatus.status === "SUCCESS") {
             taskCounts.successTaskCount = dataStatus.count;
           } else if (dataStatus.status === "FAILED") {
@@ -255,7 +257,7 @@ GROUP BY 1`);
 
   renderCard(cardOptions: CardOptions): JSX.Element {
     return <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
-      <Card interactive={true}>
+      <Card className="status-card" interactive>
         <H5><Icon color="#bfccd5" icon={cardOptions.icon}/>&nbsp;{cardOptions.title}</H5>
         {cardOptions.loading ? <p>Loading...</p> : (cardOptions.error ? `Error: ${cardOptions.error}` : cardOptions.content)}
       </Card>
@@ -268,7 +270,7 @@ GROUP BY 1`);
     return <div className="home-view app-view">
       {this.renderCard({
         href: "/status",
-        icon: IconNames.INFO_SIGN,
+        icon: IconNames.GRAPH,
         title: "Status",
         loading: state.statusLoading,
         content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
@@ -286,7 +288,7 @@ GROUP BY 1`);
 
       {this.renderCard({
         href: "#segments",
-        icon: IconNames.FULL_STACKED_CHART,
+        icon: IconNames.STACKED_CHART,
         title: "Segments",
         loading: state.segmentCountLoading,
         content: pluralIfNeeded(state.segmentCount, 'segment'),
@@ -299,11 +301,11 @@ GROUP BY 1`);
         title: "Tasks",
         loading: state.taskCountLoading,
         content: <>
-          { Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p> }
-          { Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p> }
-          { Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p> }
-          { Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p> }
-          { Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p> }
+          {Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>}
+          {Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p>}
+          {Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>}
+          {Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>}
+          {Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>}
           { !(state.runningTaskCount + state.pendingTaskCount + state.successTaskCount + state.waitingTaskCount + state.failedTaskCount) &&
             <p>There are no tasks</p>
           }
@@ -322,7 +324,6 @@ GROUP BY 1`);
         </>,
         error: state.dataServerCountError
       })}
-    </div>
+    </div>;
   }
 }
-

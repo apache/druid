@@ -23,11 +23,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
@@ -52,6 +56,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -96,12 +101,24 @@ public class CompactionTaskRunTest extends IngestionTestBase
   );
 
   private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private CoordinatorClient coordinatorClient;
+  private SegmentLoaderFactory segmentLoaderFactory;
   private ExecutorService exec;
+  private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
   public CompactionTaskRunTest()
   {
     TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
+    coordinatorClient = new CoordinatorClient(null, null)
+    {
+      @Override
+      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      {
+        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+      }
+    };
+    segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
   }
 
   @Before
@@ -126,7 +143,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -156,7 +176,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     final CompactionTask compactionTask1 = builder
@@ -200,7 +223,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     final CompactionTask compactionTask1 = builder
@@ -248,7 +274,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     // day segmentGranularity
@@ -315,7 +344,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
             false
         ),
         null,
@@ -349,8 +378,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           {
             return deepStorageDir;
           }
-        },
-        objectMapper
+        }
     )
     {
       @Override

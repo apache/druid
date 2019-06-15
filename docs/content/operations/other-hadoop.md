@@ -37,7 +37,7 @@ For best results, use these tips when configuring Druid to interact with your fa
 ## Tip #1: Place Hadoop XMLs on Druid classpath
 
 Place your Hadoop configuration XMLs (core-site.xml, hdfs-site.xml, yarn-site.xml, mapred-site.xml) on the classpath
-of your Druid nodes. You can do this by copying them into `conf/druid/_common/core-site.xml`,
+of your Druid processes. You can do this by copying them into `conf/druid/_common/core-site.xml`,
 `conf/druid/_common/hdfs-site.xml`, and so on. This allows Druid to find your Hadoop cluster and properly submit jobs.
 
 ## Tip #2: Classloader modification on Hadoop (Map/Reduce jobs only)

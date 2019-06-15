@@ -110,17 +110,17 @@ In addition to DataSegmentPusher and DataSegmentPuller, you can also bind:
 
 It's recommended to use batch ingestion tasks to validate your implementation.
 The segment will be automatically rolled up to Historical note after ~20 seconds. 
-In this way, you can validate both push (at realtime node) and pull (at Historical node) segments.
+In this way, you can validate both push (at realtime process) and pull (at Historical process) segments.
 
 * DataSegmentPusher
 
-Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) and `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
+Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see one new file: `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
 * DataSegmentPuller
 
-After ~20 secs your ingestion task ends, you should be able to see your Historical node trying to load the new segment.
+After ~20 secs your ingestion task ends, you should be able to see your Historical process trying to load the new segment.
 
-The following example was retrieved from a Historical node configured to use Azure for deep storage:
+The following example was retrieved from a Historical process configured to use Azure for deep storage:
 
 ```
 2015-04-14T02:42:33,450 INFO [ZkCoordinator-0] org.apache.druid.server.coordination.ZkCoordinator - New request[LOAD: dde_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00
@@ -130,7 +130,7 @@ The following example was retrieved from a Historical node configured to use Azu
 00Z_2015-04-14T02:41:09.484Z
 2015-04-14T02:42:33,463 INFO [ZkCoordinator-0] org.apache.druid.guice.JsonConfigurator - Loaded class[class org.apache.druid.storage.azure.AzureAccountConfig] from props[drui
 d.azure.] as [org.apache.druid.storage.azure.AzureAccountConfig@759c9ad9]
-2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] org.apache.druid.java.util.common.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
+2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] org.apache.druid.utils.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
 ip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]
 2015-04-14T02:49:08,276 INFO [ZkCoordinator-0] org.apache.druid.storage.azure.AzureDataSegmentPuller - Loaded 1196 bytes from [dde/2015-01-02T00:00:00.000Z_2015-01-03
 T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]
@@ -147,7 +147,7 @@ To mark a segment as not used, you need to connect to your metadata storage and 
 
 To start a segment killing task, you need to access the old Coordinator console `http://<COODRINATOR_IP>:<COORDINATOR_PORT/old-console/kill.html` then select the appropriate datasource and then input a time range (e.g. `2000/3000`).
 
-After the killing task ends, both `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage)  and `index.zip` (`partitionNum_index.zip` for HDFS data storage) files should be deleted from the data storage.
+After the killing task ends, `index.zip` (`partitionNum_index.zip` for HDFS data storage) file should be deleted from the data storage.
 
 ### Adding a new Firehose
 

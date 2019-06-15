@@ -17,7 +17,7 @@
 # limitations under the License.
 
 rm -rf \
-  lib/react-table.css \
+  lib/*.css \
   node_modules \
   coordinator-console \
   pages \

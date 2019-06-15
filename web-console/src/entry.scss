@@ -20,10 +20,6 @@
 @import '../node_modules/@blueprintjs/core/lib/css/blueprint';
 @import '../lib/react-table';
 
-* {
-  position: relative;
-}
-
 html,
 body {
   //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
@@ -50,5 +46,7 @@ svg {
 }
 
 .app-container {
+  position: absolute;
   height: 100%;
+  width: 100%;
 }

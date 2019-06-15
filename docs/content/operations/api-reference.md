@@ -40,15 +40,15 @@ This page documents all of the API endpoints for each Druid service type.
 
 ## Common
 
-The following endpoints are supported by all nodes.
+The following endpoints are supported by all processes.
 
-### Node information
+### Process information
 
 #### GET
 
 * `/status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.
 
 * `/status/health`
 
@@ -56,7 +56,7 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 * `/status/properties`
 
-Returns the current configuration properties of the node.
+Returns the current configuration properties of the process.
 
 ## Master Server
 
@@ -97,15 +97,15 @@ Returns the number of segments left to load in each tier until segments that sho
 
 * `/druid/coordinator/v1/loadqueue`
 
-Returns the ids of segments to load and drop for each Historical node.
+Returns the ids of segments to load and drop for each Historical process.
 
 * `/druid/coordinator/v1/loadqueue?simple`
 
-Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each Historical node.
+Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each Historical process.
 
 * `/druid/coordinator/v1/loadqueue?full`
 
-Returns the serialized JSON of segments to load and drop for each Historical node.
+Returns the serialized JSON of segments to load and drop for each Historical process.
 
 #### Metadata store information
 
@@ -341,7 +341,8 @@ will be set for them.
 
 * `/druid/coordinator/v1/config/compaction`
 
-Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+Creates or updates the compaction config for a dataSource.
+See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
@@ -357,14 +358,14 @@ Removes the compaction config for a dataSource.
 * `/druid/coordinator/v1/servers`
 
 Returns a list of servers URLs using the format `{hostname}:{port}`. Note that
-nodes that run with different types will appear multiple times with different
+processes that run with different types will appear multiple times with different
 ports.
 
 * `/druid/coordinator/v1/servers?simple`
 
 Returns a list of server data objects in which each object has the following keys:
 * `host`: host URL include (`{hostname}:{port}`)
-* `type`: node type (`indexer-executor`, `historical`)
+* `type`: process type (`indexer-executor`, `historical`)
 * `currSize`: storage size currently used
 * `maxSize`: maximum storage size
 * `priority`
@@ -655,7 +656,7 @@ Retrieve an unparseable events report from a Peon. See [task reports](../ingesti
 * `/druid/historical/v1/loadstatus`
 
 Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
-segments in the local cache have been loaded. This can be used to know when a Historical node is ready
+segments in the local cache have been loaded. This can be used to know when a Historical process is ready
 to be queried after a restart.
 
 * `/druid/historical/v1/readiness`

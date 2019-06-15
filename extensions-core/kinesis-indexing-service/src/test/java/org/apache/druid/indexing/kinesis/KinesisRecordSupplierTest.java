@@ -29,7 +29,6 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -42,7 +41,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.checkerframework.com.google.common.base.Charsets;
 import org.easymock.Capture;
 import org.easymock.EasyMockSupport;
 import org.junit.After;
@@ -88,20 +86,20 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static Shard shard1;
   private static KinesisRecordSupplier recordSupplier;
   private static List<Record> shard1Records = ImmutableList.of(
-      new Record().withData(JB("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(JB("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
-      new Record().withData(JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
+      new Record().withData(jb("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(jb("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
+      new Record().withData(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable"))).withSequenceNumber("3"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2"))).withSequenceNumber("4"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))).withSequenceNumber("5"),
-      new Record().withData(JB("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
-      new Record().withData(JB("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
-      new Record().withData(JB("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
-      new Record().withData(JB("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
+      new Record().withData(jb("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
+      new Record().withData(jb("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
+      new Record().withData(jb("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
+      new Record().withData(jb("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
   );
   private static List<Record> shard0Records = ImmutableList.of(
-      new Record().withData(JB("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(JB("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
+      new Record().withData(jb("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(jb("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
   );
   private static List<Object> allRecords = ImmutableList.builder()
                                                         .addAll(shard0Records.stream()
@@ -132,7 +130,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                      .toList()))
                                                         .build();
 
-  private static ByteBuffer JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
+  private static ByteBuffer jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
       return ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
@@ -147,7 +145,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       ));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -659,7 +657,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testDeaggregationOfKPLAggregatedMessage() throws IOException
   {
     InputStreamReader reader = new InputStreamReader(
-        new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), Charsets.UTF_8);
+        new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), StandardCharsets.UTF_8);
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
@@ -695,7 +693,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         new FileInputStream(
             "src/test/resources/base64nonaggregatedkinesismessage.txt"
         ),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();

@@ -30,16 +30,40 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
   private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
+  private static String REINDEX_TASK = "/indexer/wikipedia_parallel_reindex_task.json";
+  private static String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_reindex_queries.json";
   private static String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
+  private static String INDEX_INGEST_SEGMENT_DATASOURCE = "wikipedia_parallel_ingest_segment_index_test";
+  private static String INDEX_INGEST_SEGMENT_TASK = "/indexer/wikipedia_parallel_ingest_segment_index_task.json";
 
   @Test
   public void testIndexData() throws Exception
   {
-    try (final Closeable closeable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())) {
+    try (final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+         final Closeable ingestSegmentCloseable = unloader(
+             INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    ) {
       doIndexTestTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          INDEX_QUERIES_RESOURCE
+          INDEX_QUERIES_RESOURCE,
+          false
+      );
+
+      // Index again, this time only choosing the second data file, and without explicit intervals chosen.
+      // The second datafile covers both day segments, so this should replace them, as reflected in the queries.
+      doIndexTestTest(
+          INDEX_DATASOURCE,
+          REINDEX_TASK,
+          REINDEX_QUERIES_RESOURCE,
+          true
+      );
+
+      doReindexTest(
+          INDEX_DATASOURCE,
+          INDEX_INGEST_SEGMENT_DATASOURCE,
+          INDEX_INGEST_SEGMENT_TASK,
+          REINDEX_QUERIES_RESOURCE
       );
     }
   }

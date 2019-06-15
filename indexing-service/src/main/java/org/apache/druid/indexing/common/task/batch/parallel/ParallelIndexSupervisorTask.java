@@ -33,9 +33,12 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -234,6 +237,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   }
 
   @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    if (runner != null) {
+      runner.stopGracefully();
+    }
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     setToolbox(toolbox);
@@ -245,18 +256,37 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     chatHandlerProvider.register(getId(), this, false);
 
     try {
-      if (baseFirehoseFactory.isSplittable()) {
+      if (isParallelMode()) {
         return runParallel(toolbox);
       } else {
-        log.warn(
-            "firehoseFactory[%s] is not splittable. Running sequentially",
-            baseFirehoseFactory.getClass().getSimpleName()
-        );
+        if (!baseFirehoseFactory.isSplittable()) {
+          log.warn(
+              "firehoseFactory[%s] is not splittable. Running sequentially.",
+              baseFirehoseFactory.getClass().getSimpleName()
+          );
+        } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
+          log.warn(
+              "maxNumSubTasks is 1. Running sequentially. "
+              + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
+          );
+        } else {
+          throw new ISE("Unknown reason for sequentail mode. Failing this task.");
+        }
+
         return runSequential(toolbox);
       }
     }
     finally {
       chatHandlerProvider.unregister(getId());
+    }
+  }
+
+  private boolean isParallelMode()
+  {
+    if (baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumSubTasks() > 1) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -269,7 +299,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
     createRunner(toolbox);
-    return TaskStatus.fromCode(getId(), runner.run());
+    return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox)
@@ -305,7 +335,6 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         tuningConfig.getIndexSpec(),
         tuningConfig.getMaxPendingPersists(),
         true,
-        tuningConfig.isForceExtendableShardSpecs(),
         false,
         tuningConfig.isReportParseExceptions(),
         null,
@@ -360,43 +389,79 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
-        granularitySpec.bucketIntervals().orNull(),
-        "bucketIntervals"
-    );
+    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
+
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
-    final Map<Interval, String> versions = toolbox
+    final List<TaskLock> locks = toolbox
         .getTaskActionClient()
-        .submit(new LockListAction())
+        .submit(new LockListAction());
+    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
+    if (revokedLock != null) {
+      throw new ISE("Lock revoked: [%s]", revokedLock);
+    }
+    final Map<Interval, String> versions = locks
         .stream()
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
-    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
-    if (!maybeInterval.isPresent()) {
-      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+    Interval interval;
+    String version;
+    boolean justLockedInterval = false;
+    if (bucketIntervals.isPresent()) {
+      // If the granularity spec has explicit intervals, we just need to find the interval (of the segment
+      // granularity); we already tried to lock it at task startup.
+      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+      if (!maybeInterval.isPresent()) {
+        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+      }
+
+      interval = maybeInterval.get();
+      if (!bucketIntervals.get().contains(interval)) {
+        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+      }
+
+      version = findVersion(versions, interval);
+      if (version == null) {
+        throw new ISE("Cannot find a version for interval[%s]", interval);
+      }
+    } else {
+      // We don't have explicit intervals. We can use the segment granularity to figure out what
+      // interval we need, but we might not have already locked it.
+      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
+      version = findVersion(versions, interval);
+      if (version == null) {
+        // We don't have a lock for this interval, so we should lock it now.
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
+            "Cannot acquire a lock for interval[%s]", interval
+        );
+        version = lock.getVersion();
+        justLockedInterval = true;
+      }
     }
 
-    final Interval interval = maybeInterval.get();
-    if (!bucketIntervals.contains(interval)) {
-      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+    final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
+    if (justLockedInterval && partitionNum != 0) {
+      throw new ISE(
+          "Expected partitionNum to be 0 for interval [%s] right after locking, but got [%s]",
+          interval, partitionNum
+      );
     }
-
-    final int partitionNum = Counters.incrementAndGetInt(partitionNumCountersPerInterval, interval);
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
-        findVersion(versions, interval),
+        version,
         new NumberedShardSpec(partitionNum, 0)
     );
   }
 
+  @Nullable
   private static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+                   .orElse(null);
   }
 
   /**
@@ -432,11 +497,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   public Response getMode(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    if (runner == null) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
-    } else {
-      return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
-    }
+    return Response.ok(isParallelMode() ? "parallel" : "sequential").build();
   }
 
   @GET

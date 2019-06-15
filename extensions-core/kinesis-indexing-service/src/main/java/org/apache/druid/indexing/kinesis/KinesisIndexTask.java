@@ -90,7 +90,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
-                       : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
+                       : Math.max(1, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
 
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
