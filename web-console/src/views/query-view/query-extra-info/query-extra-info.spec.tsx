@@ -19,19 +19,19 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { SqlControl } from './sql-control';
+import { QueryExtraInfo } from './query-extra-info';
 
-describe('sql control', () => {
+describe('query extra info', () => {
   it('matches snapshot', () => {
-    const sqlControl = <SqlControl
-      initSql={'test'}
-      onRun={(query, context, wrapQuery) => {}}
-      onExplain={(sqlQuery, context) => {}}
-      queryElapsed={2}
-      onDownload={() => {}}
+    const queryExtraInfo = <QueryExtraInfo
+      queryExtraInfo={{
+        id: '3242ewdfwdf2r23',
+        elapsed: 1234
+      }}
+      onDownload={() => null}
     />;
 
-    const { container } = render(sqlControl);
+    const { container } = render(queryExtraInfo);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

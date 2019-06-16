@@ -16,23 +16,22 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+import { render } from 'react-testing-library';
 
-import { SqlView } from './sql-view';
+import { RunButton } from './run-button';
 
-describe('sql view', () => {
+describe('run button', () => {
   it('matches snapshot', () => {
-    const sqlView = shallow(
-      <SqlView
-        initSql={'test'}
-      />);
-    expect(sqlView).toMatchSnapshot();
-  });
+    const runButton = <RunButton
+      runeMode={false}
+      queryContext={{}}
+      onQueryContextChange={() => null}
+      onRun={() => null}
+      onExplain={() => null}
+    />;
 
-  it('trimSemicolon', () => {
-    expect(SqlView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-    expect(SqlView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-    expect(SqlView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
+    const { container } = render(runButton);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

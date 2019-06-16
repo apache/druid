@@ -18,12 +18,11 @@
 
 @import "../../../variables";
 
-.sql-control {
+.query-input {
   .ace-container {
     position: absolute;
     width: 100%;
-    top: 0;
-    bottom: 30px + $standard-padding;
+    height: 100%;
 
     .ace_scroller {
       background-color: #232C35;
@@ -31,24 +30,6 @@
 
     .ace_gutter-layer {
       background-color: #27313c;
-    }
-  }
-
-  .buttons {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
-    height: 30px;
-
-    .query-elapsed {
-      padding: 5px;
-      position: absolute;
-      right: 25px;
-    }
-
-    .download-button {
-      position: absolute;
-      right: 0px;
     }
   }
 }
@@ -69,8 +50,4 @@
   .function-doc-name {
     font-size: 18px;
   }
-}
-
-.bp3-menu.download-format-menu {
-  min-width: 80px;
 }

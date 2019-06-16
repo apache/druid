@@ -135,11 +135,37 @@ function identity(x: any): any {
 
 export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
   const lookup: Record<string, Q> = {};
-  for (let i = 0; i < array.length; i++) {
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
     const a = array[i];
     lookup[keyFn(a, i)] = valueFn(a, i);
   }
   return lookup;
+}
+
+export function mapRecord<T, Q>(record: Record<string, T>, fn: (value: T, key: string) => Q): Record<string, Q> {
+  const newRecord: Record<string, Q> = {};
+  const keys = Object.keys(record);
+  for (const key of keys) {
+    newRecord[key] = fn(record[key], key);
+  }
+  return newRecord;
+}
+
+export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string, aggregateFn: (xs: T[], key: string) => Q): Q[] {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+}
+
+export function uniq(array: string[]): string[] {
+  return Object.keys(lookupBy(array));
 }
 
 export function parseList(list: string): string[] {

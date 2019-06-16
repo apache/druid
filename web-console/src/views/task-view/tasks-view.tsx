@@ -46,7 +46,7 @@ const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location',
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   openDialog: string | null;
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
@@ -709,7 +709,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
 
   render() {
-    const { goToSql, goToLoadDataView, noSqlMode } = this.props;
+    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
     const submitTaskMenu = <Menu>
@@ -772,7 +772,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
-                onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+                onClick={() => goToQuery(this.taskQueryManager.getLastQuery())}
               />
             }
             <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>

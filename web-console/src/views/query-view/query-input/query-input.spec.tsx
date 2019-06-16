@@ -15,11 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export * from './datasource-view/datasource-view';
-export * from './home-view/home-view';
-export * from './load-data-view/load-data-view';
-export * from './lookups-view/lookups-view';
-export * from './segments-view/segments-view';
-export * from './servers-view/servers-view';
-export * from './query-view/query-view';
-export * from './task-view/tasks-view';
+
+import React from 'react';
+import { render } from 'react-testing-library';
+
+import { QueryInput } from './query-input';
+
+describe('query input', () => {
+  it('matches snapshot', () => {
+    const sqlControl = <QueryInput
+      queryString="hello world"
+      onQueryStringChange={() => null}
+      runeMode={false}
+    />;
+
+    const { container } = render(sqlControl);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

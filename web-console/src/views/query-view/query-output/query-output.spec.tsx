@@ -16,42 +16,20 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+import React from 'react';
+import { render } from 'react-testing-library';
 
-.sql-view {
-  height: 100%;
-  width: 100%;
+import { QueryOutput } from './query-output';
 
-  .top-pane {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 10px;
+describe('query output', () => {
+  it('matches snapshot', () => {
+    const queryOutput = <QueryOutput
+      loading={false}
+      result={null}
+      error="lol"
+    />;
 
-    .sql-control {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px;
-    background-color: #6d8ea9;
-  }
-
-  .bottom-pane {
-    position: absolute;
-    width: 100%;
-    top: 10px;
-    bottom: 0;
-
-    .ReactTable {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 100%;
-    }
-  }
-}
-
+    const { container } = render(queryOutput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
