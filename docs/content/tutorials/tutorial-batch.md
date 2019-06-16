@@ -51,42 +51,42 @@ Click `Preview` and make sure that the the data you are seeing is correct.
 
 ![Data loader sample](../tutorials/img/tutorial-batch-data-loader-02.png "Data loader sample")
 
-Once the data is located, you can click "Next: Parse data" to go to the next stage.
+Once the data is located, you can click "Next: Parse data" to go to the next step.
 The data loader will try to automatically determine the correct parser for the data.
 In this case it will successfully determine `json`.
 Feel free to play around with different parser options to get a preview of how Druid will parse your data.
 
 ![Data loader parse data](../tutorials/img/tutorial-batch-data-loader-03.png "Data loader parse data")
 
-With the `json` parser selected click `Next: Parse time` to get to the stage centered around determining your primary timestamp column.
+With the `json` parser selected click `Next: Parse time` to get to the step centered around determining your primary timestamp column.
 Druid's architecture mandates a primary timestamp column that will be called `__time`, which could always just be a `Constant value`.
 In this case the data loader will guess the `time` column as the primary time column as it is the only one with values that look like they might be time. 
 
 ![Data loader parse time](../tutorials/img/tutorial-batch-data-loader-04.png "Data loader parse time")
 
-Click `Next: ...` twice to go past the `Transform` and `Filter` stages, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
+Click `Next: ...` twice to go past the `Transform` and `Filter` steps, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
 
-In the `Configure schema` stage, you can configure which dimensions (and metrics) will be ingested into Druid.
+In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
 Since our dataset is very small go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
 
 ![Data loader schema](../tutorials/img/tutorial-batch-data-loader-05.png "Data loader schema")
 
-Once you are satisfied with the schema click `Next` to go to the `Partition` stage where you can fine tune how the data will be partitioned into segments.
+Once you are satisfied with the schema click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 Here you can adjust how the data will be split up into segments in Druid.
-Since this is such a small dataset there are no adjustments that need to be made in this stage.  
+Since this is such a small dataset there are no adjustments that need to be made in this step.
 
 ![Data loader partition](../tutorials/img/tutorial-batch-data-loader-06.png "Data loader partition")
 
-Clicking past the `Tune` stage we get to the publish stage which is where we can specify what the datasource will be called in Druid.
+Clicking past the `Tune` step we get to the publish step which is where we can specify what the datasource will be called in Druid.
 Let's name this datasource `wikipedia`.  
 
 ![Data loader publish](../tutorials/img/tutorial-batch-data-loader-07.png "Data loader publish")
 
 Finally click `Next` to review your spec.
 This is the spec you have constructed.
-Feel free to go back to previous stages and see how making changes there will manifest itself in the spec.
-Similarly you can also edit the spec directly and see it reflected in the other stages.  
+Feel free to go back to previous steps and see how making changes there will manifest itself in the spec.
+Similarly you can also edit the spec directly and see it reflected in the other steps.
 
 ![Data loader spec](../tutorials/img/tutorial-batch-data-loader-08.png "Data loader spec")
 
