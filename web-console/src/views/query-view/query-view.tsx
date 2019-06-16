@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Icon, IconName, Intent, ITreeNode, Position, Tooltip, Tree } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
 import axios, { AxiosResponse } from 'axios';
 import Hjson from 'hjson';
 import React from 'react';
@@ -29,15 +28,16 @@ import {
   BasicQueryExplanation,
   decodeRune,
   downloadFile, getDruidErrorMessage,
-  groupBy,
   HeaderRows,
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
   queryDruidSql, QueryManager,
   SemiJoinQueryExplanation, uniq
 } from '../../utils';
+import { ColumnMetadata } from '../../utils/column-metadata';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 
+import { ColumnTree } from './column-tree/column-tree';
 import { QueryExtraInfo, QueryExtraInfoData } from './query-extra-info/query-extra-info';
 import { QueryInput } from './query-input/query-input';
 import { QueryOutput } from './query-output/query-output';
@@ -69,9 +69,7 @@ export interface QueryViewState {
   loadingExplain: boolean;
   explainError: Error | null;
 
-  tableNames: string[] | null;
-  columnNames: string[] | null;
-  nav: ITreeNode[] | null;
+  columnMetadata: ColumnMetadata[] | null;
 }
 
 interface QueryResult {
@@ -79,7 +77,7 @@ interface QueryResult {
   queryExtraInfo: QueryExtraInfoData;
 }
 
-export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
+export class QueryView extends React.PureComponent<QueryViewProps, QueryViewState> {
   static trimSemicolon(query: string): string {
     // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
     return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
@@ -95,6 +93,16 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  static formatStr(s: string | number, format: 'csv' | 'tsv') {
+    if (format === 'csv') {
+      // remove line break, single quote => double quote, handle ','
+      return `"${String(s).replace(/(?:\r\n|\r|\n)/g, ' ').replace(/"/g, '""')}"`;
+    } else { // tsv
+      // remove line break, single quote => double quote, \t => ''
+      return String(s).replace(/(?:\r\n|\r|\n)/g, ' ').replace(/\t/g, '').replace(/"/g, '""');
     }
   }
 
@@ -117,9 +125,7 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       explainResult: null,
       explainError: null,
 
-      tableNames: null,
-      columnNames: null,
-      nav: null
+      columnMetadata: null
     };
   }
 
@@ -128,10 +134,11 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       processQuery: async (queryWithContext: QueryWithContext) => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
         let queryId: string = '';
+        let wrappedLimit: number | undefined;
 
         let queryResult: HeaderRows;
-        const startTime = Date.now();
-        let endTime: number;
+        const startTime = new Date();
+        let endTime: Date;
 
         if (QueryView.isRune(queryString)) {
           // Secret way to issue a native JSON "rune" query
@@ -141,7 +148,7 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
           let runeResult: any[];
           try {
             const runeResultResp = await axios.post('/druid/v2', runeQuery);
-            endTime = Date.now();
+            endTime = new Date();
             runeResult = runeResultResp.data;
             queryId = runeResultResp.headers['x-druid-query-id'];
           } catch (e) {
@@ -152,8 +159,10 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
 
         } else {
           const actualQuery = wrapQuery ?
-            `SELECT * FROM (${QueryView.trimSemicolon(queryString)}\n) LIMIT 2000` :
+            `SELECT * FROM (${QueryView.trimSemicolon(queryString)}\n) LIMIT 1000` :
             queryString;
+
+          if (wrapQuery) wrappedLimit = 1000;
 
           const queryPayload: Record<string, any> = {
             query: actualQuery,
@@ -165,7 +174,7 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
           let sqlResult: any[];
           try {
             const sqlResultResp = await axios.post('/druid/v2/sql', queryPayload);
-            endTime = Date.now();
+            endTime = new Date();
             sqlResult = sqlResultResp.data;
             queryId = sqlResultResp.headers['x-druid-sql-query-id'];
           } catch (e) {
@@ -181,8 +190,11 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
         return {
           queryResult,
           queryExtraInfo: {
-            id: queryId,
-            elapsed: endTime - startTime
+            queryId,
+            startTime,
+            endTime,
+            numResults: queryResult.rows.length,
+            wrappedLimit
           }
         };
       },
@@ -218,7 +230,7 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       }
     });
 
-    this.getMetadata();
+    this.getColumnMetadata();
   }
 
   componentWillUnmount(): void {
@@ -226,10 +238,10 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
     this.explainQueryManager.terminate();
   }
 
-  private getMetadata = async () => {
-    let metadataResp: AxiosResponse | null = null;
+  private getColumnMetadata = async () => {
+    let columnMetadataResp: AxiosResponse | null = null;
     try {
-      metadataResp = await axios.post('/druid/v2/sql', {
+      columnMetadataResp = await axios.post('/druid/v2/sql', {
         query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`
       });
     } catch (e) {
@@ -239,76 +251,24 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       });
     }
 
-    interface Metadata {
-      TABLE_SCHEMA: string;
-      TABLE_NAME: string;
-      COLUMN_NAME: string;
-    }
-
-    if (!metadataResp) return;
-    const metadata: Metadata[] = metadataResp.data;
-
+    if (!columnMetadataResp) return;
     this.setState({
-      tableNames: uniq(metadata.map((d: any) => d.TABLE_NAME)),
-      columnNames: uniq(metadata.map((d: any) => d.COLUMN_NAME)),
-      nav: groupBy(
-        metadata,
-        (r) => r.TABLE_SCHEMA,
-        (metadata, schema): ITreeNode => ({
-          id: schema,
-          icon: IconNames.DATABASE,
-          label: schema,
-          isExpanded: schema === 'druid',
-          childNodes: groupBy(
-            metadata,
-            (r) => r.TABLE_NAME,
-            (metadata, table) => ({
-              id: table,
-              icon: IconNames.TH,
-              label: table,
-              childNodes: groupBy(
-                metadata,
-                (r) => r.COLUMN_NAME,
-                (metadata, column) => ({
-                  id: column,
-                  icon: column === '__time' ? IconNames.TIME : IconNames.FONT,
-                  label: column
-                })
-              )
-            })
-          )
-        })
-      ).reverse()
+      columnMetadata: columnMetadataResp.data
     });
   }
 
-  onSecondaryPaneSizeChange(secondaryPaneSize: number) {
-    localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
-  }
-
-  formatStr(s: string | number, format: 'csv' | 'tsv') {
-    if (format === 'csv') {
-      // remove line break, single quote => double quote, handle ','
-      return `"${s.toString().replace(/(?:\r\n|\r|\n)/g, ' ').replace(/"/g, '""')}"`;
-    } else { // tsv
-      // remove line break, single quote => double quote, \t => ''
-      return `${s.toString().replace(/(?:\r\n|\r|\n)/g, ' ').replace(/\t/g, '').replace(/"/g, '""')}`;
-    }
-  }
-
-  handleDownload = (format: string) => {
+  handleDownload = (filename: string, format: string) => {
     const { result } = this.state;
     if (!result) return;
-    let data: string = '';
+    let lines: string[] = [];
     let separator: string = '';
-    const lineBreak = '\n';
 
     if (format === 'csv' || format === 'tsv') {
       separator = format === 'csv' ? ',' : '\t';
-      data = result.header.map(str => this.formatStr(str, format)).join(separator) + lineBreak;
-      data += result.rows.map(r => r.map(cell => this.formatStr(cell, format)).join(separator)).join(lineBreak);
+      lines.push(result.header.map(str => QueryView.formatStr(str, format)).join(separator));
+      lines = lines.concat(result.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)));
     } else { // json
-      data = result.rows.map(r => {
+      lines = result.rows.map(r => {
         const outputObject: Record<string, any> = {};
         for (let k = 0; k < r.length; k++) {
           const newName = result.header[k];
@@ -317,9 +277,11 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
           }
         }
         return JSON.stringify(outputObject);
-      }).join(lineBreak);
+      });
     }
-    downloadFile(data, format, 'query_result.' + format);
+
+    const lineBreak = '\n';
+    downloadFile(lines.join(lineBreak), format, filename);
   }
 
   renderExplainDialog() {
@@ -334,90 +296,8 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
     return null;
   }
 
-  renderIndexTree() {
-    const { nav } = this.state;
-    if (!nav) return null;
-
-    const INITIAL_STATE: ITreeNode[] = [
-      {
-        id: 0,
-        hasCaret: true,
-        icon: 'folder-close',
-        label: 'Folder 0'
-      },
-      {
-        id: 1,
-        icon: 'folder-close',
-        isExpanded: true,
-        label: (
-          <Tooltip content="I'm a folder <3" position={Position.RIGHT}>
-            Folder 1
-          </Tooltip>
-        ),
-        childNodes: [
-          {
-            id: 2,
-            icon: 'document',
-            label: 'Item 0',
-            secondaryLabel: (
-              <Tooltip content="An eye!">
-                <Icon icon="eye-open" />
-              </Tooltip>
-            )
-          },
-          {
-            id: 3,
-            icon: <Icon icon="tag" intent={Intent.PRIMARY} className={Classes.TREE_NODE_ICON} />,
-            label: 'Organic meditation gluten-free, sriracha VHS drinking vinegar beard man.'
-          },
-          {
-            id: 4,
-            hasCaret: true,
-            icon: 'folder-close',
-            label: (
-              <Tooltip content="foo" position={Position.RIGHT}>
-                Folder 2
-              </Tooltip>
-            )
-          }
-        ]
-      },
-      {
-        id: 2,
-        hasCaret: true,
-        icon: 'folder-close',
-        label: 'Super secret files',
-        disabled: true
-      }
-    ];
-
-    return <div className="index-tree">
-      <Tree
-        contents={nav}
-        onNodeClick={this.handleNodeClick}
-        onNodeCollapse={this.handleNodeCollapse}
-        onNodeExpand={this.handleNodeExpand}
-      />
-    </div>;
-  }
-
-  private handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
-    console.log('nodeData', _nodePath, nodeData);
-    this.setState({ queryString: String(nodeData.label) });
-  }
-
-  private handleNodeCollapse = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = false;
-    this.setState(this.state);
-  }
-
-  private handleNodeExpand = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = true;
-    this.setState(this.state);
-  }
-
   renderMainArea() {
-    const { queryString, queryContext, loading, result, queryExtraInfo, error } = this.state;
+    const { queryString, queryContext, loading, result, queryExtraInfo, error, columnMetadata } = this.state;
     const runeMode = QueryView.isRune(queryString);
 
     return <SplitterLayout
@@ -426,13 +306,14 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
       secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60}
       primaryMinSize={30}
       secondaryMinSize={30}
-      onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+      onSecondaryPaneSizeChange={this.handleSecondaryPaneSizeChange}
     >
       <div className="control-pane">
         <QueryInput
           queryString={queryString}
           onQueryStringChange={this.handleQueryStringChange}
           runeMode={runeMode}
+          columnMetadata={columnMetadata}
         />
         <div className="control-bar">
           <RunButton
@@ -482,9 +363,18 @@ export class QueryView extends React.Component<QueryViewProps, QueryViewState> {
     this.explainQueryManager.runQuery({ queryString, queryContext });
   }
 
+  private handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
+    localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
+  }
+
   render() {
+    const { columnMetadata } = this.state;
+
     return <div className="query-view app-view">
-      {this.renderIndexTree()}
+      <ColumnTree
+        columnMetadata={columnMetadata}
+        onQueryStringChange={this.handleQueryStringChange}
+      />
       {this.renderMainArea()}
       {this.renderExplainDialog()}
     </div>;

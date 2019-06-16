@@ -210,17 +210,6 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
-export function memoize<T, U>(fn: (x: T) => U): (x: T) => U {
-  let lastInput: T;
-  let lastOutput: U;
-  return (x: T) => {
-    if (x === lastInput) return lastOutput;
-    lastInput = x;
-    lastOutput = fn(lastInput);
-    return lastOutput;
-  };
-}
-
 export function parseJson(json: string): any {
   try {
     return JSON.parse(json);
@@ -273,7 +262,7 @@ export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix:
 
 // ----------------------------
 
-export function downloadFile(text: string, type: string, fileName: string): void {
+export function downloadFile(text: string, type: string, filename: string): void {
   let blobType: string = '';
   switch (type) {
     case 'json':
@@ -288,5 +277,5 @@ export function downloadFile(text: string, type: string, fileName: string): void
   const blob = new Blob([text], {
     type: blobType
   });
-  FileSaver.saveAs(blob, fileName);
+  FileSaver.saveAs(blob, filename);
 }

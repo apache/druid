@@ -24,19 +24,12 @@ $nav-width: 250px;
   height: 100%;
   width: 100%;
 
-  .index-tree {
+  .column-tree {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
     width: $nav-width;
-    padding: 10px 0;
-
-    background: #27313b;
-
-    .bp3-tree-node-content-2 {
-      padding-left: 23px;
-    }
   }
 
   .splitter-layout {

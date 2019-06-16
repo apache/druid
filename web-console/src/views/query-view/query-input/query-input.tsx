@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
+import { IResizeEntry, ITreeNode, ResizeSensor } from '@blueprintjs/core';
 import ace from 'brace';
-import Hjson from 'hjson';
 import React from 'react';
 import AceEditor from 'react-ace';
 import ReactDOMServer from 'react-dom/server';
 
 import { SQLFunctionDoc } from '../../../../lib/sql-function-doc';
+import { uniq } from '../../../utils';
+import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnTreeProps, ColumnTreeState } from '../column-tree/column-tree';
 
 import './query-input.scss';
 
@@ -33,23 +35,51 @@ export interface QueryInputProps extends React.Props<any> {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
+  columnMetadata: ColumnMetadata[] | null;
 }
 
 export interface QueryInputState {
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
+  prevColumnMetadata: ColumnMetadata[] | null;
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
+
+  static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
+    const { columnMetadata } = props;
+
+    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+      const completions = ([] as any[]).concat(
+        uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({ value: v, score: 10, meta: 'schema' })),
+        uniq(columnMetadata.map(d => d.TABLE_NAME)).map(v => ({ value: v, score: 49, meta: 'datasource' })),
+        uniq(columnMetadata.map(d => d.COLUMN_NAME)).map(v => ({ value: v, score: 50, meta: 'column' }))
+      );
+
+      langTools.addCompleter({
+        getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+          callback(null, completions);
+        }
+      });
+
+      return {
+        prevColumnMetadata: columnMetadata
+      };
+    }
+    return null;
+  }
+
   constructor(props: QueryInputProps, context: any) {
     super(props, context);
     this.state = {
-      editorHeight: 200
+      editorHeight: 200,
+      prevColumnMetadata: null
     };
   }
 
   private replaceDefaultAutoCompleter = () => {
+    if (!langTools) return;
     /*
      Please refer to the source code @
      https://github.com/ajaxorg/ace/blob/9b5b63d1dc7c1b81b58d30c87d14b5905d030ca5/lib/ace/ext/language_tools.js#L41
@@ -71,20 +101,9 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
   }
 
-  public addMetadataAutoCompleter(tableNames: string[], columnNames: string[]) {
-    const metas = ([] as any[]).concat(
-      tableNames.map(v => ({ value: v, score: 50, meta: 'datasource' })),
-      columnNames.map(v => ({ value: v, score: 50, meta: 'column' }))
-    );
-
-    langTools.addCompleter({
-      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
-        callback(null, metas);
-      }
-    });
-  }
-
   private addFunctionAutoCompleter = (): void => {
+    if (!langTools) return;
+
     const functionList: any[] = SQLFunctionDoc.map((entry: any) => {
       let funcName: string = entry.syntax.replace(/\(.*\)/, '()');
       if (!funcName.includes('(')) funcName = funcName.substr(0, 10);
@@ -104,7 +123,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       };
     });
 
-    const completer = {
+    langTools.addCompleter({
       getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
         callback(null, functionList);
       },
@@ -124,8 +143,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
           ));
         }
       }
-    };
-    langTools.addCompleter(completer);
+    });
   }
 
   componentDidMount(): void {

@@ -16,14 +16,11 @@
  * limitations under the License.
  */
 
-.query-extra-info {
-  & > * {
-    display: inline-block;
-  }
+.column-tree {
+  padding: 10px 0;
+  background: #27313b;
 
-  .query-info {
-    line-height: 30px;
-    white-space: nowrap;
-    cursor: pointer;
+  .bp3-tree-node-content-2 {
+    padding-left: 23px;
   }
 }

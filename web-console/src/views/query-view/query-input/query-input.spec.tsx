@@ -27,6 +27,7 @@ describe('query input', () => {
       queryString="hello world"
       onQueryStringChange={() => null}
       runeMode={false}
+      columnMetadata={null}
     />;
 
     const { container } = render(sqlControl);

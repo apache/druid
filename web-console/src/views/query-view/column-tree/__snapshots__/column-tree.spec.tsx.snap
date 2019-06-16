@@ -1,0 +1,202 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`column tree matches snapshot 1`] = `
+<div
+  class="column-tree"
+>
+  <div
+    class="bp3-tree"
+  >
+    <ul
+      class="bp3-tree-node-list bp3-tree-root"
+    >
+      <li
+        class="bp3-tree-node"
+      >
+        <div
+          class="bp3-tree-node-content bp3-tree-node-content-0"
+        >
+          <span
+            class="bp3-icon bp3-icon-chevron-right bp3-tree-node-caret bp3-tree-node-caret-closed"
+            icon="chevron-right"
+          >
+            <svg
+              data-icon="chevron-right"
+              height="16"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <desc>
+                chevron-right
+              </desc>
+              <path
+                d="M10.71 7.29l-4-4a1.003 1.003 0 0 0-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <span
+            class="bp3-icon bp3-icon-database bp3-tree-node-icon"
+            icon="database"
+          >
+            <svg
+              data-icon="database"
+              height="16"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <desc>
+                database
+              </desc>
+              <path
+                d="M8 4c3.31 0 6-.9 6-2s-2.69-2-6-2C4.68 0 2 .9 2 2s2.68 2 6 2zm-6-.48V8c0 1.1 2.69 2 6 2s6-.9 6-2V3.52C12.78 4.4 10.56 5 8 5s-4.78-.6-6-1.48zm0 6V14c0 1.1 2.69 2 6 2s6-.9 6-2V9.52C12.78 10.4 10.56 11 8 11s-4.78-.6-6-1.48z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <span
+            class="bp3-tree-node-label"
+          >
+            sys
+          </span>
+        </div>
+        <div
+          class="bp3-collapse"
+        >
+          <div
+            aria-hidden="false"
+            class="bp3-collapse-body"
+            style="transform: translateY(-0px);"
+          />
+        </div>
+      </li>
+      <li
+        class="bp3-tree-node bp3-tree-node-expanded"
+      >
+        <div
+          class="bp3-tree-node-content bp3-tree-node-content-0"
+        >
+          <span
+            class="bp3-icon bp3-icon-chevron-right bp3-tree-node-caret bp3-tree-node-caret-open"
+            icon="chevron-right"
+          >
+            <svg
+              data-icon="chevron-right"
+              height="16"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <desc>
+                chevron-right
+              </desc>
+              <path
+                d="M10.71 7.29l-4-4a1.003 1.003 0 0 0-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <span
+            class="bp3-icon bp3-icon-database bp3-tree-node-icon"
+            icon="database"
+          >
+            <svg
+              data-icon="database"
+              height="16"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <desc>
+                database
+              </desc>
+              <path
+                d="M8 4c3.31 0 6-.9 6-2s-2.69-2-6-2C4.68 0 2 .9 2 2s2.68 2 6 2zm-6-.48V8c0 1.1 2.69 2 6 2s6-.9 6-2V3.52C12.78 4.4 10.56 5 8 5s-4.78-.6-6-1.48zm0 6V14c0 1.1 2.69 2 6 2s6-.9 6-2V9.52C12.78 10.4 10.56 11 8 11s-4.78-.6-6-1.48z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <span
+            class="bp3-tree-node-label"
+          >
+            druid
+          </span>
+        </div>
+        <div
+          class="bp3-collapse"
+          style="height: auto; overflow-y: visible; transition: none;"
+        >
+          <div
+            aria-hidden="false"
+            class="bp3-collapse-body"
+            style="transform: translateY(0); transition: none;"
+          >
+            <ul
+              class="bp3-tree-node-list"
+            >
+              <li
+                class="bp3-tree-node"
+              >
+                <div
+                  class="bp3-tree-node-content bp3-tree-node-content-1"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-chevron-right bp3-tree-node-caret bp3-tree-node-caret-closed"
+                    icon="chevron-right"
+                  >
+                    <svg
+                      data-icon="chevron-right"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        chevron-right
+                      </desc>
+                      <path
+                        d="M10.71 7.29l-4-4a1.003 1.003 0 0 0-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="bp3-icon bp3-icon-th bp3-tree-node-icon"
+                    icon="th"
+                  >
+                    <svg
+                      data-icon="th"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        th
+                      </desc>
+                      <path
+                        d="M15 1H1c-.6 0-1 .5-1 1v12c0 .6.4 1 1 1h14c.6 0 1-.4 1-1V2c0-.5-.4-1-1-1zM6 13H2v-2h4v2zm0-3H2V8h4v2zm0-3H2V5h4v2zm8 6H7v-2h7v2zm0-3H7V8h7v2zm0-3H7V5h7v2z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="bp3-tree-node-label"
+                  >
+                    deletion-tutorial
+                  </span>
+                </div>
+                <div
+                  class="bp3-collapse"
+                >
+                  <div
+                    aria-hidden="false"
+                    class="bp3-collapse-body"
+                    style="transform: translateY(-0px);"
+                  />
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+`;

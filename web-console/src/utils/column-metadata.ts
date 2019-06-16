@@ -16,14 +16,9 @@
  * limitations under the License.
  */
 
-.query-extra-info {
-  & > * {
-    display: inline-block;
-  }
-
-  .query-info {
-    line-height: 30px;
-    white-space: nowrap;
-    cursor: pointer;
-  }
+export interface ColumnMetadata {
+  TABLE_SCHEMA: string;
+  TABLE_NAME: string;
+  COLUMN_NAME: string;
+  DATA_TYPE: string;
 }

@@ -25,8 +25,11 @@ describe('query extra info', () => {
   it('matches snapshot', () => {
     const queryExtraInfo = <QueryExtraInfo
       queryExtraInfo={{
-        id: '3242ewdfwdf2r23',
-        elapsed: 1234
+        queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
+        startTime: new Date('1986-04-26T01:23:40+03:00'),
+        endTime: new Date('1986-04-26T01:23:48+03:00'),
+        numResults: 2000,
+        wrappedLimit: 2000
       }}
       onDownload={() => null}
     />;

@@ -16,20 +16,28 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, Intent, Menu, MenuDivider, MenuItem, Popover, Position, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { on } from 'cluster';
+import copy from 'copy-to-clipboard';
 import React from 'react';
+
+import { AppToaster } from '../../../singletons/toaster';
+import { pluralIfNeeded } from '../../../utils';
 
 import './query-extra-info.scss';
 
 export interface QueryExtraInfoData {
-  id: string;
-  elapsed: number;
+  queryId: string;
+  startTime: Date;
+  endTime: Date;
+  numResults: number;
+  wrappedLimit?: number;
 }
 
 export interface QueryExtraInfoProps extends React.Props<any> {
   queryExtraInfo: QueryExtraInfoData;
-  onDownload: (format: string) => void;
+  onDownload: (filename: string, format: string) => void;
 }
 
 export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
@@ -38,14 +46,26 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
     const { queryExtraInfo, onDownload } = this.props;
 
     const downloadMenu = <Menu className="download-format-menu">
-      <MenuItem text="CSV" onClick={() => onDownload('csv')} />
-      <MenuItem text="TSV" onClick={() => onDownload('tsv')} />
-      <MenuItem text="JSON (new line delimited)" onClick={() => onDownload('json')}/>
+      <MenuDivider title="Download as:"/>
+      <MenuItem text="CSV" onClick={() => this.handleDownload('csv')} />
+      <MenuItem text="TSV" onClick={() => this.handleDownload('tsv')} />
+      <MenuItem text="JSON (new line delimited)" onClick={() => this.handleDownload('json')}/>
     </Menu>;
 
+    let resultCount: string;
+    if (queryExtraInfo.wrappedLimit && queryExtraInfo.numResults === queryExtraInfo.wrappedLimit) {
+      resultCount = `${queryExtraInfo.numResults - 1}+ results`;
+    } else {
+      resultCount = pluralIfNeeded(queryExtraInfo.numResults, 'result');
+    }
+
+    const elapsed = queryExtraInfo.endTime.valueOf() - queryExtraInfo.startTime.valueOf();
+
     return <div className="query-extra-info">
-      <div className="query-elapsed">
-        {`Last query took ${(queryExtraInfo.elapsed / 1000).toFixed(2)} seconds`}
+      <div className="query-info" onClick={this.handleQueryInfoClick}>
+        <Tooltip content={<>QueryID: <strong>{queryExtraInfo.queryId}</strong> (click to copy)</>} hoverOpenDelay={500}>
+          {`${resultCount} in ${(elapsed / 1000).toFixed(2)}s`}
+        </Tooltip>
       </div>
       <Popover className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
         <Button
@@ -54,5 +74,19 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
         />
       </Popover>
     </div>;
+  }
+
+  private handleQueryInfoClick = () => {
+    const { queryExtraInfo } = this.props;
+    copy(queryExtraInfo.queryId, { format: 'text/plain' });
+    AppToaster.show({
+      message: 'Query ID copied to clipboard',
+      intent: Intent.SUCCESS
+    });
+  }
+
+  private handleDownload = (format: string) => {
+    const { queryExtraInfo, onDownload } = this.props;
+    onDownload(`query-${queryExtraInfo.queryId}.${format}`, format);
   }
 }

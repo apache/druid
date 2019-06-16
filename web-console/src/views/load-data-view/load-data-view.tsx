@@ -28,9 +28,10 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
+import memoize from 'memoize-one';
 import React from 'react';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, TableCell } from '../../components';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -38,7 +39,7 @@ import {
   getDruidErrorMessage,
   localStorageGet,
   LocalStorageKeys,
-  localStorageSet, memoize, parseJson,
+  localStorageSet, parseJson,
   QueryState
 } from '../../utils';
 import { possibleDruidFormatForValues } from '../../utils/druid-time';
@@ -1294,7 +1295,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   }
 
-  private getMemoizedDimensionFiltersFromSpec = memoize<IngestionSpec, DruidFilter[]>((spec) => {
+  private getMemoizedDimensionFiltersFromSpec = memoize((spec) => {
     const { dimensionFilters } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
     return dimensionFilters;
   });
