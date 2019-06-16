@@ -366,6 +366,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       {this.renderResetConfirm()}
     </div>;
   }
+
   renderStepNav() {
     const { stage } = this.state;
 
@@ -382,7 +383,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 key={s}
                 active={s === stage}
                 onClick={() => this.updateStage(s)}
-                icon={s === 'json-spec' && IconNames.EYE_OPEN}
+                icon={s === 'json-spec' && IconNames.MANUALLY_ENTERED_DATA}
                 text={VIEW_TITLE[s]}
               />
             ))}
@@ -402,13 +403,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         onPrevStage &&
         <Button
           className="prev"
-          icon={IconNames.ARROW_LEFT}
+          icon={IconNames.UNDO}
           text={prevLabel}
           onClick={onPrevStage}
         />
       }
       <Button
         text={`Next: ${VIEW_TITLE[nextStage]}`}
+        rightIcon={IconNames.ARROW_RIGHT}
         intent={Intent.PRIMARY}
         disabled={disabled}
         onClick={() => {
