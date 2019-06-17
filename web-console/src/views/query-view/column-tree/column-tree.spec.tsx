@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { render } from 'react-testing-library';
+
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import { ColumnTree } from './column-tree';
