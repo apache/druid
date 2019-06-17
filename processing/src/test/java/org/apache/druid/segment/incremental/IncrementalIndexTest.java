@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -156,36 +155,46 @@ public class IncrementalIndexTest
     return constructors;
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testDuplicateDimensions() throws IndexSizeExceededException
   {
     IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
+            0,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
-    index.add(
-        new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.of("billy", "A", "joe", "B")
-        )
+    IncrementalIndexAddResult result = index.add(
+            new MapBasedInputRow(
+                    0,
+                    Lists.newArrayList("billy", "joe", "joe"),
+                    ImmutableMap.of("billy", "A", "joe", "B")
+            )
+    );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={billy=A, joe=B}, dimensions=[billy, joe, joe]}], exceptions: [Dimension[joe] occurred more than once in InputRow,]",
+            result.getParseException().getMessage()
     );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
   {
     IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex());
-    index.add(
-        new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.of("billy", "A", "joe", "B")
-        )
+    IncrementalIndexAddResult result = index.add(
+            new MapBasedInputRow(
+                    0,
+                    Lists.newArrayList("billy", "joe", "joe"),
+                    ImmutableMap.of("billy", "A", "joe", "B")
+            )
+    );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={billy=A, joe=B}, dimensions=[billy, joe, joe]}], exceptions: [Dimension[joe] occurred more than once in InputRow,]",
+            result.getParseException().getMessage()
     );
   }
 

@@ -101,12 +101,12 @@ public class IndexIngestionMultithreadedBenchmark
   @State(Scope.Thread)
   public static class ThreadState
   {
-    int id = 0;
+    int rowOffset = 0;
 
     @Setup
     public void setup(IndexIngestionMultithreadedBenchmark globalState)
     {
-      id = globalState.threadIdAllocator.getAndIncrement();
+      rowOffset = globalState.threadIdAllocator.getAndIncrement();
     }
   }
 
@@ -136,7 +136,7 @@ public class IndexIngestionMultithreadedBenchmark
   public void addRows(Blackhole blackhole, ThreadState threadState) throws Exception
   {
     int threads = threadIdAllocator.get();
-    for (int i = threadState.id; i < rowsPerSegment; i += threads) {
+    for (int i = threadState.rowOffset; i < rowsPerSegment; i += threads) {
       InputRow row = rows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);

@@ -634,12 +634,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     DimensionData dimensionData = null;
     for (String dimension : rowDimensions) {
       if (Strings.isNullOrEmpty(dimension)) {
+        parseExceptionMessages.add("InputRow contains null or empty dimension name");
         continue;
       }
-
       if (rowDimKeys.containsKey(dimension)) {
         // If the dims map already contains a mapping at this index, it means we have seen this dimension already on this input row.
-        throw new ISE("Dimension[%s] occurred more than once in InputRow", dimension);
+        parseExceptionMessages.add(StringUtils.nonStrictFormat("Dimension[%s] occurred more than once in InputRow", dimension));
+        continue;
       }
       ColumnCapabilitiesImpl capabilities;
       DimensionDesc desc = prevDimensionData.getDimensionDesc(dimension);
@@ -700,9 +701,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       dimensionData = prevDimensionData;
     }
     Object[] dims = new Object[dimensionData.size()];
-    for (String dimension : rowDimKeys.keySet()) {
-      DimensionDesc desc = dimensionData.getDimensionDesc(dimension);
-      dims[desc.getIndex()] = rowDimKeys.get(dimension);
+    for (Map.Entry<String, Object> dimension : rowDimKeys.entrySet()) {
+      DimensionDesc desc = dimensionData.getDimensionDesc(dimension.getKey());
+      dims[desc.getIndex()] = dimension.getValue();
     }
 
     long truncated = 0;
