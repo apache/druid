@@ -6,6 +6,7 @@ exports[`sql view matches snapshot 1`] = `
 >
   <ColumnTree
     columnMetadata={null}
+    columnMetadataLoading={true}
     onQueryStringChange={[Function]}
   />
   <t
