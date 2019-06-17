@@ -563,7 +563,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (inputQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please fill out the fields on the right sidebar to get started.
+        Please fill out the fields on the right sidebar to get started <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (inputQueryState.isLoading()) {
@@ -706,7 +706,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (parserQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the parser details on the right
+        Please enter the parser details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (parserQueryState.isLoading()) {
@@ -950,7 +950,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (timestampQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the timestamp column details on the right
+        Please enter the timestamp column details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else  if (timestampQueryState.isLoading()) {
