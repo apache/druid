@@ -23,6 +23,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
@@ -135,7 +136,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.retryS3Operation(
           () -> {
-            service.putObject(config.getS3Bucket(), taskKey, logFile);
+            uploadFileIfPossible(config.getS3Bucket(), taskKey, logFile);
             return null;
           }
       );
@@ -144,6 +145,17 @@ public class S3TaskLogs implements TaskLogs
       Throwables.propagateIfInstanceOf(e, IOException.class);
       throw new RuntimeException(e);
     }
+  }
+
+  private void uploadFileIfPossible(String bucket, String key, File file)
+  {
+    final PutObjectRequest logFilePutRequest = new PutObjectRequest(bucket, key, file);
+
+    if (!config.getDisableAcl()) {
+      logFilePutRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
+    }
+    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
+    service.putObject(logFilePutRequest);
   }
 
   private String getTaskLogKey(String taskid, String filename)
