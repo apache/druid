@@ -80,5 +80,9 @@ $nav-width: 250px;
 
     }
   }
+
+  &.hide-column-tree .splitter-layout {
+    left: 0;
+  }
 }
 

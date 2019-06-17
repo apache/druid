@@ -17,7 +17,8 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
+import classNames from 'classnames';
 import Hjson from 'hjson';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
@@ -32,7 +33,7 @@ import {
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
   queryDruidSql, QueryManager,
-  SemiJoinQueryExplanation, uniq
+  SemiJoinQueryExplanation
 } from '../../utils';
 import { ColumnMetadata } from '../../utils/column-metadata';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
@@ -59,6 +60,10 @@ export interface QueryViewState {
   queryString: string;
   queryContext: QueryContext;
 
+  columnMetadataLoading: boolean;
+  columnMetadata: ColumnMetadata[] | null;
+  columnMetadataError: string | null;
+
   loading: boolean;
   result: HeaderRows | null;
   queryExtraInfo: QueryExtraInfoData | null;
@@ -68,8 +73,6 @@ export interface QueryViewState {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   loadingExplain: boolean;
   explainError: Error | null;
-
-  columnMetadata: ColumnMetadata[] | null;
 }
 
 interface QueryResult {
@@ -106,6 +109,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
+  private metadataQueryManager: QueryManager<string, ColumnMetadata[]>;
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
   private explainQueryManager: QueryManager<QueryWithContext, BasicQueryExplanation | SemiJoinQueryExplanation | string>;
 
@@ -115,6 +119,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryString: props.initQuery || localStorageGet(LocalStorageKeys.QUERY_KEY) || '',
       queryContext: {},
 
+      columnMetadataLoading: false,
+      columnMetadata: null,
+      columnMetadataError: null,
+
       loading: false,
       result: null,
       queryExtraInfo: null,
@@ -123,13 +131,34 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       explainDialogOpen: false,
       loadingExplain: false,
       explainResult: null,
-      explainError: null,
-
-      columnMetadata: null
+      explainError: null
     };
   }
 
   componentDidMount(): void {
+    this.metadataQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        return await queryDruidSql<ColumnMetadata>({
+          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`
+        });
+      },
+      onStateChange: ({ result, loading, error }) => {
+        if (error) {
+          AppToaster.show({
+            message: 'Could not load SQL metadata',
+            intent: Intent.DANGER
+          });
+        }
+        this.setState({
+          columnMetadataLoading: loading,
+          columnMetadata: result,
+          columnMetadataError: error
+        });
+      }
+    });
+
+    this.metadataQueryManager.runQuery('dummy');
+
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext) => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
@@ -229,32 +258,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         });
       }
     });
-
-    this.getColumnMetadata();
   }
 
   componentWillUnmount(): void {
+    this.metadataQueryManager.terminate();
     this.sqlQueryManager.terminate();
     this.explainQueryManager.terminate();
-  }
-
-  private getColumnMetadata = async () => {
-    let columnMetadataResp: AxiosResponse | null = null;
-    try {
-      columnMetadataResp = await axios.post('/druid/v2/sql', {
-        query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`
-      });
-    } catch (e) {
-      AppToaster.show({
-        message: 'Failed to load SQL metadata',
-        intent: Intent.DANGER
-      });
-    }
-
-    if (!columnMetadataResp) return;
-    this.setState({
-      columnMetadata: columnMetadataResp.data
-    });
   }
 
   handleDownload = (filename: string, format: string) => {
@@ -368,13 +377,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   render() {
-    const { columnMetadata } = this.state;
+    const { columnMetadata, columnMetadataLoading, columnMetadataError } = this.state;
 
-    return <div className="query-view app-view">
-      <ColumnTree
-        columnMetadata={columnMetadata}
-        onQueryStringChange={this.handleQueryStringChange}
-      />
+    return <div className={classNames('query-view app-view', { 'hide-column-tree': columnMetadataError })}>
+      {
+        !columnMetadataError &&
+        <ColumnTree
+          columnMetadataLoading={columnMetadataLoading}
+          columnMetadata={columnMetadata}
+          onQueryStringChange={this.handleQueryStringChange}
+        />
+      }
       {this.renderMainArea()}
       {this.renderExplainDialog()}
     </div>;

@@ -18,17 +18,19 @@
 
 import React from 'react';
 import { render } from 'react-testing-library';
+import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import { ColumnTree } from './column-tree';
 
 describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = <ColumnTree
+      columnMetadataLoading={false}
       columnMetadata={[
         {'TABLE_SCHEMA': 'druid', 'TABLE_NAME': 'deletion-tutorial', 'COLUMN_NAME': '__time', 'DATA_TYPE': 'TIMESTAMP'},
         {'TABLE_SCHEMA': 'druid', 'TABLE_NAME': 'deletion-tutorial', 'COLUMN_NAME': 'added', 'DATA_TYPE': 'BIGINT'},
         {'TABLE_SCHEMA': 'sys', 'TABLE_NAME': 'tasks', 'COLUMN_NAME': 'error_msg', 'DATA_TYPE': 'VARCHAR'}
-      ]}
+      ] as ColumnMetadata[]}
       onQueryStringChange={() => null}
     />;
 

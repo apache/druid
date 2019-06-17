@@ -17,11 +17,27 @@
  */
 
 .column-tree {
-  padding: 10px 0;
   background: #27313b;
-  overflow: auto;
 
-  .bp3-tree-node-content-2 {
-    padding-left: 23px;
+  .schema-selector {
+    position: absolute;
+    top: 0;
+
+    select {
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+
+  .tree-container {
+    position: absolute;
+    top: 40px;
+    bottom: 0;
+    width: 100%;
+    overflow: auto;
+
+    .bp3-tree-node-content-1 {
+      padding-left: 0;
+    }
   }
 }
