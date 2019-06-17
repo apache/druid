@@ -26,9 +26,9 @@ describe('task table action dialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog =
       <SegmentTableActionDialog
-        dimensions={["test", "test"]}
-        metrics={["test", "test"]}
-        taskId={'test'}
+        dimensions={['test', 'test']}
+        metrics={['test', 'test']}
+        taskId="test"
         actions={[]}
         onClose={() => null}
         isOpen
