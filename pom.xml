@@ -1022,7 +1022,7 @@
                     </dependency>
                 </dependencies>
                 <configuration>
-                    <excludeFilterFile>dev/spotbugs-exclude.xml</excludeFilterFile>
+                    <excludeFilterFile>codestyle/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
             </plugin>
             <plugin>
