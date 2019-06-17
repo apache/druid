@@ -162,7 +162,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext) => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
-        let queryId: string = '';
+        let queryId: string | null = null;
+        let sqlQueryId: string | null = null;
         let wrappedLimit: number | undefined;
 
         let queryResult: HeaderRows;
@@ -205,7 +206,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             const sqlResultResp = await axios.post('/druid/v2/sql', queryPayload);
             endTime = new Date();
             sqlResult = sqlResultResp.data;
-            queryId = sqlResultResp.headers['x-druid-sql-query-id'];
+            sqlQueryId = sqlResultResp.headers['x-druid-sql-query-id'];
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
@@ -220,6 +221,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           queryResult,
           queryExtraInfo: {
             queryId,
+            sqlQueryId,
             startTime,
             endTime,
             numResults: queryResult.rows.length,

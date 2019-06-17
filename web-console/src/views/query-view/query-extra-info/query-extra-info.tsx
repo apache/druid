@@ -18,7 +18,6 @@
 
 import { Button, Intent, Menu, MenuDivider, MenuItem, Popover, Position, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { on } from 'cluster';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
@@ -28,7 +27,8 @@ import { pluralIfNeeded } from '../../../utils';
 import './query-extra-info.scss';
 
 export interface QueryExtraInfoData {
-  queryId: string;
+  queryId: string | null;
+  sqlQueryId: string | null;
   startTime: Date;
   endTime: Date;
   numResults: number;
@@ -43,7 +43,7 @@ export interface QueryExtraInfoProps extends React.Props<any> {
 export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
 
   render() {
-    const { queryExtraInfo, onDownload } = this.props;
+    const { queryExtraInfo } = this.props;
 
     const downloadMenu = <Menu className="download-format-menu">
       <MenuDivider title="Download as:"/>
@@ -61,9 +61,16 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
 
     const elapsed = queryExtraInfo.endTime.valueOf() - queryExtraInfo.startTime.valueOf();
 
+    let tooltipContent: JSX.Element | undefined;
+    if (queryExtraInfo.queryId) {
+      tooltipContent = <>Query ID: <strong>{queryExtraInfo.queryId}</strong> (click to copy)</>;
+    } else if (queryExtraInfo.sqlQueryId) {
+      tooltipContent = <>SQL query ID: <strong>{queryExtraInfo.sqlQueryId}</strong> (click to copy)</>;
+    }
+
     return <div className="query-extra-info">
       <div className="query-info" onClick={this.handleQueryInfoClick}>
-        <Tooltip content={<>QueryID: <strong>{queryExtraInfo.queryId}</strong> (click to copy)</>} hoverOpenDelay={500}>
+        <Tooltip content={tooltipContent} hoverOpenDelay={500}>
           {`${resultCount} in ${(elapsed / 1000).toFixed(2)}s`}
         </Tooltip>
       </div>
@@ -78,7 +85,10 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
 
   private handleQueryInfoClick = () => {
     const { queryExtraInfo } = this.props;
-    copy(queryExtraInfo.queryId, { format: 'text/plain' });
+    const id = queryExtraInfo.queryId || queryExtraInfo.sqlQueryId;
+    if (!id) return;
+
+    copy(id, { format: 'text/plain' });
     AppToaster.show({
       message: 'Query ID copied to clipboard',
       intent: Intent.SUCCESS
@@ -87,6 +97,9 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
 
   private handleDownload = (format: string) => {
     const { queryExtraInfo, onDownload } = this.props;
-    onDownload(`query-${queryExtraInfo.queryId}.${format}`, format);
+    const id = queryExtraInfo.queryId || queryExtraInfo.sqlQueryId;
+    if (!id) return;
+
+    onDownload(`query-${id}.${format}`, format);
   }
 }
