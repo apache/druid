@@ -57,7 +57,7 @@ function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmen
 
 export interface ServersViewProps extends React.Props<any> {
   middleManager: string | null;
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   noSqlMode: boolean;
 }
@@ -537,7 +537,7 @@ ORDER BY "rank" DESC, "server" DESC`);
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { groupServersBy } = this.state;
     const { serverTableColumnSelectionHandler } = this;
 
@@ -559,7 +559,7 @@ ORDER BY "rank" DESC, "server" DESC`);
           <Button
             icon={IconNames.APPLICATION}
             text="Go to SQL"
-            onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
+            onClick={() => goToQuery(this.serverQueryManager.getLastQuery())}
           />
         }
         <TableColumnSelector

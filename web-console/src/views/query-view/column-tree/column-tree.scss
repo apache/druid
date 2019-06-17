@@ -16,61 +16,28 @@
  * limitations under the License.
  */
 
-@import "../../../variables";
+.column-tree {
+  background: #27313b;
 
-.sql-control {
-  .ace-container {
+  .schema-selector {
     position: absolute;
-    width: 100%;
     top: 0;
-    bottom: 30px + $standard-padding;
 
-    .ace_scroller {
-      background-color: #232C35;
-    }
-
-    .ace_gutter-layer {
-      background-color: #27313c;
+    select {
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
     }
   }
 
-  .buttons {
+  .tree-container {
     position: absolute;
-    width: 100%;
+    top: 40px;
     bottom: 0;
-    height: 30px;
+    width: 100%;
+    overflow: auto;
 
-    .query-elapsed {
-      padding: 5px;
-      position: absolute;
-      right: 25px;
-    }
-
-    .download-button {
-      position: absolute;
-      right: 0px;
+    .bp3-tree-node-content-1 {
+      padding-left: 0;
     }
   }
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
-  }
-}
-
-.bp3-menu.download-format-menu {
-  min-width: 80px;
 }

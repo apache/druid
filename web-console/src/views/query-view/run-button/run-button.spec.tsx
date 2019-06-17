@@ -19,19 +19,19 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { SqlControl } from './sql-control';
+import { RunButton } from './run-button';
 
-describe('sql control', () => {
+describe('run button', () => {
   it('matches snapshot', () => {
-    const sqlControl = <SqlControl
-      initSql={'test'}
-      onRun={(query, context, wrapQuery) => {}}
-      onExplain={(sqlQuery, context) => {}}
-      queryElapsed={2}
-      onDownload={() => {}}
+    const runButton = <RunButton
+      runeMode={false}
+      queryContext={{}}
+      onQueryContextChange={() => null}
+      onRun={() => null}
+      onExplain={() => null}
     />;
 
-    const { container } = render(sqlControl);
+    const { container } = render(runButton);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

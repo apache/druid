@@ -15,11 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export * from './datasource-view/datasource-view';
-export * from './home-view/home-view';
-export * from './load-data-view/load-data-view';
-export * from './lookups-view/lookups-view';
-export * from './segments-view/segments-view';
-export * from './servers-view/servers-view';
-export * from './query-view/query-view';
-export * from './task-view/tasks-view';
+
+@import "../../../variables";
+
+.query-input {
+  .ace-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+
+    .ace_scroller {
+      background-color: #232C35;
+    }
+
+    .ace_gutter-layer {
+      background-color: #27313c;
+    }
+  }
+}
+
+.ace_tooltip {
+  padding: 10px;
+  background-color: #333D47;
+  color: #C1CCD5;
+  width: 500px;
+  display: block;
+  height: auto;
+  white-space: initial;
+
+  hr {
+    margin: 10px 0;
+  }
+
+  .function-doc-name {
+    font-size: 18px;
+  }
+}

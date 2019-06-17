@@ -15,11 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export * from './datasource-view/datasource-view';
-export * from './home-view/home-view';
-export * from './load-data-view/load-data-view';
-export * from './lookups-view/lookups-view';
-export * from './segments-view/segments-view';
-export * from './servers-view/servers-view';
-export * from './query-view/query-view';
-export * from './task-view/tasks-view';
+
+import React from 'react';
+import { render } from 'react-testing-library';
+
+import { QueryExtraInfo } from './query-extra-info';
+
+describe('query extra info', () => {
+  it('matches snapshot', () => {
+    const queryExtraInfo = <QueryExtraInfo
+      queryExtraInfo={{
+        queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
+        sqlQueryId: null,
+        startTime: new Date('1986-04-26T01:23:40+03:00'),
+        endTime: new Date('1986-04-26T01:23:48+03:00'),
+        numResults: 2000,
+        wrappedLimit: 2000
+      }}
+      onDownload={() => null}
+    />;
+
+    const { container } = render(queryExtraInfo);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

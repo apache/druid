@@ -15,11 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export * from './datasource-view/datasource-view';
-export * from './home-view/home-view';
-export * from './load-data-view/load-data-view';
-export * from './lookups-view/lookups-view';
-export * from './segments-view/segments-view';
-export * from './servers-view/servers-view';
-export * from './query-view/query-view';
-export * from './task-view/tasks-view';
+
+import { shallow } from 'enzyme';
+import React from 'react';
+
+import { QueryView } from './query-view';
+
+describe('sql view', () => {
+  it('matches snapshot', () => {
+    const sqlView = shallow(
+      <QueryView
+        initQuery={'test'}
+      />);
+    expect(sqlView).toMatchSnapshot();
+  });
+
+  it('trimSemicolon', () => {
+    expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
+    expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
+    expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
+  });
+});
