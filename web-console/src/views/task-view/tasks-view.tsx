@@ -52,10 +52,15 @@ import {
   LocalStorageKeys,
   localStorageSet,
   queryDruidSql,
+<<<<<<< HEAD
   QueryManager,
   TableColumnSelectionHandler,
+=======
+  QueryManager
+>>>>>>> bd7d064656... apply to all
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './tasks-view.scss';
 
@@ -114,6 +119,8 @@ export interface TasksViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
+  hiddenTaskColumns: LocalStorageBackedArray<string>;
+  hiddenSupervisorColumns: LocalStorageBackedArray<string>;
 }
 
 interface TaskQueryResultRow {
@@ -172,6 +179,7 @@ function stateToColor(status: string): string {
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
+<<<<<<< HEAD
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
   static statusRanking: Record<string, number> = {
@@ -181,6 +189,9 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
     SUCCESS: 1,
     FAILED: 1,
   };
+=======
+  static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+>>>>>>> bd7d064656... apply to all
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -192,6 +203,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       resumeSupervisorId: null,
       suspendSupervisorId: null,
       resetSupervisorId: null,
+      supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
 
       tasksLoading: true,
@@ -210,19 +222,11 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogId: null,
       taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
-      supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: [],
+
+      hiddenTaskColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION),
+      hiddenSupervisorColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION)
     };
-
-    this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
-
-    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -248,6 +252,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -521,8 +526,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   renderSupervisorTable() {
-    const { supervisors, supervisorsLoading, supervisorsError } = this.state;
+    const { supervisors, supervisorsLoading, supervisorsError, hiddenSupervisorColumns } = this.state;
+<<<<<<< HEAD
     const { supervisorTableColumnSelectionHandler } = this;
+<<<<<<< HEAD
     return (
       <>
         <ReactTable
@@ -617,6 +624,94 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         {this.renderTerminateSupervisorAction()}
       </>
     );
+=======
+=======
+>>>>>>> bd7d064656... apply to all
+    return <>
+      <ReactTable
+        data={supervisors || []}
+        loading={supervisorsLoading}
+        noDataText={!supervisorsLoading && supervisors && !supervisors.length ? 'No supervisors' : (supervisorsError || '')}
+        filterable
+        columns={[
+          {
+            Header: 'Datasource',
+            id: 'datasource',
+            accessor: 'id',
+            width: 300,
+            show: hiddenSupervisorColumns.exists('Datasource')
+          },
+          {
+            Header: 'Type',
+            id: 'type',
+            accessor: (row) => {
+              const { spec } = row;
+              if (!spec) return '';
+              const { tuningConfig } = spec;
+              if (!tuningConfig) return '';
+              return tuningConfig.type;
+            },
+            show: hiddenSupervisorColumns.exists('Type')
+          },
+          {
+            Header: 'Topic/Stream',
+            id: 'topic',
+            accessor: (row) => {
+              const { spec } = row;
+              if (!spec) return '';
+              const { ioConfig } = spec;
+              if (!ioConfig) return '';
+              return ioConfig.topic || ioConfig.stream || '';
+            },
+            show: hiddenSupervisorColumns.exists('Topic/Stream')
+          },
+          {
+            Header: 'Status',
+            id: 'status',
+            width: 300,
+            accessor: (row) => { return row.detailedState; },
+            Cell: (row) => {
+              const value = row.original.detailedState;
+              return <span>
+                <span
+                  style={{ color: stateToColor(row.original.state)}}
+                >
+                  &#x25cf;&nbsp;
+                </span>
+                {value}
+              </span>;
+            },
+            show: hiddenSupervisorColumns.exists('Status')
+          },
+          {
+            Header: ActionCell.COLUMN_LABEL,
+            id: ActionCell.COLUMN_ID,
+            accessor: 'id',
+            width: ActionCell.COLUMN_WIDTH,
+            filterable: false,
+            Cell: row => {
+              const id = row.value;
+              const type = row.row.type;
+              const supervisorSuspended = row.original.spec.suspended;
+              const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
+              return <ActionCell
+                onDetail={() => this.setState({
+                  supervisorTableActionDialogId: id,
+                  supervisorTableActionDialogActions: supervisorActions
+                })}
+                actions={supervisorActions}
+              />;
+            },
+            show: hiddenSupervisorColumns.exists(ActionCell.COLUMN_LABEL)
+          }
+        ]}
+      />
+      {this.renderResumeSupervisorAction()}
+      {this.renderSuspendSupervisorAction()}
+      {this.renderResetSupervisorAction()}
+      {this.renderTerminateSupervisorAction()}
+    </>;
+>>>>>>> 21bb7c9a0b... second attempt
   }
 
   private getTaskActions(id: string, status: string, type: string): BasicAction[] {
@@ -668,9 +763,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
-    const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy } = this.state;
-    const { taskTableColumnSelectionHandler } = this;
+    const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy, hiddenTaskColumns} = this.state;
 
+<<<<<<< HEAD
     return (
       <>
         <ReactTable
@@ -734,6 +829,83 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 return booleanCustomTableFilter(filter, row.location);
               },
               show: taskTableColumnSelectionHandler.showColumn('Location'),
+=======
+    return <>
+      <ReactTable
+        data={tasks || []}
+        loading={tasksLoading}
+        noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : (tasksError || '')}
+        filterable
+        filtered={taskFilter}
+        onFilteredChange={(filtered, column) => {
+          this.setState({ taskFilter: filtered });
+        }}
+        defaultSorted={[{id: 'status', desc: true}]}
+        pivotBy={groupTasksBy ? [groupTasksBy] : []}
+        columns={[
+          {
+            Header: 'Task ID',
+            accessor: 'task_id',
+            width: 300,
+            Aggregated: row => '',
+            show: hiddenTaskColumns.exists('Task ID')
+          },
+          {
+            Header: 'Type',
+            accessor: 'type',
+            Cell: row => {
+              const value = row.value;
+              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'type', value) }); }}>{value}</a>;
+            },
+            show: hiddenTaskColumns.exists('Type')
+          },
+          {
+            Header: 'Datasource',
+            accessor: 'datasource',
+            Cell: row => {
+              const value = row.value;
+              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }); }}>{value}</a>;
+            },
+            show: hiddenTaskColumns.exists('Datasource')
+          },
+
+          {
+            Header: 'Location',
+            accessor: 'location',
+            Aggregated: row => '',
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.location);
+            },
+            show: hiddenTaskColumns.exists('Location')
+          },
+          {
+            Header: 'Created time',
+            accessor: 'created_time',
+            width: 120,
+            Aggregated: row => '',
+            show: hiddenTaskColumns.exists('Created time')
+          },
+          {
+            Header: 'Status',
+            id: 'status',
+            width: 110,
+            accessor: (row) => ({ status: row.status, created_time: row.created_time, toString: () => row.status }),
+            Cell: row => {
+              if (row.aggregated) return '';
+              const { status, location } = row.original;
+              const locationHostname = location ? location.split(':')[0] : null;
+              const errorMsg = row.original.error_msg;
+              return <span>
+                <span
+                  style={{ color: statusToColor(status) }}
+                >
+                  &#x25cf;&nbsp;
+                </span>
+                {status}
+                {location && <a onClick={() => goToMiddleManager(locationHostname)} title={`Go to: ${locationHostname}`}>&nbsp;&#x279A;</a>}
+                {errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a>}
+              </span>;
+>>>>>>> 21bb7c9a0b... second attempt
             },
             {
               Header: 'Created time',
@@ -847,6 +1019,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   render() {
     const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
+<<<<<<< HEAD
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -859,13 +1032,104 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       taskTableActionDialogStatus,
     } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
+=======
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus, hiddenSupervisorColumns, hiddenTaskColumns} = this.state;
 
-    const submitSupervisorMenu = (
-      <Menu>
-        <MenuItem
-          icon={IconNames.CLOUD_UPLOAD}
-          text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+>>>>>>> bd7d064656... apply to all
+    const submitSupervisorMenu = <Menu>
+      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON supervisor"
+        onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+      />
+    </Menu>;
+
+    const submitTaskMenu = <Menu>
+      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON task"
+        onClick={() => this.setState({ taskSpecDialogOpen: true })}
+      />
+    </Menu>;
+
+    return <>
+      <SplitterLayout
+        customClassName={'tasks-view app-view'}
+        vertical
+        percentage
+        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string) || 60}
+        primaryMinSize={30}
+        secondaryMinSize={30}
+        onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+      >
+        <div className={'top-pane'}>
+          <ViewControlBar label="Supervisors">
+            <Button
+              icon={IconNames.REFRESH}
+              text="Refresh"
+              onClick={() => this.supervisorQueryManager.rerunLastQuery()}
+            />
+            <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
+              <Button icon={IconNames.PLUS} text="Submit supervisor"/>
+            </Popover>
+            <TableColumnSelector
+              columns={supervisorTableColumns}
+              onChange={(column) => this.setState({hiddenSupervisorColumns: hiddenSupervisorColumns.toggle(column)})}
+              tableColumnsHidden={hiddenSupervisorColumns.storedArray}
+            />
+          </ViewControlBar>
+          {this.renderSupervisorTable()}
+        </div>
+        <div className={'bottom-pane'}>
+          <ViewControlBar label="Tasks">
+            <Label>Group by</Label>
+            <ButtonGroup>
+              <Button active={groupTasksBy === null} onClick={() => this.setState({ groupTasksBy: null })}>None</Button>
+              <Button active={groupTasksBy === 'type'} onClick={() => this.setState({ groupTasksBy: 'type' })}>Type</Button>
+              <Button active={groupTasksBy === 'datasource'} onClick={() => this.setState({ groupTasksBy: 'datasource' })}>Datasource</Button>
+              <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
+            </ButtonGroup>
+            <Button
+              icon={IconNames.REFRESH}
+              text="Refresh"
+              onClick={() => this.taskQueryManager.rerunLastQuery()}
+            />
+            {
+              !noSqlMode &&
+              <Button
+                icon={IconNames.APPLICATION}
+                text="Go to SQL"
+                onClick={() => goToQuery(this.taskQueryManager.getLastQuery())}
+              />
+            }
+            <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
+              <Button icon={IconNames.PLUS} text="Submit task"/>
+            </Popover>
+            <TableColumnSelector
+              columns={taskTableColumns}
+              onChange={(column) => this.setState({hiddenTaskColumns:  hiddenTaskColumns.toggle(column)})}
+              tableColumnsHidden={hiddenTaskColumns.storedArray}
+            />
+          </ViewControlBar>
+          {this.renderTaskTable()}
+        </div>
+      </SplitterLayout>
+      {
+        supervisorSpecDialogOpen &&
+        <SpecDialog
+          onClose={this.closeSpecDialogs}
+          onSubmit={this.submitSupervisor}
+          title="Submit supervisor"
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}

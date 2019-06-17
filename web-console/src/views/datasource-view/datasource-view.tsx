@@ -45,10 +45,10 @@ import {
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
-  QueryManager,
-  TableColumnSelectionHandler,
+  QueryManager
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './datasource-view.scss';
 
@@ -107,6 +107,7 @@ export interface DatasourcesViewState {
   dropReloadDatasource: string | null;
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -127,11 +128,7 @@ export class DatasourcesView extends React.PureComponent<
     }
   }
 
-  private datasourceQueryManager: QueryManager<
-    string,
-    { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
-  >;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -152,16 +149,13 @@ export class DatasourcesView extends React.PureComponent<
       dropReloadDatasource: null,
       dropReloadAction: 'drop',
       dropReloadInterval: '',
+      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION)
     };
-
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
   }
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+    const { hiddenColumns } = this.state;
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
@@ -551,15 +545,7 @@ GROUP BY 1`);
 
   renderDatasourceTable() {
     const { goToSegments, noSqlMode } = this.props;
-    const {
-      datasources,
-      defaultRules,
-      datasourcesLoading,
-      datasourcesError,
-      datasourcesFilter,
-      showDisabled,
-    } = this.state;
-    const { tableColumnSelectionHandler } = this;
+    const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled, hiddenColumns } = this.state;
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
@@ -600,69 +586,17 @@ GROUP BY 1`);
               },
               show: tableColumnSelectionHandler.showColumn('Datasource'),
             },
-            {
-              Header: 'Availability',
-              id: 'availability',
-              filterable: false,
-              accessor: row => {
-                return {
-                  num_available: row.num_available_segments,
-                  num_total: row.num_segments,
-                };
-              },
-              Cell: row => {
-                const { datasource, num_available_segments, num_segments, disabled } = row.original;
-
-                if (disabled) {
-                  return (
-                    <span>
-                      <span style={{ color: DatasourcesView.DISABLED_COLOR }}>&#x25cf;&nbsp;</span>
-                      Disabled
-                    </span>
-                  );
-                }
-
-                const segmentsEl = (
-                  <a onClick={() => goToSegments(datasource)}>
-                    {pluralIfNeeded(num_segments, 'segment')}
-                  </a>
-                );
-                if (num_available_segments === num_segments) {
-                  return (
-                    <span>
-                      <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
-                      </span>
-                      Fully available ({segmentsEl})
-                    </span>
-                  );
-                } else {
-                  const percentAvailable = (
-                    Math.floor((num_available_segments / num_segments) * 1000) / 10
-                  ).toFixed(1);
-                  const missing = num_segments - num_available_segments;
-                  const segmentsMissingEl = (
-                    <a onClick={() => goToSegments(datasource, true)}>{`${pluralIfNeeded(
-                      missing,
-                      'segment',
-                    )} unavailable`}</a>
-                  );
-                  return (
-                    <span>
-                      <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
-                      </span>
-                      {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
-                    </span>
-                  );
-                }
-              },
-              sortMethod: (d1, d2) => {
-                const percentAvailable1 = d1.num_available / d1.num_total;
-                const percentAvailable2 = d2.num_available / d2.num_total;
-                return percentAvailable1 - percentAvailable2 || d1.num_total - d2.num_total;
-              },
-              show: tableColumnSelectionHandler.showColumn('Availability'),
+            show: hiddenColumns.exists('Datasource')
+          },
+          {
+            Header: 'Availability',
+            id: 'availability',
+            filterable: false,
+            accessor: (row) => {
+              return {
+                num_available: row.num_available_segments,
+                num_total: row.num_segments
+              };
             },
             {
               Header: 'Retention',
@@ -726,53 +660,105 @@ GROUP BY 1`);
               },
               show: tableColumnSelectionHandler.showColumn('Compaction'),
             },
-            {
-              Header: 'Size',
-              accessor: 'size',
-              filterable: false,
-              width: 100,
-              Cell: row => formatBytes(row.value),
-              show: tableColumnSelectionHandler.showColumn('Size'),
+
+            show: hiddenColumns.exists('Availability')
+          },
+          {
+            Header: 'Retention',
+            id: 'retention',
+            accessor: (row) => row.rules.length,
+            filterable: false,
+            Cell: row => {
+              const { rules } = row.original;
+              let text: string;
+              if (rules.length === 0) {
+                text = 'Cluster default: ' + DatasourcesView.formatRules(defaultRules);
+              } else {
+                text = DatasourcesView.formatRules(rules);
+              }
+
+              return <span
+                onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
+                className="clickable-cell"
+              >
+                {text}&nbsp;
+                <ActionIcon icon={IconNames.EDIT}/>
+              </span>;
             },
-            {
-              Header: 'Num rows',
-              accessor: 'num_rows',
-              filterable: false,
-              width: 100,
-              Cell: row => formatNumber(row.value),
-              show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows'),
+            show: hiddenColumns.exists('Retention')
+          },
+          {
+            Header: 'Compaction',
+            id: 'compaction',
+            accessor: (row) => Boolean(row.compaction),
+            filterable: false,
+            Cell: row => {
+              const { compaction } = row.original;
+              const compactionOpenOn: {datasource: string, configData: any} | null = {
+                datasource: row.original.datasource,
+                configData: compaction
+              };
+              let text: string;
+              if (compaction) {
+                text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+              } else {
+                text = 'None';
+              }
+              return <span
+                className="clickable-cell"
+                onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
+              >
+                {text}&nbsp;
+                <ActionIcon icon={IconNames.EDIT}/>
+              </span>;
             },
-            {
-              Header: ActionCell.COLUMN_LABEL,
-              accessor: 'datasource',
-              id: ActionCell.COLUMN_ID,
-              width: ActionCell.COLUMN_WIDTH,
-              filterable: false,
-              Cell: row => {
-                const datasource = row.value;
-                const { disabled } = row.original;
-                const datasourceActions = this.getDatasourceActions(datasource, disabled);
-                return <ActionCell actions={datasourceActions} />;
-              },
-              show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+            show: hiddenColumns.exists('Compaction')
+          },
+          {
+            Header: 'Size',
+            accessor: 'size',
+            filterable: false,
+            width: 100,
+            Cell: (row) => formatBytes(row.value),
+            show: hiddenColumns.exists('Size')
+          },
+          {
+            Header: 'Num rows',
+            accessor: 'num_rows',
+            filterable: false,
+            width: 100,
+            Cell: (row) => formatNumber(row.value),
+            show: !noSqlMode && hiddenColumns.exists('Num rows')
+          },
+          {
+            Header: ActionCell.COLUMN_LABEL,
+            accessor: 'datasource',
+            id: ActionCell.COLUMN_ID,
+            width: ActionCell.COLUMN_WIDTH,
+            filterable: false,
+            Cell: row => {
+              const datasource = row.value;
+              const { disabled } = row.original;
+              const datasourceActions = this.getDatasourceActions(datasource, disabled);
+              return <ActionCell actions={datasourceActions}/>;
             },
-          ]}
-          defaultPageSize={50}
-        />
-        {this.renderDropDataAction()}
-        {this.renderEnableAction()}
-        {this.renderDropReloadAction()}
-        {this.renderKillAction()}
-        {this.renderRetentionDialog()}
-        {this.renderCompactionDialog()}
-      </>
-    );
+            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL)
+          }
+        ]}
+        defaultPageSize={50}
+      />
+      {this.renderDropDataAction()}
+      {this.renderEnableAction()}
+      {this.renderDropReloadAction()}
+      {this.renderKillAction()}
+      {this.renderRetentionDialog()}
+      {this.renderCompactionDialog()}
+    </>;
   }
 
   render() {
     const { goToQuery, noSqlMode } = this.props;
-    const { showDisabled } = this.state;
-    const { tableColumnSelectionHandler } = this;
+    const { showDisabled, hiddenColumns } = this.state;
 
     return (
       <div className="data-sources-view app-view">
@@ -782,26 +768,19 @@ GROUP BY 1`);
             text="Refresh"
             onClick={() => this.datasourceQueryManager.rerunLastQuery()}
           />
-          {!noSqlMode && (
-            <Button
-              icon={IconNames.APPLICATION}
-              text="Go to SQL"
-              onClick={() => goToQuery(this.datasourceQueryManager.getLastQuery())}
-            />
-          )}
-          <Switch
-            checked={showDisabled}
-            label="Show disabled"
-            onChange={() => this.toggleDisabled(showDisabled)}
-          />
-          <TableColumnSelector
-            columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-            onChange={column => tableColumnSelectionHandler.changeTableColumnSelector(column)}
-            tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
-          />
-        </ViewControlBar>
-        {this.renderDatasourceTable()}
-      </div>
-    );
+        }
+        <Switch
+          checked={showDisabled}
+          label="Show disabled"
+          onChange={() => this.toggleDisabled(showDisabled)}
+        />
+        <TableColumnSelector
+          columns={noSqlMode ? tableColumnsNoSql : tableColumns}
+          onChange={(column) => this.setState({hiddenColumns: hiddenColumns.toggle(column)})}
+          tableColumnsHidden={hiddenColumns.storedArray}
+        />
+      </ViewControlBar>
+      {this.renderDatasourceTable()}
+    </div>;
   }
 }
