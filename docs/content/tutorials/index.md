@@ -117,12 +117,12 @@ All persistent state such as the cluster metadata store and segments for the ser
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
-Once the cluster has started you can navigate to [http://localhost:8888](http://localhost:8888).
-This is the router node that also serves the Druid console.
+Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
+The [Druid router process](../development/router.html), which serves the Druid console, resides at this address.
 
 ![Druid console](../tutorials/img/tutorial-quickstart-01.png "Druid console")
 
-It takes a few seconds for all the components to fully initialize and you might see some errors if you open the console immediately after starting the services.
+It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
 
 ## Loading Data
@@ -131,7 +131,8 @@ It takes a few seconds for all the components to fully initialize and you might 
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
-This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
+This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root.
+The page edit events are stored as JSON objects in a text file.
 
 The sample data has the following columns, and an example event is shown below:
 

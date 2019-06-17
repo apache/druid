@@ -62,7 +62,7 @@ We will use Druid's Kafka indexing service to ingest messages from our newly cre
 
 ### Submit a supervisor via the console
 
-In the console click `Submit supervisor` to open the submit supervisor dialog.
+In the console, click `Submit supervisor` to open the submit supervisor dialog.
 
 ![Submit supervisor](../tutorials/img/tutorial-kafka-01.png "Submit supervisor")
 

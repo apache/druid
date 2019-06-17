@@ -64,7 +64,8 @@ In this case the data loader will guess the `time` column as the primary time co
 
 ![Data loader parse time](../tutorials/img/tutorial-batch-data-loader-04.png "Data loader parse time")
 
-Click `Next: ...` twice to go past the `Transform` and `Filter` steps, you do not need to enter anything there and applying ingestion times transforms and filters is out of scope of this tutorial.
+Click `Next: ...` twice to go past the `Transform` and `Filter` steps.
+You do not need to enter anything there and applying ingestion time transforms and filters are out of scope of this tutorial.
 
 In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
@@ -72,7 +73,7 @@ Since our dataset is very small go ahead and turn off `Rollup` by clicking on th
 
 ![Data loader schema](../tutorials/img/tutorial-batch-data-loader-05.png "Data loader schema")
 
-Once you are satisfied with the schema click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
+Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 Here you can adjust how the data will be split up into segments in Druid.
 Since this is such a small dataset there are no adjustments that need to be made in this step.
 
@@ -83,7 +84,7 @@ Let's name this datasource `wikipedia`.
 
 ![Data loader publish](../tutorials/img/tutorial-batch-data-loader-07.png "Data loader publish")
 
-Finally click `Next` to review your spec.
+Finally, click `Next` to review your spec.
 This is the spec you have constructed.
 Feel free to go back to previous steps and see how making changes there will manifest itself in the spec.
 Similarly you can also edit the spec directly and see it reflected in the other steps.
@@ -187,7 +188,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 This spec will create a datasource named "wikipedia".
 
-From the task view click on `Submit task` and select `Raw JSON task`.
+From the task view, click on `Submit task` and select `Raw JSON task`.
 
 ![Tasks view add task](../tutorials/img/tutorial-batch-submit-task-01.png "Tasks view add task")
 
@@ -195,7 +196,7 @@ This will bring up the spec submission dialog where you can paste the spec above
 
 ![Query view](../tutorials/img/tutorial-batch-submit-task-02.png "Query view")
 
-Once the spec is submitted you can follow the same instructions as above to wait for the data to load and then query it.
+Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
 
 
 ## Loading data with a spec (via command line)
@@ -224,7 +225,7 @@ Completed indexing data for wikipedia. Now loading indexed data onto the cluster
 wikipedia loading complete! You may now query your data
 ```
 
-Once the spec is submitted you can follow the same instructions as above to wait for the data to load and then query it.
+Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
 
 
 ## Loading data without the script
