@@ -45,26 +45,26 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
     module.configure(null);
   }
 
-  public static final String indexVarianceMetric = "index_var";
+  public static final String INDEX_VARIANCE_METRIC = "index_var";
 
-  public static final VarianceAggregatorFactory indexVarianceAggr = new VarianceAggregatorFactory(
-      indexVarianceMetric,
-      indexMetric
+  public static final VarianceAggregatorFactory INDEX_VARIANCE_AGGR = new VarianceAggregatorFactory(
+      INDEX_VARIANCE_METRIC,
+      INDEX_METRIC
   );
 
-  public static final String stddevOfIndexMetric = "index_stddev";
+  public static final String STD_DEV_OF_INDEX_METRIC = "index_stddev";
 
-  public static final PostAggregator stddevOfIndexPostAggr = new StandardDeviationPostAggregator(
-      stddevOfIndexMetric,
-      indexVarianceMetric,
+  public static final PostAggregator STD_DEV_OF_INDEX_POST_AGGR = new StandardDeviationPostAggregator(
+      STD_DEV_OF_INDEX_METRIC,
+      INDEX_VARIANCE_METRIC,
       null
   );
 
-  public static final List<AggregatorFactory> commonPlusVarAggregators = Arrays.asList(
-      rowsCount,
-      indexDoubleSum,
-      qualityUniques,
-      indexVarianceAggr
+  public static final List<AggregatorFactory> COMMON_PLUS_VAR_AGGREGATORS = Arrays.asList(
+      ROWS_COUNT,
+      INDEX_DOUBLE_SUM,
+      QUALITY_UNIQUES,
+      INDEX_VARIANCE_AGGR
   );
 
   public static class RowBuilder

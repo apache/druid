@@ -55,12 +55,12 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest
 {
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -71,8 +71,8 @@ public class ApproximateHistogramTopNQueryTest
         "TopNQueryRunnerFactory-bufferPool",
         () -> ByteBuffer.allocate(2000)
     );
-    resourceCloser.register(defaultPool);
-    resourceCloser.register(customPool);
+    RESOURCE_CLOSER.register(defaultPool);
+    RESOURCE_CLOSER.register(customPool);
 
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         Iterables.concat(
@@ -123,16 +123,16 @@ public class ApproximateHistogramTopNQueryTest
     );
 
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
+                    QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index"),
@@ -143,8 +143,8 @@ public class ApproximateHistogramTopNQueryTest
         )
         .postAggregators(
             Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
+                QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+                QueryRunnerTestHelper.DEPENDENT_POST_AGG,
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
             )
         )
@@ -156,7 +156,7 @@ public class ApproximateHistogramTopNQueryTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
                         .put("rows", 186L)
                         .put("index", 215679.82879638672D)
                         .put("addRowsIndexConstant", 215866.82879638672D)
@@ -187,7 +187,7 @@ public class ApproximateHistogramTopNQueryTest
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
                         .put("rows", 186L)
                         .put("index", 192046.1060180664D)
                         .put("addRowsIndexConstant", 192233.1060180664D)
@@ -218,7 +218,7 @@ public class ApproximateHistogramTopNQueryTest
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "spot")
+                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
                         .put("rows", 837L)
                         .put("index", 95606.57232284546D)
                         .put("addRowsIndexConstant", 96444.57232284546D)

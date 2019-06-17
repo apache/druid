@@ -95,12 +95,12 @@ public class VarianceGroupByQueryTest
   {
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(VarianceTestHelper.indexVarianceAggr)
-        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setAggregatorSpecs(VarianceTestHelper.INDEX_VARIANCE_AGGR)
+        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     VarianceTestHelper.RowBuilder builder =
@@ -137,16 +137,16 @@ public class VarianceGroupByQueryTest
   {
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(
-            QueryRunnerTestHelper.rowsCount,
-            VarianceTestHelper.indexVarianceAggr,
+            QueryRunnerTestHelper.ROWS_COUNT,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR,
             new LongSumAggregatorFactory("idx", "index")
         )
-        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     VarianceTestHelper.RowBuilder builder =
@@ -193,20 +193,20 @@ public class VarianceGroupByQueryTest
 
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(
-            QueryRunnerTestHelper.rowsCount,
-            QueryRunnerTestHelper.indexLongSum,
-            VarianceTestHelper.indexVarianceAggr
+            QueryRunnerTestHelper.ROWS_COUNT,
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR
         )
-        .setPostAggregatorSpecs(ImmutableList.of(VarianceTestHelper.stddevOfIndexPostAggr))
+        .setPostAggregatorSpecs(ImmutableList.of(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.of(
-                    new GreaterThanHavingSpec(VarianceTestHelper.stddevOfIndexMetric, 15L) // 3 rows
+                    new GreaterThanHavingSpec(VarianceTestHelper.STD_DEV_OF_INDEX_METRIC, 15L) // 3 rows
                 )
             )
         )
@@ -219,7 +219,7 @@ public class VarianceGroupByQueryTest
         new DefaultLimitSpec(
             Collections.singletonList(
                 OrderByColumnSpec.asc(
-                    VarianceTestHelper.stddevOfIndexMetric
+                    VarianceTestHelper.STD_DEV_OF_INDEX_METRIC
                 )
             ), 2
         )

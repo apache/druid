@@ -49,7 +49,7 @@ import java.util.Set;
 
 public class LookupCoordinatorResourceTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String LOOKUP_TIER = "lookupTier";
   private static final String LOOKUP_NAME = "lookupName";
   private static final LookupExtractorFactoryMapContainer SINGLE_LOOKUP = new LookupExtractorFactoryMapContainer(
@@ -69,7 +69,7 @@ public class LookupCoordinatorResourceTest
     @Override
     public InputStream openStream() throws IOException
     {
-      return new ByteArrayInputStream(StringUtils.toUtf8(mapper.writeValueAsString(SINGLE_TIER_MAP)));
+      return new ByteArrayInputStream(StringUtils.toUtf8(MAPPER.writeValueAsString(SINGLE_TIER_MAP)));
     }
   };
   private static final ByteSource EMPTY_MAP_SOURCE = new ByteSource()
@@ -77,7 +77,7 @@ public class LookupCoordinatorResourceTest
     @Override
     public InputStream openStream() throws IOException
     {
-      return new ByteArrayInputStream(StringUtils.toUtf8(mapper.writeValueAsString(SINGLE_LOOKUP)));
+      return new ByteArrayInputStream(StringUtils.toUtf8(MAPPER.writeValueAsString(SINGLE_LOOKUP)));
     }
   };
 
@@ -100,8 +100,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getTiers(false);
     Assert.assertEquals(200, response.getStatus());
@@ -118,8 +118,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getTiers(false);
     Assert.assertEquals(404, response.getStatus());
@@ -136,8 +136,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getTiers(false);
     Assert.assertEquals(500, response.getStatus());
@@ -156,8 +156,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getTiers(true);
     Assert.assertEquals(200, response.getStatus());
@@ -178,8 +178,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getTiers(true);
     Assert.assertEquals(500, response.getStatus());
@@ -202,8 +202,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME);
     Assert.assertEquals(200, response.getStatus());
@@ -219,8 +219,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(LOOKUP_TIER, true);
     Assert.assertEquals(200, response.getStatus());
@@ -239,8 +239,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME);
     Assert.assertEquals(404, response.getStatus());
@@ -255,8 +255,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     Assert.assertEquals(400, lookupCoordinatorResource.getSpecificLookup("foo", null).getStatus());
     Assert.assertEquals(400, lookupCoordinatorResource.getSpecificLookup("foo", "").getStatus());
@@ -277,8 +277,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificLookup(LOOKUP_TIER, LOOKUP_NAME);
     Assert.assertEquals(500, response.getStatus());
@@ -351,8 +351,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -396,8 +396,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -442,8 +442,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.deleteLookup(
         LOOKUP_TIER,
@@ -472,8 +472,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     Assert.assertEquals(400, lookupCoordinatorResource.deleteLookup("foo", null, null, null, null).getStatus());
     Assert.assertEquals(400, lookupCoordinatorResource.deleteLookup(null, null, null, null, null).getStatus());
@@ -504,8 +504,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager, request);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -548,8 +548,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -592,8 +592,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.updateAllLookups(
         SINGLE_TIER_MAP_SOURCE.openStream(),
@@ -638,8 +638,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -686,8 +686,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -735,8 +735,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.createOrUpdateLookup(
         LOOKUP_TIER,
@@ -773,8 +773,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     EasyMock.replay(lookupCoordinatorManager, request);
@@ -824,8 +824,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(LOOKUP_TIER, false);
     Assert.assertEquals(200, response.getStatus());
@@ -844,8 +844,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false);
     Assert.assertEquals(404, response.getStatus());
@@ -860,8 +860,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false);
     Assert.assertEquals(400, response.getStatus());
@@ -878,8 +878,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false);
     Assert.assertEquals(404, response.getStatus());
@@ -897,8 +897,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getSpecificTier(tier, false);
     Assert.assertEquals(500, response.getStatus());
@@ -920,8 +920,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getAllLookupsStatus(false);
@@ -953,8 +953,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getLookupStatusForTier(LOOKUP_TIER, false);
@@ -983,8 +983,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getSpecificLookupStatus(LOOKUP_TIER, LOOKUP_NAME, false);
@@ -1001,8 +1001,8 @@ public class LookupCoordinatorResourceTest
   {
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         EasyMock.createStrictMock(LookupCoordinatorManager.class),
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     HostAndPort newNode = HostAndPort.fromParts("localhost", 4352);
@@ -1023,8 +1023,8 @@ public class LookupCoordinatorResourceTest
   {
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         EasyMock.createStrictMock(LookupCoordinatorManager.class),
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     HostAndPort newNode = HostAndPort.fromParts("localhost", 4352);
@@ -1054,8 +1054,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getAllNodesStatus(false);
@@ -1086,8 +1086,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getNodesStatusInTier(LOOKUP_TIER);
@@ -1114,8 +1114,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
 
     final Response response = lookupCoordinatorResource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE);
@@ -1160,8 +1160,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getAllLookupSpecs();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -1181,8 +1181,8 @@ public class LookupCoordinatorResourceTest
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.getAllLookupSpecs();
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());

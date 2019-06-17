@@ -148,7 +148,7 @@ public class IndexTaskTest
   private SegmentLoader segmentLoader;
   private List<DataSegment> segments;
 
-  private static final IndexSpec indexSpec = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = new IndexSpec();
   private final ObjectMapper jsonMapper;
   private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
@@ -1002,7 +1002,7 @@ public class IndexTaskTest
         null,
         null,
         null,
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,
@@ -1125,7 +1125,7 @@ public class IndexTaskTest
         null,
         null,
         null,
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,
@@ -1241,7 +1241,7 @@ public class IndexTaskTest
         null,
         null,
         null,
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,
@@ -1707,7 +1707,7 @@ public class IndexTaskTest
         null,
         numShards,
         partitionDimensions,
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,

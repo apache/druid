@@ -49,7 +49,7 @@ public class FlatTextFormatParserTest
     );
   }
 
-  private static final FlatTextFormatParserFactory parserFactory = new FlatTextFormatParserFactory();
+  private static final FlatTextFormatParserFactory PARSE_FACTORY = new FlatTextFormatParserFactory();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -65,7 +65,7 @@ public class FlatTextFormatParserTest
   public void testValidHeader()
   {
     final String header = concat(format, "time", "value1", "value2");
-    final Parser<String, Object> parser = parserFactory.get(format, header);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, header);
     Assert.assertEquals(ImmutableList.of("time", "value1", "value2"), parser.getFieldNames());
   }
 
@@ -77,14 +77,14 @@ public class FlatTextFormatParserTest
     expectedException.expect(ParseException.class);
     expectedException.expectMessage(StringUtils.format("Unable to parse header [%s]", header));
 
-    parserFactory.get(format, header);
+    PARSE_FACTORY.get(format, header);
   }
 
   @Test
   public void testWithHeader()
   {
     final String header = concat(format, "time", "value1", "value2");
-    final Parser<String, Object> parser = parserFactory.get(format, header);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, header);
     final String body = concat(format, "hello", "world", "foo");
     final Map<String, Object> jsonMap = parser.parseToMap(body);
     Assert.assertEquals(
@@ -97,7 +97,7 @@ public class FlatTextFormatParserTest
   @Test
   public void testWithoutHeader()
   {
-    final Parser<String, Object> parser = parserFactory.get(format);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format);
     final String body = concat(format, "hello", "world", "foo");
     final Map<String, Object> jsonMap = parser.parseToMap(body);
     Assert.assertEquals(
@@ -111,7 +111,7 @@ public class FlatTextFormatParserTest
   public void testWithSkipHeaderRows()
   {
     final int skipHeaderRows = 2;
-    final Parser<String, Object> parser = parserFactory.get(format, false, skipHeaderRows);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, false, skipHeaderRows);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "header", "line", "1"),
@@ -133,7 +133,7 @@ public class FlatTextFormatParserTest
   @Test
   public void testWithHeaderRow()
   {
-    final Parser<String, Object> parser = parserFactory.get(format, true, 0);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, true, 0);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "value1", "value2"),
@@ -151,7 +151,7 @@ public class FlatTextFormatParserTest
   @Test
   public void testWithHeaderRowOfEmptyColumns()
   {
-    final Parser<String, Object> parser = parserFactory.get(format, true, 0);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, true, 0);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "", "value2", ""),
@@ -169,7 +169,7 @@ public class FlatTextFormatParserTest
   @Test
   public void testWithDifferentHeaderRows()
   {
-    final Parser<String, Object> parser = parserFactory.get(format, true, 0);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, true, 0);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "value1", "value2"),
@@ -206,7 +206,7 @@ public class FlatTextFormatParserTest
     );
 
     final int skipHeaderRows = 2;
-    final Parser<String, Object> parser = parserFactory.get(format, false, skipHeaderRows);
+    final Parser<String, Object> parser = PARSE_FACTORY.get(format, false, skipHeaderRows);
     final String[] body = new String[]{
         concat(format, "header", "line", "1"),
         concat(format, "header", "line", "2"),

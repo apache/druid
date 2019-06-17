@@ -71,14 +71,14 @@ public class VarianceTimeseriesQueryTest
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
                                   .filters("bobby", null)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(VarianceTestHelper.commonPlusVarAggregators)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(VarianceTestHelper.COMMON_PLUS_VAR_AGGREGATORS)
                                   .postAggregators(
-                                      QueryRunnerTestHelper.addRowsIndexConstant,
-                                      VarianceTestHelper.stddevOfIndexPostAggr
+                                      QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+                                      VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR
                                   )
                                   .descending(descending)
                                   .build();

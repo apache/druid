@@ -33,7 +33,7 @@ import java.io.IOException;
 
 public class DataSourceCompactionConfigTest
 {
-  private static final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
@@ -52,8 +52,8 @@ public class DataSourceCompactionConfigTest
         null,
         ImmutableMap.of("key", "val")
     );
-    final String json = objectMapper.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -80,8 +80,8 @@ public class DataSourceCompactionConfigTest
         null,
         ImmutableMap.of("key", "val")
     );
-    final String json = objectMapper.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -98,10 +98,10 @@ public class DataSourceCompactionConfigTest
   public void testSerdeUserCompactTuningConfig() throws IOException
   {
     final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null);
-    final String json = objectMapper.writeValueAsString(config);
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
-    final UserCompactTuningConfig fromJson = objectMapper.readValue(json, UserCompactTuningConfig.class);
+    final UserCompactTuningConfig fromJson = OBJECT_MAPPER.readValue(json, UserCompactTuningConfig.class);
     Assert.assertEquals(config, fromJson);
   }
 
@@ -125,8 +125,8 @@ public class DataSourceCompactionConfigTest
         ),
         ImmutableMap.of("key", "val")
     );
-    final String json = objectMapper.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -206,8 +206,8 @@ public class DataSourceCompactionConfigTest
         ImmutableMap.of("key", "val")
     );
 
-    final String json = objectMapper.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());

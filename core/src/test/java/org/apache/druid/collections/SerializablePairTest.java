@@ -27,14 +27,14 @@ import java.io.IOException;
 
 public class SerializablePairTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Test
   public void testBytesSerde() throws IOException
   {
     SerializablePair pair = new SerializablePair<>(5L, 9L);
-    byte[] bytes = jsonMapper.writeValueAsBytes(pair);
-    SerializablePair<Number, Number> deserializedPair = jsonMapper.readValue(bytes, SerializablePair.class);
+    byte[] bytes = JSON_MAPPER.writeValueAsBytes(pair);
+    SerializablePair<Number, Number> deserializedPair = JSON_MAPPER.readValue(bytes, SerializablePair.class);
     Assert.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
     Assert.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
   }
@@ -43,8 +43,8 @@ public class SerializablePairTest
   public void testStringSerde() throws IOException
   {
     SerializablePair pair = new SerializablePair<>(5L, 9L);
-    String str = jsonMapper.writeValueAsString(pair);
-    SerializablePair<Number, Number> deserializedPair = jsonMapper.readValue(str, SerializablePair.class);
+    String str = JSON_MAPPER.writeValueAsString(pair);
+    SerializablePair<Number, Number> deserializedPair = JSON_MAPPER.readValue(str, SerializablePair.class);
     Assert.assertEquals(pair.lhs, deserializedPair.lhs.longValue());
     Assert.assertEquals(pair.rhs, deserializedPair.rhs.longValue());
   }

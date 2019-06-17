@@ -96,7 +96,7 @@ public class BloomFilterSqlAggregatorTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
   private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
-  private static final Injector injector = Guice.createInjector(
+  private static final Injector INJECTOR = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
@@ -111,7 +111,7 @@ public class BloomFilterSqlAggregatorTest
   );
 
   private static ObjectMapper jsonMapper =
-      injector
+       INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 

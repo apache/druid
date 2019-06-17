@@ -125,7 +125,7 @@ public class MapVirtualColumnGroupByTest
   public void testWithMapColumn()
   {
     final GroupByQuery query = new GroupByQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
         VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
         null,
@@ -148,7 +148,7 @@ public class MapVirtualColumnGroupByTest
   public void testWithSubColumn()
   {
     final GroupByQuery query = new GroupByQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
         VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
         null,

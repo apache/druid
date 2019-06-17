@@ -86,40 +86,39 @@ public class QueryRunnerTestHelper
   public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
   };
 
-  public static final String dataSource = "testing";
-  public static final Interval fullOnInterval = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
-  public static final SegmentId segmentId = SegmentId.of(dataSource, fullOnInterval, "dummy_version", 0);
-  public static final UnionDataSource unionDataSource = new UnionDataSource(
-      Stream.of(dataSource, dataSource, dataSource, dataSource).map(TableDataSource::new).collect(Collectors.toList())
+  public static final String DATA_SOURCE = "testing";
+  public static final Interval FULL_ON_INTERVAL = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
+  public static final SegmentId SEGMENT_ID = SegmentId.of(DATA_SOURCE, FULL_ON_INTERVAL, "dummy_version", 0);
+  public static final UnionDataSource UNION_DATA_SOURCE = new UnionDataSource(
+      Stream.of(DATA_SOURCE, DATA_SOURCE, DATA_SOURCE, DATA_SOURCE).map(TableDataSource::new).collect(Collectors.toList())
   );
 
-  public static final Granularity dayGran = Granularities.DAY;
-  public static final Granularity allGran = Granularities.ALL;
-  public static final Granularity monthGran = Granularities.MONTH;
-  public static final String timeDimension = "__time";
-  public static final String marketDimension = "market";
-  public static final String qualityDimension = "quality";
-  public static final String placementDimension = "placement";
-  public static final String placementishDimension = "placementish";
-  public static final String partialNullDimension = "partial_null_column";
-
-  public static final List<String> dimensions = Lists.newArrayList(
-      marketDimension,
-      qualityDimension,
-      placementDimension,
-      placementishDimension
+  public static final Granularity DAY_GRAN = Granularities.DAY;
+  public static final Granularity ALL_GRAN = Granularities.ALL;
+  public static final Granularity MONTH_GRAN = Granularities.MONTH;
+  public static final String TIME_DIMENSION = "__time";
+  public static final String MARKET_DIMENSION = "market";
+  public static final String QUALITY_DIMENSION = "quality";
+  public static final String PLACEMENT_DIMENSION = "placement";
+  public static final String PLACEMENTISH_DIMENSION = "placementish";
+  public static final String PARTIAL_NULL_DIMENSION = "partial_null_column";
+  public static final List<String> DIMENSIONS = Lists.newArrayList(
+      MARKET_DIMENSION,
+      QUALITY_DIMENSION,
+      PLACEMENT_DIMENSION,
+      PLACEMENTISH_DIMENSION
   );
-  public static final String indexMetric = "index";
-  public static final String uniqueMetric = "uniques";
-  public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
+  public static final String INDEX_METRIC = "index";
+  public static final String UNIQUE_METRIC = "uniques";
+  public static final String ADD_ROWS_INDEX_CONSTANT_METRIC = "addRowsIndexConstant";
   public static String dependentPostAggMetric = "dependentPostAgg";
-  public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", indexMetric);
-  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", timeDimension);
-  public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", indexMetric);
+  public static final CountAggregatorFactory ROWS_COUNT = new CountAggregatorFactory("rows");
+  public static final LongSumAggregatorFactory INDEX_LONG_SUM = new LongSumAggregatorFactory("index", INDEX_METRIC);
+  public static final LongSumAggregatorFactory TIME_LONG_SUM = new LongSumAggregatorFactory("sumtime", TIME_DIMENSION);
+  public static final DoubleSumAggregatorFactory INDEX_DOUBLE_SUM = new DoubleSumAggregatorFactory("index", INDEX_METRIC);
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
-  public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
+  public static final JavaScriptAggregatorFactory JS_INDEX_SUM_IF_PLACEMENT_IS_HA = new JavaScriptAggregatorFactory(
       "nindex",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
@@ -127,7 +126,7 @@ public class QueryRunnerTestHelper
       JS_COMBINE_A_PLUS_B,
       JavaScriptConfig.getEnabledInstance()
   );
-  public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
+  public static final JavaScriptAggregatorFactory JS_COUNT_IF_TIME_GREATER_THAN = new JavaScriptAggregatorFactory(
       "ntimestamps",
       Collections.singletonList("__time"),
       "function aggregate(current, t) { if (t > " +
@@ -137,7 +136,7 @@ public class QueryRunnerTestHelper
       JS_COMBINE_A_PLUS_B,
       JavaScriptConfig.getEnabledInstance()
   );
-  public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
+  public static final JavaScriptAggregatorFactory JS_PLACEMENTISH_COUNT = new JavaScriptAggregatorFactory(
       "pishcount",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
@@ -145,57 +144,58 @@ public class QueryRunnerTestHelper
       JS_COMBINE_A_PLUS_B,
       JavaScriptConfig.getEnabledInstance()
   );
-  public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
+  public static final HyperUniquesAggregatorFactory QUALITY_UNIQUES = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques"
   );
-  public static final HyperUniquesAggregatorFactory qualityUniquesRounded = new HyperUniquesAggregatorFactory(
+  public static final HyperUniquesAggregatorFactory QUALITY_UNIQUES_ROUNDED = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques",
       false,
       true
   );
-  public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
+  public static final CardinalityAggregatorFactory QUALITY_CARDINALITY = new CardinalityAggregatorFactory(
       "cardinality",
       Collections.singletonList(new DefaultDimensionSpec("quality", "quality")),
       false
   );
-  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
-  public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
-  public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
-  public static final ArithmeticPostAggregator addRowsIndexConstant = new ArithmeticPostAggregator(
-      addRowsIndexConstantMetric,
+  public static final ConstantPostAggregator CONSTANT = new ConstantPostAggregator("const", 1L);
+  public static final FieldAccessPostAggregator ROWS_POST_AGG = new FieldAccessPostAggregator("rows", "rows");
+  public static final FieldAccessPostAggregator INDEX_POST_AGG = new FieldAccessPostAggregator("index", "index");
+  public static final ArithmeticPostAggregator ADD_ROWS_INDEX_CONSTANT = new ArithmeticPostAggregator(
+       ADD_ROWS_INDEX_CONSTANT_METRIC,
       "+",
-      Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+      Lists.newArrayList(CONSTANT, ROWS_POST_AGG, INDEX_POST_AGG)
   );
   // dependent on AddRowsIndexContact postAgg
-  public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
+  public static final ArithmeticPostAggregator DEPENDENT_POST_AGG = new ArithmeticPostAggregator(
       dependentPostAggMetric,
       "+",
       Lists.newArrayList(
-          constant,
-          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric),
+          CONSTANT,
+          new FieldAccessPostAggregator(ADD_ROWS_INDEX_CONSTANT_METRIC, ADD_ROWS_INDEX_CONSTANT_METRIC),
           new FieldAccessPostAggregator("rows", "rows")
       )
   );
 
-  public static final String hyperUniqueFinalizingPostAggMetric = "hyperUniqueFinalizingPostAggMetric";
+  public static final String HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC = "hyperUniqueFinalizingPostAggMetric";
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
-      hyperUniqueFinalizingPostAggMetric,
+      HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
       "+",
       Lists.newArrayList(
-          new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric),
+          new HyperUniqueFinalizingPostAggregator(UNIQUE_METRIC, UNIQUE_METRIC),
           new ConstantPostAggregator(null, 1)
       )
   );
 
-  public static final List<AggregatorFactory> commonDoubleAggregators = Arrays.asList(
-      rowsCount,
-      indexDoubleSum,
-      qualityUniques
+
+  public static final List<AggregatorFactory> COMMON_DOUBLE_AGGREGATORS = Arrays.asList(
+      ROWS_COUNT,
+      INDEX_DOUBLE_SUM,
+      QUALITY_UNIQUES
   );
 
-  public static final List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
+  public static final List<AggregatorFactory> COMMON_FLOAT_AGGREGATORS = Arrays.asList(
       new FloatSumAggregatorFactory("index", "indexFloat"),
       new CountAggregatorFactory("rows"),
       new HyperUniquesAggregatorFactory(
@@ -208,7 +208,7 @@ public class QueryRunnerTestHelper
   public static final double UNIQUES_2 = 2.000977198748901d;
   public static final double UNIQUES_1 = 1.0002442201269182d;
 
-  public static final String[] expectedFullOnIndexValues = new String[]{
+  public static final String[] EXPECTED_FULL_ON_INDEX_VALUES = new String[]{
       "4500.0", "6077.949111938477", "4922.488838195801", "5726.140853881836", "4698.468170166016",
       "4651.030891418457", "4398.145851135254", "4596.068244934082", "4434.630561828613", "0.0",
       "6162.801361083984", "5590.292701721191", "4994.298484802246", "5179.679672241211", "6288.556800842285",
@@ -230,30 +230,30 @@ public class QueryRunnerTestHelper
       "5506.567192077637", "4743.144546508789", "4913.282669067383", "4723.869743347168"
   };
 
-  public static final String[] expectedFullOnIndexValuesDesc;
+  public static final String[] EXPECTED_FULL_ON_INDEX_VALUES_DESC;
 
   static {
-    List<String> list = new ArrayList<>(Arrays.asList(expectedFullOnIndexValues));
+    List<String> list = new ArrayList<>(Arrays.asList(EXPECTED_FULL_ON_INDEX_VALUES));
     Collections.reverse(list);
-    expectedFullOnIndexValuesDesc = list.toArray(new String[0]);
+    EXPECTED_FULL_ON_INDEX_VALUES_DESC = list.toArray(new String[0]);
   }
 
-  public static final DateTime earliest = DateTimes.of("2011-01-12");
-  public static final DateTime last = DateTimes.of("2011-04-15");
+  public static final DateTime EARLIEST = DateTimes.of("2011-01-12");
+  public static final DateTime LAST = DateTimes.of("2011-04-15");
 
-  public static final DateTime skippedDay = DateTimes.of("2011-01-21T00:00:00.000Z");
+  public static final DateTime SKIPPED_DAY = DateTimes.of("2011-01-21T00:00:00.000Z");
 
-  public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
+  public static final QuerySegmentSpec FIRST_TO_THIRD = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
   );
-  public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
+  public static final QuerySegmentSpec SECOND_ONLY = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
   );
 
-  public static final QuerySegmentSpec fullOnIntervalSpec = new MultipleIntervalSegmentSpec(
-      Collections.singletonList(fullOnInterval)
+  public static final QuerySegmentSpec FULL_ON_INTERVAL_SPEC = new MultipleIntervalSegmentSpec(
+      Collections.singletonList(FULL_ON_INTERVAL)
   );
-  public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
+  public static final QuerySegmentSpec EMPTY_INTERVAL = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
   );
 
@@ -341,15 +341,15 @@ public class QueryRunnerTestHelper
     final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), ("rtIndex")),
-        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, SEGMENT_ID), ("rtIndex")),
+        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, SEGMENT_ID), "noRollupRtIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, SEGMENT_ID), "mMappedTestIndex"),
         makeQueryRunner(
             factory,
-            new QueryableIndexSegment(noRollupMMappedTestIndex, segmentId),
+            new QueryableIndexSegment(noRollupMMappedTestIndex, SEGMENT_ID),
             "noRollupMMappedTestIndex"
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, segmentId), "mergedRealtimeIndex")
+        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex")
     );
   }
 
@@ -361,11 +361,11 @@ public class QueryRunnerTestHelper
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
 
     return Arrays.asList(
-        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
+        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, SEGMENT_ID), "rtIndex"),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, SEGMENT_ID), "mMappedTestIndex"),
         makeUnionQueryRunner(
             factory,
-            new QueryableIndexSegment(mergedRealtimeIndex, segmentId),
+            new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID),
             "mergedRealtimeIndex"
         )
     );
@@ -379,8 +379,8 @@ public class QueryRunnerTestHelper
   {
     return makeQueryRunner(
         factory,
-        segmentId,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId),
+        SEGMENT_ID,
+        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), SEGMENT_ID),
         runnerName
     );
   }
@@ -391,7 +391,7 @@ public class QueryRunnerTestHelper
       final String runnerName
   )
   {
-    return makeQueryRunner(factory, segmentId, adapter, runnerName);
+    return makeQueryRunner(factory, SEGMENT_ID, adapter, runnerName);
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
@@ -421,7 +421,7 @@ public class QueryRunnerTestHelper
   )
   {
     BySegmentQueryRunner<T> bySegmentQueryRunner =
-        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
+        new BySegmentQueryRunner<>(SEGMENT_ID, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
     final QueryRunner<T> runner = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
         .create(new UnionQueryRunner<>(bySegmentQueryRunner))
         .mergeResults()

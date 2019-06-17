@@ -61,7 +61,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
   private static final int NUM_EVENTS_TO_SEND = 60;
   private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
-  public static final String testPropertyPrefix = "kafka.test.property.";
+  public static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -307,8 +307,8 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
   private void addFilteredProperties(IntegrationTestingConfig config, Properties properties)
   {
     for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
-      if (entry.getKey().startsWith(testPropertyPrefix)) {
-        properties.put(entry.getKey().substring(testPropertyPrefix.length()), entry.getValue());
+      if (entry.getKey().startsWith(TEST_PROPERTY_PREFIX)) {
+        properties.put(entry.getKey().substring(TEST_PROPERTY_PREFIX.length()), entry.getValue());
       }
     }
   }

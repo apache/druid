@@ -40,8 +40,8 @@ import java.util.Map;
 
 public class JavaScriptAggregatorTest
 {
-  protected static final Map<String, String> sumLogATimesBPlusTen = new HashMap<>();
-  protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
+  protected static final Map<String, String> SUM_LOGA_TIMES_BPLUS_TEN = new HashMap<>();
+  protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   final ColumnSelectorFactory DUMMY_COLUMN_SELECTOR_FACTORY = new ColumnSelectorFactory()
   {
@@ -65,13 +65,13 @@ public class JavaScriptAggregatorTest
   };
 
   static {
-    sumLogATimesBPlusTen.put("fnAggregate", "function aggregate(current, a, b) { return current + (Math.log(a) * b) }");
-    sumLogATimesBPlusTen.put("fnReset", "function reset()                  { return 10 }");
-    sumLogATimesBPlusTen.put("fnCombine", "function combine(a,b)             { return a + b }");
+    SUM_LOGA_TIMES_BPLUS_TEN.put("fnAggregate", "function aggregate(current, a, b) { return current + (Math.log(a) * b) }");
+    SUM_LOGA_TIMES_BPLUS_TEN.put("fnReset", "function reset()                  { return 10 }");
+    SUM_LOGA_TIMES_BPLUS_TEN.put("fnCombine", "function combine(a,b)             { return a + b }");
 
-    scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
-    scriptDoubleSum.put("fnReset", "function reset()               { return 0 }");
-    scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b }");
+    SCRIPT_DOUBLE_SUM.put("fnAggregate", "function aggregate(current, a) { return current + a }");
+    SCRIPT_DOUBLE_SUM.put("fnReset", "function reset()               { return 0 }");
+    SCRIPT_DOUBLE_SUM.put("fnCombine", "function combine(a,b)          { return a + b }");
   }
 
   @Rule
@@ -114,7 +114,7 @@ public class JavaScriptAggregatorTest
     final TestDoubleColumnSelectorImpl selector1 = new TestDoubleColumnSelectorImpl(new double[]{42.12d, 9d});
     final TestDoubleColumnSelectorImpl selector2 = new TestDoubleColumnSelectorImpl(new double[]{2d, 3d});
 
-    Map<String, String> script = sumLogATimesBPlusTen;
+    Map<String, String> script = SUM_LOGA_TIMES_BPLUS_TEN;
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
         Arrays.asList(selector1, selector2),
@@ -149,7 +149,7 @@ public class JavaScriptAggregatorTest
     final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
     final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
 
-    Map<String, String> script = sumLogATimesBPlusTen;
+    Map<String, String> script = SUM_LOGA_TIMES_BPLUS_TEN;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
         Arrays.asList(selector1, selector2),
         JavaScriptAggregatorFactory.compileScript(
@@ -184,7 +184,7 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregateMissingColumn()
   {
-    Map<String, String> script = scriptDoubleSum;
+    Map<String, String> script = SCRIPT_DOUBLE_SUM;
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
         Collections.singletonList(null),
@@ -222,8 +222,8 @@ public class JavaScriptAggregatorTest
         Collections.singletonList(ocs),
         JavaScriptAggregatorFactory.compileScript(
             "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
-            scriptDoubleSum.get("fnReset"),
-            scriptDoubleSum.get("fnCombine")
+            SCRIPT_DOUBLE_SUM.get("fnReset"),
+            SCRIPT_DOUBLE_SUM.get("fnCombine")
         )
     );
 
@@ -256,9 +256,9 @@ public class JavaScriptAggregatorTest
     final JavaScriptAggregatorFactory factory = new JavaScriptAggregatorFactory(
         "foo",
         ImmutableList.of("foo"),
-        scriptDoubleSum.get("fnAggregate"),
-        scriptDoubleSum.get("fnReset"),
-        scriptDoubleSum.get("fnCombine"),
+        SCRIPT_DOUBLE_SUM.get("fnAggregate"),
+        SCRIPT_DOUBLE_SUM.get("fnReset"),
+        SCRIPT_DOUBLE_SUM.get("fnCombine"),
         new JavaScriptConfig(false)
     );
 
@@ -274,9 +274,9 @@ public class JavaScriptAggregatorTest
     final JavaScriptAggregatorFactory factory = new JavaScriptAggregatorFactory(
         "foo",
         ImmutableList.of("foo"),
-        scriptDoubleSum.get("fnAggregate"),
-        scriptDoubleSum.get("fnReset"),
-        scriptDoubleSum.get("fnCombine"),
+        SCRIPT_DOUBLE_SUM.get("fnAggregate"),
+        SCRIPT_DOUBLE_SUM.get("fnReset"),
+        SCRIPT_DOUBLE_SUM.get("fnCombine"),
         new JavaScriptConfig(false)
     );
 
@@ -308,7 +308,7 @@ public class JavaScriptAggregatorTest
     }
     */
 
-    Map<String, String> script = scriptDoubleSum;
+    Map<String, String> script = SCRIPT_DOUBLE_SUM;
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
         Collections.singletonList(selector),
         JavaScriptAggregatorFactory.compileScript(

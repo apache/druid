@@ -56,7 +56,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public class DataSourceMetadataQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
@@ -65,8 +65,8 @@ public class DataSourceMetadataQueryTest
                         .dataSource("testing")
                         .build();
 
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }

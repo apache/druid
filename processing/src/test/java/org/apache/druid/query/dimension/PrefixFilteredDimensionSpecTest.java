@@ -84,7 +84,7 @@ public class PrefixFilteredDimensionSpecTest
         "c"
     );
 
-    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.INSTACE);
 
     Assert.assertEquals(1, selector.getValueCardinality());
 

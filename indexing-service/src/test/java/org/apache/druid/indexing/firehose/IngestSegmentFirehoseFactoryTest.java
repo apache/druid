@@ -152,17 +152,17 @@ public class IngestSegmentFirehoseFactoryTest
       index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
-    if (!persistDir.mkdirs() && !persistDir.exists()) {
-      throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
+    if (!PERSIST_DIR.mkdirs() && !PERSIST_DIR.exists()) {
+      throw new IOE("Could not create directory at [%s]", PERSIST_DIR.getAbsolutePath());
     }
-    INDEX_MERGER_V9.persist(index, persistDir, indexSpec, null);
+    INDEX_MERGER_V9.persist(index, PERSIST_DIR, indexSpec, null);
 
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
       public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
       {
-        return ImmutableList.copyOf(segmentSet);
+        return ImmutableList.copyOf(SEGMENT_SET);
       }
     };
 
@@ -293,9 +293,9 @@ public class IngestSegmentFirehoseFactoryTest
   private static final String TIME_COLUMN = "ts";
   private static final Integer MAX_SHARD_NUMBER = 10;
   private static final Integer MAX_ROWS = 10;
-  private static final File tmpDir = Files.createTempDir();
-  private static final File persistDir = Paths.get(tmpDir.getAbsolutePath(), "indexTestMerger").toFile();
-  private static final List<DataSegment> segmentSet = new ArrayList<>(MAX_SHARD_NUMBER);
+  private static final File TMP_DIR = Files.createTempDir();
+  private static final File PERSIST_DIR = Paths.get(TMP_DIR.getAbsolutePath(), "indexTestMerger").toFile();
+  private static final List<DataSegment> SEGMENT_SET = new ArrayList<>(MAX_SHARD_NUMBER);
 
   private final FirehoseFactory<InputRowParser> factory;
   private final InputRowParser rowParser;
@@ -331,7 +331,7 @@ public class IngestSegmentFirehoseFactoryTest
         DATA_SOURCE_VERSION,
         ImmutableMap.of(
             "type", "local",
-            "path", persistDir.getAbsolutePath()
+            "path", PERSIST_DIR.getAbsolutePath()
         ),
         ImmutableList.of(DIM_NAME),
         ImmutableList.of(METRIC_LONG_NAME, METRIC_FLOAT_NAME),
@@ -348,14 +348,14 @@ public class IngestSegmentFirehoseFactoryTest
   public static void setUpStatic()
   {
     for (int i = 0; i < MAX_SHARD_NUMBER; ++i) {
-      segmentSet.add(buildSegment(i));
+      SEGMENT_SET.add(buildSegment(i));
     }
   }
 
   @AfterClass
   public static void tearDownStatic()
   {
-    recursivelyDelete(tmpDir);
+    recursivelyDelete(TMP_DIR);
   }
 
   private static void recursivelyDelete(final File dir)
@@ -400,7 +400,7 @@ public class IngestSegmentFirehoseFactoryTest
   @Test
   public void simpleFirehoseReadingTest() throws IOException
   {
-    Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
+    Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), SEGMENT_SET.size());
     Integer rowcount = 0;
     try (final Firehose firehose = factory.connect(rowParser, null)) {
       while (firehose.hasMore()) {
@@ -422,7 +422,7 @@ public class IngestSegmentFirehoseFactoryTest
   @Test
   public void testTransformSpec() throws IOException
   {
-    Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
+    Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), SEGMENT_SET.size());
     Integer rowcount = 0;
     final TransformSpec transformSpec = new TransformSpec(
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "1", null),

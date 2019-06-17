@@ -51,7 +51,7 @@ public class GenericIndexedWriter<T> implements Serializer
 {
   private static int PAGE_SIZE = 4096;
 
-  private static final MetaSerdeHelper<GenericIndexedWriter> singleFileMetaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
       .writeByte(
           x -> x.objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED
@@ -59,7 +59,7 @@ public class GenericIndexedWriter<T> implements Serializer
       .writeInt(x -> Ints.checkedCast(x.headerOut.size() + x.valuesOut.size() + Integer.BYTES))
       .writeInt(x -> x.numWritten);
 
-  private static final MetaSerdeHelper<GenericIndexedWriter> multiFileMetaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<GenericIndexedWriter> MULTI_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_TWO)
       .writeByte(
           x -> x.objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED
@@ -274,9 +274,9 @@ public class GenericIndexedWriter<T> implements Serializer
   {
     if (requireMultipleFiles) {
       // for multi-file version (version 2), getSerializedSize() returns number of bytes in meta file.
-      return multiFileMetaSerdeHelper.size(this);
+      return MULTI_FILE_META_SERDE_HELPER.size(this);
     } else {
-      return singleFileMetaSerdeHelper.size(this) + headerOut.size() + valuesOut.size();
+      return SINGLE_FILE_META_SERDE_HELPER.size(this) + headerOut.size() + valuesOut.size();
     }
   }
 
@@ -306,7 +306,7 @@ public class GenericIndexedWriter<T> implements Serializer
         numBytesWritten
     );
 
-    singleFileMetaSerdeHelper.writeTo(channel, this);
+    SINGLE_FILE_META_SERDE_HELPER.writeTo(channel, this);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
   }
@@ -330,7 +330,7 @@ public class GenericIndexedWriter<T> implements Serializer
     }
 
     int bagSizePower = bagSizePower();
-    multiFileMetaSerdeHelper.writeTo(channel, this);
+    MULTI_FILE_META_SERDE_HELPER.writeTo(channel, this);
 
     long previousValuePosition = 0;
     int bagSize = 1 << bagSizePower;

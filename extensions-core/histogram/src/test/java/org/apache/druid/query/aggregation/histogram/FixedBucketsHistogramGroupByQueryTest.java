@@ -51,7 +51,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class FixedBucketsHistogramGroupByQueryTest
 {
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
@@ -123,7 +123,7 @@ public class FixedBucketsHistogramGroupByQueryTest
           config
       );
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-      resourceCloser.register(factoryAndCloser.rhs);
+      RESOURCE_CLOSER.register(factoryAndCloser.rhs);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
@@ -152,7 +152,7 @@ public class FixedBucketsHistogramGroupByQueryTest
   @After
   public void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   @Test
@@ -169,18 +169,18 @@ public class FixedBucketsHistogramGroupByQueryTest
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
-            QueryRunnerTestHelper.marketDimension,
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
                 1
             )
-        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "histo", 0.5f)
@@ -229,18 +229,18 @@ public class FixedBucketsHistogramGroupByQueryTest
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
-            QueryRunnerTestHelper.marketDimension,
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
                 1
             )
-        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "quantile", 0.5f)

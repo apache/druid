@@ -182,7 +182,7 @@ public class TaskLifecycleTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
+  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<DataSegment>()
   {
     @Override
     public int compare(DataSegment dataSegment, DataSegment dataSegment2)
@@ -192,13 +192,13 @@ public class TaskLifecycleTest
   };
   private static DateTime now = DateTimes.nowUtc();
 
-  private static final Iterable<InputRow> realtimeIdxTaskInputRows = ImmutableList.of(
+  private static final Iterable<InputRow> REALTIME_IDX_INPUT_ROWS = ImmutableList.of(
       ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
       ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
       ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
   );
 
-  private static final Iterable<InputRow> IdxTaskInputRows = ImmutableList.of(
+  private static final Iterable<InputRow> IDX_TASK_INPUT_ROWS = ImmutableList.of(
       ir("2010-01-01T01", "x", "y", 1),
       ir("2010-01-01T01", "x", "z", 1),
       ir("2010-01-02T01", "a", "b", 2),
@@ -309,8 +309,8 @@ public class TaskLifecycleTest
     public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
-                                                  ? realtimeIdxTaskInputRows.iterator()
-                                                  : IdxTaskInputRows.iterator();
+                                                  ? REALTIME_IDX_INPUT_ROWS.iterator()
+                                                  : IDX_TASK_INPUT_ROWS.iterator();
 
       return new Firehose()
       {
@@ -714,8 +714,8 @@ public class TaskLifecycleTest
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
-    final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
+    final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
+    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, mergedStatus.getStatusCode());
@@ -1195,8 +1195,8 @@ public class TaskLifecycleTest
     }
 
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
-    final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
+    final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
+    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("segments logged vs published", loggedSegments, publishedSegments);

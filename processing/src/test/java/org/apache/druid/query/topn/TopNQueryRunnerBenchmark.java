@@ -55,22 +55,22 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
     rtIndex, mMappedTestIndex, mergedRealtimeIndex, rtIndexOffheap
   }
 
-  private static final String marketDimension = "market";
-  private static final SegmentId segmentId = SegmentId.dummy("testSegment");
+  private static final String MARKET_DIMENSION = "market";
+  private static final SegmentId SEGMENT_ID = SegmentId.dummy("testSegment");
 
-  private static final HashMap<String, Object> context = new HashMap<String, Object>();
+  private static final HashMap<String, Object> CONTEXT = new HashMap<String, Object>();
 
-  private static final TopNQuery query = new TopNQueryBuilder()
-      .dataSource(QueryRunnerTestHelper.dataSource)
-      .granularity(QueryRunnerTestHelper.allGran)
-      .dimension(marketDimension)
-      .metric(QueryRunnerTestHelper.indexMetric)
+  private static final TopNQuery QUERY = new TopNQueryBuilder()
+      .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+      .granularity(QueryRunnerTestHelper.ALL_GRAN)
+      .dimension(MARKET_DIMENSION)
+      .metric(QueryRunnerTestHelper.INDEX_METRIC)
       .threshold(4)
-      .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+      .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
       .aggregators(
           Lists.newArrayList(
               Iterables.concat(
-                  QueryRunnerTestHelper.commonDoubleAggregators,
+                  QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS,
                   Lists.newArrayList(
                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                       new DoubleMinAggregatorFactory("minIndex", "index")
@@ -78,9 +78,9 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               )
           )
       )
-      .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+      .postAggregators(Collections.singletonList(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT))
       .build();
-  private static final Map<TestCases, QueryRunner> testCaseMap = new HashMap<>();
+  private static final Map<TestCases, QueryRunner> TEST_CASE_MAP = new HashMap<>();
 
   @BeforeClass
   public static void setUp()
@@ -102,27 +102,27 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    testCaseMap.put(
+    TEST_CASE_MAP.put(
         TestCases.rtIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID),
             null
         )
     );
-    testCaseMap.put(
+    TEST_CASE_MAP.put(
         TestCases.mMappedTestIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), segmentId),
+            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID),
             null
         )
     );
-    testCaseMap.put(
+    TEST_CASE_MAP.put(
         TestCases.mergedRealtimeIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), segmentId),
+            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID),
             null
         )
     );
@@ -133,7 +133,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testmMapped()
   {
-    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query), context);
+    TEST_CASE_MAP.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(QUERY), CONTEXT);
   }
 
   @Ignore
@@ -141,7 +141,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testrtIndex()
   {
-    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query), context);
+    TEST_CASE_MAP.get(TestCases.rtIndex).run(QueryPlus.wrap(QUERY), CONTEXT);
   }
 
   @Ignore
@@ -149,7 +149,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testMerged()
   {
-    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query), context);
+    TEST_CASE_MAP.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(QUERY), CONTEXT);
   }
 
   @Ignore
@@ -157,6 +157,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testOffHeap()
   {
-    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query), context);
+    TEST_CASE_MAP.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(QUERY), CONTEXT);
   }
 }

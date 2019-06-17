@@ -97,7 +97,7 @@ public class JettyServerModule extends JerseyServletModule
 {
   private static final Logger log = new Logger(JettyServerModule.class);
 
-  private static final AtomicInteger activeConnections = new AtomicInteger();
+  private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
 
   @Override
@@ -337,7 +337,7 @@ public class JettyServerModule extends JerseyServletModule
 
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
-        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, ACTIVE_CONNECTIONS));
       }
       connector.setConnectionFactories(monitoredConnFactories);
     }
@@ -478,7 +478,7 @@ public class JettyServerModule extends JerseyServletModule
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-      emitter.emit(builder.build("jetty/numOpenConnections", activeConnections.get()));
+      emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       return true;
     }
   }

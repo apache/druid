@@ -68,8 +68,8 @@ import java.util.concurrent.TimeUnit;
 public class TestKafkaExtractionCluster
 {
   private static final Logger log = new Logger(TestKafkaExtractionCluster.class);
-  private static final String topicName = "testTopic";
-  private static final Map<String, String> kafkaProperties = new HashMap<>();
+  private static final String TOPIC_NAME = "testTopic";
+  private static final Map<String, String> KAFKA_PROPERTIES = new HashMap<>();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -122,7 +122,7 @@ public class TestKafkaExtractionCluster
     final String zkKafkaPath = "/kafka";
 
     final Properties serverProperties = new Properties();
-    serverProperties.putAll(kafkaProperties);
+    serverProperties.putAll(KAFKA_PROPERTIES);
     serverProperties.put("broker.id", "0");
     serverProperties.put("log.dir", temporaryFolder.newFolder().getAbsolutePath());
     serverProperties.put("log.cleaner.enable", "true");
@@ -209,13 +209,13 @@ public class TestKafkaExtractionCluster
     }) {
       final Properties topicProperties = new Properties();
       topicProperties.put("cleanup.policy", "compact");
-      if (!AdminUtils.topicExists(zkClient, topicName)) {
-        AdminUtils.createTopic(zkClient, topicName, 1, 1, topicProperties);
+      if (!AdminUtils.topicExists(zkClient, TOPIC_NAME)) {
+        AdminUtils.createTopic(zkClient, TOPIC_NAME, 1, 1, topicProperties);
       }
 
       log.info("---------------------------Created topic---------------------------");
 
-      Assert.assertTrue(AdminUtils.topicExists(zkClient, topicName));
+      Assert.assertTrue(AdminUtils.topicExists(zkClient, TOPIC_NAME));
     }
 
     final Properties kafkaProducerProperties = makeProducerProperties();
@@ -230,7 +230,7 @@ public class TestKafkaExtractionCluster
     }) {
       producer.send(
           new KeyedMessage<>(
-              topicName,
+              TOPIC_NAME,
               StringUtils.toUtf8("abcdefg"),
               StringUtils.toUtf8("abcdefg")
           )
@@ -260,14 +260,14 @@ public class TestKafkaExtractionCluster
     mapper = injector.getInstance(ObjectMapper.class);
 
     log.info("--------------------------- placed default item via producer ---------------------------");
-    final Map<String, String> consumerProperties = new HashMap<>(kafkaProperties);
+    final Map<String, String> consumerProperties = new HashMap<>(KAFKA_PROPERTIES);
     consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + zkKafkaPath);
     consumerProperties.put("zookeeper.session.timeout.ms", "10000");
     consumerProperties.put("zookeeper.sync.time.ms", "200");
 
     final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
         null,
-        topicName,
+        TOPIC_NAME,
         consumerProperties
     );
 
@@ -298,12 +298,12 @@ public class TestKafkaExtractionCluster
   private Properties makeProducerProperties()
   {
     final Properties kafkaProducerProperties = new Properties();
-    kafkaProducerProperties.putAll(kafkaProperties);
+    kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
     kafkaProducerProperties.put(
         "metadata.broker.list",
         StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().port())
     );
-    kafkaProperties.put("request.required.acks", "1");
+    KAFKA_PROPERTIES.put("request.required.acks", "1");
     return kafkaProducerProperties;
   }
 
@@ -335,7 +335,7 @@ public class TestKafkaExtractionCluster
     long events = factory.getCompletedEventCount();
 
     log.info("-------------------------     Sending foo bar     -------------------------------");
-    producer.send(new KeyedMessage<>(topicName, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
+    producer.send(new KeyedMessage<>(TOPIC_NAME, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
 
     long start = System.currentTimeMillis();
     while (events == factory.getCompletedEventCount()) {
@@ -354,7 +354,7 @@ public class TestKafkaExtractionCluster
     events = factory.getCompletedEventCount();
 
     log.info("-------------------------     Sending baz bat     -------------------------------");
-    producer.send(new KeyedMessage<>(topicName, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
+    producer.send(new KeyedMessage<>(TOPIC_NAME, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
     while (events == factory.getCompletedEventCount()) {
       Thread.sleep(10);
       if (System.currentTimeMillis() > start + 60_000) {

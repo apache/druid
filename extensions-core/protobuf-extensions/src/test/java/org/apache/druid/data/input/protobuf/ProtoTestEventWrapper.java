@@ -360,13 +360,13 @@ public final class ProtoTestEventWrapper
     public static com.google.protobuf.Descriptors.Descriptor
     getDescriptor()
     {
-      return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
+      return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR;
     }
 
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
     internalGetFieldAccessorTable()
     {
-      return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable
+      return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FIELDACCESSORTABLE
           .ensureFieldAccessorsInitialized(
               org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.class,
               org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Builder.class
@@ -437,11 +437,11 @@ public final class ProtoTestEventWrapper
       public static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
       internalGetValueMap()
       {
-        return internalValueMap;
+        return INTERNAL_VALUEMAP;
       }
 
       private static final com.google.protobuf.Internal.EnumLiteMap<
-          EventCategory> internalValueMap =
+          EventCategory> INTERNAL_VALUEMAP =
           new com.google.protobuf.Internal.EnumLiteMap<EventCategory>()
           {
             public EventCategory findValueByNumber(int number)
@@ -590,13 +590,13 @@ public final class ProtoTestEventWrapper
       public static com.google.protobuf.Descriptors.Descriptor
       getDescriptor()
       {
-        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR;
       }
 
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable()
       {
-        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable
+        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_FIELDACCESSORTABLE
             .ensureFieldAccessorsInitialized(
                 org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.class,
                 org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder.class
@@ -862,13 +862,13 @@ public final class ProtoTestEventWrapper
         public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor()
         {
-          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR;
         }
 
         protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable()
         {
-          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable
+          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_FIELDACCESSORTABLE
               .ensureFieldAccessorsInitialized(
                   org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.class,
                   org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder.class
@@ -907,7 +907,7 @@ public final class ProtoTestEventWrapper
         public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType()
         {
-          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+          return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR;
         }
 
         public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstanceForType()
@@ -1894,13 +1894,13 @@ public final class ProtoTestEventWrapper
       public static com.google.protobuf.Descriptors.Descriptor
       getDescriptor()
       {
-        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
+        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR;
       }
 
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable()
       {
-        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable
+        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FIELDACCESSORTABLE
             .ensureFieldAccessorsInitialized(
                 org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.class,
                 org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Builder.class
@@ -1969,7 +1969,7 @@ public final class ProtoTestEventWrapper
       public com.google.protobuf.Descriptors.Descriptor
       getDescriptorForType()
       {
-        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
+        return org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR;
       }
 
       public org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType()
@@ -3183,15 +3183,15 @@ public final class ProtoTestEventWrapper
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_prototest_ProtoTestEvent_descriptor;
+      INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR;
   private static final
   com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
+      INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FIELDACCESSORTABLE;
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+      INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR;
   private static final
   com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable;
+      INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_FIELDACCESSORTABLE;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
   getDescriptor()
@@ -3234,11 +3234,11 @@ public final class ProtoTestEventWrapper
                                         new com.google.protobuf.Descriptors.FileDescriptor[]{
                                         }, assigner
         );
-    internal_static_prototest_ProtoTestEvent_descriptor =
+    INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR =
         getDescriptor().getMessageTypes().get(0);
-    internal_static_prototest_ProtoTestEvent_fieldAccessorTable = new
+    INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FIELDACCESSORTABLE = new
         com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_prototest_ProtoTestEvent_descriptor,
+        INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR,
         new java.lang.String[]{
             "EventType",
             "Id",
@@ -3253,11 +3253,11 @@ public final class ProtoTestEventWrapper
             "Bar",
             }
     );
-    internal_static_prototest_ProtoTestEvent_Foo_descriptor =
-        internal_static_prototest_ProtoTestEvent_descriptor.getNestedTypes().get(0);
-    internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable = new
+    INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR =
+        INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_DESCRIPTOR.getNestedTypes().get(0);
+    INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_FIELDACCESSORTABLE = new
         com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_prototest_ProtoTestEvent_Foo_descriptor,
+        INTERNAL_STATIC_PROTOTEST_PROTOTESTEVENT_FOO_DESCRIPTOR,
         new java.lang.String[]{"Bar"}
     );
   }

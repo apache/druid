@@ -64,7 +64,7 @@ import java.util.Map;
 
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
-  private static final Injector injector = Guice.createInjector(
+  private static final Injector INJECTOR = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
@@ -80,7 +80,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   );
 
   private static ObjectMapper jsonMapper =
-      injector
+       INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
@@ -88,10 +88,10 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   {
     final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
     for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(injector.getInstance(clazz));
+      exprMacros.add(INJECTOR.getInstance(clazz));
     }
-    exprMacros.add(injector.getInstance(BloomFilterExprMacro.class));
-    exprMacros.add(injector.getInstance(LookupExprMacro.class));
+    exprMacros.add(INJECTOR.getInstance(BloomFilterExprMacro.class));
+    exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
     return new ExprMacroTable(exprMacros);
   }
 
@@ -278,7 +278,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   {
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(),
-        ImmutableSet.of(injector.getInstance(BloomFilterOperatorConversion.class))
+        ImmutableSet.of(INJECTOR.getInstance(BloomFilterOperatorConversion.class))
     );
     return getResults(
         plannerConfig,

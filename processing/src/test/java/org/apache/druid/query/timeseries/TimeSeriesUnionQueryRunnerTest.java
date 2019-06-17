@@ -84,17 +84,17 @@ public class TimeSeriesUnionQueryRunnerTest
   public void testUnionTimeseries()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.unionDataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .dataSource(QueryRunnerTestHelper.UNION_DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                   .aggregators(
                                       Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.ROWS_COUNT,
                                           new LongSumAggregatorFactory(
                                               "idx",
                                               "index"
                                           ),
-                                          QueryRunnerTestHelper.qualityUniques
+                                          QueryRunnerTestHelper.QUALITY_UNIQUES
                                       )
                                   )
                                   .descending(descending)
@@ -132,11 +132,11 @@ public class TimeSeriesUnionQueryRunnerTest
                                           )
                                       )
                                   )
-                                  .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                   .aggregators(
                                       Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.ROWS_COUNT,
                                           new LongSumAggregatorFactory(
                                               "idx",
                                               "index"

@@ -47,12 +47,12 @@ import java.util.Map;
 public abstract class HadoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
-  private static final ExtensionsConfig extensionsConfig;
+  private static final ExtensionsConfig EXTENSIONS_CONFIG;
 
-  static final Injector injector = GuiceInjectors.makeStartupInjector();
+  static final Injector INJECTOR = GuiceInjectors.makeStartupInjector();
 
   static {
-    extensionsConfig = injector.getInstance(ExtensionsConfig.class);
+    EXTENSIONS_CONFIG = INJECTOR.getInstance(ExtensionsConfig.class);
   }
 
   private final List<String> hadoopDependencyCoordinates;
@@ -143,7 +143,7 @@ public abstract class HadoopTask extends AbstractTask
     );
 
     final List<URL> extensionURLs = new ArrayList<>();
-    for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
+    for (final File extension : Initialization.getExtensionFilesToLoad(EXTENSIONS_CONFIG)) {
       final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
       extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
     }
@@ -156,7 +156,7 @@ public abstract class HadoopTask extends AbstractTask
     for (final File hadoopDependency :
         Initialization.getHadoopDependencyFilesToLoad(
             finalHadoopDependencyCoordinates,
-            extensionsConfig
+            EXTENSIONS_CONFIG
         )) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
       localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
@@ -168,15 +168,15 @@ public abstract class HadoopTask extends AbstractTask
     );
 
     final String hadoopContainerDruidClasspathJars;
-    if (extensionsConfig.getHadoopContainerDruidClasspath() == null) {
+    if (EXTENSIONS_CONFIG.getHadoopContainerDruidClasspath() == null) {
       hadoopContainerDruidClasspathJars = Joiner.on(File.pathSeparator).join(jobURLs);
 
     } else {
       List<URL> hadoopContainerURLs = Lists.newArrayList(
-          Initialization.getURLsForClasspath(extensionsConfig.getHadoopContainerDruidClasspath())
+          Initialization.getURLsForClasspath(EXTENSIONS_CONFIG.getHadoopContainerDruidClasspath())
       );
 
-      if (extensionsConfig.getAddExtensionsToHadoopContainer()) {
+      if (EXTENSIONS_CONFIG.getAddExtensionsToHadoopContainer()) {
         hadoopContainerURLs.addAll(extensionURLs);
       }
 

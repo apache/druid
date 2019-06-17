@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 public class FlattenJSONBenchmark
 {
-  private static final int numEvents = 100000;
+  private static final int NUM_EVENTS = 100000;
 
   List<String> flatInputs;
   List<String> nestedInputs;
@@ -67,15 +67,15 @@ public class FlattenJSONBenchmark
   {
     FlattenJSONBenchmarkUtil gen = new FlattenJSONBenchmarkUtil();
     flatInputs = new ArrayList<String>();
-    for (int i = 0; i < numEvents; i++) {
+    for (int i = 0; i < NUM_EVENTS; i++) {
       flatInputs.add(gen.generateFlatEvent());
     }
     nestedInputs = new ArrayList<String>();
-    for (int i = 0; i < numEvents; i++) {
+    for (int i = 0; i < NUM_EVENTS; i++) {
       nestedInputs.add(gen.generateNestedEvent());
     }
     jqInputs = new ArrayList<String>();
-    for (int i = 0; i < numEvents; i++) {
+    for (int i = 0; i < NUM_EVENTS; i++) {
       jqInputs.add(gen.generateNestedEvent()); // reuse the same event as "nested"
     }
 
@@ -95,7 +95,7 @@ public class FlattenJSONBenchmark
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
-    flatCounter = (flatCounter + 1) % numEvents;
+    flatCounter = (flatCounter + 1) % NUM_EVENTS;
     return parsed;
   }
 
@@ -108,7 +108,7 @@ public class FlattenJSONBenchmark
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
-    nestedCounter = (nestedCounter + 1) % numEvents;
+    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
     return parsed;
   }
 
@@ -121,7 +121,7 @@ public class FlattenJSONBenchmark
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
-    jqCounter = (jqCounter + 1) % numEvents;
+    jqCounter = (jqCounter + 1) % NUM_EVENTS;
     return parsed;
   }
 
@@ -134,7 +134,7 @@ public class FlattenJSONBenchmark
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
-    nestedCounter = (nestedCounter + 1) % numEvents;
+    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
     return parsed;
   }
 
@@ -147,7 +147,7 @@ public class FlattenJSONBenchmark
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
-    nestedCounter = (nestedCounter + 1) % numEvents;
+    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
     return parsed;
   }
 

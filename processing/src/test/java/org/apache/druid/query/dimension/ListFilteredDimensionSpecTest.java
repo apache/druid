@@ -122,7 +122,7 @@ public class ListFilteredDimensionSpecTest
         true
     );
 
-    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.INSTACE);
 
     Assert.assertEquals(2, selector.getValueCardinality());
 
@@ -147,7 +147,7 @@ public class ListFilteredDimensionSpecTest
         false
     );
 
-    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.INSTACE);
 
     Assert.assertEquals(24, selector.getValueCardinality());
 
@@ -171,7 +171,7 @@ public class ListFilteredDimensionSpecTest
         false
     );
 
-    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.INSTACE);
 
     Assert.assertEquals(25, selector.getValueCardinality());
 

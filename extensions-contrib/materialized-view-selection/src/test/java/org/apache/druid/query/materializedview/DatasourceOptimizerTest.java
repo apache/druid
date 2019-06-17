@@ -203,7 +203,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     // build user query
     TopNQuery userQuery = new TopNQueryBuilder()
         .dataSource("base")
-        .granularity(QueryRunnerTestHelper.allGran)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension("dim1")
         .metric("cost")
         .threshold(4)
@@ -216,7 +216,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     List<Query> expectedQueryAfterOptimizing = Lists.newArrayList(
         new TopNQueryBuilder()
             .dataSource("derivative")
-            .granularity(QueryRunnerTestHelper.allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)
@@ -227,7 +227,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             .build(),
         new TopNQueryBuilder()
             .dataSource("base")
-            .granularity(QueryRunnerTestHelper.allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)

@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
  */
 class TestDimensionSelector extends AbstractDimensionSelector
 {
-  public static final TestDimensionSelector instance = new TestDimensionSelector();
+  public static final TestDimensionSelector INSTACE = new TestDimensionSelector();
 
   private TestDimensionSelector()
   {

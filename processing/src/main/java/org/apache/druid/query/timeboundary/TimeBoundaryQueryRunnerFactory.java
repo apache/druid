@@ -54,7 +54,7 @@ import java.util.concurrent.ExecutorService;
 public class TimeBoundaryQueryRunnerFactory
     implements QueryRunnerFactory<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
-  private static final TimeBoundaryQueryQueryToolChest toolChest = new TimeBoundaryQueryQueryToolChest();
+  private static final TimeBoundaryQueryQueryToolChest TOOL_CHEST = new TimeBoundaryQueryQueryToolChest();
   private final QueryWatcher queryWatcher;
 
   @Inject
@@ -81,7 +81,7 @@ public class TimeBoundaryQueryRunnerFactory
   @Override
   public QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery> getToolchest()
   {
-    return toolChest;
+    return TOOL_CHEST;
   }
 
   private static class TimeBoundaryQueryRunner implements QueryRunner<Result<TimeBoundaryResultValue>>

@@ -61,10 +61,10 @@ import java.util.concurrent.TimeUnit;
 
 public class RemoteTaskRunnerTest
 {
-  private static final Joiner joiner = RemoteTaskRunnerTestUtils.joiner;
-  private static final String workerHost = "worker";
-  private static final String announcementsPath = joiner.join(RemoteTaskRunnerTestUtils.announcementsPath, workerHost);
-  private static final String statusPath = joiner.join(RemoteTaskRunnerTestUtils.statusPath, workerHost);
+  private static final Joiner JOINER = RemoteTaskRunnerTestUtils.JOINER;
+  private static final String WORKER_HOST = "worker";
+  private static final String ANNOUCEMENTS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH, WORKER_HOST);
+  private static final String STATUS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.STATUS_PATH, WORKER_HOST);
 
   private RemoteTaskRunner remoteTaskRunner;
   private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
@@ -334,7 +334,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals(task.getId()));
 
-    cf.delete().forPath(joiner.join(statusPath, task.getId()));
+    cf.delete().forPath(JOINER.join(STATUS_PATH, task.getId()));
 
     TaskStatus status = future.get();
 
@@ -425,7 +425,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(workerRunningTask(task.getId()));
 
-    cf.delete().forPath(announcementsPath);
+    cf.delete().forPath(ANNOUCEMENTS_PATH);
 
     TaskStatus status = future.get();
 
@@ -445,7 +445,7 @@ public class RemoteTaskRunnerTest
             config.getTaskCleanupTimeout().toStandardDuration().getMillis() * 2
         )
     );
-    Assert.assertNull(cf.checkExists().forPath(statusPath));
+    Assert.assertNull(cf.checkExists().forPath(STATUS_PATH));
   }
 
   @Test
@@ -511,7 +511,7 @@ public class RemoteTaskRunnerTest
 
   private void makeWorker() throws Exception
   {
-    worker = rtrTestUtils.makeWorker(workerHost, 3);
+    worker = rtrTestUtils.makeWorker(WORKER_HOST, 3);
   }
 
   private void disableWorker() throws Exception
@@ -521,12 +521,12 @@ public class RemoteTaskRunnerTest
 
   private boolean taskAnnounced(final String taskId)
   {
-    return rtrTestUtils.taskAnnounced(workerHost, taskId);
+    return rtrTestUtils.taskAnnounced(WORKER_HOST, taskId);
   }
 
   private boolean workerRunningTask(final String taskId)
   {
-    return rtrTestUtils.workerRunningTask(workerHost, taskId);
+    return rtrTestUtils.workerRunningTask(WORKER_HOST, taskId);
   }
 
   private boolean workerCompletedTask(final ListenableFuture<TaskStatus> result)
@@ -649,8 +649,8 @@ public class RemoteTaskRunnerTest
     mockWorkerRunningTask(task);
 
     Assert.assertTrue(workerRunningTask(task.getId()));
-    byte[] bytes = cf.getData().forPath(announcementsPath);
-    cf.delete().forPath(announcementsPath);
+    byte[] bytes = cf.getData().forPath(ANNOUCEMENTS_PATH);
+    cf.delete().forPath(ANNOUCEMENTS_PATH);
     // worker task cleanup scheduled
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -666,7 +666,7 @@ public class RemoteTaskRunnerTest
     );
 
     // Worker got reconnected
-    cf.create().forPath(announcementsPath, bytes);
+    cf.create().forPath(ANNOUCEMENTS_PATH, bytes);
 
     // worker task cleanup should get cancelled and removed
     Assert.assertTrue(

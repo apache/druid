@@ -43,11 +43,11 @@ public abstract class Granularity implements Cacheable
   /**
    * Default patterns for parsing paths.
    */
-  private static final Pattern defaultPathPattern =
+  private static final Pattern DEAFULT_PATH_PATTEN =
       Pattern.compile(
           "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
       );
-  private static final Pattern hivePathPattern =
+  private static final Pattern HIVE_PATH_PATTERN =
       Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
 
   @JsonCreator
@@ -145,13 +145,13 @@ public abstract class Granularity implements Cacheable
   // Used by the toDate implementations.
   final Integer[] getDateValues(String filePath, Formatter formatter)
   {
-    Pattern pattern = defaultPathPattern;
+    Pattern pattern = DEAFULT_PATH_PATTEN;
     switch (formatter) {
       case DEFAULT:
       case LOWER_DEFAULT:
         break;
       case HIVE:
-        pattern = hivePathPattern;
+        pattern = HIVE_PATH_PATTERN;
         break;
       default:
         throw new IAE("Format %s not supported", formatter);

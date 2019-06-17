@@ -42,9 +42,9 @@ import java.util.UUID;
 public class NoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(NoopTask.class);
-  private static final int defaultRunTime = 2500;
-  private static final int defaultIsReadyTime = 0;
-  private static final IsReadyResult defaultIsReadyResult = IsReadyResult.YES;
+  private static final int DEFAULT_RUN_TIME = 2500;
+  private static final int DEFAULT_IS_READY_TIME = 0;
+  private static final IsReadyResult DEFAULT_IS_READY_RESULT = IsReadyResult.YES;
 
   enum IsReadyResult
   {
@@ -82,10 +82,10 @@ public class NoopTask extends AbstractTask
         context
     );
 
-    this.runTime = (runTime == 0) ? defaultRunTime : runTime;
-    this.isReadyTime = (isReadyTime == 0) ? defaultIsReadyTime : isReadyTime;
+    this.runTime = (runTime == 0) ? DEFAULT_RUN_TIME : runTime;
+    this.isReadyTime = (isReadyTime == 0) ? DEFAULT_IS_READY_TIME : isReadyTime;
     this.isReadyResult = (isReadyResult == null)
-                         ? defaultIsReadyResult
+                         ? DEFAULT_IS_READY_RESULT
                          : IsReadyResult.valueOf(StringUtils.toUpperCase(isReadyResult));
     this.firehoseFactory = firehoseFactory;
   }

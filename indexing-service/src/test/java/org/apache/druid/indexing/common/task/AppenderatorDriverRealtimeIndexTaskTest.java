@@ -166,12 +166,12 @@ import java.util.regex.Pattern;
 public class AppenderatorDriverRealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(AppenderatorDriverRealtimeIndexTaskTest.class);
-  private static final ServiceEmitter emitter = new ServiceEmitter(
+  private static final ServiceEmitter EMITTER = new ServiceEmitter(
       "service",
       "host",
       new NoopEmitter()
   );
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
 
@@ -278,8 +278,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   @Before
   public void setUp() throws IOException
   {
-    EmittingLogger.registerEmitter(emitter);
-    emitter.start();
+    EmittingLogger.registerEmitter(EMITTER);
+    EMITTER.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
     now = DateTimes.nowUtc();
 
@@ -1525,7 +1525,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         taskLockbox,
         taskStorage,
         mdc,
-        emitter,
+        EMITTER,
         EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
@@ -1599,7 +1599,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     taskToolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
-        emitter,
+        EMITTER,
         new TestDataSegmentPusher(),
         new TestDataSegmentKiller(),
         null, // DataSegmentMover
@@ -1652,7 +1652,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = objectMapper.readValue(
+    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
         new TypeReference<Map<String, TaskReport>>()
         {

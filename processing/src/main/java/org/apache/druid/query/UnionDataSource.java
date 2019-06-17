@@ -36,7 +36,7 @@ public class UnionDataSource implements DataSource
   @JsonCreator
   public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
   {
-    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for unionDataSource");
+    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for UNION_DATA_SOURCE");
     this.dataSources = dataSources;
   }
 

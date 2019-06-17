@@ -46,11 +46,11 @@ public class LongCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(LongCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
-  public static final List<CompressionStrategy> compressions =
+  public static final List<CompressionStrategy> COMPRESSIONS =
       ImmutableList.of(
           CompressionStrategy.LZ4,
           CompressionStrategy.NONE);
-  public static final List<CompressionFactory.LongEncodingStrategy> encodings =
+  public static final List<CompressionFactory.LongEncodingStrategy> ENCODINGS =
       ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
   private static String dirPath = "longCompress/";
@@ -130,8 +130,8 @@ public class LongCompressionBenchmarkFileGenerator
 
     // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
-      for (CompressionStrategy compression : compressions) {
-        for (CompressionFactory.LongEncodingStrategy encoding : encodings) {
+      for (CompressionStrategy compression : COMPRESSIONS) {
+        for (CompressionFactory.LongEncodingStrategy encoding : ENCODINGS) {
           String name = entry.getKey() + "-" + compression + "-" + encoding;
           log.info("%s: ", name);
           File compFile = new File(dir, name);

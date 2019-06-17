@@ -61,12 +61,12 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   @SuppressWarnings("unchecked")
@@ -79,7 +79,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         config
     );
     final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    resourceCloser.register(factoryAndCloser.rhs);
+    RESOURCE_CLOSER.register(factoryAndCloser.rhs);
 
     final List<Object[]> constructors = new ArrayList<>();
 
@@ -149,7 +149,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize)
   {
-    super(runner, false, vectorize, QueryRunnerTestHelper.commonDoubleAggregators);
+    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -158,9 +158,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   public void testFullOnTimeseriesMaxMin()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                       new DoubleMinAggregatorFactory("minIndex", "index")

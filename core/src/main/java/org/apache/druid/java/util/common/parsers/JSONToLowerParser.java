@@ -47,7 +47,7 @@ import java.util.Set;
 @Deprecated
 public class JSONToLowerParser implements Parser<String, Object>
 {
-  private static final Function<JsonNode, Object> valueFunction = new Function<JsonNode, Object>()
+  private static final Function<JsonNode, Object> VALUE_FUNCTION = new Function<JsonNode, Object>()
   {
     @Override
     public Object apply(JsonNode node)
@@ -128,14 +128,14 @@ public class JSONToLowerParser implements Parser<String, Object>
         if (node.isArray()) {
           final List<Object> nodeValue = Lists.newArrayListWithExpectedSize(node.size());
           for (final JsonNode subnode : node) {
-            final Object subnodeValue = valueFunction.apply(subnode);
+            final Object subnodeValue = VALUE_FUNCTION.apply(subnode);
             if (subnodeValue != null) {
               nodeValue.add(subnodeValue);
             }
           }
           map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
         } else {
-          final Object nodeValue = valueFunction.apply(node);
+          final Object nodeValue = VALUE_FUNCTION.apply(node);
           if (nodeValue != null) {
             map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
           }

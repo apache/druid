@@ -41,7 +41,7 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class BoundDimFilterTest
 {
-  private static final ExtractionFn extractionFn = new RegexDimExtractionFn(".*", false, null);
+  private static final ExtractionFn EXTRACTION_FN = new RegexDimExtractionFn(".*", false, null);
 
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder()
@@ -64,7 +64,7 @@ public class BoundDimFilterTest
                                         StringComparators.ALPHANUMERIC)},
         new Object[]{new BoundDimFilter("dimension", "12", "15", true, true, false, null,
                                         StringComparators.LEXICOGRAPHIC)},
-        new Object[]{new BoundDimFilter("dimension", null, "15", null, true, true, extractionFn,
+        new Object[]{new BoundDimFilter("dimension", null, "15", null, true, true, EXTRACTION_FN,
                                         StringComparators.ALPHANUMERIC)}
     );
   }
@@ -95,8 +95,8 @@ public class BoundDimFilterTest
     BoundDimFilter anotherBoundDimFilter = new BoundDimFilter("dimension", "12", "15", true, null, false, null, StringComparators.LEXICOGRAPHIC);
     Assert.assertFalse(Arrays.equals(anotherBoundDimFilter.getCacheKey(), boundDimFilter.getCacheKey()));
 
-    BoundDimFilter boundDimFilterWithExtract = new BoundDimFilter("dimension", "12", "15", null, null, true, extractionFn, StringComparators.ALPHANUMERIC);
-    BoundDimFilter boundDimFilterWithExtractCopy = new BoundDimFilter("dimension", "12", "15", false, false, true, extractionFn, StringComparators.ALPHANUMERIC);
+    BoundDimFilter boundDimFilterWithExtract = new BoundDimFilter("dimension", "12", "15", null, null, true, EXTRACTION_FN, StringComparators.ALPHANUMERIC);
+    BoundDimFilter boundDimFilterWithExtractCopy = new BoundDimFilter("dimension", "12", "15", false, false, true, EXTRACTION_FN, StringComparators.ALPHANUMERIC);
     Assert.assertFalse(Arrays.equals(boundDimFilter.getCacheKey(), boundDimFilterWithExtract.getCacheKey()));
     Assert.assertArrayEquals(boundDimFilterWithExtract.getCacheKey(), boundDimFilterWithExtractCopy.getCacheKey());
   }
@@ -105,7 +105,7 @@ public class BoundDimFilterTest
   public void testHashCode()
   {
     BoundDimFilter boundDimFilter = new BoundDimFilter("dimension", "12", "15", null, null, true, null, StringComparators.ALPHANUMERIC);
-    BoundDimFilter boundDimFilterWithExtract = new BoundDimFilter("dimension", "12", "15", null, null, true, extractionFn, StringComparators.ALPHANUMERIC);
+    BoundDimFilter boundDimFilterWithExtract = new BoundDimFilter("dimension", "12", "15", null, null, true, EXTRACTION_FN, StringComparators.ALPHANUMERIC);
 
     Assert.assertNotEquals(boundDimFilter.hashCode(), boundDimFilterWithExtract.hashCode());
   }
