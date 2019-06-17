@@ -24,7 +24,9 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
+import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
   addFilter,
   formatBytes,
@@ -36,6 +38,7 @@ import {
   sqlQueryCustomTableFilter,
   TableColumnSelectionHandler
 } from '../../utils';
+import { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
@@ -56,6 +59,12 @@ export interface SegmentsViewState {
   segmentsError: string | null;
   segmentFilter: Filter[];
   allSegments?: SegmentQueryResultRow[] | null;
+  segmentTableActionDialogId: string | null;
+  metrics: string[];
+  actions: BasicAction[];
+  dimensions: string[];
+  terminateSegmentId: string | null;
+  terminatetDatasourceId: string | null;
 }
 
 interface QueryAndSkip {
@@ -93,6 +102,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
+      segmentTableActionDialogId: null,
+      dimensions: [],
+      metrics: [],
+      actions: [],
+      terminateSegmentId: null,
+      terminatetDatasourceId: null,
       segmentsLoading: true,
       segments: null,
       segmentsError: null,
@@ -237,6 +252,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   }
 
+  private getSegmentActions(id: string, datasource: string): BasicAction[] {
+    const actions: BasicAction[] = [];
+    actions.push(
+      {
+        icon: IconNames.IMPORT,
+        title: 'Drop datasource (disable)',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ terminateSegmentId: id, terminatetDatasourceId: datasource})
+      }
+    );
+    return actions;
+  }
+
   renderSegmentsTable() {
     const { segments, segmentsLoading, segmentsError, segmentFilter } = this.state;
     const { noSqlMode } = this.props;
@@ -360,31 +388,70 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           accessor: (row) => String(Boolean(row.is_overshadowed)),
           Filter: makeBooleanFilter(),
           show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is overshadowed')
+        },
+        {
+          Header: ActionCell.COLUMN_LABEL,
+          id: ActionCell.COLUMN_ID,
+          accessor: 'segment_id',
+          width: ActionCell.COLUMN_WIDTH,
+          filterable: false,
+          Cell: row => {
+            if (row.aggregated) return '';
+            const id = row.value;
+            const datasource = row.row.datasource;
+            const dimensions =  parseList(row.original.payload.dimensions);
+            const metrics =  parseList(row.original.payload.metrics);
+            return <ActionCell
+              onDetail={() => {this.setState({segmentTableActionDialogId : id, metrics: metrics, dimensions: dimensions, actions: this.getSegmentActions(id, datasource)  }); }}
+              actions={this.getSegmentActions(id, datasource)}
+            />;
+          },
+          Aggregated: row => '',
+          show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
         }
       ]}
       defaultPageSize={50}
-      SubComponent={rowInfo => {
-        const { original } = rowInfo;
-        const { payload } = rowInfo.original;
-        const dimensions = parseList(payload.dimensions);
-        const metrics = parseList(payload.metrics);
-        return <div className="segment-detail">
-          <H5>Segment ID</H5>
-          <p>{original.segment_id}</p>
-          <H5>{`Dimensions (${dimensions.length})`}</H5>
-          <p>{dimensions.join(', ') || 'No dimension'}</p>
-          <H5>{`Metrics (${metrics.length})`}</H5>
-          <p>{metrics.join(', ') || 'No metrics'}</p>
-        </div>;
-      }}
     />;
+  }
+
+  renderTerminateSegmentAction() {
+    const { terminateSegmentId, terminatetDatasourceId } = this.state;
+
+    return <AsyncActionDialog
+      action={
+        terminateSegmentId ? async () => {
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${terminatetDatasourceId}/segments/${terminateSegmentId}`, {});
+          return resp.data;
+        } : null
+      }
+      confirmButtonText="Drop Segment"
+      successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+      failText="Could not drop segment"
+      intent={Intent.DANGER}
+      onClose={(success) => {
+        this.setState({ terminateSegmentId: null });
+        if (success) {
+          this.segmentsJsonQueryManager.rerunLastQuery();
+          this.segmentsSqlQueryManager.rerunLastQuery();
+        }
+      }}
+    >
+      <p>
+        {`Are you sure you want to drop segment '${terminateSegmentId}'?`}
+      </p>
+      <p>
+        This action is not reversible.
+      </p>
+    </AsyncActionDialog>;
   }
 
   render() {
     const { goToSql, noSqlMode } = this.props;
+    const { segmentTableActionDialogId, metrics, dimensions, actions } = this.state;
     const { tableColumnSelectionHandler } = this;
 
-    return <div className="segments-view app-view">
+    return <>
+    <div className="segments-view app-view">
       <ViewControlBar label="Segments">
         <Button
           icon={IconNames.REFRESH}
@@ -408,5 +475,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       </ViewControlBar>
       {this.renderSegmentsTable()}
     </div>;
+      {this.renderTerminateSegmentAction()}
+      {
+        segmentTableActionDialogId &&
+       <SegmentTableActionDialog taskId={segmentTableActionDialogId} dimensions={dimensions} metrics={metrics} actions={actions} onClose={() => this.setState({segmentTableActionDialogId: null})} isOpen/>
+      }
+      </>;
   }
 }
