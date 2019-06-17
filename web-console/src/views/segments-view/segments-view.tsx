@@ -402,7 +402,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const dimensions =  parseList(row.original.payload.dimensions);
             const metrics =  parseList(row.original.payload.metrics);
             return <ActionCell
-              onDetail={() => {this.setState({segmentTableActionDialogId : id, metrics: metrics, dimensions: dimensions, actions: this.getSegmentActions(id, datasource)  }); }}
+              onDetail={() => {this.setState({segmentTableActionDialogId : id, metrics: metrics, dimensions: dimensions, actions: this.getSegmentActions(id, datasource)}); }}
               actions={this.getSegmentActions(id, datasource)}
             />;
           },
