@@ -445,7 +445,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   render() {
     const { segmentTableActionDialogId, datasourceTableActionDialogId, actions } = this.state;
-    const { goToQuery, noSqlMode,  } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { tableColumnSelectionHandler } = this;
 
     return <>
