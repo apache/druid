@@ -59,7 +59,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
       }
       this.setState({interval: interval});
       if (interval) {
-        this.timer = setTimeout(() => {this.continousRefresh(); }, interval);
+        this.timer = setTimeout(() => {this.continousRefresh(interval); }, interval);
       }
     }
   }
@@ -69,13 +69,13 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
     clearTimeout(this.timer);
   }
 
-  continousRefresh = () => {
-    if (this.state.interval) {
+  continousRefresh = (selectedInterval: number) => {
+    if (selectedInterval) {
       this.timer = setTimeout(() => {
-        this.continousRefresh();
-      }, this.state.interval);
+        this.props.onRefresh(true);
+        this.continousRefresh(selectedInterval);
+      }, selectedInterval);
     }
-    this.props.onRefresh(true);
   }
 
   handleSelection( selectedInterval: number) {
@@ -83,8 +83,8 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
     this.setState({interval: selectedInterval});
     if (this.props.localstoragekey) {
       localStorageSet(this.props.localstoragekey, String(selectedInterval));
-      this.continousRefresh();
     }
+    this.continousRefresh(selectedInterval);
   }
 
   render() {
