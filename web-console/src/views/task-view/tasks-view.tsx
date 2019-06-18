@@ -734,7 +734,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           <ViewControlBar label="Supervisors">
             <RefreshButton
               refresh={() => this.supervisorQueryManager.rerunLastQuery()}
-              localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
+              localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
             />
             <Button
               icon={IconNames.PLUS}
@@ -758,10 +758,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button active={groupTasksBy === 'datasource'} onClick={() => this.setState({ groupTasksBy: 'datasource' })}>Datasource</Button>
               <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
             </ButtonGroup>
-            <Button
-              icon={IconNames.REFRESH}
-              text="Refresh"
-              onClick={() => this.taskQueryManager.rerunLastQuery()}
+            <RefreshButton
+              refresh={() => this.taskQueryManager.rerunLastQuery()}
+              localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             />
             {
               !noSqlMode &&

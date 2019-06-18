@@ -21,7 +21,7 @@ exports[`tasks view matches snapshot 1`] = `
         label="Supervisors"
       >
         <RefreshButton
-          localStorageKey="task-refresh-rate"
+          localStorageKey="supervisors-refresh-rate"
           refresh={[Function]}
         />
         <Blueprint3.Button
@@ -307,10 +307,9 @@ exports[`tasks view matches snapshot 1`] = `
             Status
           </Blueprint3.Button>
         </Blueprint3.ButtonGroup>
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
+        <RefreshButton
+          localStorageKey="task-refresh-rate"
+          refresh={[Function]}
         />
         <Blueprint3.Button
           icon="application"

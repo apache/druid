@@ -18,14 +18,17 @@
 
 import React from 'react';
 
+import { LocalStorageKeys } from '../../utils';
 import { TimedButton } from '../timed-button/timed-button';
+
 
 export interface RefreshButtonProps extends React.Props<any> {
   refresh: () => void;
-  localStorageKey?: any;
+  localStorageKey?: LocalStorageKeys;
 }
 
-export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
+export class RefreshButton
+  extends React.PureComponent<RefreshButtonProps> {
   constructor(props: RefreshButtonProps, context: any) {
     super(props, context);
   }
@@ -39,7 +42,7 @@ export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
       {label : '1 minute', value: 60000},
       {label : '2 minutes', value: 120000},
       {label : 'Manual', value: 0}
-      ];
+    ];
 
     return <TimedButton
       intervals={intervals}

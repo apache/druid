@@ -20,7 +20,7 @@ import { Button, ButtonGroup, Popover, Radio, RadioGroup } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { localStorageGet, localStorageSet } from '../../utils';
+import { localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
 
 import './timed-button.scss';
 
@@ -33,7 +33,7 @@ export interface TimedButtonProps extends React.Props<any> {
   intervals: Interval[];
   title: string;
   refresh: () => void;
-  localstoragekey?: any;
+  localstoragekey?: LocalStorageKeys;
 }
 
 export interface TimedButtonState {
@@ -54,8 +54,8 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
     if (this.props.localstoragekey) {
       this.setState({interval: Number(localStorageGet(this.props.localstoragekey))});
       this.setState({timer: Number(setTimeout(() => {
-          this.continousRefresh();
-        }, this.state.interval))
+        this.continousRefresh();
+      }, this.state.interval))
       });
     }
   }
@@ -65,7 +65,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
     if (this.state.interval) {
       this.setState({timer: Number(setTimeout(() => {
         this.continousRefresh();
-        }, this.state.interval))
+      }, this.state.interval))
       });
     }
   }
@@ -73,8 +73,10 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   handleSelection( selectedInterval: number) {
     clearTimeout(this.state.timer);
     this.setState({interval: selectedInterval});
-    localStorageSet(this.props.localstoragekey, String(selectedInterval));
-    this.continousRefresh();
+    if (this.props.localstoragekey) {
+      localStorageSet(this.props.localstoragekey, String(selectedInterval));
+      this.continousRefresh();
+    }
   }
 
   render() {

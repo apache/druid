@@ -30,7 +30,8 @@ export const LocalStorageKeys = {
   TASKS_REFRESH_RATE: 'task-refresh-rate' as 'task-refresh-rate',
   DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as 'datasources-refresh-rate',
   SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as 'segments-refresh-rate',
-  SERVERS_REFRESH_RATE: 'servers-refresh-rate' as 'servers-refresh-rate'
+  SERVERS_REFRESH_RATE: 'servers-refresh-rate' as 'servers-refresh-rate',
+  SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate'
 
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
