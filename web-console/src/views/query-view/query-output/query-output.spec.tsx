@@ -16,17 +16,20 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+import { render } from 'react-testing-library';
 
-import { SqlView } from './sql-view';
+import { QueryOutput } from './query-output';
 
-describe('sql view', () => {
+describe('query output', () => {
   it('matches snapshot', () => {
-    const sqlView = shallow(
-      <SqlView
-        initSql={'test'}
-      />);
-    expect(sqlView).toMatchSnapshot();
+    const queryOutput = <QueryOutput
+      loading={false}
+      result={null}
+      error="lol"
+    />;
+
+    const { container } = render(queryOutput);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

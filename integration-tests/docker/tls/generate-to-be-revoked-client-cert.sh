@@ -32,7 +32,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=RevokedIntegrationTests
-emailAddress=revoked-it-cert@druid.io
+emailAddress=revoked-it-cert@druid.apache.org
 CN = localhost
 
 [ req_ext ]

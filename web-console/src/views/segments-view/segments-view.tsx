@@ -44,7 +44,7 @@ const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Ver
 const tableColumnsNoSql: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'];
 
 export interface SegmentsViewProps extends React.Props<any> {
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   datasource: string | null;
   onlyUnavailable: boolean | null;
   noSqlMode: boolean;
@@ -382,7 +382,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { tableColumnSelectionHandler } = this;
 
     return <div className="segments-view app-view">
@@ -397,7 +397,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             icon={IconNames.APPLICATION}
             text="Go to SQL"
             hidden={noSqlMode}
-            onClick={() => goToSql(this.segmentsSqlQueryManager.getLastQuery().query)}
+            onClick={() => goToQuery(this.segmentsSqlQueryManager.getLastQuery().query)}
           />
         }
         <TableColumnSelector

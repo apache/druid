@@ -24,11 +24,52 @@ exports[`tasks view matches snapshot 1`] = `
           localStorageKey="supervisors-refresh-rate"
           refresh={[Function]}
         />
-        <Blueprint3.Button
-          icon="plus"
-          onClick={[Function]}
-          text="Submit supervisor"
-        />
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="cloud-upload"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Go to data loader"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="manually-entered-data"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Submit JSON supervisor"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="plus"
+            text="Submit supervisor"
+          />
+        </Blueprint3.Popover>
         <TableColumnSelector
           columns={
             Array [
@@ -323,19 +364,21 @@ exports[`tasks view matches snapshot 1`] = `
             <Blueprint3.Menu>
               <Blueprint3.MenuItem
                 disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Raw JSON task"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
+                icon="cloud-upload"
                 multiline={false}
                 onClick={[Function]}
                 popoverProps={Object {}}
                 shouldDismissPopover={true}
                 text="Go to data loader"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="manually-entered-data"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Submit JSON task"
               />
             </Blueprint3.Menu>
           }

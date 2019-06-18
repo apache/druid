@@ -18,21 +18,12 @@
 import os
 import subprocess
 import sys
+import argparse
 
 
 existing_jar_dict_notice = {}
 
-def main():
-    if len(sys.argv) != 3:
-      sys.stderr.write('usage: program <druid source path> <full tmp path>\n')
-      sys.exit(1)
-
-    druid_path = sys.argv[1]
-    tmp_path = sys.argv[2]
-
-    generate_reports(druid_path, tmp_path)
-
-def generate_reports(druid_path, tmp_path):
+def generate_reports(druid_path, tmp_path, exclude_ext):
     license_main_path =  tmp_path + "/license-reports"
     license_ext_path = tmp_path + "/license-reports/ext"
     os.mkdir(license_main_path)
@@ -45,19 +36,23 @@ def generate_reports(druid_path, tmp_path):
     command = "cp -r distribution/target/site {}/site".format(license_main_path)
     outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
 
-    sys.exit()
+    if exclude_ext:
+        sys.exit()
 
     print("********** Generating extension LICENSE reports.... **********")
     extension_dirs = os.listdir("extensions-core")
+    print("Found {}".format(extension_dirs))
     for extension_dir in extension_dirs:
         full_extension_dir = druid_path + "/extensions-core/" + extension_dir
         if not os.path.isdir(full_extension_dir):
+            print("{} is not a directory".format(full_extension_dir))
             continue
 
         print("--- Generating report for {}... ---".format(extension_dir))
 
         extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
         os.mkdir(extension_report_dir)
+        prev_work_dir = os.getcwd()
         os.chdir(full_extension_dir)
 
         try:
@@ -68,10 +63,15 @@ def generate_reports(druid_path, tmp_path):
         except:
             print("Encountered error when generating report for: " + extension_dir)
 
-        os.chdir("..")
+        os.chdir(prev_work_dir)
 
 if __name__ == "__main__":
     try:
-        main()
+        parser = argparse.ArgumentParser(description='Generating dependency reports.')
+        parser.add_argument('druid_path', metavar='<Druid source path>', type=str)
+        parser.add_argument('tmp_path', metavar='<Full tmp path>', type=str)
+        parser.add_argument('--exclude-extension', dest='exclude_ext', action='store_const', const=True, default=False, help="Exclude extension report")
+        args = parser.parse_args()
+        generate_reports(args.druid_path, args.tmp_path, args.exclude_ext)
     except KeyboardInterrupt:
         print('Interrupted, closing.')

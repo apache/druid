@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@blueprintjs/core": "^3.15.1",
+    "@types/memoize-one": "^4.1.1",
     "axios": "^0.19.0",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
@@ -54,6 +55,7 @@
     "file-saver": "^2.0.2",
     "hjson": "^3.1.2",
     "lodash.debounce": "^4.0.8",
+    "memoize-one": "^5.0.4",
     "numeral": "^2.0.6",
     "react": "^16.8.6",
     "react-ace": "^7.0.1",

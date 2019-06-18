@@ -16,56 +16,22 @@
  * limitations under the License.
  */
 
-@import "../../../variables";
+import React from 'react';
+import { render } from 'react-testing-library';
 
-.sql-control {
-  .ace-container {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 30px + $standard-padding;
+import { RunButton } from './run-button';
 
-    .ace_scroller {
-      background-color: #232C35;
-    }
+describe('run button', () => {
+  it('matches snapshot', () => {
+    const runButton = <RunButton
+      runeMode={false}
+      queryContext={{}}
+      onQueryContextChange={() => null}
+      onRun={() => null}
+      onExplain={() => null}
+    />;
 
-    .ace_gutter-layer {
-      background-color: #27313c;
-    }
-  }
-
-  .buttons {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
-    height: 30px;
-
-    button {
-      margin-right: 15px;
-    }
-
-    .query-elapsed {
-      position: absolute;
-      right: 10px;
-    }
-  }
-
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
-  }
-}
+    const { container } = render(runButton);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

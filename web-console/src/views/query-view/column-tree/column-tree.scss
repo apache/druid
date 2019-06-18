@@ -16,21 +16,28 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import { render } from 'react-testing-library';
+.column-tree {
+  background: #27313b;
 
-import { SqlControl } from './sql-control';
+  .schema-selector {
+    position: absolute;
+    top: 0;
 
-describe('sql control', () => {
-  it('matches snapshot', () => {
-    const sqlControl = <SqlControl
-      initSql={'test'}
-      onRun={(query, context, wrapQuery) => {}}
-      onExplain={(sqlQuery, context) => {}}
-      queryElapsed={2}
-    />;
+    select {
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
 
-    const { container } = render(sqlControl);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .tree-container {
+    position: absolute;
+    top: 40px;
+    bottom: 0;
+    width: 100%;
+    overflow: auto;
+
+    .bp3-tree-node-content-1 {
+      padding-left: 0;
+    }
+  }
+}

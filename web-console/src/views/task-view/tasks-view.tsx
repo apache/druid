@@ -46,7 +46,7 @@ const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location',
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   openDialog: string | null;
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
@@ -76,6 +76,7 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 
   taskTableActionDialogId: string | null;
+  taskTableActionDialogStatus: string | null;
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
@@ -154,6 +155,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       alertErrorMsg: null,
 
       taskTableActionDialogId: null,
+      taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
       supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: []
@@ -690,6 +692,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <ActionCell
                 onDetail={() => this.setState({
                   taskTableActionDialogId: id,
+                  taskTableActionDialogStatus: status,
                   taskTableActionDialogActions: taskActions
                 })}
                 actions={taskActions}
@@ -706,17 +709,33 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
 
   render() {
-    const { goToSql, goToLoadDataView, noSqlMode } = this.props;
-    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions } = this.state;
+    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
+    const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
-    const submitTaskMenu = <Menu>
+
+    const submitSupervisorMenu = <Menu>
       <MenuItem
-        text="Raw JSON task"
-        onClick={() => this.setState({ taskSpecDialogOpen: true })}
-      />
-      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
         text="Go to data loader"
         onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON supervisor"
+        onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+      />
+    </Menu>;
+
+    const submitTaskMenu = <Menu>
+      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON task"
+        onClick={() => this.setState({ taskSpecDialogOpen: true })}
       />
     </Menu>;
 
@@ -736,11 +755,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               refresh={(auto: boolean) => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
               localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
             />
-            <Button
-              icon={IconNames.PLUS}
-              text="Submit supervisor"
-              onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-            />
+            <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
+              <Button icon={IconNames.PLUS} text="Submit supervisor"/>
+            </Popover>
             <TableColumnSelector
               columns={supervisorTableColumns}
               onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)}
@@ -767,7 +784,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
-                onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+                onClick={() => goToQuery(this.taskQueryManager.getLastQuery())}
               />
             }
             <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
@@ -820,6 +837,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         taskTableActionDialogId &&
         <TaskTableActionDialog
           isOpen
+          status={taskTableActionDialogStatus}
           taskId={taskTableActionDialogId}
           actions={taskTableActionDialogActions}
           onClose={() => this.setState({taskTableActionDialogId: null})}
