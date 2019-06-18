@@ -653,7 +653,7 @@ GROUP BY 1`);
     return <div className="data-sources-view app-view">
       <ViewControlBar label="Datasources">
         <RefreshButton
-          refresh={() => this.datasourceQueryManager.rerunLastQuery()}
+          onRefresh={() => this.datasourceQueryManager.rerunLastQuery()}
           localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
         />
         {

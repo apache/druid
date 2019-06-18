@@ -752,7 +752,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         <div className={'top-pane'}>
           <ViewControlBar label="Supervisors">
             <RefreshButton
-              refresh={(auto: boolean) => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
+              onRefresh={(auto: boolean) => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
               localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
             />
             <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
@@ -776,8 +776,13 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
             </ButtonGroup>
             <RefreshButton
-              refresh={() => this.taskQueryManager.rerunLastQuery()}
+              onRefresh={(auto) => this.taskQueryManager.rerunLastQueryInBackground(false)}
               localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
+            />
+            <Button
+              icon={IconNames.REFRESH}
+              text="Refresh"
+              onClick={() => this.taskQueryManager.rerunLastQueryInBackground(false)}
             />
             {
               !noSqlMode &&

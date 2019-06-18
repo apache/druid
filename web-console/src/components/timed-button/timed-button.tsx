@@ -51,21 +51,28 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   private timer: Timeout;
 
   componentDidMount(): void {
-    if (this.props.localstoragekey) {
-      this.setState({interval: Number(localStorageGet(this.props.localstoragekey))});
+    // if (this.props.localstoragekey) {
+    //   this.setState({interval: Number(localStorageGet(this.props.localstoragekey))});
+    //   this.timer = setTimeout(() => {
+    //     this.continousRefresh();
+    //   }, this.state.interval);
+    // }
       this.timer = setTimeout(() => {
         this.continousRefresh();
-      }, this.state.interval);
-    }
+      }, 50000);
+  }
+
+  componentWillUnmount(): void {
+    clearTimeout(this.timer);
   }
 
   continousRefresh = () => {
-    this.props.onRefresh(true);
     if (this.state.interval) {
       this.timer = setTimeout(() => {
         this.continousRefresh();
       }, this.state.interval);
     }
+    this.props.onRefresh(true);
   }
 
   handleSelection( selectedInterval: number) {
@@ -97,7 +104,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
               <Radio
                 label={interval.label}
                 value={interval.value}
-                key={interval}
+                key={interval.label}
               />
             ))}
           </RadioGroup>

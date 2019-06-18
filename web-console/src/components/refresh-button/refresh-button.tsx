@@ -23,7 +23,7 @@ import { TimedButton } from '../timed-button/timed-button';
 
 
 export interface RefreshButtonProps extends React.Props<any> {
-  refresh: (auto: boolean) => void;
+  onRefresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
 }
 
@@ -34,7 +34,7 @@ export class RefreshButton
   }
 
   render() {
-    const { refresh, localStorageKey} = this.props;
+    const { onRefresh, localStorageKey} = this.props;
     const intervals = [
       {label : '5 seconds', value: 5000},
       {label : '10 seconds', value: 10000},
@@ -48,7 +48,7 @@ export class RefreshButton
       intervals={intervals}
       icon={IconNames.REFRESH}
       text={'Refresh'}
-      onRefresh={refresh}
+      onRefresh={onRefresh}
       localstoragekey={localStorageKey}
     />;
   }
