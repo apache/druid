@@ -32,15 +32,18 @@ running on your local machine. You don't need to have loaded any data yet.
 
 A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 
-An ingestion spec can be written by hand or you can use the "Data loader" that is built into the Druid console to help iteratively build one for you by sampling your data.
-The data loader currently only supports native batch ingestion (streaming support coming soon).
+An ingestion spec can be written by hand or by using the "Data loader" that is built into the Druid console.
+The data loader can help you build an ingestion spec by sampling your data and and iteratively configuring various ingestion parameters.
+The data loader currently only supports native batch ingestion (support for streaming, including data stored in Apache Kafka and AWS Kinesis, is coming in future releases).
+Streaming ingestion is only available through a written ingestion spec today.
 
 We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
 
 
 ## Loading data with the data loader
 
-Navigate to [localhost:8888](http://localhost:8888) and click `Load data` in the console header, select `Local disk`.
+Navigate to [localhost:8888](http://localhost:8888) and click `Load data` in the console header.
+Select `Local disk`.
 
 ![Data loader init](../tutorials/img/tutorial-batch-data-loader-01.png "Data loader init")
 
@@ -58,36 +61,37 @@ Feel free to play around with different parser options to get a preview of how D
 
 ![Data loader parse data](../tutorials/img/tutorial-batch-data-loader-03.png "Data loader parse data")
 
-With the `json` parser selected click `Next: Parse time` to get to the step centered around determining your primary timestamp column.
-Druid's architecture mandates a primary timestamp column that will be called `__time`, which could always just be a `Constant value`.
-In this case the data loader will guess the `time` column as the primary time column as it is the only one with values that look like they might be time. 
+With the `json` parser selected, click `Next: Parse time` to get to the step centered around determining your primary timestamp column.
+Druid's architecture requires a primary timestamp column (internally stored in a column called `__time`).
+If you do not have a timestamp in your data, select `Constant value`.
+In our example, the data loader will determine that the `time` column in our raw data is the only candidate that can be used as the primary time column. 
 
 ![Data loader parse time](../tutorials/img/tutorial-batch-data-loader-04.png "Data loader parse time")
 
 Click `Next: ...` twice to go past the `Transform` and `Filter` steps.
-You do not need to enter anything there and applying ingestion time transforms and filters are out of scope of this tutorial.
+You do not need to enter anything in these steps as applying ingestion time transforms and filters are out of scope for this tutorial.
 
 In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
 
 ![Data loader schema](../tutorials/img/tutorial-batch-data-loader-05.png "Data loader schema")
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 Here you can adjust how the data will be split up into segments in Druid.
-Since this is such a small dataset there are no adjustments that need to be made in this step.
+Since this is a small dataset, there are no adjustments that need to be made in this step.
 
 ![Data loader partition](../tutorials/img/tutorial-batch-data-loader-06.png "Data loader partition")
 
-Clicking past the `Tune` step we get to the publish step which is where we can specify what the datasource will be called in Druid.
+Clicking past the `Tune` step, we get to the publish step, which is where we can specify what the datasource name in Druid.
 Let's name this datasource `wikipedia`.  
 
 ![Data loader publish](../tutorials/img/tutorial-batch-data-loader-07.png "Data loader publish")
 
 Finally, click `Next` to review your spec.
 This is the spec you have constructed.
-Feel free to go back to previous steps and see how making changes there will manifest itself in the spec.
-Similarly you can also edit the spec directly and see it reflected in the other steps.
+Feel free to go back and make changes in previous steps to see how changes will update the spec.
+Similarly, you can also edit the spec directly and see it reflected in the previous steps.
 
 ![Data loader spec](../tutorials/img/tutorial-batch-data-loader-08.png "Data loader spec")
 
@@ -97,18 +101,19 @@ You will be taken to the task view with the focus on the newly created task.
 
 ![Tasks view](../tutorials/img/tutorial-batch-data-loader-09.png "Tasks view")
 
-In the tasks view you can click `Refresh` a couple of times until your ingestion task (hopefully) succeeds.
+In the tasks view, you can click `Refresh` a couple of times until your ingestion task (hopefully) succeeds.
 
 When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.  
 
 Navigate to the `Datasources` view and click refresh until your datasource (`wikipedia`) appears.
-This could take a few seconds as the segments are being loaded.  
+This can take a few seconds as the segments are being loaded.  
 
 ![Datasource view](../tutorials/img/tutorial-batch-data-loader-10.png "Datasource view")
 
-Once you see the datasource there with a green (fully available) circle, you can go to the `Query` view to run SQL queries against this datasource.
+A datasource is queryable once you see a green (fully available) circle.
+At this point, you can go to the `Query` view to run SQL queries against the datasource.
 
-Since this is a small dataset you can simply run a `SELECT * FROM wikipedia` query to see your results.
+Since this is a small dataset, you can simply run a `SELECT * FROM wikipedia` query to see your results.
 
 ![Query view](../tutorials/img/tutorial-batch-data-loader-11.png "Query view")
 
