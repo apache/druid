@@ -267,10 +267,10 @@ public abstract class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(new File(getAssignedTaskDir(), task.getId()), getTmpTaskDir(),
-                                  os -> {
-                                    jsonMapper.writeValue(os, task);
-                                    return null;
-                                  }
+            os -> {
+            jsonMapper.writeValue(os, task);
+            return null;
+          }
         );
         assignedTasks.put(task.getId(), task);
       }
@@ -309,7 +309,8 @@ public abstract class WorkerTaskManager
     // Delete any tmp files left out from before due to jvm crash.
     try {
       org.apache.commons.io.FileUtils.cleanDirectory(tmpDir);
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       log.warn("Failed to cleanup tmp dir [%s].", tmpDir.getAbsolutePath());
     }
   }
@@ -424,10 +425,10 @@ public abstract class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(new File(getCompletedTaskDir(), taskId), getTmpTaskDir(),
-                                  os -> {
-                                    jsonMapper.writeValue(os, taskAnnouncement);
-                                    return null;
-                                  }
+            os -> {
+            jsonMapper.writeValue(os, taskAnnouncement);
+            return null;
+          }
         );
       }
       catch (IOException ex) {
