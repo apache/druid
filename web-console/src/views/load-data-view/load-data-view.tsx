@@ -593,7 +593,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid ingests raw data and converts it into a custom, <ExternalLink href="http://druid.io/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
+            Druid ingests raw data and converts it into a custom, <ExternalLink href="https://druid.apache.org/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
           </p>
           <p>
             To get started, please specify where your raw data is stored and what data you want to ingest.
@@ -762,7 +762,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {
             canFlatten &&
             <p>
-              If you have nested data, you can <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
+              If you have nested data, you can <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
               If the provided flattening capabilities are not sufficient, please pre-process your data before ingesting it into Druid.
             </p>
           }
@@ -884,7 +884,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         <AnchorButton
           icon={IconNames.INFO_SIGN}
-          href="http://druid.io/docs/latest/ingestion/flatten-json.html"
+          href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html"
           target="_blank"
           minimal
         />
@@ -1145,7 +1145,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             Optional
           </p>
           <p>
-            Druid can perform simple <ExternalLink href="http://druid.io/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
+            Druid can perform simple <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
           </p>
           <p>
             Click "Preview" to see the result of any specified transforms.
@@ -1351,7 +1351,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             Optional
           </p>
           <p>
-            Druid can <ExternalLink href="http://druid.io/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
+            Druid can <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
           </p>
           <p>
             Click "Preview" to see the impact of any specified filters.
@@ -1607,7 +1607,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             If you want to change the type, click on the column header.
           </p>
           <p>
-            Select whether or not you want to <ExternalLink href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
+            Select whether or not you want to <ExternalLink href="https://druid.apache.org/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
           </p>
         </Callout>
         {
@@ -1623,7 +1623,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 content={
                   <div className="label-info-text">
                     <p>
-                      Select whether or not you want to set an explicit list of <ExternalLink href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="http://druid.io/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
+                      Select whether or not you want to set an explicit list of <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
                       Explicitly setting dimensions and metrics can lead to better compression and performance.
                       If you disable this option, Druid will try to auto-detect fields in your data and treat them as individual columns.
                     </p>
@@ -1665,7 +1665,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       The primary timestamp will be truncated to the specified query granularity, and rows containing the same string field values will be aggregated together.
                     </p>
                     <p>
-                      If you enable rollup, you must specify which columns are <a href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="http://druid.io/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
+                      If you enable rollup, you must specify which columns are <a href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
                     </p>
                   </div>
                 }

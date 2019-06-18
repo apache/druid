@@ -123,7 +123,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<Coordina
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.
-        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
+        For more information please refer to the <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
       </p>
       <AutoForm
         fields={[
