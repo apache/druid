@@ -56,10 +56,87 @@ Run this command to create a Kafka topic called *wikipedia*, to which we'll send
 ./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic wikipedia
 ```
 
-## Enable Druid Kafka ingestion
+## Start Druid Kafka ingestion
 
-We will use Druid's Kafka indexing service to ingest messages from our newly created *wikipedia* topic. To start the
-service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Druid package root:
+We will use Druid's Kafka indexing service to ingest messages from our newly created *wikipedia* topic.
+
+### Submit a supervisor via the console
+
+In the console, click `Submit supervisor` to open the submit supervisor dialog.
+
+![Submit supervisor](../tutorials/img/tutorial-kafka-01.png "Submit supervisor")
+
+Paste in this spec and click `Submit`.
+
+```json
+{
+  "type": "kafka",
+  "dataSchema": {
+    "dataSource": "wikipedia",
+    "parser": {
+      "type": "string",
+      "parseSpec": {
+        "format": "json",
+        "timestampSpec": {
+          "column": "time",
+          "format": "auto"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            "channel",
+            "cityName",
+            "comment",
+            "countryIsoCode",
+            "countryName",
+            "isAnonymous",
+            "isMinor",
+            "isNew",
+            "isRobot",
+            "isUnpatrolled",
+            "metroCode",
+            "namespace",
+            "page",
+            "regionIsoCode",
+            "regionName",
+            "user",
+            { "name": "added", "type": "long" },
+            { "name": "deleted", "type": "long" },
+            { "name": "delta", "type": "long" }
+          ]
+        }
+      }
+    },
+    "metricsSpec" : [],
+    "granularitySpec": {
+      "type": "uniform",
+      "segmentGranularity": "DAY",
+      "queryGranularity": "NONE",
+      "rollup": false
+    }
+  },
+  "tuningConfig": {
+    "type": "kafka",
+    "reportParseExceptions": false
+  },
+  "ioConfig": {
+    "topic": "wikipedia",
+    "replicas": 2,
+    "taskDuration": "PT10M",
+    "completionTimeout": "PT20M",
+    "consumerProperties": {
+      "bootstrap.servers": "localhost:9092"
+    }
+  }
+}
+```
+
+This will start the supervisor that will in turn spawn some tasks that will start listening for incoming data.
+
+![Running supervisor](../tutorials/img/tutorial-kafka-02.png "Running supervisor")
+
+### Submit a supervisor directly
+
+To start the service directly, we will need to submit a supervisor spec to the Druid overlord by running the following from the Druid package root:
 
 ```bash
 curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
@@ -73,9 +150,10 @@ For more details about what's going on here, check out the
 
 You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.html#tasks](http://localhost:8888/unified-console.html#tasks).
 
+
 ## Load data
 
-Let's launch a console producer for our topic and send some data!
+Let's launch a producer for our topic and send some data!
 
 In your Druid directory, run the following command:
 
