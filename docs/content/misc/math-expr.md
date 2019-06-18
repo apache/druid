@@ -173,8 +173,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | `array_ordinal(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
 | `array_contains(arr,expr)` | returns true if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array |
 | `array_overlap(arr1,arr2)` | returns true if arr1 and arr2 have any elements in common |
-| `array_offset_of(expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
-| `array_ordinal_of(expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| `array_offset_of(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| `array_ordinal_of(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
 | `array_append(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
 | `array_concat(arr1,arr2)` | concatenates 2 arrays, the resulting array type determined by the type of the first array |
 | `array_to_string(arr,str)` | joins all elements of arr by the delimiter specified by str |
