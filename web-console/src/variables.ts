@@ -19,7 +19,7 @@
 export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
 export const LEGACY_OVERLORD_CONSOLE = '/console.html';
 
-export const DRUID_WEBSITE = 'http://druid.io';
+export const DRUID_WEBSITE = 'https://druid.apache.org';
 export const DRUID_GITHUB = 'https://github.com/apache/druid';
 export const DRUID_DOCS = 'https://druid.apache.org/docs/latest';
 export const DRUID_DOCS_SQL = 'https://druid.apache.org/docs/latest/querying/sql.html';
