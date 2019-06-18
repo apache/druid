@@ -16,62 +16,60 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Popover, Radio, RadioGroup } from '@blueprintjs/core';
+import { Button, ButtonGroup, IButtonProps, Popover, Radio, RadioGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
 
 import './timed-button.scss';
+import Timeout = NodeJS.Timeout;
 
 export interface Interval {
   label: string;
   value: number;
 }
 
-export interface TimedButtonProps extends React.Props<any> {
+export interface TimedButtonProps extends IButtonProps {
   intervals: Interval[];
-  title: string;
-  refresh: () => void;
+  onRefresh: (auto: boolean) => void;
   localstoragekey?: LocalStorageKeys;
 }
 
 export interface TimedButtonState {
   interval: number;
-  timer: number;
 }
 
 export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButtonState> {
   constructor(props: TimedButtonProps, context: any) {
     super(props, context);
     this.state = {
-      interval: 0,
-      timer: 0
+      interval: 0
     };
   }
+
+  private timer: Timeout;
 
   componentDidMount(): void {
     if (this.props.localstoragekey) {
       this.setState({interval: Number(localStorageGet(this.props.localstoragekey))});
-      this.setState({timer: Number(setTimeout(() => {
+      this.timer = setTimeout(() => {
         this.continousRefresh();
-      }, this.state.interval))
-      });
+      }, this.state.interval);
     }
   }
 
-  continousRefresh = async () => {
-    await this.props.refresh();
+  continousRefresh = () => {
+    this.props.onRefresh(true);
     if (this.state.interval) {
-      this.setState({timer: Number(setTimeout(() => {
+      this.timer = setTimeout(() => {
         this.continousRefresh();
-      }, this.state.interval))
-      });
+      }, this.state.interval);
     }
   }
 
   handleSelection( selectedInterval: number) {
-    clearTimeout(this.state.timer);
+    clearTimeout(this.timer);
     this.setState({interval: selectedInterval});
     if (this.props.localstoragekey) {
       localStorageSet(this.props.localstoragekey, String(selectedInterval));
@@ -80,13 +78,13 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   }
 
   render() {
-    const { title, intervals, refresh } = this.props;
+    const { intervals, localstoragekey, onRefresh, type, ...other } = this.props;
     const { interval } = this.state;
 
     return <ButtonGroup>
       <Button
-        text={title}
-        onClick={refresh}
+        {...other}
+        onClick={() => onRefresh(false)}
       />
       <Popover
         content={

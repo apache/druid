@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { LocalStorageKeys } from '../../utils';
@@ -23,7 +23,7 @@ import { TimedButton } from '../timed-button/timed-button';
 
 
 export interface RefreshButtonProps extends React.Props<any> {
-  refresh: () => void;
+  refresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
 }
 
@@ -46,8 +46,9 @@ export class RefreshButton
 
     return <TimedButton
       intervals={intervals}
-      title={'refresh'}
-      refresh={refresh}
+      icon={IconNames.REFRESH}
+      text={'Refresh'}
+      onRefresh={refresh}
       localstoragekey={localStorageKey}
     />;
   }

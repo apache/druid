@@ -733,7 +733,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         <div className={'top-pane'}>
           <ViewControlBar label="Supervisors">
             <RefreshButton
-              refresh={() => this.supervisorQueryManager.rerunLastQuery()}
+              refresh={(auto: boolean) => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
               localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
             />
             <Button
