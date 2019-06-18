@@ -18,9 +18,9 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as FileSaver from 'file-saver';
-import * as numeral from 'numeral';
-import * as React from 'react';
+import FileSaver from 'file-saver';
+import numeral from 'numeral';
+import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
@@ -92,7 +92,7 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
     return true;
   }
   if (value === null) return false;
-  const haystack = String(value.toLowerCase());
+  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
@@ -113,6 +113,13 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
 
 // ----------------------------
 
+export function caseInsensitiveContains(testString: string, searchString: string): boolean {
+  if (!searchString) return true;
+  return testString.toLowerCase().includes(searchString.toLowerCase());
+}
+
+// ----------------------------
+
 export function countBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
@@ -128,11 +135,37 @@ function identity(x: any): any {
 
 export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
   const lookup: Record<string, Q> = {};
-  for (let i = 0; i < array.length; i++) {
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
     const a = array[i];
     lookup[keyFn(a, i)] = valueFn(a, i);
   }
   return lookup;
+}
+
+export function mapRecord<T, Q>(record: Record<string, T>, fn: (value: T, key: string) => Q): Record<string, Q> {
+  const newRecord: Record<string, Q> = {};
+  const keys = Object.keys(record);
+  for (const key of keys) {
+    newRecord[key] = fn(record[key], key);
+  }
+  return newRecord;
+}
+
+export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string, aggregateFn: (xs: T[], key: string) => Q): Q[] {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+}
+
+export function uniq(array: string[]): string[] {
+  return Object.keys(lookupBy(array));
 }
 
 export function parseList(list: string): string[] {
@@ -229,9 +262,20 @@ export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix:
 
 // ----------------------------
 
-export function downloadFile(text: string, type: string, fileName: string): void {
+export function downloadFile(text: string, type: string, filename: string): void {
+  let blobType: string = '';
+  switch (type) {
+    case 'json':
+      blobType = 'application/json';
+      break;
+    case 'tsv':
+      blobType = 'text/tab-separated-values';
+      break;
+    default: // csv
+      blobType = `text/${type}`;
+  }
   const blob = new Blob([text], {
-    type: `text/${type}`
+    type: blobType
   });
-  FileSaver.saveAs(blob, fileName);
+  FileSaver.saveAs(blob, filename);
 }

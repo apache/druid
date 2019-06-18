@@ -434,7 +434,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (databaseSegmentManager.removeSegment(segmentId)) {
       return Response.ok().build();
     }
     return Response.noContent().build();
@@ -549,9 +549,7 @@ public class DataSourcesResource
         continue;
       }
 
-      if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, new HashSet<>());
-      }
+      tierDistinctSegments.computeIfAbsent(tier, k -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {

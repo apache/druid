@@ -19,7 +19,7 @@
 import { Button, FormGroup, Icon, InputGroup, Intent, Popover, Position, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
@@ -45,7 +45,7 @@ const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Comp
 const tableColumnsNoSql: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', ActionCell.COLUMN_LABEL];
 
 export interface DatasourcesViewProps extends React.Props<any> {
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
   noSqlMode: boolean;
 }
@@ -83,7 +83,7 @@ export interface DatasourcesViewState {
   dropReloadInterval: string;
 }
 
-export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
+export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
   static DISABLED_COLOR = '#0a1500';
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
@@ -407,7 +407,7 @@ GROUP BY 1`);
   }
 
   getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
-    const { goToSql } = this.props;
+    const { goToQuery } = this.props;
 
     if (disabled) {
       return [
@@ -428,7 +428,7 @@ GROUP BY 1`);
         {
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
-          onAction: () => goToSql(`SELECT * FROM "${datasource}"`)
+          onAction: () => goToQuery(`SELECT * FROM "${datasource}"`)
         },
         {
           icon: IconNames.EXPORT,
@@ -646,7 +646,7 @@ GROUP BY 1`);
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { showDisabled } = this.state;
     const { tableColumnSelectionHandler } = this;
 
@@ -662,7 +662,7 @@ GROUP BY 1`);
           <Button
             icon={IconNames.APPLICATION}
             text="Go to SQL"
-            onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
+            onClick={() => goToQuery(this.datasourceQueryManager.getLastQuery())}
           />
         }
         <Switch

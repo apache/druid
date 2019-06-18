@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import debounce = require('lodash.debounce');
+import debounce from 'lodash.debounce';
 
 export interface QueryStateInt<R> {
   result: R | null;

@@ -17,7 +17,7 @@
  */
 
 import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import { JSONCollapse } from '../../components';
 
@@ -31,7 +31,7 @@ interface HistoryDialogState {
 
 }
 
-export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDialogState> {
+export class HistoryDialog extends React.PureComponent<HistoryDialogProps, HistoryDialogState> {
   constructor(props: HistoryDialogProps) {
     super(props);
     this.state = {

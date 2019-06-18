@@ -18,7 +18,7 @@
 
 import { AnchorButton, Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { ExternalLink } from '../../components';
 import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../../variables';
@@ -30,7 +30,7 @@ export interface AboutDialogProps extends React.Props<any> {
 export interface AboutDialogState {
 }
 
-export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogState> {
+export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDialogState> {
   constructor(props: AboutDialogProps) {
     super(props);
     this.state = {};

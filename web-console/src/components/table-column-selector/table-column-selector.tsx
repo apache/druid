@@ -18,7 +18,7 @@
 
 import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
@@ -34,7 +34,7 @@ interface TableColumnSelectorState {
 
 }
 
-export class TableColumnSelector extends React.Component<TableColumnSelectorProps, TableColumnSelectorState> {
+export class TableColumnSelector extends React.PureComponent<TableColumnSelectorProps, TableColumnSelectorState> {
 
   constructor(props: TableColumnSelectorProps) {
     super(props);

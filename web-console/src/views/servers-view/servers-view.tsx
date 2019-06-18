@@ -20,7 +20,7 @@ import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
@@ -57,7 +57,7 @@ function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmen
 
 export interface ServersViewProps extends React.Props<any> {
   middleManager: string | null;
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   noSqlMode: boolean;
 }
@@ -108,7 +108,7 @@ interface MiddleManagerQueryResultRow {
 
 interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>, Partial<MiddleManagerQueryResultRow> {}
 
-export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
+export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
   private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
 
@@ -537,7 +537,7 @@ ORDER BY "rank" DESC, "server" DESC`);
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { groupServersBy } = this.state;
     const { serverTableColumnSelectionHandler } = this;
 
@@ -559,7 +559,7 @@ ORDER BY "rank" DESC, "server" DESC`);
           <Button
             icon={IconNames.APPLICATION}
             text="Go to SQL"
-            onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
+            onClick={() => goToQuery(this.serverQueryManager.getLastQuery())}
           />
         }
         <TableColumnSelector

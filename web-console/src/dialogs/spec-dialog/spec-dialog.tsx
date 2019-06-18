@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import './spec-dialog.scss';
@@ -33,7 +33,7 @@ export interface SpecDialogState {
   spec: string;
 }
 
-export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState> {
+export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogState> {
   static validJson(json: string): boolean {
     try {
       JSON.parse(json);

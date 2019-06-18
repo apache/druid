@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
-import * as copy from 'copy-to-clipboard';
-import * as React from 'react';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -39,6 +39,7 @@ export interface ShowLogProps extends React.Props<any> {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
+  status: string | null;
 }
 
 export interface ShowLogState {
@@ -46,16 +47,22 @@ export interface ShowLogState {
   tail: boolean;
 }
 
-export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
+export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   public log = React.createRef<HTMLTextAreaElement>();
 
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
     this.state = {
       logValue: '',
-      tail: false
+      tail: true
     };
     this.getLogInfo();
+  }
+
+  componentDidMount(): void {
+    if (this.props.status === 'RUNNING') {
+      this.tail();
+    }
   }
 
   private getLogInfo = async (): Promise<void> => {
@@ -97,16 +104,19 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
 
 
   render() {
-    const { endpoint, downloadFilename } = this.props;
+    const { endpoint, downloadFilename, status } = this.props;
     const { logValue } = this.state;
 
     return <div className="show-log">
       <div className="top-actions">
+      {
+        status === 'RUNNING' &&
         <Checkbox
           label="Tail log"
           checked={this.state.tail}
           onChange={this.handleCheckboxChange}
         />
+      }
         <ButtonGroup className="right-buttons">
           {
             downloadFilename &&

@@ -20,9 +20,11 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -30,6 +32,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataSegmentManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -67,6 +70,8 @@ public class DruidCoordinatorRuleRunnerTest
   private DruidCoordinatorRuleRunner ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
+  private MetadataSegmentManager databaseSegmentManager;
+  private DataSourcesSnapshot dataSourcesSnapshot;
 
   @Before
   public void setUp()
@@ -76,6 +81,8 @@ public class DruidCoordinatorRuleRunnerTest
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
+    dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
 
     DateTime start = DateTimes.of("2012-01-01");
     availableSegments = new ArrayList<>();
@@ -989,7 +996,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testReplicantThrottle()
   {
-    mockCoordinator();
+    EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of()).anyTimes();
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
+    EasyMock.replay(coordinator, databaseSegmentManager, dataSourcesSnapshot);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
@@ -1114,6 +1123,8 @@ public class DruidCoordinatorRuleRunnerTest
                                     .build()
         )
         .atLeastOnce();
+    EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of()).anyTimes();
+    EasyMock.replay(dataSourcesSnapshot);
     coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
@@ -1330,8 +1341,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
     availableSegments.add(v1);
     availableSegments.add(v2);
-
-    mockCoordinator();
+    EasyMock.expect(dataSourcesSnapshot.getOvershadowedSegments()).andReturn(ImmutableSet.of(v1.getId())).anyTimes();
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
+    EasyMock.replay(coordinator, dataSourcesSnapshot);
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     mockEmptyPeon();
@@ -1375,6 +1387,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withDataSourcesSnapshot(dataSourcesSnapshot)
             .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);

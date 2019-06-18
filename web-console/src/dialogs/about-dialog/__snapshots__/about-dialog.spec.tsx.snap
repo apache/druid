@@ -82,7 +82,7 @@ exports[`about dialog matches snapshot 1`] = `
           <p>
             For help and support with Druid, please refer to the 
             <a
-              href="http://druid.io/community/"
+              href="https://druid.apache.org/community/"
               target="_blank"
             >
               community page
@@ -125,7 +125,7 @@ exports[`about dialog matches snapshot 1`] = `
             </button>
             <a
               class="bp3-button bp3-intent-primary"
-              href="http://druid.io"
+              href="https://druid.apache.org"
               role="button"
               tabindex="0"
               target="_blank"
