@@ -80,7 +80,7 @@
         <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
-        <fastutil.version>8.1.0</fastutil.version>
+        <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.4.10.v20180503</jetty.version>
