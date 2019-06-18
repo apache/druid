@@ -19,45 +19,40 @@
 import { IDialogProps, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
+import { ShowJson } from '../../components';
 import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
+
 interface SegmentTableActionDialogProps extends IDialogProps {
-  taskId: string | null;
-  dimensions: string[];
-  metrics: string[];
+  segmentId: string | null;
+  dataSourceId: string | null;
   actions: BasicAction[];
   onClose: () => void;
 }
 
 interface SegmentTableActionDialogState {
-  activeTab: 'dimensions' | 'metrics';
+  activeTab: 'metadata';
 }
 
 export class SegmentTableActionDialog extends React.PureComponent<SegmentTableActionDialogProps, SegmentTableActionDialogState> {
   constructor(props: SegmentTableActionDialogProps) {
     super(props);
     this.state = {
-      activeTab: 'dimensions'
+      activeTab: 'metadata'
     };
   }
 
   render(): React.ReactNode {
-    const { taskId, actions, onClose, dimensions, metrics } = this.props;
+    const { segmentId, onClose, dataSourceId, actions} = this.props;
     const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
       {
-        icon: 'split-columns',
-        text: 'Dimensions (' + dimensions.length + ')',
-        active: activeTab === 'dimensions',
-        onClick: () => this.setState({ activeTab: 'dimensions' })
-      },
-      {
-        icon: 'series-configuration',
-        text: 'Metrics (' + metrics.length + ')',
-        active: activeTab === 'metrics',
-        onClick: () => this.setState({ activeTab: 'metrics' })
+        icon: 'manually-entered-data',
+        text: 'Metadata',
+        active: activeTab === 'metadata',
+        onClick: () => this.setState({ activeTab: 'metadata' })
       }
     ];
 
@@ -65,28 +60,14 @@ export class SegmentTableActionDialog extends React.PureComponent<SegmentTableAc
         isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
-        title={`Segment: ${taskId}`}
+        title={`Segment: ${segmentId}`}
         bottomButtons={basicActionsToButtons(actions)}
     >
-      { activeTab === 'dimensions' &&
-        <div className={'show-json'}>
-        <div className="main-area">
-          <TextArea
-            readOnly
-            value={dimensions.length ? dimensions.join().split(',').join('\n') : 'No dimensions'}
-          />
-        </div>
-        </div>
-      }
-      { activeTab === 'metrics' &&
-        <div className={'show-json'}>
-        <div className="main-area">
-          <TextArea
-            readOnly
-            value={metrics.length ? metrics.join().split(',').join('\n') : 'No metrics'}
-          />
-        </div>
-        </div>
+      { activeTab === 'metadata' &&
+        <ShowJson
+          endpoint={`/druid/coordinator/v1/metadata/datasources/${dataSourceId}/segments/${segmentId}`}
+          downloadFilename={`Segment-metadata-${segmentId}.json`}
+        />
       }
     </TableActionDialog>;
   }

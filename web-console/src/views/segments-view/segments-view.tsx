@@ -60,9 +60,8 @@ export interface SegmentsViewState {
   segmentFilter: Filter[];
   allSegments?: SegmentQueryResultRow[] | null;
   segmentTableActionDialogId: string | null;
-  metrics: string[];
+  datasourceTableActionDialogId: string | null;
   actions: BasicAction[];
-  dimensions: string[];
   terminateSegmentId: string | null;
   terminatetDatasourceId: string | null;
 }
@@ -103,8 +102,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.state = {
       segmentTableActionDialogId: null,
-      dimensions: [],
-      metrics: [],
+      datasourceTableActionDialogId: null,
       actions: [],
       terminateSegmentId: null,
       terminatetDatasourceId: null,
@@ -402,7 +400,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const dimensions =  parseList(row.original.payload.dimensions);
             const metrics =  parseList(row.original.payload.metrics);
             return <ActionCell
-              onDetail={() => {this.setState({segmentTableActionDialogId : id, metrics: metrics, dimensions: dimensions, actions: this.getSegmentActions(id, datasource)}); }}
+              onDetail={() => {this.setState({segmentTableActionDialogId : id, datasourceTableActionDialogId: datasource, actions: this.getSegmentActions(id, datasource)}); }}
               actions={this.getSegmentActions(id, datasource)}
             />;
           },
@@ -447,7 +445,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   render() {
     const { goToSql, noSqlMode } = this.props;
-    const { segmentTableActionDialogId, metrics, dimensions, actions } = this.state;
+    const { segmentTableActionDialogId, datasourceTableActionDialogId, actions } = this.state;
     const { tableColumnSelectionHandler } = this;
 
     return <>
@@ -478,7 +476,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       {this.renderTerminateSegmentAction()}
       {
         segmentTableActionDialogId &&
-       <SegmentTableActionDialog taskId={segmentTableActionDialogId} dimensions={dimensions} metrics={metrics} actions={actions} onClose={() => this.setState({segmentTableActionDialogId: null})} isOpen/>
+       <SegmentTableActionDialog segmentId={segmentTableActionDialogId} dataSourceId={datasourceTableActionDialogId} actions={actions} onClose={() => this.setState({segmentTableActionDialogId: null})} isOpen/>
       }
       </>;
   }
