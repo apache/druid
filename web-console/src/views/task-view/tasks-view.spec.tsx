@@ -27,7 +27,7 @@ describe('tasks view', () => {
       <TasksView
         openDialog={'test'}
         taskId={'test'}
-        goToSql={(initSql: string) => null}
+        goToQuery={(initSql: string) => null}
         goToMiddleManager={(middleManager: string) => null}
         goToLoadDataView={() => null}
         noSqlMode={false}

@@ -123,7 +123,7 @@ public class SegmentManagerThreadSafetyTest
     FileUtils.deleteDirectory(segmentCacheDir);
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 6000L)
   public void testLoadSameSegment() throws IOException, ExecutionException, InterruptedException
   {
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
@@ -139,7 +139,7 @@ public class SegmentManagerThreadSafetyTest
     Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 6000L)
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);
