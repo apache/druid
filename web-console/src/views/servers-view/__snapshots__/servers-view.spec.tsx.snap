@@ -30,10 +30,9 @@ exports[`servers view action servers view 1`] = `
         Tier
       </Blueprint3.Button>
     </Blueprint3.ButtonGroup>
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
+    <RefreshButton
+      localStorageKey="servers-refresh-rate"
+      refresh={[Function]}
     />
     <Blueprint3.Button
       icon="application"

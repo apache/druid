@@ -25,7 +25,8 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import {
-  ActionCell, RefreshButton,
+  ActionCell,
+  RefreshButton,
   TableColumnSelector,
   ViewControlBar
 } from '../../components';

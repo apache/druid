@@ -24,13 +24,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-<<<<<<< HEAD
-import { TableColumnSelector, ViewControlBar } from '../../components';
-=======
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
-import { AsyncActionDialog } from '../../dialogs';
-import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
->>>>>>> 7198082b88... add refresh button
+import { RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import {
   addFilter,
   formatBytes,

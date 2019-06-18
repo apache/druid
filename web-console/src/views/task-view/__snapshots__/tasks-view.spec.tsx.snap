@@ -20,10 +20,9 @@ exports[`tasks view matches snapshot 1`] = `
       <ViewControlBar
         label="Supervisors"
       >
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
+        <RefreshButton
+          localStorageKey="task-refresh-rate"
+          refresh={[Function]}
         />
         <Blueprint3.Button
           icon="plus"

@@ -38,8 +38,14 @@ export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
       {label : '30 seconds', value: 30000},
       {label : '1 minute', value: 60000},
       {label : '2 minutes', value: 120000},
-      {label : 'Manual', value: 0} ];
+      {label : 'Manual', value: 0}
+      ];
 
-    return <TimedButton intervals={intervals} title={'Refresh'} refresh={refresh} localstoragekey={localStorageKey}/>;
+    return <TimedButton
+      intervals={intervals}
+      title={'Refresh'}
+      refresh={refresh}
+      localstoragekey={localStorageKey}
+    />;
   }
 }

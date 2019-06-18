@@ -66,17 +66,15 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
 
   handleSelection( selectedInterval: number) {
     clearTimeout(this.state.timer);
-
     this.setState({interval: selectedInterval});
     localStorageSet(this.props.localstoragekey, String(selectedInterval));
     this.continousRefresh();
   }
 
   render() {
-
     const { title, intervals, refresh } = this.props;
     const { interval } = this.state;
-    console.log(interval);
+
     return <ButtonGroup>
       <Button
         text={title}
@@ -96,7 +94,8 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
                 key={interval}
               />
             ))}
-          </RadioGroup>}
+          </RadioGroup>
+        }
       >
         <Button
           rightIcon={IconNames.CARET_DOWN}
