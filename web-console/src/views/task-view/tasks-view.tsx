@@ -46,7 +46,7 @@ const taskTableColumns: string[] = ['Task ID', 'Type', 'Datasource', 'Location',
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   openDialog: string | null;
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
@@ -709,17 +709,33 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
 
   render() {
-    const { goToSql, goToLoadDataView, noSqlMode } = this.props;
+    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
-    const submitTaskMenu = <Menu>
+
+    const submitSupervisorMenu = <Menu>
       <MenuItem
-        text="Raw JSON task"
-        onClick={() => this.setState({ taskSpecDialogOpen: true })}
-      />
-      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
         text="Go to data loader"
         onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON supervisor"
+        onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+      />
+    </Menu>;
+
+    const submitTaskMenu = <Menu>
+      <MenuItem
+        icon={IconNames.CLOUD_UPLOAD}
+        text="Go to data loader"
+        onClick={() => goToLoadDataView()}
+      />
+      <MenuItem
+        icon={IconNames.MANUALLY_ENTERED_DATA}
+        text="Submit JSON task"
+        onClick={() => this.setState({ taskSpecDialogOpen: true })}
       />
     </Menu>;
 
@@ -740,11 +756,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               text="Refresh"
               onClick={() => this.supervisorQueryManager.rerunLastQuery()}
             />
-            <Button
-              icon={IconNames.PLUS}
-              text="Submit supervisor"
-              onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-            />
+            <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
+              <Button icon={IconNames.PLUS} text="Submit supervisor"/>
+            </Popover>
             <TableColumnSelector
               columns={supervisorTableColumns}
               onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)}
@@ -772,7 +786,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
-                onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+                onClick={() => goToQuery(this.taskQueryManager.getLastQuery())}
               />
             }
             <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>

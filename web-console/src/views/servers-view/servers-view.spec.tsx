@@ -26,7 +26,7 @@ describe('servers view', () => {
     const serversView = shallow(
       <ServersView
         middleManager={'test'}
-        goToSql={(initSql: string) => {}}
+        goToQuery={(initSql: string) => {}}
         goToTask={(taskId: string) => {}}
         noSqlMode={false}
       />);

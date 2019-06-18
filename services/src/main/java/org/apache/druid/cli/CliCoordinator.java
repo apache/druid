@@ -98,7 +98,7 @@ import java.util.concurrent.ExecutorService;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see http://druid.io/docs/latest/Coordinator.html for a description."
+    description = "Runs the Coordinator, see https://druid.apache.org/docs/latest/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
@@ -217,8 +217,8 @@ public class CliCoordinator extends ServerRunnable
               throw new UnsupportedOperationException(
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See http://druid.io/docs/latest/operations/segment-optimization.html and "
-                  + "http://druid.io/docs/latest/operations/api-reference.html#compaction-configuration for more "
+                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for more "
                   + "details about compaction."
               );
             }
