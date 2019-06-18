@@ -167,6 +167,7 @@ public class DruidJsonValidatorTest
                 1,
                 NoneShardSpec.instance(),
                 new IndexSpec(),
+                new IndexSpec(),
                 null,
                 0,
                 0,

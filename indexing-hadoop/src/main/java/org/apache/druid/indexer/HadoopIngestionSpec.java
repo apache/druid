@@ -26,6 +26,7 @@ import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.indexer.path.UsedSegmentLister;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.timeline.DataSegment;

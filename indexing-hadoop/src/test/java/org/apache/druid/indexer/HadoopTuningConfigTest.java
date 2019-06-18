@@ -43,6 +43,7 @@ public class HadoopTuningConfigTest
         null,
         null,
         null,
+        null,
         100,
         null,
         true,

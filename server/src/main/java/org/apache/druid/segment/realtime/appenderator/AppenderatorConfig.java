@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
@@ -28,6 +29,12 @@ import java.io.File;
 
 public interface AppenderatorConfig
 {
+  IndexSpec DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS = new IndexSpec(
+      null,
+      CompressionStrategy.UNCOMPRESSED,
+      CompressionStrategy.NONE,
+      null);
+
   boolean isReportParseExceptions();
 
   /**
@@ -66,6 +73,8 @@ public interface AppenderatorConfig
   Period getIntermediatePersistPeriod();
 
   IndexSpec getIndexSpec();
+
+  IndexSpec getIndexSpecForIntermediatePersists();
 
   File getBasePersistDirectory();
 
