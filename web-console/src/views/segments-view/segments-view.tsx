@@ -349,7 +349,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         },
         {
           Header: 'Is available',
-
           id: 'is_available',
           accessor: (row) => String(Boolean(row.is_available)),
           Filter: makeBooleanFilter(),
