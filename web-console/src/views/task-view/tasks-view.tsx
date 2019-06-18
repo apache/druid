@@ -24,7 +24,7 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog, TaskTableActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -732,10 +732,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       >
         <div className={'top-pane'}>
           <ViewControlBar label="Supervisors">
-            <Button
-              icon={IconNames.REFRESH}
-              text="Refresh"
-              onClick={() => this.supervisorQueryManager.rerunLastQuery()}
+            <RefreshButton
+              refresh={() => this.supervisorQueryManager.rerunLastQuery()}
+              localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             />
             <Button
               icon={IconNames.PLUS}

@@ -25,7 +25,7 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import {
-  ActionCell,
+  ActionCell, RefreshButton,
   TableColumnSelector,
   ViewControlBar
 } from '../../components';
@@ -549,10 +549,9 @@ ORDER BY "rank" DESC, "server" DESC`);
           <Button active={groupServersBy === 'server_type'} onClick={() => this.setState({ groupServersBy: 'server_type' })}>Type</Button>
           <Button active={groupServersBy === 'tier'} onClick={() => this.setState({ groupServersBy: 'tier' })}>Tier</Button>
         </ButtonGroup>
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.serverQueryManager.rerunLastQuery()}
+        <RefreshButton
+          refresh={() => this.serverQueryManager.rerunLastQuery()}
+          localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
         />
         {
           !noSqlMode &&
