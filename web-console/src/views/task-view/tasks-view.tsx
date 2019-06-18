@@ -776,13 +776,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
             </ButtonGroup>
             <RefreshButton
-              onRefresh={(auto) => this.taskQueryManager.rerunLastQueryInBackground(false)}
+              onRefresh={(auto) => this.taskQueryManager.rerunLastQueryInBackground(auto)}
               localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
-            />
-            <Button
-              icon={IconNames.REFRESH}
-              text="Refresh"
-              onClick={() => this.taskQueryManager.rerunLastQueryInBackground(false)}
             />
             {
               !noSqlMode &&

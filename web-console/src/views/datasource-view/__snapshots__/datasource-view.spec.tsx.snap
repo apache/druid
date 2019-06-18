@@ -9,7 +9,7 @@ exports[`data source view matches snapshot 1`] = `
   >
     <RefreshButton
       localStorageKey="datasources-refresh-rate"
-      refresh={[Function]}
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="application"

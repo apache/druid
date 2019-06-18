@@ -32,7 +32,7 @@ exports[`servers view action servers view 1`] = `
     </Blueprint3.ButtonGroup>
     <RefreshButton
       localStorageKey="servers-refresh-rate"
-      refresh={[Function]}
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="application"

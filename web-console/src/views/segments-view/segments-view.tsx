@@ -388,7 +388,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return <div className="segments-view app-view">
       <ViewControlBar label="Segments">
         <RefreshButton
-          onRefresh={() => noSqlMode ? this.segmentsJsonQueryManager.rerunLastQuery() : this.segmentsSqlQueryManager.rerunLastQuery()}
+          onRefresh={(auto) => noSqlMode ? this.segmentsJsonQueryManager.rerunLastQueryInBackground(auto) : this.segmentsSqlQueryManager.rerunLastQueryInBackground(auto)}
           localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
         />
         {

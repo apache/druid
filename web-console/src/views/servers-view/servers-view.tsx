@@ -551,7 +551,7 @@ ORDER BY "rank" DESC, "server" DESC`);
           <Button active={groupServersBy === 'tier'} onClick={() => this.setState({ groupServersBy: 'tier' })}>Tier</Button>
         </ButtonGroup>
         <RefreshButton
-          onRefresh={() => this.serverQueryManager.rerunLastQuery()}
+          onRefresh={(auto) => this.serverQueryManager.rerunLastQueryInBackground(auto)}
           localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
         />
         {

@@ -34,6 +34,7 @@ export interface TimedButtonProps extends IButtonProps {
   intervals: Interval[];
   onRefresh: (auto: boolean) => void;
   localstoragekey?: LocalStorageKeys;
+  label: string;
 }
 
 export interface TimedButtonState {
@@ -44,23 +45,25 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   constructor(props: TimedButtonProps, context: any) {
     super(props, context);
     this.state = {
-      interval: 0
+      interval: 30000
     };
   }
 
   private timer: Timeout;
 
   componentDidMount(): void {
-    // if (this.props.localstoragekey) {
-    //   this.setState({interval: Number(localStorageGet(this.props.localstoragekey))});
-    //   this.timer = setTimeout(() => {
-    //     this.continousRefresh();
-    //   }, this.state.interval);
-    // }
-      this.timer = setTimeout(() => {
-        this.continousRefresh();
-      }, 50000);
+    let interval = 30000;
+    if (this.props.localstoragekey) {
+      if (localStorageGet(this.props.localstoragekey) !== null) {
+        interval = Number(localStorageGet(this.props.localstoragekey));
+      }
+      this.setState({interval: interval});
+      if (interval) {
+        this.timer = setTimeout(() => {this.continousRefresh(); }, interval);
+      }
+    }
   }
+
 
   componentWillUnmount(): void {
     clearTimeout(this.timer);
@@ -85,7 +88,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   }
 
   render() {
-    const { intervals, localstoragekey, onRefresh, type, ...other } = this.props;
+    const { label, intervals, localstoragekey, onRefresh, type, ...other } = this.props;
     const { interval } = this.state;
 
     return <ButtonGroup>
@@ -96,6 +99,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
       <Popover
         content={
           <RadioGroup
+            label={label}
             className="refresh-options"
             onChange={value => this.handleSelection(Number(value.currentTarget.value))}
             selectedValue={interval}

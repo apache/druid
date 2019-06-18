@@ -41,10 +41,11 @@ export class RefreshButton
       {label : '30 seconds', value: 30000},
       {label : '1 minute', value: 60000},
       {label : '2 minutes', value: 120000},
-      {label : 'Manual', value: 0}
+      {label : 'None', value: 0}
     ];
 
     return <TimedButton
+      label={'Refresh rate:'}
       intervals={intervals}
       icon={IconNames.REFRESH}
       text={'Refresh'}

@@ -9,7 +9,7 @@ exports[`segments-view matches snapshot 1`] = `
   >
     <RefreshButton
       localStorageKey="segments-refresh-rate"
-      refresh={[Function]}
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       hidden={false}
