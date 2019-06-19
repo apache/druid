@@ -23,7 +23,7 @@ exemptLabels:
 exemptMilestones: true
 
 # Limit to only `issues` or `pulls`
-only: pulls
+# only: pulls
 
 # Label applied when closing
 staleLabel: stale
