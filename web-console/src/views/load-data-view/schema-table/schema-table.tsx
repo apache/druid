@@ -21,7 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
+import { alphanumericCompare, caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
 import {
   DimensionSpec,
   DimensionsSpec,
@@ -57,7 +57,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
     const { sampleBundle, columnFilter, selectedDimensionSpecIndex, selectedMetricSpecIndex, onDimensionOrMetricSelect } = this.props;
     const { headerAndRows, dimensionsSpec, metricsSpec } = sampleBundle;
 
-    const dimensionMetricSortedHeader = sortWithPrefixSuffix(headerAndRows.header, ['__time'], metricsSpec.map(getMetricSpecName));
+    const dimensionMetricSortedHeader = sortWithPrefixSuffix(headerAndRows.header, ['__time'], metricsSpec.map(getMetricSpecName), null);
 
     return <ReactTable
       className="schema-table -striped -highlight"
