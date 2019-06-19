@@ -36,7 +36,7 @@ pulls:
     This pull request/issue has been marked as stale due to 60 days of inactivity.
     It will be closed in 1 week if no further activity occurs. If you think
     that’s incorrect or this pull request/issue requires a review, please simply
-    write any comment. If closed, you can revive the PR at any time and @mention
+    write any comment. If closed, you can revive the PR/issue at any time and @mention
     a reviewer or discuss it on the dev@druid.apache.org list.
     Thank you for your contributions.
   unmarkComment: >
