@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, sortWithPrefixSuffix } from './general';
 
 describe('general', () => {
   describe('sortWithPrefixSuffix', () => {
     it('works in simple case', () => {
-      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gef'.split(''), 'ba'.split('')).join('')).toEqual('gefcdhba');
+      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gef'.split(''), 'ba'.split(''), alphanumericCompare).join('')).toEqual('gefcdhba');
     });
 
     it('dedupes', () => {
-      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gefgef'.split(''), 'baba'.split('')).join('')).toEqual('gefcdhba');
+      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gefgef'.split(''), 'baba'.split(''), alphanumericCompare).join('')).toEqual('gefcdhba');
     });
   });
 });
