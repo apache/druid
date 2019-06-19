@@ -17,17 +17,7 @@
  * under the License.
  */
 
+@EverythingIsNonnullByDefault
 package org.apache.druid.math.expr;
 
-/**
- * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
- */
-public enum ExprType
-{
-  DOUBLE,
-  LONG,
-  STRING,
-  DOUBLE_ARRAY,
-  LONG_ARRAY,
-  STRING_ARRAY
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;
