@@ -45,12 +45,12 @@ export class RefreshButton
     ];
 
     return <TimedButton
-      label={'Refresh rate:'}
+      label={'Auto refresh every:'}
       intervals={intervals}
       icon={IconNames.REFRESH}
       text={'Refresh'}
       onRefresh={onRefresh}
-      localstoragekey={localStorageKey}
+      localStorageKey={localStorageKey}
     />;
   }
 }

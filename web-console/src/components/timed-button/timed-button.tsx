@@ -33,7 +33,7 @@ export interface Interval {
 export interface TimedButtonProps extends IButtonProps {
   intervals: Interval[];
   onRefresh: (auto: boolean) => void;
-  localstoragekey?: LocalStorageKeys;
+  localStorageKey?: LocalStorageKeys;
   label: string;
 }
 
@@ -53,9 +53,9 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
 
   componentDidMount(): void {
     let interval = 30000;
-    if (this.props.localstoragekey) {
-      if (localStorageGet(this.props.localstoragekey) !== null) {
-        interval = Number(localStorageGet(this.props.localstoragekey));
+    if (this.props.localStorageKey) {
+      if (localStorageGet(this.props.localStorageKey) !== null) {
+        interval = Number(localStorageGet(this.props.localStorageKey));
       }
       this.setState({interval: interval});
       if (interval) {
@@ -81,19 +81,21 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   handleSelection( selectedInterval: number) {
     clearTimeout(this.timer);
     this.setState({interval: selectedInterval});
-    if (this.props.localstoragekey) {
-      localStorageSet(this.props.localstoragekey, String(selectedInterval));
+    if (this.props.localStorageKey) {
+      localStorageSet(this.props.localStorageKey, String(selectedInterval));
     }
     this.continousRefresh(selectedInterval);
   }
 
   render() {
-    const { label, intervals, localstoragekey, onRefresh, type, ...other } = this.props;
+    const { label, intervals, onRefresh, type, text, icon, ...other } = this.props;
     const { interval } = this.state;
 
     return <ButtonGroup>
       <Button
         {...other}
+        text={text}
+        icon={icon}
         onClick={() => onRefresh(false)}
       />
       <Popover
@@ -115,6 +117,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
         }
       >
         <Button
+          {...other}
           rightIcon={IconNames.CARET_DOWN}
         />
       </Popover>
