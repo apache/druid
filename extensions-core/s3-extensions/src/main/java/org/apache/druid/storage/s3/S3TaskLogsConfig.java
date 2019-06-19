@@ -19,14 +19,12 @@
 
 package org.apache.druid.storage.s3;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 
 /**
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class S3TaskLogsConfig
 {
   @JsonProperty
@@ -50,6 +48,11 @@ public class S3TaskLogsConfig
     return s3Bucket;
   }
 
+  public void setS3Bucket(String s3Bucket)
+  {
+    this.s3Bucket = s3Bucket;
+  }
+
   public String getS3Prefix()
   {
     return s3Prefix;
@@ -59,4 +62,5 @@ public class S3TaskLogsConfig
   {
     return disableAcl;
   }
+
 }

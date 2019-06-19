@@ -136,7 +136,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.retryS3Operation(
           () -> {
-            uploadFileIfPossible(config.getS3Bucket(), taskKey, logFile);
+            S3Utils.uploadFileIfPossible(service, config.getDisableAcl(), config.getS3Bucket(), taskKey, logFile);
             return null;
           }
       );
@@ -158,7 +158,7 @@ public class S3TaskLogs implements TaskLogs
     service.putObject(logFilePutRequest);
   }
 
-  private String getTaskLogKey(String taskid, String filename)
+  String getTaskLogKey(String taskid, String filename)
   {
     return StringUtils.format("%s/%s/%s", config.getS3Prefix(), taskid, filename);
   }
