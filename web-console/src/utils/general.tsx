@@ -19,6 +19,7 @@
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import FileSaver from 'file-saver';
+import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -165,7 +166,15 @@ export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string
 }
 
 export function uniq(array: string[]): string[] {
-  return Object.keys(lookupBy(array));
+  const seen: Record<string, boolean> = {};
+  return array.filter(s => {
+    if (hasOwnProp(seen, s)) {
+      return false;
+    } else {
+      seen[s] = true;
+      return true;
+    }
+  });
 }
 
 export function parseList(list: string): string[] {
@@ -253,11 +262,15 @@ export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | und
   return (xs.map(f) as any).filter(Boolean);
 }
 
-export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[]): string[] {
-  const pre = things.filter((x) => prefix.includes(x)).sort();
-  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x)).sort();
-  const post = things.filter((x) => suffix.includes(x)).sort();
-  return pre.concat(mid, post);
+export function alphanumericCompare(a: string, b: string): number {
+  return String(a).localeCompare(b, undefined, { numeric: true });
+}
+
+export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[], cmp: null | ((a: string, b: string) => number)): string[] {
+  const pre = uniq(prefix.filter((x) => things.includes(x)));
+  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x));
+  const post = uniq(suffix.filter((x) => things.includes(x)));
+  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
 }
 
 // ----------------------------
