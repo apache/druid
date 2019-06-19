@@ -220,6 +220,8 @@ public class FunctionTest
   {
     assertExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
     assertExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertExpr("array_append([], 1)", new String[]{"1"});
+    assertExpr("array_append(cast([], 'LONG_ARRAY'), 1)", new Long[]{1L});
   }
 
   @Test
