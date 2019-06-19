@@ -43,7 +43,7 @@ import { BasicAction } from '../../utils/basic-action';
 import './segments-view.scss';
 
 const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition',
-  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available', 'Is overshadowed'];
+  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available', 'Is overshadowed', ActionCell.COLUMN_LABEL];
 const tableColumnsNoSql: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'];
 
 export interface SegmentsViewProps extends React.Props<any> {
@@ -255,7 +255,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     actions.push(
       {
         icon: IconNames.IMPORT,
-        title: 'Drop datasource (disable)',
+        title: 'Drop segment (disable)',
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSegmentId: id, terminatetDatasourceId: datasource})
       }
