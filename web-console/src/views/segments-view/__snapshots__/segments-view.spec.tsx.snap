@@ -35,6 +35,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Is realtime",
             "Is available",
             "Is overshadowed",
+            "Actions",
           ]
         }
         onChange={[Function]}
