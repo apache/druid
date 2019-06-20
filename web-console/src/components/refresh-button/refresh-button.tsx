@@ -45,6 +45,7 @@ export class RefreshButton
     ];
 
     return <TimedButton
+      defaultValue={30000}
       label={'Auto refresh every:'}
       intervals={intervals}
       icon={IconNames.REFRESH}
