@@ -16,16 +16,18 @@
  * limitations under the License.
  */
 
-import { IResizeEntry, ITreeNode, ResizeSensor } from '@blueprintjs/core';
+import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
 import ace from 'brace';
 import React from 'react';
 import AceEditor from 'react-ace';
 import ReactDOMServer from 'react-dom/server';
 
-import { SQLFunctionDoc } from '../../../../lib/sql-function-doc';
+import { SQL_DATE_TYPES, SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
 import { uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 import { ColumnTreeProps, ColumnTreeState } from '../column-tree/column-tree';
+
+import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_EXPRESSION_PARTS, SQL_KEYWORDS } from './keywords';
 
 import './query-input.scss';
 
@@ -46,7 +48,6 @@ export interface QueryInputState {
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
-
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata } = props;
 
@@ -80,33 +81,29 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
 
   private replaceDefaultAutoCompleter = () => {
     if (!langTools) return;
-    /*
-     Please refer to the source code @
-     https://github.com/ajaxorg/ace/blob/9b5b63d1dc7c1b81b58d30c87d14b5905d030ca5/lib/ace/ext/language_tools.js#L41
-     for the implementation of keyword completer
-    */
+
+    const keywordList = ([] as any[]).concat(
+      SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+      SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+      SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
+      SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
+      SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' }))
+    );
+
     const keywordCompleter = {
       getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
-        if (session.$mode.completer) {
-          return session.$mode.completer.getCompletions(editor, session, pos, prefix, callback);
-        }
-        const state = editor.session.getState(pos.row);
-        let keywordCompletions = session.$mode.getCompletions(state, session, pos, prefix);
-        keywordCompletions = keywordCompletions.map((d: any) => {
-          return Object.assign(d, {name: d.name.toUpperCase(), value: d.value.toUpperCase()});
-        });
-        return callback(null, keywordCompletions);
+        return callback(null, keywordList);
       }
     };
+
     langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
   }
 
   private addFunctionAutoCompleter = (): void => {
     if (!langTools) return;
 
-    const functionList: any[] = SQLFunctionDoc.map((entry: any) => {
-      let funcName: string = entry.syntax.replace(/\(.*\)/, '()');
-      if (!funcName.includes('(')) funcName = funcName.substr(0, 10);
+    const functionList: any[] = SQL_FUNCTIONS.map((entry: SyntaxDescription) => {
+      const funcName: string = entry.syntax.replace(/\(.*\)/, '()');
       return {
         value: funcName,
         score: 80,

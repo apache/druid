@@ -90,7 +90,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
     return <Menu>
       <MenuItem
         icon={IconNames.HELP}
-        text="Docs"
+        text="Query docs"
         href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
         target="_blank"
       />
