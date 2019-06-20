@@ -49,7 +49,7 @@ issues:
   daysUntilStale: 280
   daysUntilClose: 14
   markComment: >
-    This pull issue has been marked as stale due to 280 days of inactivity.
+    This issue has been marked as stale due to 280 days of inactivity.
     It will be closed in 2 weeks if no further activity occurs. If this issue is still
     relevant, please simply write any comment. Even if closed, you can still revive the
     issue at any time or discuss it on the dev@druid.apache.org list.
