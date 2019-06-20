@@ -23,8 +23,8 @@ import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -34,7 +34,8 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.List;
 
-public class S3TaskLogsTest {
+public class S3TaskLogsTest
+{
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -66,7 +67,8 @@ public class S3TaskLogsTest {
     Assert.assertEquals("The Grant should have full control permission", Permission.FullControl, grant.getPermission());
   }
 
-  private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception {
+  private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception
+  {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
 
     EasyMock.expect(s3Client.putObject(EasyMock.anyObject()))
