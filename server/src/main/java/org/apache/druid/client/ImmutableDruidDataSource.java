@@ -30,7 +30,6 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
@@ -123,29 +122,12 @@ public class ImmutableDruidDataSource
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
-
-    if (o == null || !getClass().equals(o.getClass())) {
-      return false;
-    }
-
-    final ImmutableDruidDataSource that = (ImmutableDruidDataSource) o;
-    if (!this.name.equals(that.name)) {
-      return false;
-    }
-
-    if (!this.properties.equals(that.properties)) {
-      return false;
-    }
-
-    return this.idToSegments.equals(that.idToSegments);
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, properties, idToSegments);
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
   }
 }
