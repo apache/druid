@@ -26,8 +26,8 @@ import {
   Intent
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import classNames = require('classnames');
-import * as React from 'react';
+import classNames from 'classnames';
+import React from 'react';
 
 import { HistoryDialog } from '../history-dialog/history-dialog';
 
@@ -49,7 +49,7 @@ export interface SnitchDialogState {
   showHistory?: boolean;
 }
 
-export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialogState> {
+export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchDialogState> {
   constructor(props: SnitchDialogProps) {
     super(props);
 

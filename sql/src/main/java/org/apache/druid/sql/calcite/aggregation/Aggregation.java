@@ -31,7 +31,8 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -150,7 +151,11 @@ public class Aggregation
            : Iterables.getOnlyElement(aggregatorFactories).getName();
   }
 
-  public Aggregation filter(final DruidQuerySignature querySignature, final DimFilter filter)
+  public Aggregation filter(
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final DimFilter filter
+  )
   {
     if (filter == null) {
       return this;
@@ -173,13 +178,13 @@ public class Aggregation
     }
 
     final DimFilter baseOptimizedFilter = Filtration.create(filter)
-                                                    .optimizeFilterOnly(querySignature)
+                                                    .optimizeFilterOnly(virtualColumnRegistry.getFullRowSignature())
                                                     .getDimFilter();
 
     Set<VirtualColumn> aggVirtualColumnsPlusFilterColumns = new HashSet<>(virtualColumns);
     for (String column : baseOptimizedFilter.getRequiredColumns()) {
-      if (querySignature.isVirtualColumnDefined(column)) {
-        aggVirtualColumnsPlusFilterColumns.add(querySignature.getVirtualColumn(column));
+      if (virtualColumnRegistry.isVirtualColumnDefined(column)) {
+        aggVirtualColumnsPlusFilterColumns.add(virtualColumnRegistry.getVirtualColumn(column));
       }
     }
     final List<AggregatorFactory> newAggregators = new ArrayList<>();
@@ -187,15 +192,15 @@ public class Aggregation
       if (agg instanceof FilteredAggregatorFactory) {
         final FilteredAggregatorFactory filteredAgg = (FilteredAggregatorFactory) agg;
         for (String column : filteredAgg.getFilter().getRequiredColumns()) {
-          if (querySignature.isVirtualColumnDefined(column)) {
-            aggVirtualColumnsPlusFilterColumns.add(querySignature.getVirtualColumn(column));
+          if (virtualColumnRegistry.isVirtualColumnDefined(column)) {
+            aggVirtualColumnsPlusFilterColumns.add(virtualColumnRegistry.getVirtualColumn(column));
           }
         }
         newAggregators.add(
             new FilteredAggregatorFactory(
                 filteredAgg.getAggregator(),
                 Filtration.create(new AndDimFilter(ImmutableList.of(filteredAgg.getFilter(), baseOptimizedFilter)))
-                          .optimizeFilterOnly(querySignature)
+                          .optimizeFilterOnly(virtualColumnRegistry.getFullRowSignature())
                           .getDimFilter()
             )
         );

@@ -19,10 +19,9 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
-import { ExternalLink } from '../../components/external-link/external-link';
+import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
@@ -39,7 +38,7 @@ export interface OverlordDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
+export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: OverlordDynamicConfigDialogProps) {
@@ -127,7 +126,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
     >
       <p>
         Edit the overlord dynamic configuration on the fly.
-        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#overlord-dynamic-configuration">documentation</ExternalLink>.
+        For more information please refer to the <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration">documentation</ExternalLink>.
       </p>
       <AutoForm
         fields={[

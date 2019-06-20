@@ -138,16 +138,14 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneMultiValuedStringColumn()
   {
-    // Expressions currently treat multi-valued arrays as nulls.
-    // This test is just documenting the current behavior, not necessarily saying it makes sense.
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(edf("dim4 == ''"), ImmutableList.of("0", "1", "2", "4", "5", "6", "7", "8"));
+      assertFilterMatches(edf("dim4 == ''"), ImmutableList.of("1", "2", "6", "7", "8"));
     } else {
       assertFilterMatches(edf("dim4 == ''"), ImmutableList.of("2"));
       // AS per SQL standard null == null returns false.
       assertFilterMatches(edf("dim4 == null"), ImmutableList.of());
     }
-    assertFilterMatches(edf("dim4 == '1'"), ImmutableList.of());
+    assertFilterMatches(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatches(edf("dim4 == '3'"), ImmutableList.of("3"));
   }
 
@@ -212,10 +210,7 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatches(edf("dim2 == dim3"), ImmutableList.of("2", "5", "8"));
     }
 
-    // String vs. multi-value string
-    // Expressions currently treat multi-valued arrays as nulls.
-    // This test is just documenting the current behavior, not necessarily saying it makes sense.
-    assertFilterMatches(edf("dim0 == dim4"), ImmutableList.of("3"));
+    assertFilterMatches(edf("dim0 == dim4"), ImmutableList.of("3", "4", "5"));
   }
 
   @Test

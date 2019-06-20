@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe coordinator dynamic config coordinator dynamic config snapshot 1`] = `
+exports[`coordinator dynamic config matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -58,7 +58,7 @@ exports[`describe coordinator dynamic config coordinator dynamic config snapshot
           <p>
             Edit the coordinator dynamic configuration on the fly. For more information please refer to the 
             <a
-              href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration"
+              href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration"
               target="_blank"
             >
               documentation

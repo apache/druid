@@ -19,10 +19,11 @@
  */
 
 const fs = require('fs-extra');
+
 const readfile = '../docs/content/querying/sql.md';
 const writefile = 'lib/sql-function-doc.ts';
 
-const license = `/*
+const heading = `/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,61 +39,62 @@ const license = `/*
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */`
+ */
 
-const comment = `// This file is auto generated and should not be modified`;
+// This file is auto generated and should not be modified
 
-const disableTSlint = '/* tslint:disable */';
+export interface FunctionDescription {
+  syntax: string;
+  description: string;
+}
 
-const interfaceStr = `export interface FunctionDescription {
-    syntax: string;
-    description: string;
-  }`;
+/* tslint:disable:quotemark */
 
-const heading = `${license}\n\n${comment}\n\n${interfaceStr}\n\n${disableTSlint}\n\n`;
+export const SQLFunctionDoc: FunctionDescription[] = `;
 
 const readDoc = async () => {
   try {
-    let content = `${heading}export const SQLFunctionDoc: FunctionDescription[] = [ \n`;
-
     const data = await fs.readFile(readfile, 'utf-8');
-    const sections = data.toString().split("##");
+    const sections = data.split("##");
 
+    let entries = [];
     sections.forEach((section) => {
+      if (!/^#.*function/.test(section)) return;
 
-      if (/^#.*functions/.test(section)) {
-
-        section.split('\n').forEach(line => {
+      entries = entries.concat(
+        section.split('\n').map(line => {
           if (line.startsWith('|`')) {
-            const rawSyntax = line.match(/\|`.*`\|/g);
-            if (rawSyntax == null) return;
-            const syntax = rawSyntax[0].slice(2, -2).replace(/\\/g,'');
+            const rawSyntax = line.match(/\|`(.*)`\|/);
+            if (rawSyntax == null) return null;
+            const syntax = rawSyntax[1]
+              .replace(/\\/g,'')
+              .replace(/&#124;/g,'|');
 
-            const rawDescription = line.match(/`\|.*\|/g);
-            if (rawDescription == null) return;
-            const description = rawDescription[0].slice(2,-1);
+            // Must have an uppercase letter
+            if (!/[A-Z]/.test(syntax)) return null;
 
-            const json = {
+            const rawDescription = line.match(/`\|(.*)\|/);
+            if (rawDescription == null) return null;
+            const description = rawDescription[1];
+
+            return {
               syntax: syntax,
               description: description
-            }
-
-            const prettyJson = JSON.stringify(json, null, 4)
-              .replace('{', '  {')
-              .replace('}', '  }')
-              .replace(/\"([^(\")"]+)\":/g,"$1:");
-            content += `${prettyJson},\n`;
+            };
           }
-        });
-
-      }
+        }).filter(Boolean)
+      );
     });
 
-    content = content.slice(0, -2);
-    content += '\n];\n';
+    // Make sure there are at least 10 functions for sanity
+    if (entries.length < 10) {
+      throw new Error(`Did not find any entries did the structure of '${readfile}' change?`);
+    }
+
+    const content = heading + JSON.stringify(entries, null, 2) + ';\n';
 
     try {
-      fs.writeFile(writefile, content, 'utf-8');
+      await fs.writeFile(writefile, content, 'utf-8');
     } catch (e) {
       console.log(`Error when writing to ${writefile}: `, e);
     }

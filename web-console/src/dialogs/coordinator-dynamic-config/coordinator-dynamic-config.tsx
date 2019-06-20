@@ -19,10 +19,9 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
-import { ExternalLink } from '../../components/external-link/external-link';
+import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
@@ -38,7 +37,7 @@ export interface CoordinatorDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+export class CoordinatorDynamicConfigDialog extends React.PureComponent<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: CoordinatorDynamicConfigDialogProps) {
@@ -124,7 +123,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.
-        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
+        For more information please refer to the <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration">documentation</ExternalLink>.
       </p>
       <AutoForm
         fields={[

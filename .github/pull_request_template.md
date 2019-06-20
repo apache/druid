@@ -22,7 +22,7 @@ example:
 In each section, please describe design decisions made, including:
  - Choice of algorithms
  - Behavioral aspects. What configuration values are acceptable? How are corner cases and error conditions handled, such
-   as when insufficient resources are available?
+   as when there are insufficient resources?
  - Class organization and design (how the logic is split between classes, inheritance, composition, design patterns)
  - Method organization and design (how the logic is split between methods, parameters and return types)
  - Naming (class, method, API, configuration, HTTP endpoint, names of emitted metrics)

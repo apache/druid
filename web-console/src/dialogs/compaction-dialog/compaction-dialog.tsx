@@ -17,9 +17,9 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
-import { AutoForm } from '../../components/auto-form/auto-form';
+import { AutoForm } from '../../components';
 
 import './compaction-dialog.scss';
 
@@ -36,7 +36,7 @@ export interface CompactionDialogState {
   allJSONValid: boolean;
 }
 
-export class CompactionDialog extends React.Component<CompactionDialogProps, CompactionDialogState> {
+export class CompactionDialog extends React.PureComponent<CompactionDialogProps, CompactionDialogState> {
   constructor(props: CompactionDialogProps) {
     super(props);
     this.state = {
@@ -50,7 +50,6 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
     let config: Record<string, any> = {
       dataSource: datasource,
       inputSegmentSizeBytes: 419430400,
-      keepSegmentGranularity: true,
       maxNumSegmentsToCompact: 150,
       skipOffsetFromLatest: 'P1D',
       targetCompactionSizeBytes: 419430400,
@@ -81,10 +80,6 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
           {
             name: 'inputSegmentSizeBytes',
             type: 'number'
-          },
-          {
-            name: 'keepSegmentGranularity',
-            type: 'boolean'
           },
           {
             name: 'maxNumSegmentsToCompact',

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';
@@ -34,7 +34,7 @@ interface JSONInputState {
   stringValue: string;
 }
 
-export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputState> {
   constructor(props: JSONInputProps) {
     super(props);
     this.state = {
@@ -87,6 +87,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
         showLineNumbers: false,
         tabSize: 2
       }}
+      style={{}}
     />;
   }
 }

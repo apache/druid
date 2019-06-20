@@ -20,11 +20,11 @@ import { Button, Intent } from '@blueprintjs/core';
 import { H5 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components/index';
+import { TableColumnSelector, ViewControlBar } from '../../components';
 import {
   addFilter,
   formatBytes,
@@ -44,7 +44,7 @@ const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Ver
 const tableColumnsNoSql: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'];
 
 export interface SegmentsViewProps extends React.Props<any> {
-  goToSql: (initSql: string) => void;
+  goToQuery: (initSql: string) => void;
   datasource: string | null;
   onlyUnavailable: boolean | null;
   noSqlMode: boolean;
@@ -80,7 +80,7 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
-export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
+export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;
@@ -363,7 +363,6 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         }
       ]}
       defaultPageSize={50}
-      className="-striped -highlight"
       SubComponent={rowInfo => {
         const { original } = rowInfo;
         const { payload } = rowInfo.original;
@@ -382,7 +381,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
   }
 
   render() {
-    const { goToSql, noSqlMode } = this.props;
+    const { goToQuery, noSqlMode } = this.props;
     const { tableColumnSelectionHandler } = this;
 
     return <div className="segments-view app-view">
@@ -398,12 +397,12 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             icon={IconNames.APPLICATION}
             text="Go to SQL"
             hidden={noSqlMode}
-            onClick={() => goToSql(this.segmentsSqlQueryManager.getLastQuery().query)}
+            onClick={() => goToQuery(this.segmentsSqlQueryManager.getLastQuery().query)}
           />
         }
-        <TableColumnSelection
+        <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </ViewControlBar>

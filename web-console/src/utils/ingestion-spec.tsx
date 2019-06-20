@@ -18,13 +18,17 @@
 
 import { Code } from '@blueprintjs/core';
 import { number } from 'prop-types';
-import * as React from 'react';
+import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
 
-import { TIMESTAMP_FORMAT_VALUES } from './druid-time';
+import { BASIC_FORMAT_VALUES, DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES } from './druid-time';
 import { deepGet, deepSet } from './object-change';
+
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
 
 export interface IngestionSpec {
   type?: IngestionType;
@@ -61,7 +65,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
 }
 
 export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
-  const ioConfig = deepGet(spec, 'ioConfig') || {};
+  const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
     case 'kafka':
@@ -70,7 +74,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
 
     case 'index':
     case 'index_parallel':
-      const firehose = deepGet(spec, 'ioConfig.firehose') || {};
+      const firehose = deepGet(spec, 'ioConfig.firehose') || EMPTY_OBJECT;
       switch (firehose.type) {
         case 'local':
         case 'http':
@@ -124,7 +128,7 @@ export function isParallel(spec: IngestionSpec): boolean {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || [];
+  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
@@ -147,6 +151,19 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
   return newSpec;
 }
 
+/**
+ * Make sure that the types are set in the root, ioConfig, and tuningConfig
+ * @param spec
+ */
+export function normalizeSpecType(spec: IngestionSpec) {
+  const specType = getSpecType(spec);
+  if (!specType) return spec;
+  if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
+  if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
+  if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
+  return spec;
+}
+
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'format',
@@ -155,7 +172,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
     suggestions: ['json', 'csv', 'tsv', 'regex'],
     info: <>
       <p>The parser used to parse the data.</p>
-      <p>For more information see <ExternalLink href="http://druid.io/docs/latest/ingestion/data-formats.html">the documentation</ExternalLink>.</p>
+      <p>For more information see <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/data-formats.html">the documentation</ExternalLink>.</p>
     </>
   },
   {
@@ -261,7 +278,18 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     name: 'format',
     type: 'string',
     defaultValue: 'auto',
-    suggestions: ['auto'].concat(TIMESTAMP_FORMAT_VALUES),
+    suggestions: [
+      'auto',
+      ...BASIC_FORMAT_VALUES,
+      {
+        group: 'Date and time formats',
+        suggestions: DATE_TIME_FORMAT_VALUES
+      },
+      {
+        group: 'Date only formats',
+        suggestions: DATE_FORMAT_VALUES
+      }
+    ],
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: <p>
       Please specify your timestamp format by using the suggestions menu or typing in a <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html">format string</ExternalLink>.
@@ -376,7 +404,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     placeholder: '$.thing',
     isDefined: (flattenField: FlattenField) => flattenField.type === 'path' || flattenField.type === 'jq',
     info: <>
-      Specify a flatten <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json">expression</ExternalLink>.
+      Specify a flatten <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json">expression</ExternalLink>.
     </>
   }
 ];
@@ -412,7 +440,7 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     type: 'string',
     placeholder: '"foo" + "bar"',
     info: <>
-      A valid Druid <ExternalLink href="http://druid.io/docs/latest/misc/math-expr.html">expression</ExternalLink>.
+      A valid Druid <ExternalLink href="https://druid.apache.org/docs/latest/misc/math-expr.html">expression</ExternalLink>.
     </>
   }
 ];
@@ -607,7 +635,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
     info: <>
       <p>
-        Druid connects to raw data through <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
+        Druid connects to raw data through <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
         You can change your selected firehose here.
       </p>
     </>
@@ -637,7 +665,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/files/',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
             <p>Specifies the directory to search recursively for files to be ingested.</p>
           </>
         },
@@ -647,7 +675,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           defaultValue: '*.*',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
             <p>A wildcard filter for files. See <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">here</ExternalLink> for format information.</p>
           </>
         }
@@ -688,7 +716,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Google blobs',
           type: 'json',
           info: <>
-            <p>JSON array of <ExternalLink href="http://druid.io/docs/latest/development/extensions-contrib/google.html">Google Blobs</ExternalLink>.</p>
+            <p>JSON array of <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-contrib/google.html">Google Blobs</ExternalLink>.</p>
           </>
         }
       ];
@@ -700,7 +728,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Bootstrap servers',
           type: 'string',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A list of Kafka brokers in the form: <Code>{`<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`}</Code></p>
           </>
         },
@@ -714,7 +742,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'json',
           defaultValue: {},
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A map of properties to be passed to the Kafka consumer.</p>
           </>
         }
@@ -841,8 +869,25 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
     case 'index:http':
     case 'index:static-s3':
     case 'index:static-google-blobstore':
-      const objectType = ingestionComboType === 'index:http' ? 'http' : 'S3';
       return [
+        {
+          name: 'firehose.fetchTimeout',
+          label: 'Fetch timeout',
+          type: 'number',
+          defaultValue: 60000,
+          info: <>
+            <p>Timeout for fetching the object.</p>
+          </>
+        },
+        {
+          name: 'firehose.maxFetchRetry',
+          label: 'Max fetch retry',
+          type: 'number',
+          defaultValue: 3,
+          info: <>
+            <p>Maximum retry for fetching the object.</p>
+          </>
+        },
         {
           name: 'firehose.maxCacheCapacityBytes',
           label: 'Max cache capacity bytes',
@@ -865,27 +910,9 @@ export function getIoConfigTuningFormFields(ingestionComboType: IngestionComboTy
           name: 'firehose.prefetchTriggerBytes',
           label: 'Prefetch trigger bytes',
           type: 'number',
+          placeholder: 'maxFetchCapacityBytes / 2',
           info: <>
-            <p>Threshold to trigger prefetching {objectType} objects.</p>
-            <p>Default: maxFetchCapacityBytes / 2</p>
-          </>
-        },
-        {
-          name: 'firehose.fetchTimeout',
-          label: 'Fetch timeout',
-          type: 'number',
-          defaultValue: 60000,
-          info: <>
-            <p>Timeout for fetching a http object.</p>
-          </>
-        },
-        {
-          name: 'firehose.maxFetchRetry',
-          label: 'Max fetch retry',
-          type: 'number',
-          defaultValue: 3,
-          info: <>
-            <p>Maximum retry for fetching a {objectType} object.</p>
+            <p>Threshold to trigger prefetching the objects.</p>
           </>
         }
       ];
@@ -1092,7 +1119,7 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
           return filenameFromPath(firehose.baseDir);
 
         case 'static-s3':
-          return filenameFromPath((firehose.uris || [])[0] || (firehose.prefixes || [])[0]);
+          return filenameFromPath((firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0]);
 
         case 'http':
           return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
@@ -1575,7 +1602,7 @@ export interface DimensionFiltersWithRest {
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : [];
+  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : EMPTY_ARRAY;
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension === 'string');
   const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
 
@@ -1587,7 +1614,7 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
 
 export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
-  let newFields = dimensionFilters || [];
+  let newFields = dimensionFilters || EMPTY_ARRAY;
   if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
   if (!newFields.length) return null;

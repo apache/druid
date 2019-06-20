@@ -27,12 +27,12 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
-import * as React from 'react';
-import ReactTable from 'react-table';
+import classNames from 'classnames';
+import memoize from 'memoize-one';
+import React from 'react';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, NullTableCell } from '../../components/index';
-import { AsyncActionDialog } from '../../dialogs/index';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -40,9 +40,8 @@ import {
   localStorageGet,
   LocalStorageKeys,
   localStorageSet, parseJson,
-  QueryState, sortWithPrefixSuffix
+  QueryState
 } from '../../utils';
-import { escapeColumnName } from '../../utils/druid-expression';
 import { possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
@@ -50,15 +49,13 @@ import {
   DimensionMode,
   DimensionSpec,
   DimensionsSpec,
-  DruidFilter,
+  DruidFilter, EMPTY_ARRAY, EMPTY_OBJECT,
   fillDataSourceName,
   fillParser,
   FlattenField,
   getBlankSpec,
   getDimensionMode,
   getDimensionSpecFormFields,
-  getDimensionSpecName,
-  getDimensionSpecType,
   getEmptyTimestampSpec,
   getFilterFormFields,
   getFlattenFieldFormFields,
@@ -66,27 +63,24 @@ import {
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
   getMetricSpecFormFields,
-  getMetricSpecName,
   getParseSpecFormFields,
   getPartitionRelatedTuningSpecFormFields,
   getRollup,
   getSpecType,
-  getTimestampSpecColumn,
   getTimestampSpecFormFields,
   getTransformFormFields,
   getTuningSpecFormFields,
   GranularitySpec,
   hasParallelAbility,
-  inflateDimensionSpec, IngestionComboType,
+  IngestionComboType,
   IngestionSpec,
-  IngestionType,
   IoConfig,
   isColumnTimestampSpec,
   isParallel,
   issueWithIoConfig,
   issueWithParser,
   joinFilter,
-  MetricSpec,
+  MetricSpec, normalizeSpecType,
   Parser,
   ParseSpec,
   parseSpecHasFlatten,
@@ -100,7 +94,6 @@ import {
   getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
-  SampleEntry,
   sampleForConnect,
   sampleForFilter,
   sampleForParser, sampleForSchema,
@@ -110,6 +103,12 @@ import {
   SampleResponse, SampleStrategy
 } from '../../utils/sampler';
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
+
+import { FilterTable } from './filter-table/filter-table';
+import { ParseDataTable } from './parse-data-table/parse-data-table';
+import { ParseTimeTable } from './parse-time-table/parse-time-table';
+import { SchemaTable } from './schema-table/schema-table';
+import { TransformTable } from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
@@ -121,11 +120,6 @@ function showRawLine(line: string): string {
     return line.substr(0, 1000) + '...';
   }
   return line;
-}
-
-function filterMatch(testString: string, searchString: string): boolean {
-  if (!searchString) return true;
-  return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
@@ -143,17 +137,17 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   return timestampSpecs[0] || getEmptyTimestampSpec();
 }
 
-type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
-const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
+type Step = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
+const STEPS: Step[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
 
-const SECTIONS: { name: string, stages: Stage[] }[] = [
-  { name: 'Connect and parse raw data', stages: ['connect', 'parser', 'timestamp'] },
-  { name: 'Transform and configure schema', stages: ['transform', 'filter', 'schema'] },
-  { name: 'Tune parameters', stages: ['partition', 'tuning', 'publish'] },
-  { name: 'Verify and submit', stages: ['json-spec'] }
+const SECTIONS: { name: string, steps: Step[] }[] = [
+  { name: 'Connect and parse raw data', steps: ['connect', 'parser', 'timestamp'] },
+  { name: 'Transform and configure schema', steps: ['transform', 'filter', 'schema'] },
+  { name: 'Tune parameters', steps: ['partition', 'tuning', 'publish'] },
+  { name: 'Verify and submit', steps: ['json-spec'] }
 ];
 
-const VIEW_TITLE: Record<Stage, string> = {
+const VIEW_TITLE: Record<Step, string> = {
   'connect': 'Connect',
   'parser': 'Parse data',
   'timestamp': 'Parse time',
@@ -174,7 +168,7 @@ export interface LoadDataViewProps extends React.Props<any> {
 }
 
 export interface LoadDataViewState {
-  stage: Stage;
+  step: Step;
   spec: IngestionSpec;
   cacheKey: string | undefined;
   // dialogs / modals
@@ -201,7 +195,10 @@ export interface LoadDataViewState {
   selectedFlattenField: FlattenField | null;
 
   // for timestamp
-  timestampQueryState: QueryState<HeaderAndRows>;
+  timestampQueryState: QueryState<{
+    headerAndRows: HeaderAndRows;
+    timestampSpec: TimestampSpec;
+  }>;
 
   // for transform
   transformQueryState: QueryState<HeaderAndRows>;
@@ -215,21 +212,25 @@ export interface LoadDataViewState {
   showGlobalFilter: boolean;
 
   // for schema
-  schemaQueryState: QueryState<HeaderAndRows>;
+  schemaQueryState: QueryState<{
+    headerAndRows: HeaderAndRows;
+    dimensionsSpec: DimensionsSpec;
+    metricsSpec: MetricSpec[];
+  }>;
   selectedDimensionSpecIndex: number;
   selectedDimensionSpec: DimensionSpec | null;
   selectedMetricSpecIndex: number;
   selectedMetricSpec: MetricSpec | null;
 }
 
-export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataViewState> {
+export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
   constructor(props: LoadDataViewProps) {
     super(props);
 
     let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
-      stage: 'connect',
+      step: 'connect',
       spec,
       cacheKey: undefined,
 
@@ -282,11 +283,16 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   componentDidMount(): void {
     this.getOverlordModules();
     if (this.props.initTaskId) {
-      this.updateStage('loading');
+      this.updateStep('loading');
       this.getTaskJson();
+
     } else if (this.props.initSupervisorId) {
-      this.updateStage('loading');
-      this.getSupervisorJson(); } else this.updateStage('connect');
+      this.updateStep('loading');
+      this.getSupervisorJson();
+
+    } else {
+      this.updateStep('connect');
+    }
   }
 
 
@@ -306,13 +312,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({ overlordModules });
   }
 
-  private updateStage = (newStage: Stage) => {
-    this.doQueryForStage(newStage);
-    this.setState({ stage: newStage });
+  private updateStep = (newStep: Step) => {
+    this.doQueryForStep(newStep);
+    this.setState({ step: newStep });
   }
 
-  doQueryForStage(stage: Stage): any {
-    switch (stage) {
+  doQueryForStep(step: Step): any {
+    switch (step) {
       case 'connect': return this.queryForConnect(true);
       case 'parser': return this.queryForParser(true);
       case 'timestamp': return this.queryForTimestamp(true);
@@ -332,51 +338,52 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   render() {
-    const { stage, spec } = this.state;
+    const { step, spec } = this.state;
     if (!Object.keys(spec).length && !this.props.initSupervisorId && !this.props.initTaskId) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
-        {this.renderInitStage()}
+        {this.renderInitStep()}
       </div>;
     }
 
-    return <div className={classNames('load-data-view', 'app-view', stage)}>
+    return <div className={classNames('load-data-view', 'app-view', step)}>
       {this.renderStepNav()}
 
-      {stage === 'connect' && this.renderConnectStage()}
-      {stage === 'parser' && this.renderParserStage()}
-      {stage === 'timestamp' && this.renderTimestampStage()}
+      {step === 'connect' && this.renderConnectStep()}
+      {step === 'parser' && this.renderParserStep()}
+      {step === 'timestamp' && this.renderTimestampStep()}
 
-      {stage === 'transform' && this.renderTransformStage()}
-      {stage === 'filter' && this.renderFilterStage()}
-      {stage === 'schema' && this.renderSchemaStage()}
+      {step === 'transform' && this.renderTransformStep()}
+      {step === 'filter' && this.renderFilterStep()}
+      {step === 'schema' && this.renderSchemaStep()}
 
-      {stage === 'partition' && this.renderPartitionStage()}
-      {stage === 'tuning' && this.renderTuningStage()}
-      {stage === 'publish' && this.renderPublishStage()}
+      {step === 'partition' && this.renderPartitionStep()}
+      {step === 'tuning' && this.renderTuningStep()}
+      {step === 'publish' && this.renderPublishStep()}
 
-      {stage === 'json-spec' && this.renderJsonSpecStage()}
-      {stage === 'loading' && this.renderLoading()}
+      {step === 'json-spec' && this.renderJsonSpecStep()}
+      {step === 'loading' && this.renderLoading()}
 
       {this.renderResetConfirm()}
     </div>;
   }
-  renderStepNav() {
-    const { stage } = this.state;
 
-    return <div className={classNames(Classes.TABS, 'stage-nav')}>
+  renderStepNav() {
+    const { step } = this.state;
+
+    return <div className={classNames(Classes.TABS, 'step-nav')}>
       {SECTIONS.map(section => (
-        <div className="stage-section" key={section.name}>
-          <div className="stage-nav-l1">
+        <div className="step-section" key={section.name}>
+          <div className="step-nav-l1">
             {section.name}
           </div>
-          <ButtonGroup className="stage-nav-l2">
-            {section.stages.map((s) => (
+          <ButtonGroup className="step-nav-l2">
+            {section.steps.map((s) => (
               <Button
                 className={s}
                 key={s}
-                active={s === stage}
-                onClick={() => this.updateStage(s)}
-                icon={s === 'json-spec' && IconNames.EYE_OPEN}
+                active={s === step}
+                onClick={() => this.updateStep(s)}
+                icon={s === 'json-spec' && IconNames.MANUALLY_ENTERED_DATA}
                 text={VIEW_TITLE[s]}
               />
             ))}
@@ -386,31 +393,32 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     </div>;
   }
 
-  renderNextBar(options: { nextStage?: Stage, disabled?: boolean; onNextStage?: () => void, onPrevStage?: () => void, prevLabel?: string }) {
-    const { disabled, onNextStage, onPrevStage, prevLabel } = options;
-    const { stage } = this.state;
-    const nextStage = options.nextStage || STAGES[STAGES.indexOf(stage) + 1] || STAGES[0];
+  renderNextBar(options: { nextStep?: Step, disabled?: boolean; onNextStep?: () => void, onPrevStep?: () => void, prevLabel?: string }) {
+    const { disabled, onNextStep, onPrevStep, prevLabel } = options;
+    const { step } = this.state;
+    const nextStep = options.nextStep || STEPS[STEPS.indexOf(step) + 1] || STEPS[0];
 
     return <div className="next-bar">
       {
-        onPrevStage &&
+        onPrevStep &&
         <Button
           className="prev"
-          icon={IconNames.ARROW_LEFT}
+          icon={IconNames.UNDO}
           text={prevLabel}
-          onClick={onPrevStage}
+          onClick={onPrevStep}
         />
       }
       <Button
-        text={`Next: ${VIEW_TITLE[nextStage]}`}
+        text={`Next: ${VIEW_TITLE[nextStep]}`}
+        rightIcon={IconNames.ARROW_RIGHT}
         intent={Intent.PRIMARY}
         disabled={disabled}
         onClick={() => {
           if (disabled) return;
-          if (onNextStage) onNextStage();
+          if (onNextStep) onNextStep();
 
           setTimeout(() => {
-            this.updateStage(nextStage);
+            this.updateStep(nextStep);
           }, 10);
         }}
       />
@@ -424,7 +432,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       spec: getBlankSpec(comboType)
     });
     setTimeout(() => {
-      this.updateStage('connect');
+      this.updateStep('connect');
     }, 10);
   }
 
@@ -450,7 +458,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     </Card>;
   }
 
-  renderInitStage() {
+  renderInitStep() {
     const { goToTask } = this.props;
     const { overlordModuleNeededMessage } = this.state;
 
@@ -512,7 +520,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   async queryForConnect(initRun = false) {
     const { spec, sampleStrategy } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
@@ -546,16 +554,16 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     });
   }
 
-  renderConnectStage() {
+  renderConnectStep() {
     const { spec, inputQueryState, sampleStrategy } = this.state;
     const specType = getSpecType(spec);
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const isBlank = !ioConfig.type;
 
     let mainFill: JSX.Element | string = '';
     if (inputQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please fill out the fields on the right sidebar to get started.
+        Please fill out the fields on the right sidebar to get started <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (inputQueryState.isLoading()) {
@@ -585,7 +593,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid ingests raw data and converts it into a custom, <ExternalLink href="http://druid.io/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
+            Druid ingests raw data and converts it into a custom, <ExternalLink href="https://druid.apache.org/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
           </p>
           <p>
             To get started, please specify where your raw data is stored and what data you want to ingest.
@@ -634,12 +642,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       {this.renderNextBar({
         disabled: !inputQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!inputQueryState.data) return;
           this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
         },
         prevLabel: 'Restart',
-        onPrevStage: () => this.setState({ showResetConfirm: true })
+        onPrevStep: () => this.setState({ showResetConfirm: true })
       })}
     </>;
   }
@@ -648,8 +656,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   async queryForParser(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -682,15 +691,15 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       parserQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse, '__time')
+        data: headerAndRowsFromSampleResponse(sampleResponse, '__time', parserColumns)
       })
     });
   }
 
-  renderParserStage() {
+  renderParserStep() {
     const { spec, columnFilter, specialColumnsOnly, parserQueryState, selectedFlattenField } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-    const flattenFields: FlattenField[] = deepGet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields') || [];
+    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
+    const flattenFields: FlattenField[] = deepGet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields') || EMPTY_ARRAY;
 
     const isBlank = !parseSpec.format;
     const canFlatten = parseSpec.format === 'json';
@@ -698,7 +707,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     let mainFill: JSX.Element | string = '';
     if (parserQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the parser details on the right
+        Please enter the parser details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (parserQueryState.isLoading()) {
@@ -727,62 +736,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             />
           }
         </div>
-        <ReactTable
-          data={parserQueryState.data.rows}
-          columns={filterMap(parserQueryState.data.header, (columnName, i) => {
-            if (!filterMatch(columnName, columnFilter)) return null;
-            const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
-            if (flattenFieldIndex === -1 && specialColumnsOnly) return null;
-            const flattenField = flattenFields[flattenFieldIndex];
-            return {
-              Header: (
-                <div
-                  className={classNames({ clickable: flattenField })}
-                  onClick={() => {
-                    this.setState({
-                      selectedFlattenFieldIndex: flattenFieldIndex,
-                      selectedFlattenField: flattenField
-                    });
-                  }}
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">
-                    {flattenField ? `${flattenField.type}: ${flattenField.expr}` : ''}&nbsp;
-                  </div>
-                </div>
-              ),
-              id: String(i),
-              accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => {
-                if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
-                }
-                return <NullTableCell value={row.value}/>;
-              },
-              headerClassName: classNames({
-                flattened: flattenField
-              })
-            };
-          })}
-          SubComponent={rowInfo => {
-            const { raw, error } = rowInfo.original;
-            const parsedJson: any = parseJson(raw);
-
-            if (!error && parsedJson && canFlatten) {
-              return <pre className="parse-detail">
-                {'Original row: ' + JSON.stringify(parsedJson, null, 2)}
-              </pre>;
-            } else {
-              return <div className="parse-detail">
-                {error && <div className="parse-error">{error}</div>}
-                <div>{'Original row: ' + rowInfo.original.raw}</div>
-              </div>;
-            }
-          }}
-          defaultPageSize={50}
-          showPagination={false}
-          sortable={false}
-          className="-striped -highlight"
+        <ParseDataTable
+          sampleData={parserQueryState.data}
+          columnFilter={columnFilter}
+          canFlatten={canFlatten}
+          flattenedColumnsOnly={specialColumnsOnly}
+          flattenFields={flattenFields}
+          onFlattenFieldSelect={this.onFlattenFieldSelect}
         />
       </div>;
     }
@@ -803,7 +763,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           {
             canFlatten &&
             <p>
-              If you have nested data, you can <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
+              If you have nested data, you can <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
               If the provided flattening capabilities are not sufficient, please pre-process your data before ingesting it into Druid.
             </p>
           }
@@ -843,7 +803,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       {this.renderNextBar({
         disabled: !parserQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!parserQueryState.data) return;
           const possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
           if (possibleTimestampSpec) {
@@ -855,9 +815,16 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     </>;
   }
 
+  private onFlattenFieldSelect = (field: FlattenField, index: number) => {
+    this.setState({
+      selectedFlattenFieldIndex: index,
+      selectedFlattenField: field
+    });
+  }
+
   renderFlattenControls() {
     const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
     if (!parseSpecHasFlatten(parseSpec)) return null;
 
     const close = () => {
@@ -918,7 +885,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         />
         <AnchorButton
           icon={IconNames.INFO_SIGN}
-          href="http://druid.io/docs/latest/ingestion/flatten-json.html"
+          href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html"
           target="_blank"
           minimal
         />
@@ -930,8 +897,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   async queryForTimestamp(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const timestampSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -964,16 +933,18 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       timestampQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse)
+        data: {
+          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns)),
+          timestampSpec
+        }
       })
     });
   }
 
-  renderTimestampStage() {
+  renderTimestampStep() {
     const { spec, columnFilter, specialColumnsOnly, timestampQueryState } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-    const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || {};
-    const timestampSpecColumn = getTimestampSpecColumn(timestampSpec);
+    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
+    const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
     const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
 
     const isBlank = !parseSpec.format;
@@ -981,7 +952,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     let mainFill: JSX.Element | string = '';
     if (timestampQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the timestamp column details on the right
+        Please enter the timestamp column details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else  if (timestampQueryState.isLoading()) {
@@ -993,7 +964,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </CenterMessage>;
 
     } else if (timestampQueryState.data) {
-      const timestampData = timestampQueryState.data;
       mainFill = <div className="table-with-control">
         <div className="table-control">
           <ClearableInput
@@ -1007,62 +977,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             onChange={() => this.setState({ specialColumnsOnly: !specialColumnsOnly })}
           />
         </div>
-        <ReactTable
-          data={timestampData.rows}
-          columns={filterMap(timestampData.header.length ? timestampData.header : ['__error__'], (columnName, i) => {
-            const timestamp = columnName === '__time';
-            if (!timestamp && !filterMatch(columnName, columnFilter)) return null;
-            const selected = timestampSpec.column === columnName;
-            const possibleFormat = timestamp ? null : possibleDruidFormatForValues(filterMap(timestampData.rows, d => d.parsed ? d.parsed[columnName] : null));
-            if (specialColumnsOnly && !timestamp && !possibleFormat) return null;
-
-            const columnClassName = classNames({
-              timestamp,
-              selected
-            });
-            return {
-              Header: (
-                <div
-                  className={classNames({ clickable: !timestamp })}
-                  onClick={timestamp ? undefined : () => {
-                    const newTimestampSpec = {
-                      column: columnName,
-                      format: possibleFormat || '!!! Could not auto detect a format !!!'
-                    };
-                    this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', newTimestampSpec));
-                  }}
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">
-                    {
-                      timestamp ?
-                        (timestampSpecFromColumn ? `from: '${timestampSpecColumn}'` : `mv: ${timestampSpec.missingValue}`) :
-                        (possibleFormat || '')
-                    }&nbsp;
-                  </div>
-                </div>
-              ),
-              headerClassName: columnClassName,
-              className: columnClassName,
-              id: String(i),
-              accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => {
-                if (columnName === '__error__') {
-                  return <NullTableCell value={row.original.error}/>;
-                }
-                if (row.original.unparseable) {
-                  return <NullTableCell unparseable/>;
-                }
-                return <NullTableCell value={row.value} timestamp={timestamp}/>;
-              },
-              minWidth: timestamp ? 200 : 100,
-              resizable: !timestamp
-            };
-          })}
-          defaultPageSize={50}
-          showPagination={false}
-          sortable={false}
-          className="-striped -highlight"
+        <ParseTimeTable
+          sampleBundle={timestampQueryState.data}
+          columnFilter={columnFilter}
+          possibleTimestampColumnsOnly={specialColumnsOnly}
+          onTimestampColumnSelect={this.onTimestampColumnSelect}
         />
       </div>;
     }
@@ -1128,12 +1047,18 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     </>;
   }
 
+  private onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
+    const { spec } = this.state;
+    this.updateSpec(deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', newTimestampSpec));
+  }
+
   // ==================================================================
 
   async queryForTransform(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -1166,14 +1091,14 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       transformQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse)
+        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns))
       })
     });
   }
 
-  renderTransformStage() {
+  renderTransformStep() {
     const { spec, columnFilter, specialColumnsOnly, transformQueryState, selectedTransformIndex } = this.state;
-    const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
+    const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
     let mainFill: JSX.Element | string = '';
     if (transformQueryState.isInit()) {
@@ -1204,58 +1129,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             disabled={!transforms.length}
           />
         </div>
-        <ReactTable
-          data={transformQueryState.data.rows}
-          columns={filterMap(transformQueryState.data.header, (columnName, i) => {
-            if (!filterMatch(columnName, columnFilter)) return null;
-            const timestamp = columnName === '__time';
-            const transformIndex = transforms.findIndex(f => f.name === columnName);
-            if (transformIndex === -1 && specialColumnsOnly) return null;
-            const transform = transforms[transformIndex];
-
-            const columnClassName = classNames({
-              transformed: transform,
-              selected: transform && transformIndex === selectedTransformIndex
-            });
-            return {
-              Header: (
-                <div
-                  className={classNames('clickable')}
-                  onClick={() => {
-                    if (transform) {
-                      this.setState({
-                        selectedTransformIndex: transformIndex,
-                        selectedTransform: transform
-                      });
-                    } else {
-                      this.setState({
-                        selectedTransformIndex: -1,
-                        selectedTransform: {
-                          type: 'expression',
-                          name: columnName,
-                          expression: escapeColumnName(columnName)
-                        }
-                      });
-                    }
-                  }}
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">
-                    {transform ? `= ${transform.expression}` : ''}&nbsp;
-                  </div>
-                </div>
-              ),
-              headerClassName: columnClassName,
-              className: columnClassName,
-              id: String(i),
-              accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
-            };
-          })}
-          defaultPageSize={50}
-          showPagination={false}
-          sortable={false}
-          className="-striped -highlight"
+        <TransformTable
+          sampleData={transformQueryState.data}
+          columnFilter={columnFilter}
+          transformedColumnsOnly={specialColumnsOnly}
+          transforms={transforms}
+          selectedTransformIndex={selectedTransformIndex}
+          onTransformSelect={this.onTransformSelect}
         />
       </div>;
     }
@@ -1268,7 +1148,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Optional
           </p>
           <p>
-            Druid can perform simple <ExternalLink href="http://druid.io/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
+            Druid can perform simple <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
           </p>
           <p>
             Click "Preview" to see the result of any specified transforms.
@@ -1298,12 +1178,19 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       {this.renderNextBar({
         disabled: !transformQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!transformQueryState.data) return;
           this.updateSpec(updateSchemaWithSample(spec, transformQueryState.data, 'specific', true));
         }
       })}
     </>;
+  }
+
+  private onTransformSelect = (transform: Transform, index: number) => {
+    this.setState({
+      selectedTransformIndex: index,
+      selectedTransform: transform
+    });
   }
 
   renderTransformControls() {
@@ -1374,8 +1261,9 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   async queryForFilter(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -1408,15 +1296,20 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       filterQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, true)
+        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns), true)
       })
     });
   }
 
-  renderFilterStage() {
-    const { spec, columnFilter, filterQueryState, selectedFilter, selectedFilterIndex, showGlobalFilter } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+  private getMemoizedDimensionFiltersFromSpec = memoize((spec) => {
     const { dimensionFilters } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
+    return dimensionFilters;
+  });
+
+  renderFilterStep() {
+    const { spec, columnFilter, filterQueryState, selectedFilter, selectedFilterIndex, showGlobalFilter } = this.state;
+    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
+    const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
     const isBlank = !parseSpec.format;
 
@@ -1443,57 +1336,13 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             placeholder="Search columns"
           />
         </div>
-        <ReactTable
-          data={filterQueryState.data.rows}
-          columns={filterMap(filterQueryState.data.header, (columnName, i) => {
-            if (!filterMatch(columnName, columnFilter)) return null;
-            const timestamp = columnName === '__time';
-            const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
-            const filter = dimensionFilters[filterIndex];
-
-            const columnClassName = classNames({
-              filtered: filter,
-              selected: filter && filterIndex === selectedFilterIndex
-            });
-            return {
-              Header: (
-                <div
-                  className={classNames('clickable')}
-                  onClick={() => {
-                    if (timestamp) {
-                      this.setState({
-                        showGlobalFilter: true
-                      });
-                    } else if (filter) {
-                      this.setState({
-                        selectedFilterIndex: filterIndex,
-                        selectedFilter: filter
-                      });
-                    } else {
-                      this.setState({
-                        selectedFilterIndex: -1,
-                        selectedFilter: { type: 'selector', dimension: columnName, value: '' }
-                      });
-                    }
-                  }}
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">
-                    {filter ? `(filtered)` : ''}&nbsp;
-                  </div>
-                </div>
-              ),
-              headerClassName: columnClassName,
-              className: columnClassName,
-              id: String(i),
-              accessor: row => row.parsed ? row.parsed[columnName] : null,
-              Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
-            };
-          })}
-          defaultPageSize={50}
-          showPagination={false}
-          sortable={false}
-          className="-striped -highlight"
+        <FilterTable
+          sampleData={filterQueryState.data}
+          columnFilter={columnFilter}
+          dimensionFilters={dimensionFilters}
+          selectedFilterIndex={selectedFilterIndex}
+          onShowGlobalFilter={this.onShowGlobalFilter}
+          onFilterSelect={this.onFilterSelect}
         />
       </div>;
     }
@@ -1506,7 +1355,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             Optional
           </p>
           <p>
-            Druid can <ExternalLink href="http://druid.io/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
+            Druid can <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
           </p>
           <p>
             Click "Preview" to see the impact of any specified filters.
@@ -1525,6 +1374,17 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </div>
       {this.renderNextBar({})}
     </>;
+  }
+
+  private onShowGlobalFilter = () => {
+    this.setState({ showGlobalFilter: true });
+  }
+
+  private onFilterSelect = (filter: DruidFilter, index: number) => {
+    this.setState({
+      selectedFilterIndex: index,
+      selectedFilter: filter
+    });
   }
 
   renderColumnFilterControls() {
@@ -1657,8 +1517,11 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   async queryForSchema(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || EMPTY_ARRAY;
+    const dimensionsSpec: DimensionsSpec = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || EMPTY_OBJECT;
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -1691,15 +1554,17 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       schemaQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse)
+        data: {
+          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns)),
+          dimensionsSpec,
+          metricsSpec
+        }
       })
     });
   }
 
-  renderSchemaStage() {
+  renderSchemaStep() {
     const { spec, columnFilter, schemaQueryState, selectedDimensionSpec, selectedDimensionSpecIndex, selectedMetricSpec, selectedMetricSpecIndex } = this.state;
-    const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || [];
-    const dimensionsSpec: DimensionsSpec = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || {};
     const rollup: boolean = Boolean(deepGet(spec, 'dataSchema.granularitySpec.rollup'));
     const somethingSelected = Boolean(selectedDimensionSpec || selectedMetricSpec);
     const dimensionMode = getDimensionMode(spec);
@@ -1719,7 +1584,6 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
       </CenterMessage>;
 
     } else if (schemaQueryState.data) {
-      const dimensionMetricSortedHeader = sortWithPrefixSuffix(schemaQueryState.data.header, ['__time'], metricsSpec.map(getMetricSpecName));
       mainFill = <div className="table-with-control">
         <div className="table-control">
           <ClearableInput
@@ -1728,94 +1592,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             placeholder="Search columns"
           />
         </div>
-        <ReactTable
-          data={schemaQueryState.data.rows}
-          columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
-            if (!filterMatch(columnName, columnFilter)) return null;
-
-            const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
-            const metricSpec = metricsSpec[metricSpecIndex];
-
-            if (metricSpec) {
-              const columnClassName = classNames('metric', {
-                selected: metricSpec && metricSpecIndex === selectedMetricSpecIndex
-              });
-              return {
-                Header: (
-                  <div
-                    className="clickable"
-                    onClick={() => {
-                      this.setState({
-                        selectedMetricSpecIndex: metricSpecIndex,
-                        selectedMetricSpec: metricSpec,
-                        selectedDimensionSpecIndex: -1,
-                        selectedDimensionSpec: null
-                      });
-                    }}
-                  >
-                    <div className="column-name">{columnName}</div>
-                    <div className="column-detail">
-                      {metricSpec.type}&nbsp;
-                    </div>
-                  </div>
-                ),
-                headerClassName: columnClassName,
-                className: columnClassName,
-                id: String(i),
-                accessor: row => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value}/>
-              };
-            } else {
-              const timestamp = columnName === '__time';
-              const dimensionSpecIndex = dimensionsSpec.dimensions ? dimensionsSpec.dimensions.findIndex(d => getDimensionSpecName(d) === columnName) : -1;
-              const dimensionSpec = dimensionsSpec.dimensions ? dimensionsSpec.dimensions[dimensionSpecIndex] : null;
-              const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : null;
-
-              const columnClassName = classNames(timestamp ? 'timestamp' : 'dimension', dimensionSpecType || 'string', {
-                selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex
-              });
-              return {
-                Header: (
-                  <div
-                    className="clickable"
-                    onClick={() => {
-                      if (timestamp) {
-                        this.setState({
-                          selectedDimensionSpecIndex: -1,
-                          selectedDimensionSpec: null,
-                          selectedMetricSpecIndex: -1,
-                          selectedMetricSpec: null
-                        });
-                        return;
-                      }
-
-                      if (!dimensionSpec) return;
-                      this.setState({
-                        selectedDimensionSpecIndex: dimensionSpecIndex,
-                        selectedDimensionSpec: inflateDimensionSpec(dimensionSpec),
-                        selectedMetricSpecIndex: -1,
-                        selectedMetricSpec: null
-                      });
-                    }}
-                  >
-                    <div className="column-name">{columnName}</div>
-                    <div className="column-detail">
-                      {timestamp ? 'long (time column)' : (dimensionSpecType || 'string (auto)')}&nbsp;
-                    </div>
-                  </div>
-                ),
-                headerClassName: columnClassName,
-                className: columnClassName,
-                id: String(i),
-                accessor: (row: SampleEntry) => row.parsed ? row.parsed[columnName] : null,
-                Cell: row => <NullTableCell value={row.value} timestamp={timestamp}/>
-              };
-            }
-          })}
-          defaultPageSize={50}
-          showPagination={false}
-          sortable={false}
-          className="-striped -highlight"
+        <SchemaTable
+          sampleBundle={schemaQueryState.data}
+          columnFilter={columnFilter}
+          selectedDimensionSpecIndex={selectedDimensionSpecIndex}
+          selectedMetricSpecIndex={selectedMetricSpecIndex}
+          onDimensionOrMetricSelect={this.onDimensionOrMetricSelect}
         />
       </div>;
     }
@@ -1830,7 +1612,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
             If you want to change the type, click on the column header.
           </p>
           <p>
-            Select whether or not you want to <ExternalLink href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
+            Select whether or not you want to <ExternalLink href="https://druid.apache.org/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
           </p>
         </Callout>
         {
@@ -1846,7 +1628,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                 content={
                   <div className="label-info-text">
                     <p>
-                      Select whether or not you want to set an explicit list of <ExternalLink href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="http://druid.io/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
+                      Select whether or not you want to set an explicit list of <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
                       Explicitly setting dimensions and metrics can lead to better compression and performance.
                       If you disable this option, Druid will try to auto-detect fields in your data and treat them as individual columns.
                     </p>
@@ -1888,7 +1670,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
                       The primary timestamp will be truncated to the specified query granularity, and rows containing the same string field values will be aggregated together.
                     </p>
                     <p>
-                      If you enable rollup, you must specify which columns are <a href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="http://druid.io/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
+                      If you enable rollup, you must specify which columns are <a href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
                     </p>
                   </div>
                 }
@@ -1924,6 +1706,20 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
         disabled: !schemaQueryState.data
       })}
     </>;
+  }
+
+  private onDimensionOrMetricSelect = (
+    selectedDimensionSpec: DimensionSpec | null,
+    selectedDimensionSpecIndex: number,
+    selectedMetricSpec: MetricSpec | null,
+    selectedMetricSpecIndex: number
+  ) => {
+    this.setState({
+      selectedDimensionSpec,
+      selectedDimensionSpecIndex,
+      selectedMetricSpec,
+      selectedMetricSpecIndex
+    });
   }
 
   renderChangeRollupAction() {
@@ -2025,7 +1821,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
               icon={IconNames.TRASH}
               intent={Intent.DANGER}
               onClick={() => {
-                const curDimensions = deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || [];
+                const curDimensions = deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
                 if (curDimensions.length <= 1) return; // Guard against removing the last dimension, ToDo: some better feedback here would be good
 
                 this.updateSpec(deepDelete(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`));
@@ -2126,10 +1922,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
 
-  renderPartitionStage() {
+  renderPartitionStep() {
     const { spec } = this.state;
-    const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || {};
-    const granularitySpec: GranularitySpec = deepGet(spec, 'dataSchema.granularitySpec') || {};
+    const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || EMPTY_OBJECT;
+    const granularitySpec: GranularitySpec = deepGet(spec, 'dataSchema.granularitySpec') || EMPTY_OBJECT;
 
     return <>
       <div className="main">
@@ -2185,10 +1981,10 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
 
-  renderTuningStage() {
+  renderTuningStep() {
     const { spec } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-    const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || {};
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || EMPTY_OBJECT;
 
     const ingestionComboType = getIngestionComboType(spec);
     const inputTuningFields = ingestionComboType ? getIoConfigTuningFormFields(ingestionComboType) : null;
@@ -2270,7 +2066,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
 
-  renderPublishStage() {
+  renderPublishStep() {
     const { spec } = this.state;
 
     return <>
@@ -2354,10 +2150,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
 
   // ==================================================================
   private getSupervisorJson = async (): Promise<void> =>  {
+    const { initSupervisorId } = this.props;
+
     try {
-      const resp = await axios.get(`/druid/indexer/v1/supervisor/${this.props.initSupervisorId}`);
-      this.updateSpec(resp.data);
-      this.updateStage('json-spec');
+      const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
+      this.updateSpec(normalizeSpecType(resp.data));
+      this.updateStep('json-spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get supervisor spec: ${getDruidErrorMessage(e)}`,
@@ -2367,10 +2165,12 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
   }
 
   private getTaskJson = async (): Promise<void> =>  {
+    const { initTaskId } = this.props;
+
     try {
-      const resp = await axios.get(`/druid/indexer/v1/task/${this.props.initTaskId}`);
-      this.updateSpec(resp.data.payload.spec);
-      this.updateStage('json-spec');
+      const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
+      this.updateSpec(normalizeSpecType(resp.data.payload.spec));
+      this.updateStep('json-spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get task spec: ${getDruidErrorMessage(e)}`,
@@ -2383,7 +2183,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
     return <Loader loading/>;
   }
 
-  renderJsonSpecStage() {
+  renderJsonSpecStep() {
     const { goToTask } = this.props;
     const { spec } = this.state;
 
@@ -2393,7 +2193,7 @@ export class LoadDataView extends React.Component<LoadDataViewProps, LoadDataVie
           value={spec}
           onChange={(s) => {
             if (!s) return;
-            this.updateSpec(s);
+            this.updateSpec(normalizeSpecType(s));
           }}
           height="100%"
         />

@@ -30,13 +30,11 @@ import {
   Position
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config/coordinator-dynamic-config';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config/overlord-dynamic-config';
-import { getWikipediaSpec } from '../../utils/example-ingestion-spec';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
@@ -60,7 +58,7 @@ export interface HeaderBarState {
   overlordDynamicConfigDialogOpen: boolean;
 }
 
-export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
+export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarState> {
   constructor(props: HeaderBarProps) {
     super(props);
     this.state = {
@@ -163,7 +161,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         <AnchorButton minimal active={active === 'datasources'} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" />
         <AnchorButton minimal active={active === 'segments'} icon={IconNames.STACKED_CHART} text="Segments" href="#segments" />
         <AnchorButton minimal active={active === 'tasks'} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
-        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Data servers" href="#servers" />
+        <AnchorButton minimal active={active === 'servers'} icon={IconNames.DATABASE} text="Servers" href="#servers" />
 
         <NavbarDivider/>
         <AnchorButton minimal active={active === 'query'} icon={IconNames.APPLICATION} text="Query" href="#query" />

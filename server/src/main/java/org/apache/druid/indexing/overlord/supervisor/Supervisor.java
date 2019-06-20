@@ -39,9 +39,17 @@ public interface Supervisor
 
   SupervisorReport getStatus();
 
+  SupervisorStateManager.State getState();
+
   default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();
+  }
+
+  @Nullable
+  default Boolean isHealthy()
+  {
+    return null; // default implementation for interface compatability; returning null since true or false is misleading
   }
 
   void reset(DataSourceMetadata dataSourceMetadata);

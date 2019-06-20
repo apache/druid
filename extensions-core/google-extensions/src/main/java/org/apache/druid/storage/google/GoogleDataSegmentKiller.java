@@ -52,7 +52,7 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
     Map<String, Object> loadSpec = segment.getLoadSpec();
     final String bucket = MapUtils.getString(loadSpec, "bucket");
     final String indexPath = MapUtils.getString(loadSpec, "path");
-    final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf('/')) + "/descriptor.json";
+    final String descriptorPath = DataSegmentKiller.descriptorPath(indexPath);
 
     try {
       deleteIfPresent(bucket, indexPath);

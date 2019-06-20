@@ -16,24 +16,23 @@
  * limitations under the License.
  */
 
-
-import {Intent} from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {TaskTableActionDialog} from './task-table-action-dialog';
+import { TaskTableActionDialog } from './task-table-action-dialog';
 
 const basicAction = {title: 'test', onAction: () => null};
-describe('describe task table action dialog', () => {
-  it('task table action dialog snapshot', () => {
+describe('task table action dialog', () => {
+  it('matches snapshot', () => {
     const taskTableActionDialog =
       <TaskTableActionDialog
+        status={'RUNNING'}
         taskId={'test'}
         actions={[basicAction]}
         onClose={() => null}
-        isOpen={true}
+        isOpen
       />;
-    const { container, getByText } = render(taskTableActionDialog, { container: document.body });
+    const { container } = render(taskTableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });
