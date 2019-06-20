@@ -41,8 +41,8 @@ public class SketchModule implements DruidModule
 
   public static final String THETA_SKETCH_ESTIMATE_POST_AGG = "thetaSketchEstimate";
   public static final String THETA_SKETCH_SET_OP_POST_AGG = "thetaSketchSetOp";
-  
   public static final String THETA_SKETCH_CONSTANT_POST_AGG = "thetaSketchConstant";
+  public static final String THETA_SKETCH_TO_STRING_POST_AGG = "thetaSketchToString";
 
   @Override
   public void configure(Binder binder)
@@ -60,7 +60,8 @@ public class SketchModule implements DruidModule
                 new NamedType(SketchMergeAggregatorFactory.class, THETA_SKETCH),
                 new NamedType(SketchEstimatePostAggregator.class, THETA_SKETCH_ESTIMATE_POST_AGG),
                 new NamedType(SketchSetPostAggregator.class, THETA_SKETCH_SET_OP_POST_AGG),
-                new NamedType(SketchConstantPostAggregator.class, THETA_SKETCH_CONSTANT_POST_AGG)
+                new NamedType(SketchConstantPostAggregator.class, THETA_SKETCH_CONSTANT_POST_AGG),
+                new NamedType(SketchToStringPostAggregator.class, THETA_SKETCH_TO_STRING_POST_AGG)
             )
             .addSerializer(SketchHolder.class, new SketchHolderJsonSerializer())
     );
