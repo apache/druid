@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
@@ -119,7 +118,7 @@ public class ExpressionPostAggregator implements PostAggregator
         macroTable,
         finalizers,
         parsed,
-        Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(parsed.get()))));
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getFreeVariables()));
   }
 
   private ExpressionPostAggregator(

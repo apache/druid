@@ -19,7 +19,7 @@
 import axios from 'axios';
 
 import { getDruidErrorMessage } from './druid-query';
-import { filterMap, sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
   getEmptyTimestampSpec, getSpecType,
@@ -88,10 +88,13 @@ export function getSamplerType(spec: IngestionSpec): SamplerType {
   return 'index';
 }
 
-export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string): string[] {
-  let columns = sortWithPrefixSuffix(dedupe(
-    [].concat(...(filterMap(sampleResponse.data, s => s.parsed ? Object.keys(s.parsed) : null) as any))
-  ).sort(), ['__time'], []);
+export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, columnOrder?: string[]): string[] {
+  let columns = sortWithPrefixSuffix(
+    dedupe([].concat(...(filterMap(sampleResponse.data, s => s.parsed ? Object.keys(s.parsed) : null) as any))).sort(),
+    columnOrder || ['__time'],
+    [],
+    alphanumericCompare
+  );
 
   if (ignoreColumn) {
     columns = columns.filter(c => c !== ignoreColumn);
@@ -100,9 +103,9 @@ export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreC
   return columns;
 }
 
-export function headerAndRowsFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, parsedOnly = false): HeaderAndRows {
+export function headerAndRowsFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, columnOrder?: string[], parsedOnly = false): HeaderAndRows {
   return {
-    header: headerFromSampleResponse(sampleResponse, ignoreColumn),
+    header: headerFromSampleResponse(sampleResponse, ignoreColumn, columnOrder),
     rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data
   };
 }
@@ -292,6 +295,7 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
   const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+  const parserColumns: string[] = deepGet(parseSpec, 'columns') || [];
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
 
   // Extra step to simulate auto detecting dimension with transforms
@@ -320,7 +324,7 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'transform-pre');
 
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
+    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time', ['__time'].concat(parserColumns)).concat(transforms.map(t => t.name)));
   }
 
   const sampleSpec: SampleSpec = {
@@ -354,6 +358,7 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
   const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+  const parserColumns: string[] = deepGet(parser, 'columns') || [];
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'dataSchema.transformSpec.filter');
 
@@ -383,7 +388,7 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'filter-pre');
 
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
+    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time', ['__time'].concat(parserColumns)).concat(transforms.map(t => t.name)));
   }
 
   const sampleSpec: SampleSpec = {

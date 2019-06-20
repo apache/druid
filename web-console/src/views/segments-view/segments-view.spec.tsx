@@ -27,7 +27,7 @@ describe('segments-view', () => {
       <SegmentsView
         datasource={'test'}
         onlyUnavailable={false}
-        goToSql={(initSql: string) => {}}
+        goToQuery={(initSql: string) => {}}
         noSqlMode={false}
       />);
     expect(segmentsView).toMatchSnapshot();

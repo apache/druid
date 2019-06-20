@@ -20,14 +20,23 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Mechanism by which Druid expressions can define new functions for the Druid expression language. When
+ * {@link ExprListenerImpl} is creating a {@link FunctionExpr}, {@link ExprMacroTable} will first be checked to find
+ * the function by name, falling back to {@link Parser#getFunction(String)} to map to a built-in {@link Function} if
+ * none is defined in the macro table.
+ */
 public class ExprMacroTable
 {
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
@@ -79,5 +88,73 @@ public class ExprMacroTable
     String name();
 
     Expr apply(List<Expr> args);
+  }
+
+  /**
+   * Base class for single argument {@link ExprMacro} function {@link Expr}
+   */
+  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
+  {
+    protected final Expr arg;
+
+    public BaseScalarUnivariateMacroFunctionExpr(Expr arg)
+    {
+      this.arg = arg;
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      arg.visit(visitor);
+      visitor.visit(this);
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      final String identifier = arg.getIdentifierIfIdentifier();
+      if (identifier == null) {
+        return arg.analyzeInputs();
+      }
+      return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
+    }
+  }
+
+  /**
+   * Base class for multi-argument {@link ExprMacro} function {@link Expr}
+   */
+  public abstract static class BaseScalarMacroFunctionExpr implements Expr
+  {
+    protected final List<Expr> args;
+
+    public BaseScalarMacroFunctionExpr(final List<Expr> args)
+    {
+      this.args = args;
+    }
+
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      for (Expr arg : args) {
+        arg.visit(visitor);
+      }
+      visitor.visit(this);
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      Set<String> scalars = new HashSet<>();
+      BindingDetails accumulator = new BindingDetails();
+      for (Expr arg : args) {
+        final String identifier = arg.getIdentifierIfIdentifier();
+        if (identifier != null) {
+          scalars.add(identifier);
+        }
+        accumulator = accumulator.merge(arg.analyzeInputs());
+      }
+      return accumulator.mergeWithScalars(scalars);
+    }
   }
 }

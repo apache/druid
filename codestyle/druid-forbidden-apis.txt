@@ -43,3 +43,6 @@ com.ibm.icu.text.SimpleDateFormat#<init>(java.lang.String)
 @defaultMessage For performance reasons, use the utf8Base64 / encodeBase64 / encodeBase64String / decodeBase64 / decodeBase64String methods in StringUtils
 org.apache.commons.codec.binary.Base64
 com.google.common.io.BaseEncoding.base64
+
+@defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
+javax.annotations.concurrent.GuardedBy

@@ -80,7 +80,7 @@
         <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
-        <fastutil.version>8.1.0</fastutil.version>
+        <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.4.10.v20180503</jetty.version>
@@ -364,7 +364,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.16</version>
+                <version>1.18</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -714,7 +714,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.8.0</version>
+                <version>0.8.6</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -1010,6 +1010,22 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>3.1.12</version>
+                <dependencies>
+                    <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
+                    <dependency>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs</artifactId>
+                        <version>3.1.12</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <excludeFilterFile>codestyle/spotbugs-exclude.xml</excludeFilterFile>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>3.8</version>
@@ -1228,6 +1244,7 @@
                             -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
@@ -1490,6 +1507,7 @@
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                                -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                                 <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>

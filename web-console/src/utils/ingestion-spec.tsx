@@ -172,7 +172,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
     suggestions: ['json', 'csv', 'tsv', 'regex'],
     info: <>
       <p>The parser used to parse the data.</p>
-      <p>For more information see <ExternalLink href="http://druid.io/docs/latest/ingestion/data-formats.html">the documentation</ExternalLink>.</p>
+      <p>For more information see <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/data-formats.html">the documentation</ExternalLink>.</p>
     </>
   },
   {
@@ -404,7 +404,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     placeholder: '$.thing',
     isDefined: (flattenField: FlattenField) => flattenField.type === 'path' || flattenField.type === 'jq',
     info: <>
-      Specify a flatten <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json">expression</ExternalLink>.
+      Specify a flatten <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json">expression</ExternalLink>.
     </>
   }
 ];
@@ -440,7 +440,7 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     type: 'string',
     placeholder: '"foo" + "bar"',
     info: <>
-      A valid Druid <ExternalLink href="http://druid.io/docs/latest/misc/math-expr.html">expression</ExternalLink>.
+      A valid Druid <ExternalLink href="https://druid.apache.org/docs/latest/misc/math-expr.html">expression</ExternalLink>.
     </>
   }
 ];
@@ -635,7 +635,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
     info: <>
       <p>
-        Druid connects to raw data through <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
+        Druid connects to raw data through <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">firehoses</ExternalLink>.
         You can change your selected firehose here.
       </p>
     </>
@@ -665,7 +665,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/files/',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">firehose.baseDir</ExternalLink>
             <p>Specifies the directory to search recursively for files to be ingested.</p>
           </>
         },
@@ -675,7 +675,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           defaultValue: '*.*',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">firehose.filter</ExternalLink>
             <p>A wildcard filter for files. See <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">here</ExternalLink> for format information.</p>
           </>
         }
@@ -716,7 +716,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Google blobs',
           type: 'json',
           info: <>
-            <p>JSON array of <ExternalLink href="http://druid.io/docs/latest/development/extensions-contrib/google.html">Google Blobs</ExternalLink>.</p>
+            <p>JSON array of <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-contrib/google.html">Google Blobs</ExternalLink>.</p>
           </>
         }
       ];
@@ -728,7 +728,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Bootstrap servers',
           type: 'string',
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A list of Kafka brokers in the form: <Code>{`<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`}</Code></p>
           </>
         },
@@ -742,7 +742,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'json',
           defaultValue: {},
           info: <>
-            <ExternalLink href="http://druid.io/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
+            <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">consumerProperties</ExternalLink>
             <p>A map of properties to be passed to the Kafka consumer.</p>
           </>
         }
