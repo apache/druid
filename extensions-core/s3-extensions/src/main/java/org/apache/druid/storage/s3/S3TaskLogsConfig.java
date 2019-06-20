@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 
 import javax.validation.constraints.NotNull;
 
@@ -38,7 +39,8 @@ public class S3TaskLogsConfig
   @JsonProperty
   private boolean disableAcl = false;
 
-  public void setDisableAcl(boolean disableAcl)
+  @VisibleForTesting
+  void setDisableAcl(boolean disableAcl)
   {
     this.disableAcl = disableAcl;
   }
@@ -48,7 +50,8 @@ public class S3TaskLogsConfig
     return s3Bucket;
   }
 
-  public void setS3Bucket(String s3Bucket)
+  @VisibleForTesting
+  void setS3Bucket(String s3Bucket)
   {
     this.s3Bucket = s3Bucket;
   }

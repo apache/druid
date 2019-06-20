@@ -257,12 +257,12 @@ public class S3Utils
    */
   public static void uploadFileIfPossible(ServerSideEncryptingAmazonS3 service, boolean disableAcl, String bucket, String key, File file)
   {
-    final PutObjectRequest logFilePutRequest = new PutObjectRequest(bucket, key, file);
+    final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
 
     if (!disableAcl) {
-      logFilePutRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
+      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.putObject(logFilePutRequest);
+    service.putObject(putObjectRequest);
   }
 }

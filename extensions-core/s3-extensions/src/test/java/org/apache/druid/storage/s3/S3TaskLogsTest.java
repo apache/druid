@@ -76,7 +76,7 @@ public class S3TaskLogsTest
       .once();
 
     AccessControlList aclExpected = new AccessControlList();
-    aclExpected.setOwner(new Owner("test_owner", "test_owner"));
+    aclExpected.setOwner(new Owner(ownerId, ownerDisplayName));
 
     EasyMock.expect(s3Client.getBucketAcl("test_bucket"))
       .andReturn(aclExpected)
