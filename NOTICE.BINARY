@@ -257,27 +257,6 @@ project. The following notice covers the Felix files:
   - BSD License
 
 
-=========================================================================
-
-
-The Derby build relies on jar files supplied by the Apache Lucene
-project. The following notice covers the Lucene files:
-
-Apache Lucene
-Copyright 2013 The Apache Software Foundation
-
-This product includes software developed by
-The Apache Software Foundation (http://www.apache.org/).
-
-Includes software from other Apache Software Foundation projects,
-including, but not limited to:
- - Apache Ant
- - Apache Jakarta Regexp
- - Apache Commons
- - Apache Xerces
-
-The Google Code Prettify is Apache License 2.0.
-See http://code.google.com/p/google-code-prettify/
 
 ================= httpcore-4.4.4.jar =================
 Apache HttpCore
