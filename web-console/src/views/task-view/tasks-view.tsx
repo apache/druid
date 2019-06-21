@@ -83,6 +83,7 @@ export interface TasksViewState {
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
   hiddenTaskColumns: LocalStorageBackedArray;
+  taskColumns: string[];
   hiddenSupervisorColumns: LocalStorageBackedArray;
 }
 
@@ -166,7 +167,8 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       supervisorTableActionDialogActions: [],
 
       hiddenTaskColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, []),
-      hiddenSupervisorColumns: new LocalStorageBackedArray(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION, [])
+      hiddenSupervisorColumns: new LocalStorageBackedArray(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION, []),
+      taskColumns: []
     };
 
     this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
@@ -200,6 +202,12 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+    const { hiddenTaskColumns, hiddenSupervisorColumns } = this.state;
+
+    hiddenTaskColumns.getDataFromStorage();
+    this.setState({taskColumns: hiddenTaskColumns.storedArray});
+    hiddenSupervisorColumns.getDataFromStorage();
+
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -257,6 +265,10 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
+  }
+
+  componentWillUpdate(nextProps: Readonly<TasksViewProps>, nextState: Readonly<TasksViewState>, nextContext: any): void {
+    console.log(nextState.hiddenTaskColumns.storedArray);
   }
 
   componentWillUnmount(): void {
@@ -443,7 +455,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   renderSupervisorTable() {
-    const { supervisors, supervisorsLoading, supervisorsError } = this.state;
+    const { supervisors, supervisorsLoading, supervisorsError, hiddenSupervisorColumns } = this.state;
     const { supervisorTableColumnSelectionHandler } = this;
     return <>
       <ReactTable
@@ -457,7 +469,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             id: 'datasource',
             accessor: 'id',
             width: 300,
-            show: supervisorTableColumnSelectionHandler.showColumn('Datasource')
+            show: hiddenSupervisorColumns.exists('Datasource')
           },
           {
             Header: 'Type',
@@ -469,7 +481,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!tuningConfig) return '';
               return tuningConfig.type;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Type')
+            show: hiddenSupervisorColumns.exists('Type')
           },
           {
             Header: 'Topic/Stream',
@@ -481,7 +493,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!ioConfig) return '';
               return ioConfig.topic || ioConfig.stream || '';
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Topic/Stream')
+            show: hiddenSupervisorColumns.exists('Topic/Stream')
           },
           {
             Header: 'Status',
@@ -499,7 +511,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 {value}
               </span>;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn('Status')
+            show: hiddenSupervisorColumns.exists('Status')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
@@ -520,7 +532,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 actions={supervisorActions}
               />;
             },
-            show: supervisorTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
+            show: hiddenSupervisorColumns.exists(ActionCell.COLUMN_LABEL)
           }
         ]}
       />
@@ -578,7 +590,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
-    const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy } = this.state;
+    const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy, hiddenTaskColumns} = this.state;
     const { taskTableColumnSelectionHandler } = this;
 
     return <>
@@ -599,7 +611,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             accessor: 'task_id',
             width: 300,
             Aggregated: row => '',
-            show: taskTableColumnSelectionHandler.showColumn('Task ID')
+            show: hiddenTaskColumns.exists('Task ID')
           },
           {
             Header: 'Type',
@@ -608,7 +620,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = row.value;
               return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'type', value) }); }}>{value}</a>;
             },
-            show: taskTableColumnSelectionHandler.showColumn('Type')
+            show: hiddenTaskColumns.exists('Type')
           },
           {
             Header: 'Datasource',
@@ -617,7 +629,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = row.value;
               return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: taskTableColumnSelectionHandler.showColumn('Datasource')
+            show: hiddenTaskColumns.exists('Datasource')
           },
 
           {
@@ -627,14 +639,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             filterMethod: (filter: Filter, row: any) => {
               return booleanCustomTableFilter(filter, row.location);
             },
-            show: taskTableColumnSelectionHandler.showColumn('Location')
+            show: hiddenTaskColumns.exists('Location')
           },
           {
             Header: 'Created time',
             accessor: 'created_time',
             width: 120,
             Aggregated: row => '',
-            show: taskTableColumnSelectionHandler.showColumn('Created time')
+            show: hiddenTaskColumns.exists('Created time')
           },
           {
             Header: 'Status',
@@ -675,7 +687,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             filterMethod: (filter: Filter, row: any) => {
               return booleanCustomTableFilter(filter, row.status.status);
             },
-            show: taskTableColumnSelectionHandler.showColumn('Status')
+            show: hiddenTaskColumns.exists('Status')
           },
           {
             Header: 'Duration',
@@ -683,7 +695,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             filterable: false,
             Cell: (row) => row.value > 0 ? formatDuration(row.value) : '',
             Aggregated: () => '',
-            show: taskTableColumnSelectionHandler.showColumn('Duration')
+            show: hiddenTaskColumns.exists('Duration')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
@@ -707,7 +719,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               />;
             },
             Aggregated: row => '',
-            show: taskTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
+            show: hiddenTaskColumns.exists(ActionCell.COLUMN_LABEL)
           }
         ]}
       />
@@ -719,7 +731,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   render() {
     const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus, hiddenSupervisorColumns, hiddenTaskColumns} = this.state;
-    const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
+    const { supervisorTableColumnSelectionHandler } = this;
 
     const submitSupervisorMenu = <Menu>
       <MenuItem
@@ -769,7 +781,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             </Popover>
             <TableColumnSelector
               columns={supervisorTableColumns}
-              onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)}
+              onChange={(column) => this.setState({hiddenSupervisorColumns: new LocalStorageBackedArray(hiddenSupervisorColumns.key, hiddenSupervisorColumns.toggle(column))})}
               tableColumnsHidden={hiddenSupervisorColumns.storedArray}
             />
           </ViewControlBar>
@@ -802,7 +814,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             </Popover>
             <TableColumnSelector
               columns={taskTableColumns}
-              onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelector(column)}
+              onChange={(column) => this.setState({hiddenTaskColumns: new LocalStorageBackedArray(hiddenTaskColumns.key, hiddenTaskColumns.toggle(column))})}
               tableColumnsHidden={hiddenTaskColumns.storedArray}
             />
           </ViewControlBar>

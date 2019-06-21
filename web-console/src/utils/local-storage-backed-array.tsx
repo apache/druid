@@ -35,4 +35,18 @@ export class LocalStorageBackedArray {
   update() {
     localStorageSet(this.key, JSON.stringify(this.storedArray));
   }
+
+  toggle(value: any) {
+    let toggledArray;
+    if (this.storedArray.includes(value)) {
+      toggledArray = this.storedArray.filter(c => c !== value);
+    } else {
+      toggledArray = this.storedArray.concat(value);
+    }
+    return toggledArray;
+  }
+
+  exists(value: any) {
+    return !this.storedArray.includes(value);
+  }
 }
