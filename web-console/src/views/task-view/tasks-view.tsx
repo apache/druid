@@ -34,11 +34,10 @@ import {
   formatDuration,
   getDruidErrorMessage, localStorageGet, LocalStorageKeys, localStorageSet,
   queryDruidSql,
-  QueryManager, TableColumnSelectionHandler
+  QueryManager
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './tasks-view.scss';
 
@@ -130,8 +129,6 @@ function stateToColor(status: string): string {
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
-  private supervisorTableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
-  private taskTableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
   static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
@@ -166,18 +163,10 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogActions: [],
       supervisorTableActionDialogActions: [],
 
-      hiddenTaskColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, []),
-      hiddenSupervisorColumns: new LocalStorageBackedArray(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION, []),
+      hiddenTaskColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION),
+      hiddenSupervisorColumns: new LocalStorageBackedArray(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION),
       taskColumns: []
     };
-
-    this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
-      this.state.hiddenSupervisorColumns, (storedArray: string[]) => { this.setState({hiddenSupervisorColumns : new  LocalStorageBackedArray(this.state.hiddenSupervisorColumns.key, storedArray)}); }
-      );
-
-    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
-      this.state.hiddenTaskColumns, (storedArray: string[]) => { this.setState({hiddenTaskColumns : new  LocalStorageBackedArray(this.state.hiddenTaskColumns.key, storedArray)}); }
-      );
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -202,11 +191,9 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
-    const { hiddenTaskColumns, hiddenSupervisorColumns } = this.state;
 
-    hiddenTaskColumns.getDataFromStorage();
-    this.setState({taskColumns: hiddenTaskColumns.storedArray});
-    hiddenSupervisorColumns.getDataFromStorage();
+    this.state.hiddenTaskColumns.getDataFromStorage();
+    this.state.hiddenTaskColumns.getDataFromStorage();
 
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
@@ -265,10 +252,6 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
 
-  }
-
-  componentWillUpdate(nextProps: Readonly<TasksViewProps>, nextState: Readonly<TasksViewState>, nextContext: any): void {
-    console.log(nextState.hiddenTaskColumns.storedArray);
   }
 
   componentWillUnmount(): void {
@@ -456,7 +439,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   renderSupervisorTable() {
     const { supervisors, supervisorsLoading, supervisorsError, hiddenSupervisorColumns } = this.state;
-    const { supervisorTableColumnSelectionHandler } = this;
     return <>
       <ReactTable
         data={supervisors || []}
@@ -591,7 +573,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
     const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy, hiddenTaskColumns} = this.state;
-    const { taskTableColumnSelectionHandler } = this;
 
     return <>
       <ReactTable
@@ -731,7 +712,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   render() {
     const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg, taskTableActionDialogId, taskTableActionDialogActions, supervisorTableActionDialogId, supervisorTableActionDialogActions, taskTableActionDialogStatus, hiddenSupervisorColumns, hiddenTaskColumns} = this.state;
-    const { supervisorTableColumnSelectionHandler } = this;
 
     const submitSupervisorMenu = <Menu>
       <MenuItem
@@ -781,7 +761,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             </Popover>
             <TableColumnSelector
               columns={supervisorTableColumns}
-              onChange={(column) => this.setState({hiddenSupervisorColumns: new LocalStorageBackedArray(hiddenSupervisorColumns.key, hiddenSupervisorColumns.toggle(column))})}
+              onChange={(column) => this.setState({hiddenSupervisorColumns: hiddenSupervisorColumns.toggle(column)})}
               tableColumnsHidden={hiddenSupervisorColumns.storedArray}
             />
           </ViewControlBar>
@@ -814,7 +794,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             </Popover>
             <TableColumnSelector
               columns={taskTableColumns}
-              onChange={(column) => this.setState({hiddenTaskColumns: new LocalStorageBackedArray(hiddenTaskColumns.key, hiddenTaskColumns.toggle(column))})}
+              onChange={(column) => this.setState({hiddenTaskColumns:  hiddenTaskColumns.toggle(column)})}
               tableColumnsHidden={hiddenTaskColumns.storedArray}
             />
           </ViewControlBar>

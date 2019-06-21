@@ -35,12 +35,11 @@ import {
   formatBytes,
   formatBytesCompact, LocalStorageKeys, lookupBy,
   queryDruidSql,
-  QueryManager, TableColumnSelectionHandler
+  QueryManager
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
-import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './servers-view.scss';
 
@@ -114,7 +113,6 @@ interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>
 
 export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
-  private serverTableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: ServersViewProps, context: any) {
     super(props, context);
@@ -128,12 +126,8 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
       middleManagerDisableWorkerHost: null,
       middleManagerEnableWorkerHost: null,
 
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, [])
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION)
     };
-
-    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
-      this.state.hiddenColumns, (storedArray: string[]) => this.setState({hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
-    );
   }
 
   static async getServers(): Promise<ServerQueryResultRow[]> {
@@ -155,6 +149,10 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+    const { hiddenColumns } = this.state;
+
+    hiddenColumns.getDataFromStorage();
+
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         let servers: ServerQueryResultRow[];
@@ -244,8 +242,7 @@ ORDER BY "rank" DESC, "server" DESC`);
   }
 
   renderServersTable() {
-    const { servers, serversLoading, serversError, serverFilter, groupServersBy } = this.state;
-    const { serverTableColumnSelectionHandler } = this;
+    const { servers, serversLoading, serversError, serverFilter, groupServersBy, hiddenColumns} = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -273,7 +270,7 @@ ORDER BY "rank" DESC, "server" DESC`);
           accessor: 'server',
           width: 300,
           Aggregated: row => '',
-          show: serverTableColumnSelectionHandler.showColumn('Server')
+          show: hiddenColumns.exists('Server')
         },
         {
           Header: 'Type',
@@ -283,7 +280,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'server_type', value) }); }}>{value}</a>;
           },
-          show: serverTableColumnSelectionHandler.showColumn('Type')
+          show: hiddenColumns.exists('Type')
         },
         {
           Header: 'Tier',
@@ -292,13 +289,13 @@ ORDER BY "rank" DESC, "server" DESC`);
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
           },
-          show: serverTableColumnSelectionHandler.showColumn('Tier')
+          show: hiddenColumns.exists('Tier')
         },
         {
           Header: 'Host',
           accessor: 'host',
           Aggregated: () => '',
-          show: serverTableColumnSelectionHandler.showColumn('Host')
+          show: hiddenColumns.exists('Host')
         },
         {
           Header: 'Port',
@@ -314,7 +311,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             return ports.join(', ') || 'No port';
           },
           Aggregated: () => '',
-          show: serverTableColumnSelectionHandler.showColumn('Port')
+          show: hiddenColumns.exists('Port')
         },
         {
           Header: 'Curr size',
@@ -333,7 +330,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectionHandler.showColumn('Curr size')
+          show: hiddenColumns.exists('Curr size')
         },
         {
           Header: 'Max size',
@@ -352,7 +349,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectionHandler.showColumn('Max size')
+          show: hiddenColumns.exists('Max size')
         },
         {
           Header: 'Usage',
@@ -404,7 +401,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                 return '';
             }
           },
-          show: serverTableColumnSelectionHandler.showColumn('Usage')
+          show: hiddenColumns.exists('Usage')
         },
         {
           Header: 'Detail',
@@ -452,7 +449,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
           },
-          show: serverTableColumnSelectionHandler.showColumn('Detail')
+          show: hiddenColumns.exists('Detail')
         },
         {
           Header: ActionCell.COLUMN_LABEL,
@@ -466,7 +463,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             const workerActions = this.getWorkerActions(row.value.host, disabled);
             return <ActionCell actions={workerActions}/>;
           },
-          show: serverTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
+          show: hiddenColumns.exists(ActionCell.COLUMN_LABEL)
         }
       ]}
     />;
@@ -545,7 +542,6 @@ ORDER BY "rank" DESC, "server" DESC`);
   render() {
     const { goToQuery, noSqlMode } = this.props;
     const { groupServersBy, hiddenColumns} = this.state;
-    const { serverTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
       <ViewControlBar label="Servers">
@@ -570,7 +566,7 @@ ORDER BY "rank" DESC, "server" DESC`);
         }
         <TableColumnSelector
           columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
+          onChange={(column) => this.setState({hiddenColumns: hiddenColumns.toggle(column)})}
           tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>

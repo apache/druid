@@ -18,18 +18,34 @@
 
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
-export class LocalStorageBackedArray {
+export class LocalStorageBackedArray <T> {
   key: LocalStorageKeys;
-  storedArray: any[];
+  storedArray: T[];
 
-  constructor(key: LocalStorageKeys, array: any[]) {
+  constructor(key: LocalStorageKeys, array?: T[]) {
     this.key = key;
-    this.storedArray = array;
-    this.update();
+    if (array === undefined) {
+      this.getDataFromStorage();
+    } else {
+      this.storedArray = array;
+      this.update();
+    }
   }
 
   getDataFromStorage() {
-    this.storedArray = JSON.parse(String(localStorageGet(this.key)));
+    console.log('here');
+    try {
+      this.storedArray = JSON.parse(String(localStorageGet(this.key)));
+    } catch {
+      // show all columns by default
+      this.storedArray = [];
+      this.update();
+    }
+    if (this.storedArray === null) {
+      this.storedArray = [];
+      this.update();
+    }
+    return this.storedArray;
   }
 
   update() {
@@ -43,7 +59,7 @@ export class LocalStorageBackedArray {
     } else {
       toggledArray = this.storedArray.concat(value);
     }
-    return toggledArray;
+    return new LocalStorageBackedArray(this.key, toggledArray);
   }
 
   exists(value: any) {

@@ -35,11 +35,10 @@ import {
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
-  QueryManager, TableColumnSelectionHandler
+  QueryManager
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './datasource-view.scss';
 
@@ -102,7 +101,6 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -123,16 +121,15 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
       dropReloadDatasource: null,
       dropReloadAction: 'drop',
       dropReloadInterval: '',
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, [])
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION)
     };
-
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
-      this.state.hiddenColumns, (storedArray: string[]) => this.setState({hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
-    );
   }
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+    const { hiddenColumns } = this.state;
+
+    hiddenColumns.getDataFromStorage();
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
@@ -485,7 +482,6 @@ GROUP BY 1`);
   renderDatasourceTable() {
     const { goToSegments, noSqlMode } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled, hiddenColumns } = this.state;
-    const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
@@ -509,7 +505,7 @@ GROUP BY 1`);
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: tableColumnSelectionHandler.showColumn('Datasource')
+            show: hiddenColumns.exists('Datasource')
           },
           {
             Header: 'Availability',
@@ -554,7 +550,7 @@ GROUP BY 1`);
               const percentAvailable2 = d2.num_available / d2.num_total;
               return (percentAvailable1 - percentAvailable2) || (d1.num_total - d2.num_total);
             },
-            show: tableColumnSelectionHandler.showColumn('Availability')
+            show: hiddenColumns.exists('Availability')
           },
           {
             Header: 'Retention',
@@ -578,7 +574,7 @@ GROUP BY 1`);
                 <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
-            show: tableColumnSelectionHandler.showColumn('Retention')
+            show: hiddenColumns.exists('Retention')
           },
           {
             Header: 'Compaction',
@@ -605,7 +601,7 @@ GROUP BY 1`);
                 <ActionIcon icon={IconNames.EDIT}/>
               </span>;
             },
-            show: tableColumnSelectionHandler.showColumn('Compaction')
+            show: hiddenColumns.exists('Compaction')
           },
           {
             Header: 'Size',
@@ -613,7 +609,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatBytes(row.value),
-            show: tableColumnSelectionHandler.showColumn('Size')
+            show: hiddenColumns.exists('Size')
           },
           {
             Header: 'Num rows',
@@ -621,7 +617,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
+            show: !noSqlMode && hiddenColumns.exists('Num rows')
           },
           {
             Header: ActionCell.COLUMN_LABEL,
@@ -635,7 +631,7 @@ GROUP BY 1`);
               const datasourceActions = this.getDatasourceActions(datasource, disabled);
               return <ActionCell actions={datasourceActions}/>;
             },
-            show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
+            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL)
           }
         ]}
         defaultPageSize={50}
@@ -652,7 +648,6 @@ GROUP BY 1`);
   render() {
     const { goToQuery, noSqlMode } = this.props;
     const { showDisabled, hiddenColumns } = this.state;
-    const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
       <ViewControlBar label="Datasources">
@@ -676,7 +671,7 @@ GROUP BY 1`);
         />
         <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
+          onChange={(column) => this.setState({hiddenColumns: hiddenColumns.toggle(column)})}
           tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>

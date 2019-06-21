@@ -17,7 +17,6 @@
  */
 
 import { Button, Intent } from '@blueprintjs/core';
-import { H5 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -35,12 +34,10 @@ import {
   parseList,
   queryDruidSql,
   QueryManager,
-  sqlQueryCustomTableFilter,
-  TableColumnSelectionHandler
+  sqlQueryCustomTableFilter
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
-import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './segments-view.scss';
 
@@ -94,7 +91,6 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -113,7 +109,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       segments: null,
       segmentsError: null,
       segmentFilter,
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, [])
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION)
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
@@ -175,13 +171,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         });
       }
     });
-
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
-      this.state.hiddenColumns, (storedArray: string[]) => this.setState({ hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
-    );
   }
 
   componentDidMount(): void {
+    this.state.hiddenColumns.getDataFromStorage();
     if (this.props.noSqlMode) {
       this.segmentsJsonQueryManager.runQuery('init');
     }
@@ -268,9 +261,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   renderSegmentsTable() {
-    const { segments, segmentsLoading, segmentsError, segmentFilter } = this.state;
+    const { segments, segmentsLoading, segmentsError, segmentFilter, hiddenColumns } = this.state;
     const { noSqlMode } = this.props;
-    const { tableColumnSelectionHandler } = this;
 
     return <ReactTable
       data={segments || []}
@@ -292,7 +284,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           Header: 'Segment ID',
           accessor: 'segment_id',
           width: 300,
-          show: tableColumnSelectionHandler.showColumn('Segment ID')
+          show: hiddenColumns.exists('Segment ID')
         },
         {
           Header: 'Datasource',
@@ -301,7 +293,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value)}); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn('Datasource')
+          show: hiddenColumns.exists('Datasource')
         },
         {
           Header: 'Start',
@@ -312,7 +304,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn('Start')
+          show: hiddenColumns.exists('Start')
         },
         {
           Header: 'End',
@@ -323,21 +315,21 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn('End')
+          show: hiddenColumns.exists('End')
         },
         {
           Header: 'Version',
           accessor: 'version',
           defaultSortDesc: true,
           width: 120,
-          show: tableColumnSelectionHandler.showColumn('Version')
+          show: hiddenColumns.exists('Version')
         },
         {
           Header: 'Partition',
           accessor: 'partition_num',
           width: 60,
           filterable: false,
-          show: tableColumnSelectionHandler.showColumn('Partition')
+          show: hiddenColumns.exists('Partition')
         },
         {
           Header: 'Size',
@@ -345,7 +337,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatBytes(row.value),
-          show: tableColumnSelectionHandler.showColumn('Size')
+          show: hiddenColumns.exists('Size')
         },
         {
           Header: 'Num rows',
@@ -353,7 +345,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatNumber(row.value),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
+          show: !noSqlMode && hiddenColumns.exists('Num rows')
         },
         {
           Header: 'Replicas',
@@ -361,35 +353,35 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           width: 60,
           filterable: false,
           defaultSortDesc: true,
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Replicas')
+          show: !noSqlMode && hiddenColumns.exists('Replicas')
         },
         {
           Header: 'Is published',
           id: 'is_published',
           accessor: (row) => String(Boolean(row.is_published)),
           Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is published')
+          show: !noSqlMode && hiddenColumns.exists('Is published')
         },
         {
           Header: 'Is realtime',
           id: 'is_realtime',
           accessor: (row) => String(Boolean(row.is_realtime)),
           Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is realtime')
+          show: !noSqlMode && hiddenColumns.exists('Is realtime')
         },
         {
           Header: 'Is available',
           id: 'is_available',
           accessor: (row) => String(Boolean(row.is_available)),
           Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is available')
+          show: !noSqlMode && hiddenColumns.exists('Is available')
         },
         {
           Header: 'Is overshadowed',
           id: 'is_overshadowed',
           accessor: (row) => String(Boolean(row.is_overshadowed)),
           Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is overshadowed')
+          show: !noSqlMode && hiddenColumns.exists('Is overshadowed')
         },
         {
           Header: ActionCell.COLUMN_LABEL,
@@ -409,7 +401,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             />;
           },
           Aggregated: row => '',
-          show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL)
+          show: hiddenColumns.exists(ActionCell.COLUMN_LABEL)
         }
       ]}
       defaultPageSize={50}
@@ -450,7 +442,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   render() {
     const { segmentTableActionDialogId, datasourceTableActionDialogId, actions, hiddenColumns } = this.state;
     const { goToQuery, noSqlMode } = this.props;
-    const { tableColumnSelectionHandler } = this;
 
     return <>
     <div className="segments-view app-view">
@@ -471,7 +462,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         }
         <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
+          onChange={(column) => this.setState({hiddenColumns: hiddenColumns.toggle(column)})}
           tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>
