@@ -28,19 +28,21 @@ describe('transform table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' }
-        }
-      ]
+          parsed: { c1: 'hello' },
+        },
+      ],
     };
 
-    const transformTable = <TransformTable
-      sampleData={sampleData}
-      columnFilter=""
-      transformedColumnsOnly={false}
-      transforms={[]}
-      selectedTransformIndex={-1}
-      onTransformSelect={() => null}
-    />;
+    const transformTable = (
+      <TransformTable
+        sampleData={sampleData}
+        columnFilter=""
+        transformedColumnsOnly={false}
+        transforms={[]}
+        selectedTransformIndex={-1}
+        onTransformSelect={() => null}
+      />
+    );
 
     const { container } = render(transformTable);
     expect(container.firstChild).toMatchSnapshot();

@@ -23,12 +23,13 @@ import { TableActionDialog } from './table-action-dialog';
 
 describe('table action dialog', () => {
   it('matches snapshot', () => {
-    const tableActionDialog =
+    const tableActionDialog = (
       <TableActionDialog
-        sideButtonMetadata={[{icon: 'badge', text: 'test' }]}
+        sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
         onClose={() => null}
         isOpen
-      />;
+      />
+    );
     const { container } = render(tableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -56,7 +56,8 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           class="bp3-dialog-body"
         >
           <p>
-            Edit the coordinator dynamic configuration on the fly. For more information please refer to the 
+            Edit the coordinator dynamic configuration on the fly. For more information please refer to the
+             
             <a
               href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration"
               target="_blank"

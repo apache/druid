@@ -23,7 +23,7 @@ import { LookupEditDialog } from './lookup-edit-dialog';
 
 describe('lookup edit dialog', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog =
+    const lookupEditDialog = (
       <LookupEditDialog
         isOpen
         onClose={() => null}
@@ -35,7 +35,8 @@ describe('lookup edit dialog', () => {
         lookupSpec={'test'}
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />;
+      />
+    );
 
     const { container } = render(lookupEditDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
