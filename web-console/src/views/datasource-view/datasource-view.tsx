@@ -82,7 +82,7 @@ export interface DatasourcesViewState {
   dropReloadDatasource: string | null;
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
-  hiddenColumns: LocalStorageBackedArray;
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
@@ -121,7 +121,7 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
       dropReloadDatasource: null,
       dropReloadAction: 'drop',
       dropReloadInterval: '',
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION)
+      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION)
     };
   }
 

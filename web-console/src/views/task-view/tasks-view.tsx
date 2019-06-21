@@ -81,9 +81,8 @@ export interface TasksViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
-  hiddenTaskColumns: LocalStorageBackedArray;
-  taskColumns: string[];
-  hiddenSupervisorColumns: LocalStorageBackedArray;
+  hiddenTaskColumns: LocalStorageBackedArray<string>;
+  hiddenSupervisorColumns: LocalStorageBackedArray<string>;
 }
 
 interface TaskQueryResultRow {
@@ -163,9 +162,8 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogActions: [],
       supervisorTableActionDialogActions: [],
 
-      hiddenTaskColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION),
-      hiddenSupervisorColumns: new LocalStorageBackedArray(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION),
-      taskColumns: []
+      hiddenTaskColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION),
+      hiddenSupervisorColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION)
     };
   }
 

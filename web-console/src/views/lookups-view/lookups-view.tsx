@@ -60,7 +60,7 @@ export interface LookupsViewState {
   deleteLookupName: string | null;
   deleteLookupTier: string | null;
 
-  hiddenColumns: LocalStorageBackedArray;
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
@@ -84,7 +84,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       deleteLookupTier: null,
       deleteLookupName: null,
 
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION)
+      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION)
     };
   }
 

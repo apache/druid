@@ -63,7 +63,7 @@ export interface SegmentsViewState {
   actions: BasicAction[];
   terminateSegmentId: string | null;
   terminatetDatasourceId: string | null;
-  hiddenColumns: LocalStorageBackedArray;
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 interface QueryAndSkip {
@@ -109,7 +109,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       segments: null,
       segmentsError: null,
       segmentFilter,
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION)
+      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION)
     };
 
     this.segmentsSqlQueryManager = new QueryManager({

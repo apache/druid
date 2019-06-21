@@ -73,7 +73,7 @@ export interface ServersViewState {
   middleManagerDisableWorkerHost: string | null;
   middleManagerEnableWorkerHost: string | null;
 
-  hiddenColumns: LocalStorageBackedArray;
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 interface ServerQueryResultRow {
@@ -126,7 +126,7 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
       middleManagerDisableWorkerHost: null,
       middleManagerEnableWorkerHost: null,
 
-      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION)
+      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION)
     };
   }
 
