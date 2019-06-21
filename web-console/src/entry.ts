@@ -48,15 +48,12 @@ if (typeof consoleConfig.title === 'string') {
 }
 
 ReactDOM.render(
-  React.createElement(
-    ConsoleApplication,
-    {
-      hideLegacy: Boolean(consoleConfig.hideLegacy),
-      baseURL: consoleConfig.baseURL,
-      customHeaderName: consoleConfig.customHeaderName,
-      customHeaderValue: consoleConfig.customHeaderValue
-    }
-  ) as any,
+  React.createElement(ConsoleApplication, {
+    hideLegacy: Boolean(consoleConfig.hideLegacy),
+    baseURL: consoleConfig.baseURL,
+    customHeaderName: consoleConfig.customHeaderName,
+    customHeaderValue: consoleConfig.customHeaderValue,
+  }) as any,
   container
 );
 

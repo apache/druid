@@ -36,7 +36,7 @@ import {
   QueryView,
   SegmentsView,
   ServersView,
-  TasksView
+  TasksView,
 } from './views';
 
 import './console-application.scss';
@@ -54,17 +54,24 @@ export interface ConsoleApplicationState {
   capabilitiesLoading: boolean;
 }
 
-export class ConsoleApplication extends React.PureComponent<ConsoleApplicationProps, ConsoleApplicationState> {
+export class ConsoleApplication extends React.PureComponent<
+  ConsoleApplicationProps,
+  ConsoleApplicationState
+> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
   private capabilitiesQueryManager: QueryManager<string, string>;
 
-  static async discoverCapabilities(): Promise<'working-with-sql' | 'working-without-sql' | 'broken'> {
+  static async discoverCapabilities(): Promise<
+    'working-with-sql' | 'working-without-sql' | 'broken'
+  > {
     try {
       await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return 'working-with-sql'; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
+        return 'working-with-sql'; // other failure
+      }
       try {
         await axios.get('/status');
       } catch (e) {
@@ -78,25 +85,27 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
 
   static shownNotifications(capabilities: string) {
     let message: JSX.Element = <></>;
-    /* tslint:disable:jsx-alignment */
+
     if (capabilities === 'working-without-sql') {
-      message = <>
-        It appears that the SQL endpoint is disabled. The console will fall back
-        to <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be
-        limited in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to
-        enable the SQL endpoint.
-      </>;
+      message = (
+        <>
+          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
+          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
+          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
+          to enable the SQL endpoint.
+        </>
+      );
     } else if (capabilities === 'broken') {
-      message = <>
-        It appears that the Druid is not responding. Data cannot be retrieved right now
-      </>;
+      message = (
+        <>It appears that the Druid is not responding. Data cannot be retrieved right now</>
+      );
     }
-    /* tslint:enable:jsx-alignment */
+
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
       timeout: 120000,
-      message: message
+      message: message,
     });
   }
 
@@ -113,7 +122,7 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
     this.state = {
       aboutDialogOpen: false,
       noSqlMode: false,
-      capabilitiesLoading: true
+      capabilitiesLoading: true,
     };
 
     if (props.baseURL) {
@@ -135,9 +144,9 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           noSqlMode: result === 'working-with-sql' ? false : true,
-          capabilitiesLoading: loading
+          capabilitiesLoading: loading,
         });
-      }
+      },
     });
   }
 
@@ -161,113 +170,160 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
     }, 50);
   }
 
-  private goToLoadDataView = (supervisorId?: string, taskId?: string ) => {
+  private goToLoadDataView = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
-  }
+  };
 
   private goToTask = (taskId: string | null, openDialog?: string) => {
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
-  }
+  };
 
   private goToSegments = (datasource: string, onlyUnavailable = false) => {
     this.datasource = `"${datasource}"`;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
     this.resetInitialsWithDelay();
-  }
+  };
 
   private goToMiddleManager = (middleManager: string) => {
     this.middleManager = middleManager;
     window.location.hash = 'servers';
     this.resetInitialsWithDelay();
-  }
+  };
 
   private goToQuery = (initQuery: string) => {
     this.initQuery = initQuery;
     window.location.hash = 'query';
     this.resetInitialsWithDelay();
-  }
+  };
 
-  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'narrow-pad' = 'normal') => {
+  private wrapInViewContainer = (
+    active: HeaderActiveTab,
+    el: JSX.Element,
+    classType: 'normal' | 'narrow-pad' = 'normal'
+  ) => {
     const { hideLegacy } = this.props;
 
-    return <>
-      <HeaderBar active={active} hideLegacy={hideLegacy}/>
-      <div className={classNames('view-container', classType)}>{el}</div>
-    </>;
-  }
+    return (
+      <>
+        <HeaderBar active={active} hideLegacy={hideLegacy} />
+        <div className={classNames('view-container', classType)}>{el}</div>
+      </>
+    );
+  };
 
   private wrappedHomeView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode} />);
+  };
 
   private wrappedLoadDataView = () => {
-
-    return this.wrapInViewContainer('load-data', <LoadDataView initSupervisorId={this.supervisorId} initTaskId={this.taskId} goToTask={this.goToTask}/>, 'narrow-pad');
-  }
+    return this.wrapInViewContainer(
+      'load-data',
+      <LoadDataView
+        initSupervisorId={this.supervisorId}
+        initTaskId={this.taskId}
+        goToTask={this.goToTask}
+      />,
+      'narrow-pad'
+    );
+  };
 
   private wrappedQueryView = () => {
-    return this.wrapInViewContainer('query', <QueryView initQuery={this.initQuery}/>);
-  }
+    return this.wrapInViewContainer('query', <QueryView initQuery={this.initQuery} />);
+  };
 
   private wrappedDatasourcesView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('datasources', <DatasourcesView goToQuery={this.goToQuery} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'datasources',
+      <DatasourcesView
+        goToQuery={this.goToQuery}
+        goToSegments={this.goToSegments}
+        noSqlMode={noSqlMode}
+      />
+    );
+  };
 
   private wrappedSegmentsView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToQuery={this.goToQuery} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'segments',
+      <SegmentsView
+        datasource={this.datasource}
+        onlyUnavailable={this.onlyUnavailable}
+        goToQuery={this.goToQuery}
+        noSqlMode={noSqlMode}
+      />
+    );
+  };
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToQuery={this.goToQuery} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'tasks',
+      <TasksView
+        taskId={this.taskId}
+        openDialog={this.openDialog}
+        goToQuery={this.goToQuery}
+        goToMiddleManager={this.goToMiddleManager}
+        goToLoadDataView={this.goToLoadDataView}
+        noSqlMode={noSqlMode}
+      />
+    );
+  };
 
   private wrappedServersView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToQuery={this.goToQuery} goToTask={this.goToTask} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'servers',
+      <ServersView
+        middleManager={this.middleManager}
+        goToQuery={this.goToQuery}
+        goToTask={this.goToTask}
+        noSqlMode={noSqlMode}
+      />
+    );
+  };
 
   private wrappedLookupsView = () => {
-    return this.wrapInViewContainer('lookups', <LookupsView/>);
-  }
+    return this.wrapInViewContainer('lookups', <LookupsView />);
+  };
 
   render() {
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
-      return <div className="loading-capabilities">
-        <Loader
-          loadingText=""
-          loading={capabilitiesLoading}
-        />
-      </div>;
+      return (
+        <div className="loading-capabilities">
+          <Loader loadingText="" loading={capabilitiesLoading} />
+        </div>
+      );
     }
 
-    return <HashRouter hashType="noslash">
-      <div className="console-application">
-        <Switch>
-          <Route path="/load-data" component={this.wrappedLoadDataView}/>
-          <Route path="/query" component={this.wrappedQueryView}/>
+    return (
+      <HashRouter hashType="noslash">
+        <div className="console-application">
+          <Switch>
+            <Route path="/load-data" component={this.wrappedLoadDataView} />
+            <Route path="/query" component={this.wrappedQueryView} />
 
-          <Route path="/datasources" component={this.wrappedDatasourcesView}/>
-          <Route path="/segments" component={this.wrappedSegmentsView}/>
-          <Route path="/tasks" component={this.wrappedTasksView}/>
-          <Route path="/servers" component={this.wrappedServersView}/>
+            <Route path="/datasources" component={this.wrappedDatasourcesView} />
+            <Route path="/segments" component={this.wrappedSegmentsView} />
+            <Route path="/tasks" component={this.wrappedTasksView} />
+            <Route path="/servers" component={this.wrappedServersView} />
 
-          <Route path="/lookups" component={this.wrappedLookupsView}/>
-          <Route component={this.wrappedHomeView}/>
-        </Switch>
-      </div>
-    </HashRouter>;
+            <Route path="/lookups" component={this.wrappedLookupsView} />
+            <Route component={this.wrappedHomeView} />
+          </Switch>
+        </div>
+      </HashRouter>
+    );
   }
 }

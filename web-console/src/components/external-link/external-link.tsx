@@ -26,11 +26,10 @@ export class ExternalLink extends React.PureComponent<ExternalLinkProps> {
   render() {
     const { href, children } = this.props;
 
-    return <a
-      href={href}
-      target="_blank"
-    >
-      {children}
-    </a>;
+    return (
+      <a href={href} target="_blank">
+        {children}
+      </a>
+    );
   }
 }

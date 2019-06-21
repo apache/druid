@@ -53,19 +53,31 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const completions = ([] as any[]).concat(
-        uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({ value: v, score: 10, meta: 'schema' })),
-        uniq(columnMetadata.map(d => d.TABLE_NAME)).map(v => ({ value: v, score: 49, meta: 'datasource' })),
-        uniq(columnMetadata.map(d => d.COLUMN_NAME)).map(v => ({ value: v, score: 50, meta: 'column' }))
+        uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
+          value: v,
+          score: 10,
+          meta: 'schema',
+        })),
+        uniq(columnMetadata.map(d => d.TABLE_NAME)).map(v => ({
+          value: v,
+          score: 49,
+          meta: 'datasource',
+        })),
+        uniq(columnMetadata.map(d => d.COLUMN_NAME)).map(v => ({
+          value: v,
+          score: 50,
+          meta: 'column',
+        }))
       );
 
       langTools.addCompleter({
         getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
           callback(null, completions);
-        }
+        },
       });
 
       return {
-        prevColumnMetadata: columnMetadata
+        prevColumnMetadata: columnMetadata,
       };
     }
     return null;
@@ -75,7 +87,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     super(props, context);
     this.state = {
       editorHeight: 200,
-      prevColumnMetadata: null
+      prevColumnMetadata: null,
     };
   }
 
@@ -93,11 +105,15 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     const keywordCompleter = {
       getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
         return callback(null, keywordList);
-      }
+      },
     };
 
-    langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
-  }
+    langTools.setCompleters([
+      langTools.snippetCompleter,
+      langTools.textCompleter,
+      keywordCompleter,
+    ]);
+  };
 
   private addFunctionAutoCompleter = (): void => {
     if (!langTools) return;
@@ -112,11 +128,11 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         description: entry.description,
         completer: {
           insertMatch: (editor: any, data: any) => {
-            editor.completer.insertMatch({value: data.caption});
+            editor.completer.insertMatch({ value: data.caption });
             const pos = editor.getCursorPosition();
             editor.gotoLine(pos.row + 1, pos.column - 1);
-          }
-        }
+          },
+        },
       };
     });
 
@@ -127,21 +143,27 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
           const functionName = item.caption.slice(0, -2);
-          item.docHTML = ReactDOMServer.renderToStaticMarkup((
+          item.docHTML = ReactDOMServer.renderToStaticMarkup(
             <div className="function-doc">
-              <div className="function-doc-name"><b>{functionName}</b></div>
-              <hr/>
-              <div><b>Syntax:</b></div>
+              <div className="function-doc-name">
+                <b>{functionName}</b>
+              </div>
+              <hr />
+              <div>
+                <b>Syntax:</b>
+              </div>
               <div>{item.syntax}</div>
-              <br/>
-              <div><b>Description:</b></div>
+              <br />
+              <div>
+                <b>Description:</b>
+              </div>
               <div>{item.description}</div>
             </div>
-          ));
+          );
         }
-      }
+      },
     });
-  }
+  };
 
   componentDidMount(): void {
     this.replaceDefaultAutoCompleter();
@@ -151,41 +173,43 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
-  }
+  };
 
   render() {
     const { queryString, runeMode, onQueryStringChange } = this.props;
     const { editorHeight } = this.state;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
-    return <div className="query-input">
-      <ResizeSensor onResize={this.handleAceContainerResize}>
-        <div className="ace-container">
-          <AceEditor
-            key={runeMode ? 'hjson' : 'sql'}
-            mode={runeMode ? 'hjson' : 'sql'}
-            theme="solarized_dark"
-            name="ace-editor"
-            onChange={onQueryStringChange}
-            focus
-            fontSize={14}
-            width="100%"
-            height={`${editorHeight}px`}
-            showPrintMargin={false}
-            value={queryString}
-            editorProps={{
-              $blockScrolling: Infinity
-            }}
-            setOptions={{
-              enableBasicAutocompletion: !runeMode,
-              enableLiveAutocompletion: !runeMode,
-              showLineNumbers: true,
-              tabSize: 2
-            }}
-            style={{}}
-          />
-        </div>
-      </ResizeSensor>
-    </div>;
+    return (
+      <div className="query-input">
+        <ResizeSensor onResize={this.handleAceContainerResize}>
+          <div className="ace-container">
+            <AceEditor
+              key={runeMode ? 'hjson' : 'sql'}
+              mode={runeMode ? 'hjson' : 'sql'}
+              theme="solarized_dark"
+              name="ace-editor"
+              onChange={onQueryStringChange}
+              focus
+              fontSize={14}
+              width="100%"
+              height={`${editorHeight}px`}
+              showPrintMargin={false}
+              value={queryString}
+              editorProps={{
+                $blockScrolling: Infinity,
+              }}
+              setOptions={{
+                enableBasicAutocompletion: !runeMode,
+                enableLiveAutocompletion: !runeMode,
+                showLineNumbers: true,
+                tabSize: 2,
+              }}
+              style={{}}
+            />
+          </div>
+        </ResizeSensor>
+      </div>
+    );
   }
 }

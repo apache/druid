@@ -7,10 +7,13 @@
     "no-conditional-assignment": true,
     "no-string-literal": false,
     "object-literal-shorthand": false,
-    "no-require-imports": false,
     "arrow-return-shorthand": false,
     "no-var-requires": false,
-    "no-unused-variable": false
+    "no-unused-variable": false,
+
+    "trailing-comma": false,
+    "semicolon": false,
+    "ter-indent": false
   },
   "linterOptions": {
     "format": "useful"

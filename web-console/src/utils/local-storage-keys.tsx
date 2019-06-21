@@ -26,7 +26,7 @@ export const LocalStorageKeys = {
   LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as 'lookup-table-column-selection',
   QUERY_KEY: 'druid-console-query' as 'druid-console-query',
   TASKS_VIEW_PANE_SIZE: 'tasks-view-pane-size' as 'tasks-view-pane-size',
-  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as 'query-view-pane-size'
+  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as 'query-view-pane-size',
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 

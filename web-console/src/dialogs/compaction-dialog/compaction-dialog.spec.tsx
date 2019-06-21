@@ -23,14 +23,15 @@ import { CompactionDialog } from './compaction-dialog';
 
 describe('compaction dialog', () => {
   it('matches snapshot', () => {
-    const compactionDialog =
+    const compactionDialog = (
       <CompactionDialog
         onClose={() => null}
         onSave={(config: any) => null}
         onDelete={() => null}
         datasource={'test'}
         configData={'test'}
-      />;
+      />
+    );
     const { container } = render(compactionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
