@@ -150,10 +150,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       case 1: // Datasource
         const tableSchema = columnTree[selectedTreeIndex].label;
         if (tableSchema === 'druid') {
-          onQueryStringChange(`SELECT * FROM "${nodeData.label}"
+          onQueryStringChange(`SELECT *
+FROM "${nodeData.label}"
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
         } else {
-          onQueryStringChange(`SELECT * FROM ${tableSchema}.${nodeData.label}`);
+          onQueryStringChange(`SELECT *
+FROM ${tableSchema}.${nodeData.label}`);
         }
         break;
 
