@@ -25,6 +25,7 @@ describe('show log', () => {
   it('describe show log', () => {
     const showLog =
       <ShowLog
+        status={'RUNNING'}
         endpoint={'test'}
         downloadFilename={'test'}
       />;

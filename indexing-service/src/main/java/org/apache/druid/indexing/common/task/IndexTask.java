@@ -821,9 +821,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           }
 
           if (determineNumPartitions) {
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-            }
+            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
                 queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
@@ -834,9 +832,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           } else {
             // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
             // for the interval and don't instantiate a HLL collector
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.absent());
-            }
+            hllCollectors.putIfAbsent(interval, Optional.absent());
           }
           determinePartitionsMeters.incrementProcessed();
         }

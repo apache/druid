@@ -176,7 +176,7 @@ export class RetentionDialog extends React.PureComponent<RetentionDialogProps, R
       <p>
         Druid uses rules to determine what data should be retained in the cluster.
         The rules are evaluated in order from top to bottom.
-        For more information please refer to the <a href="http://druid.io/docs/latest/operations/rule-configuration.html" target="_blank">documentation</a>.
+        For more information please refer to the <a href="https://druid.apache.org/docs/latest/operations/rule-configuration.html" target="_blank">documentation</a>.
       </p>
       <FormGroup>
         {(currentRules || []).map(this.renderRule)}

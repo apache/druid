@@ -61,7 +61,7 @@
   &.tuning,
   &.publish {
     grid-gap: 20px 40px;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 280px;
     grid-template-areas:
       "navi navi navi"
       "main othr ctrl"
@@ -75,25 +75,25 @@
     }
   }
 
-  .stage-nav {
+  .step-nav {
     grid-area: navi;
     white-space: nowrap;
     overflow: auto;
     padding: 0 5px;
 
-    .stage-section {
+    .step-section {
       display: inline-block;
       vertical-align: top;
       margin-right: 15px;
     }
 
-    .stage-nav-l1 {
+    .step-nav-l1 {
       height: 25px;
       font-weight: bold;
       color: #eeeeee;
     }
 
-    .stage-nav-l2 {
+    .step-nav-l2 {
       height: 30px;
     }
   }

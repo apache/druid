@@ -38,6 +38,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private boolean filterable;
 
+  @JsonIgnore
+  private boolean complete = false;
+
   @Override
   @JsonProperty
   public ValueType getType()
@@ -114,6 +117,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
            filterable;
   }
 
+  @Override
+  public boolean isComplete()
+  {
+    return complete;
+  }
+
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
@@ -123,6 +132,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = hasMultipleValues;
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl setIsComplete(boolean complete)
+  {
+    this.complete = complete;
     return this;
   }
 
@@ -145,6 +160,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
     this.hasMultipleValues |= other.hasMultipleValues();
+    this.complete &= other.isComplete(); // these should always be the same?
     this.filterable &= other.isFilterable();
   }
 }

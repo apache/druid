@@ -16,42 +16,9 @@
  * limitations under the License.
  */
 
-@import "../../variables";
-
-.sql-view {
-  height: 100%;
-  width: 100%;
-
-  .top-pane {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 10px;
-
-    .sql-control {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px;
-    background-color: #6d8ea9;
-  }
-
-  .bottom-pane {
-    position: absolute;
-    width: 100%;
-    top: 10px;
-    bottom: 0;
-
-    .ReactTable {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 100%;
-    }
-  }
+export interface ColumnMetadata {
+  TABLE_SCHEMA: string;
+  TABLE_NAME: string;
+  COLUMN_NAME: string;
+  DATA_TYPE: string;
 }
-

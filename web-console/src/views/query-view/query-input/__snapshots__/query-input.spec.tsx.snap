@@ -1,8 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`sql control matches snapshot 1`] = `
+exports[`query input matches snapshot 1`] = `
 <div
-  class="sql-control"
+  class="query-input"
 >
   <div
     class="ace-container"
@@ -95,80 +95,6 @@ exports[`sql control matches snapshot 1`] = `
         </div>
       </div>
     </div>
-  </div>
-  <div
-    class="buttons"
-  >
-    <div
-      class="bp3-button-group"
-    >
-      <button
-        class="bp3-button"
-        type="button"
-      >
-        <span
-          class="bp3-icon bp3-icon-caret-right"
-          icon="caret-right"
-        >
-          <svg
-            data-icon="caret-right"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <desc>
-              caret-right
-            </desc>
-            <path
-              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 0 0 6 4.5v7a.495.495 0 0 0 .83.37l4-3.5c.1-.09.17-.22.17-.37z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
-        <span
-          class="bp3-button-text"
-        >
-          Run with limit
-        </span>
-      </button>
-      <span
-        class="bp3-popover-wrapper"
-      >
-        <span
-          class="bp3-popover-target"
-        >
-          <button
-            class="bp3-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-more"
-              icon="more"
-            >
-              <svg
-                data-icon="more"
-                height="16"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <desc>
-                  more
-                </desc>
-                <path
-                  d="M2 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4zM14 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4zM8 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-        </span>
-      </span>
-    </div>
-    <span
-      class="query-elapsed"
-    >
-      Last query took 0.00 seconds
-    </span>
   </div>
 </div>
 `;

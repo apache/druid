@@ -28,9 +28,10 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
+import memoize from 'memoize-one';
 import React from 'react';
 
-import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader, TableCell } from '../../components';
+import { AutoForm, CenterMessage, ClearableInput, ExternalLink, JSONInput, Loader } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -38,7 +39,7 @@ import {
   getDruidErrorMessage,
   localStorageGet,
   LocalStorageKeys,
-  localStorageSet, memoize, parseJson,
+  localStorageSet, parseJson,
   QueryState
 } from '../../utils';
 import { possibleDruidFormatForValues } from '../../utils/druid-time';
@@ -136,17 +137,17 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   return timestampSpecs[0] || getEmptyTimestampSpec();
 }
 
-type Stage = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
-const STAGES: Stage[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
+type Step = 'connect' | 'parser' | 'timestamp' | 'transform' | 'filter' | 'schema' | 'partition' | 'tuning' | 'publish' | 'json-spec' | 'loading';
+const STEPS: Step[] = ['connect', 'parser', 'timestamp', 'transform', 'filter', 'schema', 'partition', 'tuning', 'publish', 'json-spec', 'loading'];
 
-const SECTIONS: { name: string, stages: Stage[] }[] = [
-  { name: 'Connect and parse raw data', stages: ['connect', 'parser', 'timestamp'] },
-  { name: 'Transform and configure schema', stages: ['transform', 'filter', 'schema'] },
-  { name: 'Tune parameters', stages: ['partition', 'tuning', 'publish'] },
-  { name: 'Verify and submit', stages: ['json-spec'] }
+const SECTIONS: { name: string, steps: Step[] }[] = [
+  { name: 'Connect and parse raw data', steps: ['connect', 'parser', 'timestamp'] },
+  { name: 'Transform and configure schema', steps: ['transform', 'filter', 'schema'] },
+  { name: 'Tune parameters', steps: ['partition', 'tuning', 'publish'] },
+  { name: 'Verify and submit', steps: ['json-spec'] }
 ];
 
-const VIEW_TITLE: Record<Stage, string> = {
+const VIEW_TITLE: Record<Step, string> = {
   'connect': 'Connect',
   'parser': 'Parse data',
   'timestamp': 'Parse time',
@@ -167,7 +168,7 @@ export interface LoadDataViewProps extends React.Props<any> {
 }
 
 export interface LoadDataViewState {
-  stage: Stage;
+  step: Step;
   spec: IngestionSpec;
   cacheKey: string | undefined;
   // dialogs / modals
@@ -229,7 +230,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
-      stage: 'connect',
+      step: 'connect',
       spec,
       cacheKey: undefined,
 
@@ -282,15 +283,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   componentDidMount(): void {
     this.getOverlordModules();
     if (this.props.initTaskId) {
-      this.updateStage('loading');
+      this.updateStep('loading');
       this.getTaskJson();
 
     } else if (this.props.initSupervisorId) {
-      this.updateStage('loading');
+      this.updateStep('loading');
       this.getSupervisorJson();
 
     } else {
-      this.updateStage('connect');
+      this.updateStep('connect');
     }
   }
 
@@ -311,13 +312,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({ overlordModules });
   }
 
-  private updateStage = (newStage: Stage) => {
-    this.doQueryForStage(newStage);
-    this.setState({ stage: newStage });
+  private updateStep = (newStep: Step) => {
+    this.doQueryForStep(newStep);
+    this.setState({ step: newStep });
   }
 
-  doQueryForStage(stage: Stage): any {
-    switch (stage) {
+  doQueryForStep(step: Step): any {
+    switch (step) {
       case 'connect': return this.queryForConnect(true);
       case 'parser': return this.queryForParser(true);
       case 'timestamp': return this.queryForTimestamp(true);
@@ -337,51 +338,52 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   render() {
-    const { stage, spec } = this.state;
+    const { step, spec } = this.state;
     if (!Object.keys(spec).length && !this.props.initSupervisorId && !this.props.initTaskId) {
       return <div className={classNames('load-data-view', 'app-view', 'init')}>
-        {this.renderInitStage()}
+        {this.renderInitStep()}
       </div>;
     }
 
-    return <div className={classNames('load-data-view', 'app-view', stage)}>
+    return <div className={classNames('load-data-view', 'app-view', step)}>
       {this.renderStepNav()}
 
-      {stage === 'connect' && this.renderConnectStage()}
-      {stage === 'parser' && this.renderParserStage()}
-      {stage === 'timestamp' && this.renderTimestampStage()}
+      {step === 'connect' && this.renderConnectStep()}
+      {step === 'parser' && this.renderParserStep()}
+      {step === 'timestamp' && this.renderTimestampStep()}
 
-      {stage === 'transform' && this.renderTransformStage()}
-      {stage === 'filter' && this.renderFilterStage()}
-      {stage === 'schema' && this.renderSchemaStage()}
+      {step === 'transform' && this.renderTransformStep()}
+      {step === 'filter' && this.renderFilterStep()}
+      {step === 'schema' && this.renderSchemaStep()}
 
-      {stage === 'partition' && this.renderPartitionStage()}
-      {stage === 'tuning' && this.renderTuningStage()}
-      {stage === 'publish' && this.renderPublishStage()}
+      {step === 'partition' && this.renderPartitionStep()}
+      {step === 'tuning' && this.renderTuningStep()}
+      {step === 'publish' && this.renderPublishStep()}
 
-      {stage === 'json-spec' && this.renderJsonSpecStage()}
-      {stage === 'loading' && this.renderLoading()}
+      {step === 'json-spec' && this.renderJsonSpecStep()}
+      {step === 'loading' && this.renderLoading()}
 
       {this.renderResetConfirm()}
     </div>;
   }
-  renderStepNav() {
-    const { stage } = this.state;
 
-    return <div className={classNames(Classes.TABS, 'stage-nav')}>
+  renderStepNav() {
+    const { step } = this.state;
+
+    return <div className={classNames(Classes.TABS, 'step-nav')}>
       {SECTIONS.map(section => (
-        <div className="stage-section" key={section.name}>
-          <div className="stage-nav-l1">
+        <div className="step-section" key={section.name}>
+          <div className="step-nav-l1">
             {section.name}
           </div>
-          <ButtonGroup className="stage-nav-l2">
-            {section.stages.map((s) => (
+          <ButtonGroup className="step-nav-l2">
+            {section.steps.map((s) => (
               <Button
                 className={s}
                 key={s}
-                active={s === stage}
-                onClick={() => this.updateStage(s)}
-                icon={s === 'json-spec' && IconNames.EYE_OPEN}
+                active={s === step}
+                onClick={() => this.updateStep(s)}
+                icon={s === 'json-spec' && IconNames.MANUALLY_ENTERED_DATA}
                 text={VIEW_TITLE[s]}
               />
             ))}
@@ -391,31 +393,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     </div>;
   }
 
-  renderNextBar(options: { nextStage?: Stage, disabled?: boolean; onNextStage?: () => void, onPrevStage?: () => void, prevLabel?: string }) {
-    const { disabled, onNextStage, onPrevStage, prevLabel } = options;
-    const { stage } = this.state;
-    const nextStage = options.nextStage || STAGES[STAGES.indexOf(stage) + 1] || STAGES[0];
+  renderNextBar(options: { nextStep?: Step, disabled?: boolean; onNextStep?: () => void, onPrevStep?: () => void, prevLabel?: string }) {
+    const { disabled, onNextStep, onPrevStep, prevLabel } = options;
+    const { step } = this.state;
+    const nextStep = options.nextStep || STEPS[STEPS.indexOf(step) + 1] || STEPS[0];
 
     return <div className="next-bar">
       {
-        onPrevStage &&
+        onPrevStep &&
         <Button
           className="prev"
-          icon={IconNames.ARROW_LEFT}
+          icon={IconNames.UNDO}
           text={prevLabel}
-          onClick={onPrevStage}
+          onClick={onPrevStep}
         />
       }
       <Button
-        text={`Next: ${VIEW_TITLE[nextStage]}`}
+        text={`Next: ${VIEW_TITLE[nextStep]}`}
+        rightIcon={IconNames.ARROW_RIGHT}
         intent={Intent.PRIMARY}
         disabled={disabled}
         onClick={() => {
           if (disabled) return;
-          if (onNextStage) onNextStage();
+          if (onNextStep) onNextStep();
 
           setTimeout(() => {
-            this.updateStage(nextStage);
+            this.updateStep(nextStep);
           }, 10);
         }}
       />
@@ -429,7 +432,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       spec: getBlankSpec(comboType)
     });
     setTimeout(() => {
-      this.updateStage('connect');
+      this.updateStep('connect');
     }, 10);
   }
 
@@ -455,7 +458,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     </Card>;
   }
 
-  renderInitStage() {
+  renderInitStep() {
     const { goToTask } = this.props;
     const { overlordModuleNeededMessage } = this.state;
 
@@ -551,7 +554,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   }
 
-  renderConnectStage() {
+  renderConnectStep() {
     const { spec, inputQueryState, sampleStrategy } = this.state;
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
@@ -560,7 +563,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (inputQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please fill out the fields on the right sidebar to get started.
+        Please fill out the fields on the right sidebar to get started <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (inputQueryState.isLoading()) {
@@ -590,7 +593,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <div className="control">
         <Callout className="intro">
           <p>
-            Druid ingests raw data and converts it into a custom, <ExternalLink href="http://druid.io/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
+            Druid ingests raw data and converts it into a custom, <ExternalLink href="https://druid.apache.org/docs/latest/design/segments.html">indexed</ExternalLink> format that is optimized for analytic queries.
           </p>
           <p>
             To get started, please specify where your raw data is stored and what data you want to ingest.
@@ -639,12 +642,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       </div>
       {this.renderNextBar({
         disabled: !inputQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!inputQueryState.data) return;
           this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
         },
         prevLabel: 'Restart',
-        onPrevStage: () => this.setState({ showResetConfirm: true })
+        onPrevStep: () => this.setState({ showResetConfirm: true })
       })}
     </>;
   }
@@ -655,6 +658,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -687,12 +691,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       parserQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse, '__time')
+        data: headerAndRowsFromSampleResponse(sampleResponse, '__time', parserColumns)
       })
     });
   }
 
-  renderParserStage() {
+  renderParserStep() {
     const { spec, columnFilter, specialColumnsOnly, parserQueryState, selectedFlattenField } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
     const flattenFields: FlattenField[] = deepGet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields') || EMPTY_ARRAY;
@@ -703,7 +707,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (parserQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the parser details on the right
+        Please enter the parser details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else if (parserQueryState.isLoading()) {
@@ -759,7 +763,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {
             canFlatten &&
             <p>
-              If you have nested data, you can <ExternalLink href="http://druid.io/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
+              If you have nested data, you can <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html">flatten</ExternalLink> it here.
               If the provided flattening capabilities are not sufficient, please pre-process your data before ingesting it into Druid.
             </p>
           }
@@ -799,7 +803,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       </div>
       {this.renderNextBar({
         disabled: !parserQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!parserQueryState.data) return;
           const possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
           if (possibleTimestampSpec) {
@@ -881,7 +885,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         <AnchorButton
           icon={IconNames.INFO_SIGN}
-          href="http://druid.io/docs/latest/ingestion/flatten-json.html"
+          href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html"
           target="_blank"
           minimal
         />
@@ -895,6 +899,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
     const timestampSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
 
     let issue: string | null = null;
@@ -929,14 +934,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       cacheKey: sampleResponse.cacheKey,
       timestampQueryState: new QueryState({
         data: {
-          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse),
+          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns)),
           timestampSpec
         }
       })
     });
   }
 
-  renderTimestampStage() {
+  renderTimestampStep() {
     const { spec, columnFilter, specialColumnsOnly, timestampQueryState } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
     const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
@@ -947,7 +952,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let mainFill: JSX.Element | string = '';
     if (timestampQueryState.isInit()) {
       mainFill = <CenterMessage>
-        Please enter the timestamp column details on the right
+        Please enter the timestamp column details on the right <Icon icon={IconNames.ARROW_RIGHT}/>
       </CenterMessage>;
 
     } else  if (timestampQueryState.isLoading()) {
@@ -1053,6 +1058,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -1085,12 +1091,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       transformQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse)
+        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns))
       })
     });
   }
 
-  renderTransformStage() {
+  renderTransformStep() {
     const { spec, columnFilter, specialColumnsOnly, transformQueryState, selectedTransformIndex } = this.state;
     const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
@@ -1142,7 +1148,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             Optional
           </p>
           <p>
-            Druid can perform simple <ExternalLink href="http://druid.io/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
+            Druid can perform simple <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/transform-spec.html#transforms">transforms</ExternalLink> of column values.
           </p>
           <p>
             Click "Preview" to see the result of any specified transforms.
@@ -1172,7 +1178,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       </div>
       {this.renderNextBar({
         disabled: !transformQueryState.data,
-        onNextStage: () => {
+        onNextStep: () => {
           if (!transformQueryState.data) return;
           this.updateSpec(updateSchemaWithSample(spec, transformQueryState.data, 'specific', true));
         }
@@ -1257,6 +1263,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
     let issue: string | null = null;
     if (issueWithIoConfig(ioConfig)) {
@@ -1289,17 +1296,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       filterQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, true)
+        data: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns), true)
       })
     });
   }
 
-  private getMemoizedDimensionFiltersFromSpec = memoize<IngestionSpec, DruidFilter[]>((spec) => {
+  private getMemoizedDimensionFiltersFromSpec = memoize((spec) => {
     const { dimensionFilters } = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
     return dimensionFilters;
   });
 
-  renderFilterStage() {
+  renderFilterStep() {
     const { spec, columnFilter, filterQueryState, selectedFilter, selectedFilterIndex, showGlobalFilter } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
@@ -1348,7 +1355,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             Optional
           </p>
           <p>
-            Druid can <ExternalLink href="http://druid.io/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
+            Druid can <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">filter</ExternalLink> out unwanted data.
           </p>
           <p>
             Click "Preview" to see the impact of any specified filters.
@@ -1512,6 +1519,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
     const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || EMPTY_ARRAY;
     const dimensionsSpec: DimensionsSpec = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || EMPTY_OBJECT;
 
@@ -1547,7 +1555,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       cacheKey: sampleResponse.cacheKey,
       schemaQueryState: new QueryState({
         data: {
-          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse),
+          headerAndRows: headerAndRowsFromSampleResponse(sampleResponse, undefined, ['__time'].concat(parserColumns)),
           dimensionsSpec,
           metricsSpec
         }
@@ -1555,7 +1563,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   }
 
-  renderSchemaStage() {
+  renderSchemaStep() {
     const { spec, columnFilter, schemaQueryState, selectedDimensionSpec, selectedDimensionSpecIndex, selectedMetricSpec, selectedMetricSpecIndex } = this.state;
     const rollup: boolean = Boolean(deepGet(spec, 'dataSchema.granularitySpec.rollup'));
     const somethingSelected = Boolean(selectedDimensionSpec || selectedMetricSpec);
@@ -1604,7 +1612,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             If you want to change the type, click on the column header.
           </p>
           <p>
-            Select whether or not you want to <ExternalLink href="http://druid.io/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
+            Select whether or not you want to <ExternalLink href="https://druid.apache.org/docs/latest/tutorials/tutorial-rollup.html">roll-up</ExternalLink> your data.
           </p>
         </Callout>
         {
@@ -1620,7 +1628,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 content={
                   <div className="label-info-text">
                     <p>
-                      Select whether or not you want to set an explicit list of <ExternalLink href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="http://druid.io/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
+                      Select whether or not you want to set an explicit list of <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</ExternalLink> and <ExternalLink href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</ExternalLink>.
                       Explicitly setting dimensions and metrics can lead to better compression and performance.
                       If you disable this option, Druid will try to auto-detect fields in your data and treat them as individual columns.
                     </p>
@@ -1662,7 +1670,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       The primary timestamp will be truncated to the specified query granularity, and rows containing the same string field values will be aggregated together.
                     </p>
                     <p>
-                      If you enable rollup, you must specify which columns are <a href="http://druid.io/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="http://druid.io/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
+                      If you enable rollup, you must specify which columns are <a href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">dimensions</a> (fields you want to group and filter on), and which are <a href="https://druid.apache.org/docs/latest/querying/aggregations.html">metrics</a> (fields you want to aggregate on).
                     </p>
                   </div>
                 }
@@ -1914,7 +1922,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  renderPartitionStage() {
+  renderPartitionStep() {
     const { spec } = this.state;
     const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || EMPTY_OBJECT;
     const granularitySpec: GranularitySpec = deepGet(spec, 'dataSchema.granularitySpec') || EMPTY_OBJECT;
@@ -1973,7 +1981,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  renderTuningStage() {
+  renderTuningStep() {
     const { spec } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const tuningConfig: TuningConfig = deepGet(spec, 'tuningConfig') || EMPTY_OBJECT;
@@ -2058,7 +2066,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  renderPublishStage() {
+  renderPublishStep() {
     const { spec } = this.state;
 
     return <>
@@ -2147,7 +2155,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(normalizeSpecType(resp.data));
-      this.updateStage('json-spec');
+      this.updateStep('json-spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get supervisor spec: ${getDruidErrorMessage(e)}`,
@@ -2162,7 +2170,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(normalizeSpecType(resp.data.payload.spec));
-      this.updateStage('json-spec');
+      this.updateStep('json-spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get task spec: ${getDruidErrorMessage(e)}`,
@@ -2175,7 +2183,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return <Loader loading/>;
   }
 
-  renderJsonSpecStage() {
+  renderJsonSpecStep() {
     const { goToTask } = this.props;
     const { spec } = this.state;
 

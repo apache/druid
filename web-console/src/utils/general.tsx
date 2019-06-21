@@ -19,6 +19,7 @@
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import FileSaver from 'file-saver';
+import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -92,7 +93,7 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
     return true;
   }
   if (value === null) return false;
-  const haystack = String(value.toLowerCase());
+  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
@@ -135,11 +136,45 @@ function identity(x: any): any {
 
 export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
   const lookup: Record<string, Q> = {};
-  for (let i = 0; i < array.length; i++) {
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
     const a = array[i];
     lookup[keyFn(a, i)] = valueFn(a, i);
   }
   return lookup;
+}
+
+export function mapRecord<T, Q>(record: Record<string, T>, fn: (value: T, key: string) => Q): Record<string, Q> {
+  const newRecord: Record<string, Q> = {};
+  const keys = Object.keys(record);
+  for (const key of keys) {
+    newRecord[key] = fn(record[key], key);
+  }
+  return newRecord;
+}
+
+export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string, aggregateFn: (xs: T[], key: string) => Q): Q[] {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+}
+
+export function uniq(array: string[]): string[] {
+  const seen: Record<string, boolean> = {};
+  return array.filter(s => {
+    if (hasOwnProp(seen, s)) {
+      return false;
+    } else {
+      seen[s] = true;
+      return true;
+    }
+  });
 }
 
 export function parseList(list: string): string[] {
@@ -184,17 +219,6 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
-export function memoize<T, U>(fn: (x: T) => U): (x: T) => U {
-  let lastInput: T;
-  let lastOutput: U;
-  return (x: T) => {
-    if (x === lastInput) return lastOutput;
-    lastInput = x;
-    lastOutput = fn(lastInput);
-    return lastOutput;
-  };
-}
-
 export function parseJson(json: string): any {
   try {
     return JSON.parse(json);
@@ -238,18 +262,33 @@ export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | und
   return (xs.map(f) as any).filter(Boolean);
 }
 
-export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[]): string[] {
-  const pre = things.filter((x) => prefix.includes(x)).sort();
-  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x)).sort();
-  const post = things.filter((x) => suffix.includes(x)).sort();
-  return pre.concat(mid, post);
+export function alphanumericCompare(a: string, b: string): number {
+  return String(a).localeCompare(b, undefined, { numeric: true });
+}
+
+export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[], cmp: null | ((a: string, b: string) => number)): string[] {
+  const pre = uniq(prefix.filter((x) => things.includes(x)));
+  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x));
+  const post = uniq(suffix.filter((x) => things.includes(x)));
+  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
 }
 
 // ----------------------------
 
-export function downloadFile(text: string, type: string, fileName: string): void {
+export function downloadFile(text: string, type: string, filename: string): void {
+  let blobType: string = '';
+  switch (type) {
+    case 'json':
+      blobType = 'application/json';
+      break;
+    case 'tsv':
+      blobType = 'text/tab-separated-values';
+      break;
+    default: // csv
+      blobType = `text/${type}`;
+  }
   const blob = new Blob([text], {
-    type: `text/${type}`
+    type: blobType
   });
-  FileSaver.saveAs(blob, fileName);
+  FileSaver.saveAs(blob, filename);
 }
