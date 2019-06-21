@@ -174,7 +174,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   componentDidMount(): void {
-    this.state.hiddenColumns.getDataFromStorage();
     if (this.props.noSqlMode) {
       this.segmentsJsonQueryManager.runQuery('init');
     }

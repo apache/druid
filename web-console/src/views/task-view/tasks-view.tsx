@@ -189,9 +189,6 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
   componentDidMount(): void {
     const { noSqlMode } = this.props;
 
-    this.state.hiddenTaskColumns.getDataFromStorage();
-    this.state.hiddenTaskColumns.getDataFromStorage();
-
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');

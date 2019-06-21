@@ -151,8 +151,6 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
     const { noSqlMode } = this.props;
     const { hiddenColumns } = this.state;
 
-    hiddenColumns.getDataFromStorage();
-
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         let servers: ServerQueryResultRow[];

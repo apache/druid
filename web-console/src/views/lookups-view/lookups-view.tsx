@@ -89,8 +89,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   componentDidMount(): void {
-    this.state.hiddenColumns.getDataFromStorage();
-
     this.lookupsGetQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');

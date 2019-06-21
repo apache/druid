@@ -18,40 +18,38 @@
 
 import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
-export class LocalStorageBackedArray <T> {
+export class LocalStorageBackedArray<T> {
   key: LocalStorageKeys;
   storedArray: T[];
 
   constructor(key: LocalStorageKeys, array?: T[]) {
     this.key = key;
-    if (array === undefined) {
+    if (!Array.isArray(array)) {
       this.getDataFromStorage();
     } else {
       this.storedArray = array;
-      this.update();
+      this.setDataInStorage();
     }
   }
 
-  getDataFromStorage() {
+  private getDataFromStorage(): void {
+    let possibleArray: any;
     try {
-      this.storedArray = JSON.parse(String(localStorageGet(this.key)));
+      possibleArray = JSON.parse(String(localStorageGet(this.key)));
     } catch {
       // show all columns by default
-      this.storedArray = [];
-      this.update();
+      possibleArray = [];
     }
-    if (this.storedArray === null) {
-      this.storedArray = [];
-      this.update();
-    }
-    return this.storedArray;
+    if (!Array.isArray(possibleArray)) possibleArray = [];
+
+    this.storedArray = possibleArray;
   }
 
-  update() {
+  private setDataInStorage(): void {
     localStorageSet(this.key, JSON.stringify(this.storedArray));
   }
 
-  toggle(value: any) {
+  toggle(value: T): LocalStorageBackedArray<T> {
     let toggledArray;
     if (this.storedArray.includes(value)) {
       toggledArray = this.storedArray.filter(c => c !== value);
@@ -61,7 +59,7 @@ export class LocalStorageBackedArray <T> {
     return new LocalStorageBackedArray<T>(this.key, toggledArray);
   }
 
-  exists(value: any) {
+  exists(value: any): boolean {
     return !this.storedArray.includes(value);
   }
 }

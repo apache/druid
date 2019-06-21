@@ -129,8 +129,6 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
     const { noSqlMode } = this.props;
     const { hiddenColumns } = this.state;
 
-    hiddenColumns.getDataFromStorage();
-
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         let datasources: DatasourceQueryResultRow[];
