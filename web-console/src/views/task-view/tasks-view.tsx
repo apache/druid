@@ -37,6 +37,8 @@ import {
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/localStorageBackedArray';
+import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './tasks-view.scss';
 
@@ -80,6 +82,8 @@ export interface TasksViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
+  hiddenColumns: LocalStorageBackedArray;
+  test: number;
 }
 
 interface TaskQueryResultRow {
@@ -126,7 +130,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
-  private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private taskTableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
   static statusRanking: Record<string, number> = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
@@ -158,16 +162,17 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
       supervisorTableActionDialogId: null,
-      supervisorTableActionDialogActions: []
+      supervisorTableActionDialogActions: [],
+
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, []),
+      test: 0
     };
 
     this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
 
-    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, () => this.setState({})
-    );
+    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(  this.state.hiddenColumns, (storedArray: string[]) => { this.setState({hiddenColumns : new  LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)}); });
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -795,7 +800,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             <TableColumnSelector
               columns={taskTableColumns}
               onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelector(column)}
-              tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
+              tableColumnsHidden={this.state.hiddenColumns.copy()}
             />
           </ViewControlBar>
           {this.renderTaskTable()}
