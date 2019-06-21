@@ -143,7 +143,6 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
 
-
       tasksLoading: true,
       tasks: null,
       tasksError: null,

@@ -33,7 +33,6 @@ export class LocalStorageBackedArray <T> {
   }
 
   getDataFromStorage() {
-    console.log('here');
     try {
       this.storedArray = JSON.parse(String(localStorageGet(this.key)));
     } catch {
@@ -59,7 +58,7 @@ export class LocalStorageBackedArray <T> {
     } else {
       toggledArray = this.storedArray.concat(value);
     }
-    return new LocalStorageBackedArray(this.key, toggledArray);
+    return new LocalStorageBackedArray<T>(this.key, toggledArray);
   }
 
   exists(value: any) {
