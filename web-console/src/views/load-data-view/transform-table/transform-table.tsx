@@ -77,7 +77,7 @@ export class TransformTable extends React.PureComponent<TransformTableProps> {
                         name: columnName,
                         expression: escapeColumnName(columnName),
                       },
-                      transformIndex
+                      transformIndex,
                     );
                   }
                 }}

@@ -113,7 +113,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
               label="Use approximate COUNT(DISTINCT)"
               onChange={() => {
                 onQueryContextChange(
-                  setUseApproximateCountDistinct(queryContext, !useApproximateCountDistinct)
+                  setUseApproximateCountDistinct(queryContext, !useApproximateCountDistinct),
                 );
               }}
             />

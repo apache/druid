@@ -95,7 +95,7 @@ export class QueryManager<Q, R> {
           loading: false,
           error: e.message,
         });
-      }
+      },
     );
   }
 

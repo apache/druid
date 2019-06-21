@@ -31,7 +31,7 @@ describe('sql view', () => {
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
     expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual(
-      'SELECT * FROM tbl --hello  '
+      'SELECT * FROM tbl --hello  ',
     );
   });
 });

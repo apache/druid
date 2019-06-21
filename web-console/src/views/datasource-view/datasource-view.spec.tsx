@@ -28,7 +28,7 @@ describe('data source view', () => {
         goToQuery={(initSql: string) => {}}
         goToSegments={(datasource: string, onlyUnavailable?: boolean) => {}}
         noSqlMode={false}
-      />
+      />,
     );
     expect(dataSourceView).toMatchSnapshot();
   });

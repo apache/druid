@@ -937,7 +937,7 @@ export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null
 }
 
 export function getIoConfigTuningFormFields(
-  ingestionComboType: IngestionComboType
+  ingestionComboType: IngestionComboType,
 ): Field<IoConfig>[] {
   switch (ingestionComboType) {
     case 'index:http':
@@ -1245,7 +1245,7 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
 
         case 'static-s3':
           return filenameFromPath(
-            (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0]
+            (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0],
           );
 
         case 'http':
@@ -1300,7 +1300,7 @@ export interface TuningConfig {
 }
 
 export function getPartitionRelatedTuningSpecFormFields(
-  specType: IngestionType
+  specType: IngestionType,
 ): Field<TuningConfig>[] {
   switch (specType) {
     case 'index':
@@ -1666,7 +1666,7 @@ export function getBlankSpec(comboType: IngestionComboType): IngestionSpec {
   let [ingestionType, firehoseType] = comboType.split(':');
   if (ingestionType === 'index') ingestionType = 'index_parallel';
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
-    ingestionType as IngestionType
+    ingestionType as IngestionType,
   );
 
   const granularitySpec: GranularitySpec = {
@@ -1756,7 +1756,7 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
       : [filter]
     : EMPTY_ARRAY;
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
-    f => typeof f.dimension === 'string'
+    f => typeof f.dimension === 'string',
   );
   const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
 

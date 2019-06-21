@@ -63,9 +63,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
                   label: columnData.COLUMN_NAME,
                 })),
-              })
+              }),
             ),
-          })
+          }),
         ),
       };
     }
@@ -153,7 +153,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   private handleNodeClick = (
     nodeData: ITreeNode,
     nodePath: number[],
-    e: React.MouseEvent<HTMLElement>
+    e: React.MouseEvent<HTMLElement>,
   ) => {
     const { onQueryStringChange } = this.props;
     const { columnTree, selectedTreeIndex } = this.state;

@@ -24,7 +24,7 @@ export type ArrayHandling = 'ignore-arrays' | 'include-arrays';
 export function computeFlattenPathsForData(
   data: Record<string, any>[],
   exprType: ExprType,
-  arrayHandling: ArrayHandling
+  arrayHandling: ArrayHandling,
 ): FlattenField[] {
   return computeFlattenExprsForData(data, exprType, arrayHandling).map((expr, i) => {
     return {
@@ -38,7 +38,7 @@ export function computeFlattenPathsForData(
 export function computeFlattenExprsForData(
   data: Record<string, any>[],
   exprType: ExprType,
-  arrayHandling: ArrayHandling
+  arrayHandling: ArrayHandling,
 ): string[] {
   const seenPaths: Record<string, boolean> = {};
   for (const datum of data) {
@@ -50,7 +50,7 @@ export function computeFlattenExprsForData(
           seenPaths,
           exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`,
           datumValue,
-          arrayHandling
+          arrayHandling,
         );
       }
     }
@@ -63,7 +63,7 @@ function addPath(
   paths: Record<string, boolean>,
   path: string,
   value: any,
-  arrayHandling: ArrayHandling
+  arrayHandling: ArrayHandling,
 ) {
   if (isNested(value)) {
     if (!Array.isArray(value)) {

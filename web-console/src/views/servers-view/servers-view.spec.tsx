@@ -29,7 +29,7 @@ describe('servers view', () => {
         goToQuery={(initSql: string) => {}}
         goToTask={(taskId: string) => {}}
         noSqlMode={false}
-      />
+      />,
     );
     expect(serversView).toMatchSnapshot();
   });

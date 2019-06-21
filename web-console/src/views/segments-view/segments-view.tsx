@@ -167,7 +167,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 is_overshadowed: -1,
               };
             });
-          })
+          }),
         );
         const results: SegmentQueryResultRow[] = [].concat
           .apply([], nestedResults)
@@ -188,7 +188,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
   }
 
@@ -232,7 +232,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         'ORDER BY ' +
           sorted
             .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-            .join(', ')
+            .join(', '),
       );
     }
 

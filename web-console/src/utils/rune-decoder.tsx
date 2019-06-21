@@ -67,7 +67,7 @@ function processArrayWithResult(rune: any[]): HeaderRows {
 
 function processSelect(rune: any[]): HeaderRows {
   return flatArrayToHeaderRows(
-    [].concat(...rune.map(r => r.result.events.map((e: any) => e.event)))
+    [].concat(...rune.map(r => r.result.events.map((e: any) => e.event))),
   );
 }
 
@@ -79,8 +79,8 @@ function processScan(rune: any[]): HeaderRows {
 function processSegmentMetadata(rune: any[]): HeaderRows {
   const flatArray = ([] as any).concat(
     ...rune.map(r =>
-      Object.keys(r.columns).map(k => Object.assign({ id: r.id, column: k }, r.columns[k]))
-    )
+      Object.keys(r.columns).map(k => Object.assign({ id: r.id, column: k }, r.columns[k])),
+    ),
   );
   return flatArrayToHeaderRows(flatArray);
 }
@@ -102,7 +102,7 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
           `Unsupported query type '${queryType}'.`,
           `Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'.`,
           `If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`,
-        ].join(' ')
+        ].join(' '),
       );
     }
   }

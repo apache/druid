@@ -31,7 +31,7 @@ describe('tasks view', () => {
         goToMiddleManager={(middleManager: string) => null}
         goToLoadDataView={() => null}
         noSqlMode={false}
-      />
+      />,
     );
     expect(taskView).toMatchSnapshot();
   });

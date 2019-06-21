@@ -206,7 +206,7 @@ export class ConsoleApplication extends React.PureComponent<
   private wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
-    classType: 'normal' | 'narrow-pad' = 'normal'
+    classType: 'normal' | 'narrow-pad' = 'normal',
   ) => {
     const { hideLegacy } = this.props;
 
@@ -231,7 +231,7 @@ export class ConsoleApplication extends React.PureComponent<
         initTaskId={this.taskId}
         goToTask={this.goToTask}
       />,
-      'narrow-pad'
+      'narrow-pad',
     );
   };
 
@@ -247,7 +247,7 @@ export class ConsoleApplication extends React.PureComponent<
         goToQuery={this.goToQuery}
         goToSegments={this.goToSegments}
         noSqlMode={noSqlMode}
-      />
+      />,
     );
   };
 
@@ -260,7 +260,7 @@ export class ConsoleApplication extends React.PureComponent<
         onlyUnavailable={this.onlyUnavailable}
         goToQuery={this.goToQuery}
         noSqlMode={noSqlMode}
-      />
+      />,
     );
   };
 
@@ -275,7 +275,7 @@ export class ConsoleApplication extends React.PureComponent<
         goToMiddleManager={this.goToMiddleManager}
         goToLoadDataView={this.goToLoadDataView}
         noSqlMode={noSqlMode}
-      />
+      />,
     );
   };
 
@@ -288,7 +288,7 @@ export class ConsoleApplication extends React.PureComponent<
         goToQuery={this.goToQuery}
         goToTask={this.goToTask}
         noSqlMode={noSqlMode}
-      />
+      />,
     );
   };
 

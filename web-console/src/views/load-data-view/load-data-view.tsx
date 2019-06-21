@@ -149,7 +149,7 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   const timestampSpecs = headerAndRows.header
     .map(sampleHeader => {
       const possibleFormat = possibleDruidFormatForValues(
-        filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[sampleHeader] : null))
+        filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[sampleHeader] : null)),
       );
       if (!possibleFormat) return null;
       return {
@@ -533,7 +533,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard(
             'Google Cloud Storage',
             'index:static-google-blobstore',
-            'druid-google-extensions'
+            'druid-google-extensions',
           )}
           {this.renderIngestionCard('Local disk', 'index:local')}
           <Card interactive onClick={() => goToTask(null, 'supervisor')}>
@@ -825,7 +825,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       sugestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => parseJson(r.raw)),
         'path',
-        'ignore-arrays'
+        'ignore-arrays',
       );
     }
 
@@ -869,8 +869,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     deepSet(
                       spec,
                       'dataSchema.parser.parseSpec.flattenSpec.fields',
-                      sugestedFlattenFields
-                    )
+                      sugestedFlattenFields,
+                    ),
                   );
                   setTimeout(() => {
                     this.queryForParser();
@@ -892,7 +892,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               const newSpec: IngestionSpec = deepSet(
                 spec,
                 'dataSchema.parser.parseSpec.timestampSpec',
-                possibleTimestampSpec
+                possibleTimestampSpec,
               );
               this.updateSpec(newSpec);
             }
@@ -946,8 +946,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   deepSet(
                     spec,
                     `dataSchema.parser.parseSpec.flattenSpec.fields.${selectedFlattenFieldIndex}`,
-                    selectedFlattenField
-                  )
+                    selectedFlattenField,
+                  ),
                 );
                 closeAndQuery();
               }}
@@ -960,8 +960,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpec(
                     deepDelete(
                       spec,
-                      `dataSchema.parser.parseSpec.flattenSpec.fields.${selectedFlattenFieldIndex}`
-                    )
+                      `dataSchema.parser.parseSpec.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                    ),
                   );
                   closeAndQuery();
                 }}
@@ -1039,7 +1039,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           headerAndRows: headerAndRowsFromSampleResponse(
             sampleResponse,
             undefined,
-            ['__time'].concat(parserColumns)
+            ['__time'].concat(parserColumns),
           ),
           timestampSpec,
         },
@@ -1117,7 +1117,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     format: 'auto',
                   };
                   this.updateSpec(
-                    deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec)
+                    deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec),
                   );
                   setTimeout(() => {
                     this.queryForTimestamp();
@@ -1132,8 +1132,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     deepSet(
                       spec,
                       'dataSchema.parser.parseSpec.timestampSpec',
-                      getEmptyTimestampSpec()
-                    )
+                      getEmptyTimestampSpec(),
+                    ),
                   );
                   setTimeout(() => {
                     this.queryForTimestamp();
@@ -1147,7 +1147,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={timestampSpec}
             onChange={timestampSpec => {
               this.updateSpec(
-                deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec)
+                deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec),
               );
             }}
           />
@@ -1207,7 +1207,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: headerAndRowsFromSampleResponse(
           sampleResponse,
           undefined,
-          ['__time'].concat(parserColumns)
+          ['__time'].concat(parserColumns),
         ),
       }),
     });
@@ -1297,7 +1297,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           onNextStep: () => {
             if (!transformQueryState.data) return;
             this.updateSpec(
-              updateSchemaWithSample(spec, transformQueryState.data, 'specific', true)
+              updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
             );
           },
         })}
@@ -1347,8 +1347,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   deepSet(
                     spec,
                     `dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
-                    selectedTransform
-                  )
+                    selectedTransform,
+                  ),
                 );
                 closeAndQuery();
               }}
@@ -1361,8 +1361,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpec(
                     deepDelete(
                       spec,
-                      `dataSchema.transformSpec.transforms.${selectedTransformIndex}`
-                    )
+                      `dataSchema.transformSpec.transforms.${selectedTransformIndex}`,
+                    ),
                   );
                   closeAndQuery();
                 }}
@@ -1432,7 +1432,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           sampleResponse,
           undefined,
           ['__time'].concat(parserColumns),
-          true
+          true,
         ),
       }),
     });
@@ -1556,7 +1556,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               onClick={() => {
                 const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
                 const newFilter = joinFilter(
-                  deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter)
+                  deepSet(curFilter, `dimensionFilters.${selectedFilterIndex}`, selectedFilter),
                 );
                 this.updateSpec(deepSet(spec, 'dataSchema.transformSpec.filter', newFilter));
                 closeAndQuery();
@@ -1569,7 +1569,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 onClick={() => {
                   const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
                   const newFilter = joinFilter(
-                    deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`)
+                    deepDelete(curFilter, `dimensionFilters.${selectedFilterIndex}`),
                   );
                   this.updateSpec(deepSet(spec, 'dataSchema.transformSpec.filter', newFilter));
                   closeAndQuery();
@@ -1708,7 +1708,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           headerAndRows: headerAndRowsFromSampleResponse(
             sampleResponse,
             undefined,
-            ['__time'].concat(parserColumns)
+            ['__time'].concat(parserColumns),
           ),
           dimensionsSpec,
           metricsSpec,
@@ -1901,7 +1901,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     selectedDimensionSpec: DimensionSpec | null,
     selectedDimensionSpecIndex: number,
     selectedMetricSpec: MetricSpec | null,
-    selectedMetricSpecIndex: number
+    selectedMetricSpecIndex: number,
   ) => {
     this.setState({
       selectedDimensionSpec,
@@ -1924,8 +1924,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               spec,
               headerAndRowsFromSampleResponse(sampleResponse),
               getDimensionMode(spec),
-              newRollup
-            )
+              newRollup,
+            ),
           );
           setTimeout(() => {
             this.queryForSchema();
@@ -1957,8 +1957,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               spec,
               headerAndRowsFromSampleResponse(sampleResponse),
               newDimensionMode,
-              getRollup(spec)
-            )
+              getRollup(spec),
+            ),
           );
           setTimeout(() => {
             this.queryForSchema();
@@ -2017,8 +2017,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   deepSet(
                     spec,
                     `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-                    selectedDimensionSpec
-                  )
+                    selectedDimensionSpec,
+                  ),
                 );
                 closeAndQuery();
               }}
@@ -2036,8 +2036,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpec(
                     deepDelete(
                       spec,
-                      `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`
-                    )
+                      `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+                    ),
                   );
                   closeAndQuery();
                 }}
@@ -2103,8 +2103,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   deepSet(
                     spec,
                     `dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
-                    selectedMetricSpec
-                  )
+                    selectedMetricSpec,
+                  ),
                 );
                 closeAndQuery();
               }}
@@ -2115,7 +2115,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 intent={Intent.DANGER}
                 onClick={() => {
                   this.updateSpec(
-                    deepDelete(spec, `dataSchema.metricsSpec.${selectedMetricSpecIndex}`)
+                    deepDelete(spec, `dataSchema.metricsSpec.${selectedMetricSpecIndex}`),
                   );
                   closeAndQuery();
                 }}
@@ -2232,7 +2232,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 {ioConfig.firehose
                   ? `No specific tuning configs for firehose of type '${deepGet(
                       ioConfig,
-                      'firehose.type'
+                      'firehose.type',
                     )}'.`
                   : `No specific tuning configs.`}
               </div>

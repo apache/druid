@@ -156,7 +156,7 @@ export class DatasourcesView extends React.PureComponent<
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
   }
 
@@ -188,7 +188,7 @@ export class DatasourcesView extends React.PureComponent<
         let disabled: string[] = [];
         if (this.state.showDisabled) {
           const disabledResp = await axios.get(
-            '/druid/coordinator/v1/metadata/datasources?includeDisabled'
+            '/druid/coordinator/v1/metadata/datasources?includeDisabled',
           );
           disabled = disabledResp.data.filter((d: string) => !seen[d]);
         }
@@ -199,14 +199,14 @@ export class DatasourcesView extends React.PureComponent<
         const compactionResp = await axios.get('/druid/coordinator/v1/config/compaction');
         const compaction = lookupBy(
           compactionResp.data.compactionConfigs,
-          (c: any) => c.dataSource
+          (c: any) => c.dataSource,
         );
 
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
         const allDatasources = (datasources as any).concat(
-          disabled.map(d => ({ datasource: d, disabled: true }))
+          disabled.map(d => ({ datasource: d, disabled: true })),
         );
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
@@ -254,7 +254,7 @@ GROUP BY 1`);
             ? async () => {
                 const resp = await axios.delete(
                   `/druid/coordinator/v1/datasources/${dropDataDatasource}`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -286,7 +286,7 @@ GROUP BY 1`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/coordinator/v1/datasources/${enableDatasource}`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -322,7 +322,7 @@ GROUP BY 1`);
                   }`,
                   {
                     interval: dropReloadInterval,
-                  }
+                  },
                 );
                 return resp.data;
               }
@@ -363,7 +363,7 @@ GROUP BY 1`);
             ? async () => {
                 const resp = await axios.delete(
                   `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -451,7 +451,7 @@ GROUP BY 1`);
           try {
             await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
             this.setState({ compactionDialogOpenOn: null }, () =>
-              this.datasourceQueryManager.rerunLastQuery()
+              this.datasourceQueryManager.rerunLastQuery(),
             );
           } catch (e) {
             AppToaster.show({
@@ -644,7 +644,7 @@ GROUP BY 1`);
                   const segmentsMissingEl = (
                     <a onClick={() => goToSegments(datasource, true)}>{`${pluralIfNeeded(
                       missing,
-                      'segment'
+                      'segment',
                     )} unavailable`}</a>
                   );
                   return (

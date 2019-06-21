@@ -68,7 +68,7 @@ export class QueryPlanDialog extends React.PureComponent<
               value={JSON.stringify(
                 (explainResult as BasicQueryExplanation).query[0],
                 undefined,
-                2
+                2,
               )}
             />
           </FormGroup>
@@ -108,7 +108,7 @@ export class QueryPlanDialog extends React.PureComponent<
               value={JSON.stringify(
                 (explainResult as SemiJoinQueryExplanation).mainQuery.query,
                 undefined,
-                2
+                2,
               )}
             />
           </FormGroup>
@@ -119,7 +119,7 @@ export class QueryPlanDialog extends React.PureComponent<
               value={JSON.stringify(
                 (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
                 undefined,
-                2
+                2,
               )}
             />
           </FormGroup>

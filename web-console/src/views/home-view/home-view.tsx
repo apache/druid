@@ -303,7 +303,7 @@ GROUP BY 1`);
     });
 
     this.serverQueryManager.runQuery(
-      `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`
+      `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
     );
   }
 
@@ -427,15 +427,15 @@ GROUP BY 1`);
             <>
               <p>{`${pluralIfNeeded(state.overlordCount, 'overlord')}, ${pluralIfNeeded(
                 state.coordinatorCount,
-                'coordinator'
+                'coordinator',
               )}`}</p>
               <p>{`${pluralIfNeeded(state.routerCount, 'router')}, ${pluralIfNeeded(
                 state.brokerCount,
-                'broker'
+                'broker',
               )}`}</p>
               <p>{`${pluralIfNeeded(state.historicalCount, 'historical')}, ${pluralIfNeeded(
                 state.middleManagerCount,
-                'middle manager'
+                'middle manager',
               )}`}</p>
               {Boolean(state.peonCount) && <p>{pluralIfNeeded(state.peonCount, 'peon')}</p>}
             </>

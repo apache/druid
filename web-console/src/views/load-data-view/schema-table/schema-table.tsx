@@ -54,7 +54,7 @@ export interface SchemaTableProps extends React.Props<any> {
     selectedDimensionSpec: DimensionSpec | null,
     selectedDimensionSpecIndex: number,
     selectedMetricSpec: MetricSpec | null,
-    selectedMetricSpecIndex: number
+    selectedMetricSpecIndex: number,
   ) => void;
 }
 
@@ -73,7 +73,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
       headerAndRows.header,
       ['__time'],
       metricsSpec.map(getMetricSpecName),
-      null
+      null,
     );
 
     return (
@@ -121,7 +121,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
               dimensionSpecType || 'string',
               {
                 selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex,
-              }
+              },
             );
             return {
               Header: (
@@ -138,7 +138,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
                       inflateDimensionSpec(dimensionSpec),
                       dimensionSpecIndex,
                       null,
-                      -1
+                      -1,
                     );
                   }}
                 >

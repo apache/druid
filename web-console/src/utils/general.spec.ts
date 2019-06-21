@@ -26,8 +26,8 @@ describe('general', () => {
           'abcdefgh'.split('').reverse(),
           'gef'.split(''),
           'ba'.split(''),
-          alphanumericCompare
-        ).join('')
+          alphanumericCompare,
+        ).join(''),
       ).toEqual('gefcdhba');
     });
 
@@ -37,8 +37,8 @@ describe('general', () => {
           'abcdefgh'.split('').reverse(),
           'gefgef'.split(''),
           'baba'.split(''),
-          alphanumericCompare
-        ).join('')
+          alphanumericCompare,
+        ).join(''),
       ).toEqual('gefcdhba');
     });
   });

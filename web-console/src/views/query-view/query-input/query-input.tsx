@@ -67,7 +67,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
           value: v,
           score: 50,
           meta: 'column',
-        }))
+        })),
       );
 
       langTools.addCompleter({
@@ -99,7 +99,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' }))
+      SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' })),
     );
 
     const keywordCompleter = {
@@ -158,7 +158,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
                 <b>Description:</b>
               </div>
               <div>{item.description}</div>
-            </div>
+            </div>,
           );
         }
       },

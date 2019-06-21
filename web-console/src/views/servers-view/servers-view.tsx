@@ -58,17 +58,17 @@ function formatQueues(
   segmentsToLoad: number,
   segmentsToLoadSize: number,
   segmentsToDrop: number,
-  segmentsToDropSize: number
+  segmentsToDropSize: number,
 ): string {
   const queueParts: string[] = [];
   if (segmentsToLoad) {
     queueParts.push(
-      `${segmentsToLoad} segments to load (${formatBytesCompact(segmentsToLoadSize)})`
+      `${segmentsToLoad} segments to load (${formatBytesCompact(segmentsToLoadSize)})`,
     );
   }
   if (segmentsToDrop) {
     queueParts.push(
-      `${segmentsToDrop} segments to drop (${formatBytesCompact(segmentsToDropSize)})`
+      `${segmentsToDrop} segments to drop (${formatBytesCompact(segmentsToDropSize)})`,
     );
   }
   return queueParts.join(', ') || 'Empty load/drop queues';
@@ -149,7 +149,7 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
 
     this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
   }
 
@@ -415,11 +415,11 @@ ORDER BY "rank" DESC, "server" DESC`);
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
                     originalMiddleManagers,
-                    s => s.currCapacityUsed || 0
+                    s => s.currCapacityUsed || 0,
                   );
                   const totalWorkerCapacity = sum(
                     originalMiddleManagers,
-                    s => deepGet(s, 'worker.capacity') || 0
+                    s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
 
@@ -485,7 +485,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                     segmentsToLoad,
                     segmentsToLoadSize,
                     segmentsToDrop,
-                    segmentsToDropSize
+                    segmentsToDropSize,
                   );
 
                 case 'middle_manager':
@@ -506,7 +506,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                 segmentsToLoad,
                 segmentsToLoadSize,
                 segmentsToDrop,
-                segmentsToDropSize
+                segmentsToDropSize,
               );
             },
             show: serverTableColumnSelectionHandler.showColumn('Detail'),
@@ -560,7 +560,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -590,7 +590,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }

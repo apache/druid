@@ -129,7 +129,7 @@ export function caseInsensitiveContains(testString: string, searchString: string
 
 export function countBy<T>(
   array: T[],
-  fn: (x: T, index: number) => string = String
+  fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
@@ -146,7 +146,7 @@ function identity(x: any): any {
 export function lookupBy<T, Q>(
   array: T[],
   keyFn: (x: T, index: number) => string = String,
-  valueFn: (x: T, index: number) => Q = identity
+  valueFn: (x: T, index: number) => Q = identity,
 ): Record<string, Q> {
   const lookup: Record<string, Q> = {};
   const n = array.length;
@@ -159,7 +159,7 @@ export function lookupBy<T, Q>(
 
 export function mapRecord<T, Q>(
   record: Record<string, T>,
-  fn: (value: T, key: string) => Q
+  fn: (value: T, key: string) => Q,
 ): Record<string, Q> {
   const newRecord: Record<string, Q> = {};
   const keys = Object.keys(record);
@@ -172,7 +172,7 @@ export function mapRecord<T, Q>(
 export function groupBy<T, Q>(
   array: T[],
   keyFn: (x: T, index: number) => string,
-  aggregateFn: (xs: T[], key: string) => Q
+  aggregateFn: (xs: T[], key: string) => Q,
 ): Q[] {
   const buckets: Record<string, T[]> = {};
   const n = array.length;
@@ -290,7 +290,7 @@ export function sortWithPrefixSuffix(
   things: string[],
   prefix: string[],
   suffix: string[],
-  cmp: null | ((a: string, b: string) => number)
+  cmp: null | ((a: string, b: string) => number),
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));

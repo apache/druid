@@ -107,7 +107,7 @@ function parseQueryPlanResult(queryPlanResult: string): BasicQueryExplanation {
 }
 
 export function parseQueryPlan(
-  raw: string
+  raw: string,
 ): BasicQueryExplanation | SemiJoinQueryExplanation | string {
   let plan: string = raw;
   plan = plan.replace(/\n/g, '');

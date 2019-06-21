@@ -39,16 +39,16 @@ export function guessTypeFromSample(sample: any[]): string {
 
 export function getColumnTypeFromHeaderAndRows(
   headerAndRows: HeaderAndRows,
-  column: string
+  column: string,
 ): string {
   return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : null))
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : null)),
   );
 }
 
 export function getDimensionSpecs(
   headerAndRows: HeaderAndRows,
-  hasRollup: boolean
+  hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(headerAndRows.header, h => {
     if (h === '__time') return null;
@@ -75,7 +75,7 @@ export function getMetricSecs(headerAndRows: HeaderAndRows): MetricSpec[] {
         default:
           return null;
       }
-    })
+    }),
   );
 }
 
@@ -83,7 +83,7 @@ export function updateSchemaWithSample(
   spec: IngestionSpec,
   headerAndRows: HeaderAndRows,
   dimensionMode: DimensionMode,
-  rollup: boolean
+  rollup: boolean,
 ): IngestionSpec {
   let newSpec = spec;
 
@@ -97,7 +97,7 @@ export function updateSchemaWithSample(
       newSpec = deepSet(
         newSpec,
         'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
-        dimensions
+        dimensions,
       );
     }
   }

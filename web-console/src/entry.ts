@@ -54,7 +54,7 @@ ReactDOM.render(
     customHeaderName: consoleConfig.customHeaderName,
     customHeaderValue: consoleConfig.customHeaderValue,
   }) as any,
-  container
+  container,
 );
 
 // ---------------------------------

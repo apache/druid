@@ -32,7 +32,7 @@ describe('jodaFormatToRegExp', () => {
   it('matches dates when needed', () => {
     expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').test('26-4-1986 01:23:40 am')).toEqual(true);
     expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').test('26-4-1986 01:23:40 am')).toEqual(
-      false
+      false,
     );
   });
 });

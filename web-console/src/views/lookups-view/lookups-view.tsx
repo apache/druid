@@ -83,7 +83,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
   }
 
@@ -246,7 +246,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           deleteLookupTier
             ? async () => {
                 await axios.delete(
-                  `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`
+                  `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
                 );
               }
             : null

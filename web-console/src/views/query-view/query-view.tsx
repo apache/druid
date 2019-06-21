@@ -290,7 +290,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       separator = format === 'csv' ? ',' : '\t';
       lines.push(result.header.map(str => QueryView.formatStr(str, format)).join(separator));
       lines = lines.concat(
-        result.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator))
+        result.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)),
       );
     } else {
       // json

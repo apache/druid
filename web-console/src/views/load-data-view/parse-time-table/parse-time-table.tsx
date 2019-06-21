@@ -67,7 +67,7 @@ export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
             const possibleFormat = timestamp
               ? null
               : possibleDruidFormatForValues(
-                  filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : null))
+                  filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : null)),
                 );
             if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return null;
 
@@ -117,7 +117,7 @@ export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
               minWidth: timestamp ? 200 : 100,
               resizable: !timestamp,
             };
-          }
+          },
         )}
         defaultPageSize={50}
         showPagination={false}

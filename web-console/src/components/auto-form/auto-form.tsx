@@ -246,7 +246,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           jsonInputsValidity: newJSONInputValidity,
         });
         const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(
-          property => newJSONInputValidity[property] === true
+          property => newJSONInputValidity[property] === true,
         );
         updateJSONValidity(allJSONValid);
       }
@@ -286,7 +286,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         return this.renderStringInput(field);
       case 'duration':
         return this.renderStringInput(field, (str: string) =>
-          str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, '')
+          str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, ''),
         );
       case 'boolean':
         return this.renderBooleanInput(field);

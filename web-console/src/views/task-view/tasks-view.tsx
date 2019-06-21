@@ -216,12 +216,12 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
     this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
 
     this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
-      () => this.setState({})
+      () => this.setState({}),
     );
   }
 
@@ -279,7 +279,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
             taskEndpoints.map(async (endpoint: string) => {
               const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
               return TasksView.parseTasks(resp.data);
-            })
+            }),
           );
           return [].concat.apply([], result);
         }
@@ -365,7 +365,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   private getSupervisorActions(
     id: string,
     supervisorSuspended: boolean,
-    type: string
+    type: string,
   ): BasicAction[] {
     const actions: BasicAction[] = [];
     if (type === 'kafka' || type === 'kinesis') {
@@ -394,7 +394,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         title: 'Terminate',
         intent: Intent.DANGER,
         onAction: () => this.setState({ terminateSupervisorId: id }),
-      }
+      },
     );
     return actions;
   }
@@ -409,7 +409,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -439,7 +439,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -469,7 +469,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }
@@ -499,7 +499,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             ? async () => {
                 const resp = await axios.post(
                   `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
-                  {}
+                  {},
                 );
                 return resp.data;
               }

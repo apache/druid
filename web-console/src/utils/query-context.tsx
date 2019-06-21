@@ -57,7 +57,7 @@ export function getUseApproximateCountDistinct(context: QueryContext): boolean {
 
 export function setUseApproximateCountDistinct(
   context: QueryContext,
-  useApproximateCountDistinct: boolean
+  useApproximateCountDistinct: boolean,
 ): QueryContext {
   if (useApproximateCountDistinct) {
     return deepDelete(context, 'useApproximateCountDistinct');
@@ -75,7 +75,7 @@ export function getUseApproximateTopN(context: QueryContext): boolean {
 
 export function setUseApproximateTopN(
   context: QueryContext,
-  useApproximateTopN: boolean
+  useApproximateTopN: boolean,
 ): QueryContext {
   if (useApproximateTopN) {
     return deepDelete(context, 'useApproximateTopN');
