@@ -125,6 +125,8 @@ Non-blocking and partially blocking code
  https://github.com/code-review-checklists/java-concurrency#check-non-blocking-code)
  - [Can use immutable POJO + compare-and-swap operations to simplify non-blocking code?](
  https://github.com/code-review-checklists/java-concurrency#swap-state-atomically)
+ - [Boundaries of non-blocking or benignly racy code are identified by WARNING comments?](
+ https://github.com/code-review-checklists/java-concurrency#non-blocking-warning)
 
 Threads and Executors
  - [Thread is named?](https://github.com/code-review-checklists/java-concurrency#name-threads)
