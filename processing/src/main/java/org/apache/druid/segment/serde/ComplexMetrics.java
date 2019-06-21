@@ -38,18 +38,13 @@ public class ComplexMetrics
     return complexSerializers.get(type);
   }
 
-  private static void registerSerde(String type, ComplexMetricSerde serde)
-  {
-    if (complexSerializers.containsKey(type)) {
-      throw new ISE("Serializer for type[%s] already exists.", type);
-    }
-    complexSerializers.put(type, serde);
-  }
-
   public static void registerSerde(String type, Supplier<ComplexMetricSerde> serdeSupplier)
   {
     if (ComplexMetrics.getSerdeForType(type) == null) {
-      ComplexMetrics.registerSerde(type, serdeSupplier.get());
+      if (complexSerializers.containsKey(type)) {
+        throw new ISE("Serializer for type[%s] already exists.", type);
+      }
+      complexSerializers.put(type, serdeSupplier.get());
     }
   }
 }
