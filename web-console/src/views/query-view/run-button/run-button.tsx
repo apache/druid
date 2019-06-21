@@ -43,8 +43,6 @@ import {
 } from '../../../utils/query-context';
 import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
-import './run-button.scss';
-
 export interface RunButtonProps extends React.Props<any> {
   runeMode: boolean;
   queryContext: QueryContext;
