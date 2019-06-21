@@ -38,7 +38,9 @@ import {
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
+import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './servers-view.scss';
 
@@ -71,6 +73,8 @@ export interface ServersViewState {
 
   middleManagerDisableWorkerHost: string | null;
   middleManagerEnableWorkerHost: string | null;
+
+  hiddenColumns: LocalStorageBackedArray;
 }
 
 interface ServerQueryResultRow {
@@ -110,7 +114,7 @@ interface ServerResultRow extends ServerQueryResultRow, Partial<LoadQueueStatus>
 
 export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
-  private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private serverTableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: ServersViewProps, context: any) {
     super(props, context);
@@ -122,11 +126,13 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
       groupServersBy: null,
 
       middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null
+      middleManagerEnableWorkerHost: null,
+
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, [])
     };
 
-    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, () => this.setState({})
+    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
+      this.state.hiddenColumns, (storedArray: string[]) => this.setState({hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
     );
   }
 
@@ -538,7 +544,7 @@ ORDER BY "rank" DESC, "server" DESC`);
 
   render() {
     const { goToQuery, noSqlMode } = this.props;
-    const { groupServersBy } = this.state;
+    const { groupServersBy, hiddenColumns} = this.state;
     const { serverTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
@@ -565,7 +571,7 @@ ORDER BY "rank" DESC, "server" DESC`);
         <TableColumnSelector
           columns={serverTableColumns}
           onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
-          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
+          tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>
       {this.renderServersTable()}

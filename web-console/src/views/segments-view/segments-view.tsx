@@ -39,6 +39,8 @@ import {
   TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
+import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './segments-view.scss';
 
@@ -64,6 +66,7 @@ export interface SegmentsViewState {
   actions: BasicAction[];
   terminateSegmentId: string | null;
   terminatetDatasourceId: string | null;
+  hiddenColumns: LocalStorageBackedArray;
 }
 
 interface QueryAndSkip {
@@ -91,7 +94,7 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private tableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -109,7 +112,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       segmentsLoading: true,
       segments: null,
       segmentsError: null,
-      segmentFilter
+      segmentFilter,
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, [])
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
@@ -172,8 +176,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       }
     });
 
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
+      this.state.hiddenColumns, (storedArray: string[]) => this.setState({ hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
     );
   }
 
@@ -444,7 +448,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { segmentTableActionDialogId, datasourceTableActionDialogId, actions } = this.state;
+    const { segmentTableActionDialogId, datasourceTableActionDialogId, actions, hiddenColumns } = this.state;
     const { goToQuery, noSqlMode } = this.props;
     const { tableColumnSelectionHandler } = this;
 
@@ -468,7 +472,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
-          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+          tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>
       {this.renderSegmentsTable()}

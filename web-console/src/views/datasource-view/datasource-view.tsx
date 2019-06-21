@@ -38,6 +38,8 @@ import {
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
+import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './datasource-view.scss';
 
@@ -81,6 +83,7 @@ export interface DatasourcesViewState {
   dropReloadDatasource: string | null;
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
+  hiddenColumns: LocalStorageBackedArray;
 }
 
 export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, DatasourcesViewState> {
@@ -99,7 +102,7 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private tableColumnSelectionHandler: TableColumnSelectionHandlerTrial;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -119,11 +122,12 @@ export class DatasourcesView extends React.PureComponent<DatasourcesViewProps, D
       killDatasource: null,
       dropReloadDatasource: null,
       dropReloadAction: 'drop',
-      dropReloadInterval: ''
+      dropReloadInterval: '',
+      hiddenColumns: new LocalStorageBackedArray(LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, [])
     };
 
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandlerTrial(
+      this.state.hiddenColumns, (storedArray: string[]) => this.setState({hiddenColumns: new LocalStorageBackedArray(this.state.hiddenColumns.key, storedArray)})
     );
   }
 
@@ -480,7 +484,7 @@ GROUP BY 1`);
 
   renderDatasourceTable() {
     const { goToSegments, noSqlMode } = this.props;
-    const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
+    const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled, hiddenColumns } = this.state;
     const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
@@ -647,7 +651,7 @@ GROUP BY 1`);
 
   render() {
     const { goToQuery, noSqlMode } = this.props;
-    const { showDisabled } = this.state;
+    const { showDisabled, hiddenColumns } = this.state;
     const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
@@ -673,7 +677,7 @@ GROUP BY 1`);
         <TableColumnSelector
           columns={noSqlMode ? tableColumnsNoSql : tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelector(column)}
-          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+          tableColumnsHidden={hiddenColumns.storedArray}
         />
       </ViewControlBar>
       {this.renderDatasourceTable()}

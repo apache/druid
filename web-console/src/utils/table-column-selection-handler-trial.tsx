@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { LocalStorageBackedArray } from './localStorageBackedArray';
+import { LocalStorageBackedArray } from './local-storage-backed-array';
 
 export class TableColumnSelectionHandlerTrial {
   hiddenColumns: string[];
@@ -25,7 +25,7 @@ export class TableColumnSelectionHandlerTrial {
   constructor(storedArray: LocalStorageBackedArray, updateComponent: (newArray: string[]) => void) {
     this.updateComponent = updateComponent;
     storedArray.getDataFromStorage();
-    this.hiddenColumns = storedArray.copy();
+    this.hiddenColumns = storedArray.storedArray;
   }
 
   changeTableColumnSelector(column: string): void {

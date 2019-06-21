@@ -37,7 +37,7 @@ import {
   QueryManager, TableColumnSelectionHandler
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/localStorageBackedArray';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { TableColumnSelectionHandlerTrial } from '../../utils/table-column-selection-handler-trial';
 
 import './tasks-view.scss';
@@ -143,7 +143,9 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       resumeSupervisorId: null,
       suspendSupervisorId: null,
       resetSupervisorId: null,
+      supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
+
 
       tasksLoading: true,
       tasks: null,
@@ -161,7 +163,6 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogId: null,
       taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
-      supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: [],
 
       hiddenTaskColumns: new LocalStorageBackedArray(LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, []),
@@ -769,7 +770,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             <TableColumnSelector
               columns={supervisorTableColumns}
               onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)}
-              tableColumnsHidden={hiddenSupervisorColumns.copy()}
+              tableColumnsHidden={hiddenSupervisorColumns.storedArray}
             />
           </ViewControlBar>
           {this.renderSupervisorTable()}
@@ -802,7 +803,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             <TableColumnSelector
               columns={taskTableColumns}
               onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelector(column)}
-              tableColumnsHidden={hiddenTaskColumns.copy()}
+              tableColumnsHidden={hiddenTaskColumns.storedArray}
             />
           </ViewControlBar>
           {this.renderTaskTable()}

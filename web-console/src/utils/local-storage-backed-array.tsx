@@ -35,8 +35,4 @@ export class LocalStorageBackedArray {
   update() {
     localStorageSet(this.key, JSON.stringify(this.storedArray));
   }
-
-  copy() {
-    return this.storedArray;
-  }
 }
