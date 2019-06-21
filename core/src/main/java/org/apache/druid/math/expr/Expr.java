@@ -343,7 +343,6 @@ class StringExpr extends ConstantExpr
     return value;
   }
 
-  @Nullable
   @Override
   public String toString()
   {
