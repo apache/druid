@@ -26,6 +26,7 @@ import com.yahoo.sketches.hll.TgtHllType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.StripedLockHelper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -42,16 +43,13 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  /** for locking per buffer position (power of 2 to make index computation faster) */
-  private static final int NUM_STRIPES = 64;
-
   private final ColumnValueSelector<Object> selector;
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = StripedLockHelper.getReadWriteLock();
 
   public HllSketchBuildBufferAggregator(
       final ColumnValueSelector<Object> selector,
@@ -85,7 +83,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     if (value == null) {
       return;
     }
-    final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).writeLock();
     lock.lock();
     try {
       final HllSketch sketch = sketchCache.get(buf).get(position);
@@ -104,7 +102,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).readLock();
     lock.lock();
     try {
       return sketchCache.get(buf).get(position).copy();
@@ -158,27 +156,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   {
     final Int2ObjectMap<HllSketch> map = sketchCache.computeIfAbsent(buf, b -> new Int2ObjectOpenHashMap<>());
     map.put(position, sketch);
-  }
-
-  /**
-   * compute lock index to avoid boxing in Striped.get() call
-   * @param position
-   * @return index
-   */
-  static int lockIndex(final int position)
-  {
-    return smear(position) % NUM_STRIPES;
-  }
-
-  /**
-   * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
-   * @param hashCode
-   * @return smeared hashCode
-   */
-  private static int smear(int hashCode)
-  {
-    hashCode ^= (hashCode >>> 20) ^ (hashCode >>> 12);
-    return hashCode ^ (hashCode >>> 7) ^ (hashCode >>> 4);
   }
 
   @Override

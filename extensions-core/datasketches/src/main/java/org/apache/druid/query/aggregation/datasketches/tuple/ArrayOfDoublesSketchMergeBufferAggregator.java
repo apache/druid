@@ -26,6 +26,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.StripedLockHelper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -42,13 +43,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position
-
   private final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector;
   private final int nominalEntries;
   private final int numberOfValues;
   private final int maxIntermediateSize;
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = StripedLockHelper.getReadWriteLock();
 
   public ArrayOfDoublesSketchMergeBufferAggregator(
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
@@ -89,7 +88,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
     // might might be considered, but it would increase complexity including relocate() support.
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).writeLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).writeLock();
     lock.lock();
     try {
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
@@ -113,7 +112,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   {
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).readLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).readLock();
     lock.lock();
     try {
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);

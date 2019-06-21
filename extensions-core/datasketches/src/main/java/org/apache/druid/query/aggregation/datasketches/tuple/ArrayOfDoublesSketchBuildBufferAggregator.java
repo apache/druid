@@ -25,6 +25,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.StripedLockHelper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -44,14 +45,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to make index computation faster)
-
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
   private double[] values; // not part of the state, but to reuse in aggregate() method
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = StripedLockHelper.getReadWriteLock();
 
   public ArrayOfDoublesSketchBuildBufferAggregator(
       final DimensionSelector keySelector,
@@ -94,7 +93,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     // might might be considered, but it would increase complexity including relocate() support.
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).writeLock();
     lock.lock();
     try {
       final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
@@ -121,7 +120,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   {
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).readLock();
     lock.lock();
     try {
       final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
@@ -156,19 +155,6 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   {
     inspector.visit("keySelector", keySelector);
     inspector.visit("valueSelectors", valueSelectors);
-  }
-
-  // compute lock index to avoid boxing in Striped.get() call
-  static int lockIndex(final int position)
-  {
-    return smear(position) % NUM_STRIPES;
-  }
-
-  // from https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
-  private static int smear(int hashCode)
-  {
-    hashCode ^= (hashCode >>> 20) ^ (hashCode >>> 12);
-    return hashCode ^ (hashCode >>> 7) ^ (hashCode >>> 4);
   }
 
 }

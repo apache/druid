@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
+import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.SetOperation;
@@ -26,12 +27,15 @@ import com.yahoo.sketches.theta.Union;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.StripedLockHelper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
@@ -40,6 +44,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+  private final Striped<ReadWriteLock> stripedLock = StripedLockHelper.getReadWriteLock();
 
   public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
@@ -54,6 +59,11 @@ public class SketchBufferAggregator implements BufferAggregator
     createNewUnion(buf, position, false);
   }
 
+  /**
+   * This method uses locks because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
+   * https://github.com/apache/incubator-druid/pull/3956
+   */
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
@@ -61,25 +71,46 @@ public class SketchBufferAggregator implements BufferAggregator
     if (update == null) {
       return;
     }
-
-    Union union = getOrCreateUnion(buf, position);
-    SketchAggregator.updateUnion(union, update);
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).writeLock();
+    lock.lock();
+    try {
+      Union union = getOrCreateUnion(buf, position);
+      SketchAggregator.updateUnion(union, update);
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
+  /**
+   * This method uses locks because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
+   * https://github.com/apache/incubator-druid/pull/3956
+   * The returned sketch is a separate instance of Sketch
+   * representing the current state of the aggregation, and is not affected by consequent
+   * aggregate() calls
+   */
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    Union union = unionMap != null ? unionMap.get(position) : null;
-    if (union == null) {
-      return SketchHolder.EMPTY;
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).readLock();
+    lock.lock();
+    try {
+      Int2ObjectMap<Union> unionMap = unions.get(buf);
+      Union union = unionMap != null ? unionMap.get(position) : null;
+      if (union == null) {
+        return SketchHolder.EMPTY;
+      }
+      //the code below returns SetOp.getResult(true, null)
+      //"true" returns an ordered sketch but slower to compute than unordered sketch.
+      //however, advantage of ordered sketch is that they are faster to "union" later
+      //given that results from the aggregator will be combined further, it is better
+      //to return the ordered sketch here
+      return SketchHolder.of(union.getResult(true, null));
     }
-    //in the code below, I am returning SetOp.getResult(true, null)
-    //"true" returns an ordered sketch but slower to compute than unordered sketch.
-    //however, advantage of ordered sketch is that they are faster to "union" later
-    //given that results from the aggregator will be combined further, it is better
-    //to return the ordered sketch here
-    return SketchHolder.of(union.getResult(true, null));
+    finally {
+      lock.unlock();
+    }
   }
 
   private Union getOrCreateUnion(ByteBuffer buf, int position)

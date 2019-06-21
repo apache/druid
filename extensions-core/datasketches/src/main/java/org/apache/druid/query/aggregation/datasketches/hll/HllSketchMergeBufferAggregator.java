@@ -25,6 +25,7 @@ import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.StripedLockHelper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -40,14 +41,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  /** for locking per buffer position (power of 2 to make index computation faster) */
-  private static final int NUM_STRIPES = 64;
-
   private final ColumnValueSelector<HllSketch> selector;
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
-  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = StripedLockHelper.getReadWriteLock();
 
   public HllSketchMergeBufferAggregator(
       final ColumnValueSelector<HllSketch> selector,
@@ -86,7 +84,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
       return;
     }
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).writeLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).writeLock();
     lock.lock();
     try {
       final Union union = Union.writableWrap(mem);
@@ -106,7 +104,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   public Object get(final ByteBuffer buf, final int position)
   {
     final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).readLock();
+    final Lock lock = stripedLock.getAt(StripedLockHelper.lockIndex(position)).readLock();
     lock.lock();
     try {
       final Union union = Union.writableWrap(mem);
