@@ -33,10 +33,10 @@ import java.util.List;
 
 public class ParquetExtensionsModule implements DruidModule
 {
-  public static String PARQUET_SIMPLE_INPUT_PARSER_TYPE = "parquet";
-  public static String PARQUET_SIMPLE_PARSE_SPEC_TYPE = "parquet";
-  public static String PARQUET_AVRO_INPUT_PARSER_TYPE = "parquet-avro";
-  public static String PARQUET_AVRO_PARSE_SPEC_TYPE = "avro";
+  public static final String PARQUET_SIMPLE_INPUT_PARSER_TYPE = "parquet";
+  public static final String PARQUET_SIMPLE_PARSE_SPEC_TYPE = "parquet";
+  public static final String PARQUET_AVRO_INPUT_PARSER_TYPE = "parquet-avro";
+  public static final String PARQUET_AVRO_PARSE_SPEC_TYPE = "avro";
 
   @Override
   public List<? extends Module> getJacksonModules()

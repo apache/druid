@@ -40,7 +40,7 @@ import java.io.IOException;
 
 public class BloomFilterSerializersModule extends SimpleModule
 {
-  public static String BLOOM_FILTER_TYPE_NAME = "bloom";
+  public static final String BLOOM_FILTER_TYPE_NAME = "bloom";
 
   public BloomFilterSerializersModule()
   {
