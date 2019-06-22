@@ -1,5 +1,5 @@
 {
-  "extends": "awesome-code-style/tslint.json",
+  "extends": "awesome-code-style",
   "rules": {
     "file-header": [true, "Licensed to the Apache Software Foundation \\(ASF\\).+"],
     "no-shadowed-variable": false,
@@ -9,7 +9,6 @@
     "object-literal-shorthand": false,
     "no-require-imports": false,
     "arrow-return-shorthand": false,
-    "no-var-requires": false,
     "no-unused-variable": false
   },
   "linterOptions": {

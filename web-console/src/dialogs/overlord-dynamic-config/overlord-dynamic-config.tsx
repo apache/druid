@@ -38,7 +38,10 @@ export interface OverlordDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
+export class OverlordDynamicConfigDialog extends React.PureComponent<
+  OverlordDynamicConfigDialogProps,
+  OverlordDynamicConfigDialogState
+> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: OverlordDynamicConfigDialogProps) {
@@ -46,7 +49,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDyn
     this.state = {
       dynamicConfig: null,
       allJSONValid: true,
-      historyRecords: []
+      historyRecords: [],
     };
   }
 
@@ -54,15 +57,15 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDyn
     this.getConfig();
 
     this.historyQueryManager = new QueryManager({
-      processQuery: async (query) => {
+      processQuery: async query => {
         const historyResp = await axios(`/druid/indexer/v1/worker/history?count=100`);
         return historyResp.data;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          historyRecords: result
+          historyRecords: result,
         });
-      }
+      },
     });
 
     this.historyQueryManager.runQuery(`dummy`);
@@ -77,12 +80,12 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDyn
       AppToaster.show({
         icon: IconNames.ERROR,
         intent: Intent.DANGER,
-        message: `Could not load overlord dynamic config: ${getDruidErrorMessage(e)}`
+        message: `Could not load overlord dynamic config: ${getDruidErrorMessage(e)}`,
       });
       return;
     }
     this.setState({
-      dynamicConfig: config
+      dynamicConfig: config,
     });
   }
 
@@ -93,56 +96,62 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDyn
       await axios.post('/druid/indexer/v1/worker', newState, {
         headers: {
           'X-Druid-Author': 'console',
-          'X-Druid-Comment': comment
-        }
+          'X-Druid-Comment': comment,
+        },
       });
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
         intent: Intent.DANGER,
-        message: `Could not save overlord dynamic config: ${getDruidErrorMessage(e)}`
+        message: `Could not save overlord dynamic config: ${getDruidErrorMessage(e)}`,
       });
     }
 
     AppToaster.show({
       message: 'Saved overlord dynamic config',
-      intent: Intent.SUCCESS
+      intent: Intent.SUCCESS,
     });
     onClose();
-  }
+  };
 
   render() {
     const { onClose } = this.props;
     const { dynamicConfig, allJSONValid, historyRecords } = this.state;
 
-    return <SnitchDialog
-      className="overlord-dynamic-config"
-      isOpen
-      onSave={this.saveConfig}
-      onClose={onClose}
-      title="Overlord dynamic config"
-      saveDisabled={!allJSONValid}
-      historyRecords={historyRecords}
-    >
-      <p>
-        Edit the overlord dynamic configuration on the fly.
-        For more information please refer to the <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#overlord-dynamic-configuration">documentation</ExternalLink>.
-      </p>
-      <AutoForm
-        fields={[
-          {
-            name: 'selectStrategy',
-            type: 'json'
-          },
-          {
-            name: 'autoScaler',
-            type: 'json'
-          }
-        ]}
-        model={dynamicConfig}
-        onChange={m => this.setState({ dynamicConfig: m })}
-        updateJSONValidity={e => this.setState({allJSONValid: e})}
-      />
-    </SnitchDialog>;
+    return (
+      <SnitchDialog
+        className="overlord-dynamic-config"
+        isOpen
+        onSave={this.saveConfig}
+        onClose={onClose}
+        title="Overlord dynamic config"
+        saveDisabled={!allJSONValid}
+        historyRecords={historyRecords}
+      >
+        <p>
+          Edit the overlord dynamic configuration on the fly. For more information please refer to
+          the{' '}
+          <ExternalLink href="http://druid.io/docs/latest/configuration/index.html#overlord-dynamic-configuration">
+            documentation
+          </ExternalLink>
+          .
+        </p>
+        <AutoForm
+          fields={[
+            {
+              name: 'selectStrategy',
+              type: 'json',
+            },
+            {
+              name: 'autoScaler',
+              type: 'json',
+            },
+          ]}
+          model={dynamicConfig}
+          onChange={m => this.setState({ dynamicConfig: m })}
+          updateJSONValidity={e => this.setState({ allJSONValid: e })}
+        />
+      </SnitchDialog>
+    );
   }
 }

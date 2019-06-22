@@ -23,12 +23,13 @@ import { QueryPlanDialog } from './query-plan-dialog';
 
 describe('query plan dialog', () => {
   it('matches snapshot', () => {
-    const queryPlanDialog =
+    const queryPlanDialog = (
       <QueryPlanDialog
         explainResult={'test'}
-        explainError={{name: 'test', message: 'test'}}
+        explainError={{ name: 'test', message: 'test' }}
         onClose={() => null}
-      />;
+      />
+    );
     const { container } = render(queryPlanDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });

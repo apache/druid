@@ -23,11 +23,9 @@ import { JSONCollapse } from './json-collapse';
 
 describe('json collapse', () => {
   it('matches snapshot', () => {
-    const jsonCollapse =
-    <JSONCollapse
-      buttonText={'test'}
-      stringValue={JSON.stringify({ name : 'test' })}
-    />;
+    const jsonCollapse = (
+      <JSONCollapse buttonText={'test'} stringValue={JSON.stringify({ name: 'test' })} />
+    );
     const { container } = render(jsonCollapse);
     expect(container.firstChild).toMatchSnapshot();
   });
