@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import "../../../variables";
+@import '../../../variables';
 
 .query-input {
   .ace-container {
@@ -25,7 +25,7 @@
     height: 100%;
 
     .ace_scroller {
-      background-color: #232C35;
+      background-color: #232c35;
     }
 
     .ace_gutter-layer {
@@ -36,8 +36,8 @@
 
 .ace_tooltip {
   padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
+  background-color: #333d47;
+  color: #c1ccd5;
   width: 500px;
   display: block;
   height: auto;

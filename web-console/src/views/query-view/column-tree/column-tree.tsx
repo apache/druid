@@ -39,7 +39,6 @@ export interface ColumnTreeState {
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
-
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata } = props;
 
@@ -48,13 +47,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         prevColumnMetadata: columnMetadata,
         columnTree: groupBy(
           columnMetadata,
-          (r) => r.TABLE_SCHEMA,
+          r => r.TABLE_SCHEMA,
           (metadata, schema): ITreeNode => ({
             id: schema,
             label: schema,
             childNodes: groupBy(
               metadata,
-              (r) => r.TABLE_NAME,
+              r => r.TABLE_NAME,
               (metadata, table) => ({
                 id: table,
                 icon: IconNames.TH,
@@ -62,12 +61,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                 childNodes: metadata.map(columnData => ({
                   id: columnData.COLUMN_NAME,
                   icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                  label: columnData.COLUMN_NAME
-                }))
-              })
-            )
-          })
-        )
+                  label: columnData.COLUMN_NAME,
+                })),
+              }),
+            ),
+          }),
+        ),
       };
     }
     return null;
@@ -75,10 +74,14 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   static dataTypeToIcon(dataType: string): IconName {
     switch (dataType) {
-      case 'TIMESTAMP': return IconNames.TIME;
-      case 'VARCHAR': return IconNames.FONT;
-      case 'BIGINT': return IconNames.NUMERICAL;
-      default: return IconNames.HELP;
+      case 'TIMESTAMP':
+        return IconNames.TIME;
+      case 'VARCHAR':
+        return IconNames.FONT;
+      case 'BIGINT':
+        return IconNames.NUMERICAL;
+      default:
+        return IconNames.HELP;
     }
   }
 
@@ -87,7 +90,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.state = {
       prevColumnMetadata: null,
       columnTree: null,
-      selectedTreeIndex: 0
+      selectedTreeIndex: 0,
     };
   }
 
@@ -95,32 +98,36 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
 
-    return <HTMLSelect
-      className="schema-selector"
-      value={selectedTreeIndex}
-      onChange={this.handleSchemaSelectorChange}
-      fill
-      minimal
-      large
-    >
-      {columnTree.map((treeNode, i) => (
-        <option key={i} value={i}>
-          {treeNode.label}
-        </option>
-      ))}
-    </HTMLSelect>;
+    return (
+      <HTMLSelect
+        className="schema-selector"
+        value={selectedTreeIndex}
+        onChange={this.handleSchemaSelectorChange}
+        fill
+        minimal
+        large
+      >
+        {columnTree.map((treeNode, i) => (
+          <option key={i} value={i}>
+            {treeNode.label}
+          </option>
+        ))}
+      </HTMLSelect>
+    );
   }
 
   private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>) => {
     this.setState({ selectedTreeIndex: Number(e.target.value) });
-  }
+  };
 
   render() {
     const { columnMetadataLoading } = this.props;
     if (columnMetadataLoading) {
-      return <div className="column-tree">
-        <Loader loading/>
-      </div>;
+      return (
+        <div className="column-tree">
+          <Loader loading />
+        </div>
+      );
     }
 
     const { columnTree, selectedTreeIndex } = this.state;
@@ -128,20 +135,26 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     const currentSchemaSubtree = columnTree[selectedTreeIndex].childNodes;
     if (!currentSchemaSubtree) return null;
 
-    return <div className="column-tree">
-      {this.renderSchemaSelector()}
-      <div className="tree-container">
-        <Tree
-          contents={currentSchemaSubtree}
-          onNodeClick={this.handleNodeClick}
-          onNodeCollapse={this.handleNodeCollapse}
-          onNodeExpand={this.handleNodeExpand}
-        />
+    return (
+      <div className="column-tree">
+        {this.renderSchemaSelector()}
+        <div className="tree-container">
+          <Tree
+            contents={currentSchemaSubtree}
+            onNodeClick={this.handleNodeClick}
+            onNodeCollapse={this.handleNodeCollapse}
+            onNodeExpand={this.handleNodeExpand}
+          />
+        </div>
       </div>
-    </div>;
+    );
   }
 
-  private handleNodeClick = (nodeData: ITreeNode, nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
+  private handleNodeClick = (
+    nodeData: ITreeNode,
+    nodePath: number[],
+    e: React.MouseEvent<HTMLElement>,
+  ) => {
     const { onQueryStringChange } = this.props;
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return;
@@ -185,17 +198,17 @@ ORDER BY "Count" DESC`);
         }
         break;
     }
-  }
+  };
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
     nodeData.isExpanded = false;
     this.bounceState();
-  }
+  };
 
   private handleNodeExpand = (nodeData: ITreeNode) => {
     nodeData.isExpanded = true;
     this.bounceState();
-  }
+  };
 
   bounceState() {
     const { columnTree } = this.state;

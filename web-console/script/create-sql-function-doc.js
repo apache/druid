@@ -82,10 +82,10 @@ export interface SyntaxDescription {
   description: string;
 }
 
-/* tslint:disable:quotemark */
-
+// prettier-ignore
 export const SQL_FUNCTIONS: SyntaxDescription[] = ${JSON.stringify(functionDocs, null, 2)};
 
+// prettier-ignore
 export const SQL_DATE_TYPES: SyntaxDescription[] = ${JSON.stringify(dataTypeDocs, null, 2)};
 `;
 
