@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -30,6 +31,7 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
@@ -119,15 +121,59 @@ public class ImmutableDruidDataSource
            + "'}";
   }
 
+  /**
+   *
+   * Look at https://github.com/apache/incubator-druid/issues/7858 for explanation of why equals method is not supported.
+   *
+   */
   @Override
   public boolean equals(Object o)
   {
-    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+    throw new UnsupportedOperationException("equals:ImmutableDruidDataSource shouldn't be used as the key in containers");
   }
 
+  /**
+   * Look at https://github.com/apache/incubator-druid/issues/7858 for explanation of why hashCode method is not supported.
+   *
+   */
   @Override
   public int hashCode()
   {
-    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+    throw new UnsupportedOperationException("hashCode:ImmutableDruidDataSource shouldn't be used as the key in containers");
+  }
+
+  /**
+   * This method should only be used in tests.
+   */
+  @VisibleForTesting
+  public boolean equalsForTesting(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || !getClass().equals(o.getClass())) {
+      return false;
+    }
+
+    final ImmutableDruidDataSource that = (ImmutableDruidDataSource) o;
+    if (!this.name.equals(that.name)) {
+      return false;
+    }
+
+    if (!this.properties.equals(that.properties)) {
+      return false;
+    }
+
+    return this.idToSegments.equals(that.idToSegments);
+  }
+
+  /**
+   * This method should only be used in tests.
+   */
+  @VisibleForTesting
+  public int hashCodeForTesting()
+  {
+    return Objects.hash(name, properties, idToSegments);
   }
 }

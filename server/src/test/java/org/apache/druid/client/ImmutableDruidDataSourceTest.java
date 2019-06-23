@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.test.utils.TestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneLoadSpecHolder;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -45,7 +45,8 @@ public class ImmutableDruidDataSourceTest
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .setInjectableValues(new Std().addValue(PruneLoadSpecHolder.class, PruneLoadSpecHolder.DEFAULT));
     final String json = objectMapper.writeValueAsString(dataSource);
-    Assert.assertEquals(dataSource, objectMapper.readValue(json, ImmutableDruidDataSource.class));
+
+    TestUtils.assertEqualsImmutableDruidDataSource(dataSource, objectMapper.readValue(json, ImmutableDruidDataSource.class));
   }
 
   @Test(expected = UnsupportedOperationException.class)
