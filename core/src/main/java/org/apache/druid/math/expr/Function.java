@@ -258,7 +258,7 @@ interface Function
     public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
     }
 
@@ -2060,6 +2060,113 @@ interface Function
         any |= array2.contains(check);
       }
       return ExprEval.bestEffortOf(any);
+    }
+  }
+
+  class ArraySliceFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array_slice";
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2 && args.size() != 3) {
+        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      final int start = args.get(1).eval(bindings).asInt();
+      int end = array.length;
+      if (args.size() == 3) {
+        end = args.get(2).eval(bindings).asInt();
+      }
+
+      if (start < 0 || start > array.length || start > end) {
+        // Arrays.copyOfRange will throw exception in these cases
+        return ExprEval.of(null);
+      }
+
+      switch (expr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(Arrays.copyOfRange(expr.asStringArray(), start, end));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(Arrays.copyOfRange(expr.asLongArray(), start, end));
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
+      }
+      throw new RE("Unable to slice to unknown type %s", expr.type());
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(1), args.get(2));
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+  }
+
+  class ArrayUnshiftFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_unshift";
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      switch (arrayExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(this.unshift(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              this.unshift(
+                  arrayExpr.asLongArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
+              )
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              this.unshift(
+                  arrayExpr.asDoubleArray(),
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
+              )
+          );
+      }
+
+      throw new RE("Unable to unshift to unknown type %s", arrayExpr.type());
+    }
+
+    private <T> Stream<T> unshift(T[] array, T val)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array));
+      l.add(0, val);
+      return l.stream();
     }
   }
 }
