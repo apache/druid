@@ -21,37 +21,37 @@ import React from 'react';
 import { LocalStorageKeys } from '../../utils';
 import { TimedButton } from '../timed-button/timed-button';
 
-
 export interface RefreshButtonProps extends React.Props<any> {
   onRefresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
 }
 
-export class RefreshButton
-  extends React.PureComponent<RefreshButtonProps> {
+export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
   constructor(props: RefreshButtonProps, context: any) {
     super(props, context);
   }
 
   render() {
-    const { onRefresh, localStorageKey} = this.props;
+    const { onRefresh, localStorageKey } = this.props;
     const intervals = [
-      {label : '5 seconds', value: 5000},
-      {label : '10 seconds', value: 10000},
-      {label : '30 seconds', value: 30000},
-      {label : '1 minute', value: 60000},
-      {label : '2 minutes', value: 120000},
-      {label : 'None', value: 0}
+      { label: '5 seconds', value: 5000 },
+      { label: '10 seconds', value: 10000 },
+      { label: '30 seconds', value: 30000 },
+      { label: '1 minute', value: 60000 },
+      { label: '2 minutes', value: 120000 },
+      { label: 'None', value: 0 },
     ];
 
-    return <TimedButton
-      defaultValue={30000}
-      label={'Auto refresh every:'}
-      intervals={intervals}
-      icon={IconNames.REFRESH}
-      text={'Refresh'}
-      onRefresh={onRefresh}
-      localStorageKey={localStorageKey}
-    />;
+    return (
+      <TimedButton
+        defaultValue={30000}
+        label={'Auto refresh every:'}
+        intervals={intervals}
+        icon={IconNames.REFRESH}
+        text={'Refresh'}
+        onRefresh={onRefresh}
+        localStorageKey={localStorageKey}
+      />
+    );
   }
 }

@@ -45,7 +45,10 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
   constructor(props: TimedButtonProps, context: any) {
     super(props, context);
     this.state = {
-      interval: (this.props.localStorageKey && (localStorageGet(this.props.localStorageKey))) ? Number(localStorageGet(this.props.localStorageKey)) : this.props.defaultValue
+      interval:
+        this.props.localStorageKey && localStorageGet(this.props.localStorageKey)
+          ? Number(localStorageGet(this.props.localStorageKey))
+          : this.props.defaultValue,
     };
   }
 
@@ -77,52 +80,52 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
         this.continuousRefresh(selectedInterval);
       }, selectedInterval);
     }
-  }
+  };
 
   handleSelection = (e: any) => {
     const selectedInterval = Number(e.currentTarget.value);
     this.clearTimer();
-    this.setState({interval: selectedInterval});
+    this.setState({ interval: selectedInterval });
     if (this.props.localStorageKey) {
       localStorageSet(this.props.localStorageKey, String(selectedInterval));
     }
     this.continuousRefresh(selectedInterval);
-  }
+  };
 
   render() {
-    const { label, intervals, onRefresh, type, text, icon, defaultValue, localStorageKey, ...other } = this.props;
+    const {
+      label,
+      intervals,
+      onRefresh,
+      type,
+      text,
+      icon,
+      defaultValue,
+      localStorageKey,
+      ...other
+    } = this.props;
     const { interval } = this.state;
 
-    return <ButtonGroup>
-      <Button
-        {...other}
-        text={text}
-        icon={icon}
-        onClick={() => onRefresh(false)}
-      />
-      <Popover
-        content={
-          <RadioGroup
-            label={label}
-            className="refresh-options"
-            onChange={this.handleSelection}
-            selectedValue={interval}
-          >
-            {intervals.map((interval: any) => (
-              <Radio
-                label={interval.label}
-                value={interval.value}
-                key={interval.label}
-              />
-            ))}
-          </RadioGroup>
-        }
-      >
-        <Button
-          {...other}
-          rightIcon={IconNames.CARET_DOWN}
-        />
-      </Popover>
-    </ButtonGroup>;
+    return (
+      <ButtonGroup>
+        <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
+        <Popover
+          content={
+            <RadioGroup
+              label={label}
+              className="refresh-options"
+              onChange={this.handleSelection}
+              selectedValue={interval}
+            >
+              {intervals.map((interval: any) => (
+                <Radio label={interval.label} value={interval.value} key={interval.label} />
+              ))}
+            </RadioGroup>
+          }
+        >
+          <Button {...other} rightIcon={IconNames.CARET_DOWN} />
+        </Popover>
+      </ButtonGroup>
+    );
   }
 }

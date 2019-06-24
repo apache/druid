@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -46,21 +45,23 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
 
     const { prefix, omitted, suffix } = TableCell.shortenString(str);
-    return <span className="table-cell truncated">
-      {prefix}
-      <span className="omitted">{omitted}</span>
-      {suffix}
-      <ActionIcon
-        icon={IconNames.CLIPBOARD}
-        onClick={() => {
-          copy(str, { format: 'text/plain' });
-          AppToaster.show({
-            message: 'Value copied to clipboard',
-            intent: Intent.SUCCESS
-          });
-        }}
-      />
-    </span>;
+    return (
+      <span className="table-cell truncated">
+        {prefix}
+        <span className="omitted">{omitted}</span>
+        {suffix}
+        <ActionIcon
+          icon={IconNames.CLIPBOARD}
+          onClick={() => {
+            copy(str, { format: 'text/plain' });
+            AppToaster.show({
+              message: 'Value copied to clipboard',
+              intent: Intent.SUCCESS,
+            });
+          }}
+        />
+      </span>
+    );
   }
 
   static shortenString(str: string): ShortParts {
@@ -72,7 +73,7 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     return {
       prefix,
       omitted: `...${omit} omitted...`,
-      suffix
+      suffix,
     };
   }
 
@@ -82,7 +83,11 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
       return <span className="table-cell unparseable">error</span>;
     } else if (value !== '' && value != null) {
       if (timestamp) {
-        return <span className="table-cell timestamp" title={value}>{new Date(value).toISOString()}</span>;
+        return (
+          <span className="table-cell timestamp" title={value}>
+            {new Date(value).toISOString()}
+          </span>
+        );
       } else if (Array.isArray(value)) {
         return TableCell.possiblyTruncate(`[${value.join(', ')}]`);
       } else {

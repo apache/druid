@@ -16,6 +16,30 @@
  * limitations under the License.
  */
 
-.run-button {
+import { alphanumericCompare, sortWithPrefixSuffix } from './general';
 
-}
+describe('general', () => {
+  describe('sortWithPrefixSuffix', () => {
+    it('works in simple case', () => {
+      expect(
+        sortWithPrefixSuffix(
+          'abcdefgh'.split('').reverse(),
+          'gef'.split(''),
+          'ba'.split(''),
+          alphanumericCompare,
+        ).join(''),
+      ).toEqual('gefcdhba');
+    });
+
+    it('dedupes', () => {
+      expect(
+        sortWithPrefixSuffix(
+          'abcdefgh'.split('').reverse(),
+          'gefgef'.split(''),
+          'baba'.split(''),
+          alphanumericCompare,
+        ).join(''),
+      ).toEqual('gefcdhba');
+    });
+  });
+});

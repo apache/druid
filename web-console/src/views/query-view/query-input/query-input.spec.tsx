@@ -23,12 +23,14 @@ import { QueryInput } from './query-input';
 
 describe('query input', () => {
   it('matches snapshot', () => {
-    const sqlControl = <QueryInput
-      queryString="hello world"
-      onQueryStringChange={() => null}
-      runeMode={false}
-      columnMetadata={null}
-    />;
+    const sqlControl = (
+      <QueryInput
+        queryString="hello world"
+        onQueryStringChange={() => null}
+        runeMode={false}
+        columnMetadata={null}
+      />
+    );
 
     const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
