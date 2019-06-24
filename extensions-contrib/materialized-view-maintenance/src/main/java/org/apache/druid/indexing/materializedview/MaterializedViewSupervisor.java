@@ -344,6 +344,23 @@ public class MaterializedViewSupervisor implements Supervisor
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = new HashMap<>(difference.entriesOnlyOnLeft());
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
+
+    //add by jiangshequan
+    //code for realization of “version of derived segments isn't the max(created_date) of all base segments”
+    //if(second part) can prevent exception"user supplied segments list did not match with segments list obtained from db"
+    Map<Interval, MapDifference.ValueDifference<String>> checkIfNewestVersion =
+            new HashMap<>(difference.entriesDiffering());
+    for (Map.Entry<Interval, MapDifference.ValueDifference<String>> entry : checkIfNewestVersion.entrySet()) {
+      String versionOfBase = maxCreatedDate.get(entry.getKey());
+      String versionOfDerivative = derivativeVersion.get(entry.getKey());
+      if (versionOfBase.compareTo(versionOfDerivative) > 0 &&
+              baseSegments.get(entry.getKey()).size() == metadataStorageCoordinator.getUsedSegmentsForInterval(
+                      spec.getBaseDataSource(),
+                      entry.getKey()).size()) {
+        toBuildInterval.put(entry.getKey(), versionOfBase);
+      }
+    }
+
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
     for (Interval interval : runningVersion.keySet()) {

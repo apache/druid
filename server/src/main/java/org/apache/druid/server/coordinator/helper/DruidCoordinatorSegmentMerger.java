@@ -113,7 +113,9 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
             || segmentsToMerge.getSegmentCount() >= params.getCoordinatorDynamicConfig().getMergeSegmentsLimit()) {
           i -= segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
 
-          if (segmentsToMerge.getSegmentCount() > 1) {
+          // change by jiangshequan
+          if (segmentsToMerge.getSegmentCount() > 1  && !(entry.getKey().endsWith("_view") || entry.getKey().endsWith("-view"))) {
+            log.info("start to merge dataSource: " + entry.getKey());
             stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
           }
 
@@ -128,7 +130,9 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
 
       // Finish any timelineObjects to merge that may have not hit threshold
       segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
-      if (segmentsToMerge.getSegmentCount() > 1) {
+      // change by jiangshequan
+      if (segmentsToMerge.getSegmentCount() > 1 && !(entry.getKey().endsWith("_view") || entry.getKey().endsWith("-view"))) {
+        log.info("start to merge dataSource: " + entry.getKey());
         stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }
     }
