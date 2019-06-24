@@ -41,6 +41,11 @@
         font-size: 16px;
         text-align: center;
 
+        & > * {
+          user-select: none;
+          pointer-events: none;
+        }
+
         &.active {
           box-shadow: 0 0 4px 2px #2de4f0;
         }

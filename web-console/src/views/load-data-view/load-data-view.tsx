@@ -498,7 +498,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         onClick={() => {
-          this.setState({ selectedComboType: comboType });
+          this.setState({ selectedComboType: selectedComboType !== comboType ? comboType : null });
         }}
       >
         <img src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)} />
