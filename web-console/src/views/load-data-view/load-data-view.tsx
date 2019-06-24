@@ -104,7 +104,7 @@ import {
   issueWithParser,
   joinFilter,
   MetricSpec,
-  normalizeSpecType,
+  normalizeSpec,
   Parser,
   ParseSpec,
   parseSpecHasFlatten,
@@ -393,10 +393,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private updateSpec = (newSpec: IngestionSpec) => {
-    if (!newSpec || typeof newSpec !== 'object') {
-      // This does not match the type of IngestionSpec but this dialog is robust enough to deal with anything but spec must be an object
-      newSpec = {} as any;
-    }
+    newSpec = normalizeSpec(newSpec);
     this.setState({ spec: newSpec });
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
@@ -2478,7 +2475,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
-      this.updateSpec(normalizeSpecType(resp.data));
+      this.updateSpec(resp.data);
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
@@ -2493,7 +2490,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
-      this.updateSpec(normalizeSpecType(resp.data.payload.spec));
+      this.updateSpec(resp.data.payload);
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
@@ -2518,7 +2515,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             value={spec}
             onChange={s => {
               if (!s) return;
-              this.updateSpec(normalizeSpecType(s));
+              this.updateSpec(s);
             }}
             height="100%"
           />

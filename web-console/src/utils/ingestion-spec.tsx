@@ -96,7 +96,7 @@ export function getIngestionTitle(ingestionType: IngestionComboType | 'other'): 
       return 'HTTP(s)';
 
     case 'index:static-s3':
-      return 'AWS S3';
+      return 'Amazon S3';
 
     case 'index:static-google-blobstore':
       return 'Google Cloud Storage';
@@ -202,7 +202,7 @@ export function getRollup(spec: IngestionSpec): boolean {
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
 
-export function getSpecType(spec: IngestionSpec): IngestionType | undefined {
+export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undefined {
   return (
     deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type')
   );
@@ -222,13 +222,21 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
  * Make sure that the types are set in the root, ioConfig, and tuningConfig
  * @param spec
  */
-export function normalizeSpecType(spec: IngestionSpec) {
+export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
+  if (!spec || typeof spec !== 'object') {
+    // This does not match the type of IngestionSpec but this dialog is robust enough to deal with anything but spec must be an object
+    spec = {};
+  }
+
+  // Make sure that if we actually get a task payload we extract the spec
+  if (typeof (spec as any).spec === 'object') spec = (spec as any).spec;
+
   const specType = getSpecType(spec);
-  if (!specType) return spec;
+  if (!specType) return spec as IngestionSpec;
   if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
   if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
   if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
-  return spec;
+  return spec as IngestionSpec;
 }
 
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
