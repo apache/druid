@@ -113,7 +113,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
           content={
             <RadioGroup
               label={label}
-              className="refresh-options"
+              className="timed-button"
               onChange={this.handleSelection}
               selectedValue={interval}
             >
