@@ -26,17 +26,7 @@ import ReactTable from 'react-table';
 import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
-import {
-<<<<<<< HEAD
-  getDruidErrorMessage,
-  LocalStorageKeys,
-  QueryManager,
-  TableColumnSelectionHandler,
-=======
-  getDruidErrorMessage, LocalStorageKeys,
-  QueryManager
->>>>>>> bd7d064656... apply to all
-} from '../../utils';
+import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
@@ -68,7 +58,8 @@ export interface LookupsViewState {
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
-  private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
+  private lookupsGetQueryManager: QueryManager<string, { lookupEntries: any[]; tiers: string[] }>;
+
   constructor(props: LookupsViewProps, context: any) {
     super(props, context);
     this.state = {
@@ -87,7 +78,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       deleteLookupTier: null,
       deleteLookupName: null,
 
-      hiddenColumns: new LocalStorageBackedArray<string>(LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION)
+      hiddenColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
+      ),
     };
   }
 
@@ -270,7 +263,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   renderLookupsTable() {
-    const { lookups, loadingLookups, lookupsError, lookupsUninitialized, hiddenColumns } = this.state;
+    const {
+      lookups,
+      loadingLookups,
+      lookupsError,
+      lookupsUninitialized,
+      hiddenColumns,
+    } = this.state;
 
     if (lookupsUninitialized) {
       return (
@@ -284,54 +283,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       );
     }
 
-    return <>
-      <ReactTable
-        data={lookups || []}
-        loading={loadingLookups}
-        noDataText={!loadingLookups && lookups && !lookups.length ? 'No lookups' : (lookupsError || '')}
-        filterable
-        columns={[
-          {
-            Header: 'Lookup name',
-            id: 'lookup_name',
-            accessor: (row: any) => row.id,
-            filterable: true,
-            show: hiddenColumns.exists('Lookup name')
-          },
-          {
-            Header: 'Tier',
-            id: 'tier',
-            accessor: (row: any) => row.tier,
-            filterable: true,
-            show: hiddenColumns.exists('Tier')
-          },
-          {
-            Header: 'Type',
-            id: 'type',
-            accessor: (row: any) => row.spec.type,
-            filterable: true,
-            show: hiddenColumns.exists('Type')
-          },
-          {
-            Header: 'Version',
-            id: 'version',
-            accessor: (row: any) => row.version,
-            filterable: true,
-            show: hiddenColumns.exists('Version')
-          },
-          {
-            Header: ActionCell.COLUMN_LABEL,
-            id: ActionCell.COLUMN_ID,
-            width: ActionCell.COLUMN_WIDTH,
-            accessor: row => ({id: row.id, tier: row.tier}),
-            filterable: false,
-            Cell: (row: any) => {
-              const lookupId = row.value.id;
-              const lookupTier = row.value.tier;
-              const lookupActions = this.getLookupActions(lookupTier, lookupId);
-              return <ActionCell actions={lookupActions}/>;
-            },
-            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL)
+    return (
+      <>
+        <ReactTable
+          data={lookups || []}
+          loading={loadingLookups}
+          noDataText={
+            !loadingLookups && lookups && !lookups.length ? 'No lookups' : lookupsError || ''
           }
           filterable
           columns={[
@@ -340,28 +298,28 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
               id: 'lookup_name',
               accessor: (row: any) => row.id,
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Lookup name'),
+              show: hiddenColumns.exists('Lookup name'),
             },
             {
               Header: 'Tier',
               id: 'tier',
               accessor: (row: any) => row.tier,
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Tier'),
+              show: hiddenColumns.exists('Tier'),
             },
             {
               Header: 'Type',
               id: 'type',
               accessor: (row: any) => row.spec.type,
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Type'),
+              show: hiddenColumns.exists('Type'),
             },
             {
               Header: 'Version',
               id: 'version',
               accessor: (row: any) => row.version,
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Version'),
+              show: hiddenColumns.exists('Version'),
             },
             {
               Header: ActionCell.COLUMN_LABEL,
@@ -375,7 +333,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
                 return <ActionCell actions={lookupActions} />;
               },
-              show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+              show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}
@@ -422,16 +380,23 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             text="Refresh"
             onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
           />
-        }
-        <TableColumnSelector
-          columns={tableColumns}
-          onChange={(column) => this.setState({hiddenColumns: hiddenColumns.toggle(column)})}
-          tableColumnsHidden={hiddenColumns.storedArray}
-        />
-      </ViewControlBar>
-      {this.renderLookupsTable()}
-      {this.renderLookupEditDialog()}
-      {this.renderDeleteLookupAction()}
-    </div>;
+          {!lookupsError && (
+            <Button
+              icon={IconNames.PLUS}
+              text="Add"
+              onClick={() => this.openLookupEditDialog('', '')}
+            />
+          )}
+          <TableColumnSelector
+            columns={tableColumns}
+            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            tableColumnsHidden={hiddenColumns.storedArray}
+          />
+        </ViewControlBar>
+        {this.renderLookupsTable()}
+        {this.renderLookupEditDialog()}
+        {this.renderDeleteLookupAction()}
+      </div>
+    );
   }
 }
