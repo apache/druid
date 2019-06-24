@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe about dialog about dialog snapshot 1`] = `
+exports[`about dialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -80,14 +80,16 @@ exports[`describe about dialog about dialog snapshot 1`] = `
             </strong>
           </p>
           <p>
-            For help and support with Druid, please refer to the 
+            For help and support with Druid, please refer to the
+             
             <a
-              href="http://druid.io/community/"
+              href="https://druid.apache.org/community/"
               target="_blank"
             >
               community page
             </a>
-             and the 
+             and the
+             
             <a
               href="https://groups.google.com/forum/#!forum/druid-user"
               target="_blank"
@@ -97,7 +99,8 @@ exports[`describe about dialog about dialog snapshot 1`] = `
             .
           </p>
           <p>
-            Druid is made with ❤️ by a community of passionate developers. To contribute, join in the discussion on the 
+            Druid is made with ❤️ by a community of passionate developers. To contribute, join in the discussion on the
+             
             <a
               href="https://lists.apache.org/list.html?dev@druid.apache.org"
               target="_blank"
@@ -125,7 +128,7 @@ exports[`describe about dialog about dialog snapshot 1`] = `
             </button>
             <a
               class="bp3-button bp3-intent-primary"
-              href="http://druid.io"
+              href="https://druid.apache.org"
               role="button"
               tabindex="0"
               target="_blank"

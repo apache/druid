@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import debounce = require('lodash.debounce');
+import debounce from 'lodash.debounce';
 
 export interface QueryStateInt<R> {
   result: R | null;
@@ -42,7 +42,7 @@ export class QueryManager<Q, R> {
   private state: QueryStateInt<R> = {
     result: null,
     loading: false,
-    error: null
+    error: null,
   };
   private currentQueryId = 0;
 
@@ -77,27 +77,26 @@ export class QueryManager<Q, R> {
     const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
-    this.processQuery(this.lastQuery)
-      .then(
-        (result) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result,
-            loading: false,
-            error: null
-          });
-        },
-        (e: Error) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result: null,
-            loading: false,
-            error: e.message
-          });
-        }
-      );
+    this.processQuery(this.lastQuery).then(
+      result => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result,
+          loading: false,
+          error: null,
+        });
+      },
+      (e: Error) => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result: null,
+          loading: false,
+          error: e.message,
+        });
+      },
+    );
   }
 
   private trigger() {
@@ -106,7 +105,7 @@ export class QueryManager<Q, R> {
     this.setState({
       result: null,
       loading: true,
-      error: null
+      error: null,
     });
 
     if (currentActuallyLoading) {

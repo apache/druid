@@ -89,7 +89,7 @@ public class SqlModule implements Module
   private boolean isEnabled()
   {
     Preconditions.checkNotNull(props, "props");
-    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE, "false"));
+    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE, "true"));
   }
 
   private boolean isJsonOverHttpEnabled()

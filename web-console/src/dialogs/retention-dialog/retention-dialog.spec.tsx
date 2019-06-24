@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {RetentionDialog} from './retention-dialog';
+import { RetentionDialog } from './retention-dialog';
 
-
-describe('describe retention dialog', () => {
-  it('retention dialog snapshot', () => {
-    const retentionDialog =
+describe('retention dialog', () => {
+  it('matches snapshot', () => {
+    const retentionDialog = (
       <RetentionDialog
         datasource={'test'}
         rules={[null]}
@@ -33,8 +31,9 @@ describe('describe retention dialog', () => {
         onEditDefaults={() => null}
         onCancel={() => null}
         onSave={() => null}
-      />;
-    const { container, getByText } = render(retentionDialog, { container: document.body });
+      />
+    );
+    const { container } = render(retentionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

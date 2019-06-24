@@ -16,18 +16,16 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {LookupEditDialog} from './lookup-edit-dialog';
+import { LookupEditDialog } from './lookup-edit-dialog';
 
-
-describe('describe lookup edit dialog', () => {
-  it('lookup edit dialog snapshot', () => {
-    const lookupEditDialog =
+describe('lookup edit dialog', () => {
+  it('matches snapshot', () => {
+    const lookupEditDialog = (
       <LookupEditDialog
-        isOpen={true}
+        isOpen
         onClose={() => null}
         onSubmit={() => null}
         onChange={() => null}
@@ -38,7 +36,9 @@ describe('describe lookup edit dialog', () => {
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
       />
-    const { container, getByText } = render(lookupEditDialog, { container: document.body });
+    );
+
+    const { container } = render(lookupEditDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

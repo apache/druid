@@ -16,24 +16,23 @@
  * limitations under the License.
  */
 
-
-import {Intent} from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {SupervisorTableActionDialog} from './supervisor-table-action-dialog';
+import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
-const basicAction = {title: 'test', onAction: () => null};
-describe('describe supervisor table action dialog', () => {
-  it('supervisor table action dialog snapshot', () => {
-    const supervisorTableActionDialog =
+const basicAction = { title: 'test', onAction: () => null };
+describe('supervisor table action dialog', () => {
+  it('matches snapshot', () => {
+    const supervisorTableActionDialog = (
       <SupervisorTableActionDialog
         supervisorId={'test'}
         actions={[basicAction, basicAction, basicAction, basicAction]}
         onClose={() => null}
-        isOpen={true}
-      />;
-    const { container, getByText } = render(supervisorTableActionDialog, { container: document.body });
+        isOpen
+      />
+    );
+    const { container } = render(supervisorTableActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

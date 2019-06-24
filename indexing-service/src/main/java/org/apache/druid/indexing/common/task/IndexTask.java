@@ -223,11 +223,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<Throwable>(
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      buildSegmentsSavedParseExceptions = new CircularBuffer<Throwable>(
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
     }
@@ -768,9 +768,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
 
           if (determineNumPartitions) {
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-            }
+            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
                 queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
@@ -781,9 +779,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           } else {
             // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
             // for the interval and don't instantiate a HLL collector
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.absent());
-            }
+            hllCollectors.putIfAbsent(interval, Optional.absent());
           }
           determinePartitionsMeters.incrementProcessed();
         }

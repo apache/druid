@@ -16,22 +16,21 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {QueryPlanDialog} from './query-plan-dialog';
+import { QueryPlanDialog } from './query-plan-dialog';
 
-
-describe('describe query plan dialog', () => {
-  it('query plan dialog snapshot', () => {
-    const queryPlanDialog =
+describe('query plan dialog', () => {
+  it('matches snapshot', () => {
+    const queryPlanDialog = (
       <QueryPlanDialog
         explainResult={'test'}
-        explainError={{name: 'test', message: 'test'}}
+        explainError={{ name: 'test', message: 'test' }}
         onClose={() => null}
-      />;
-    const { container, getByText } = render(queryPlanDialog, { container: document.body });
+      />
+    );
+    const { container } = render(queryPlanDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

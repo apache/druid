@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Implementation of antlr parse tree listener, transforms {@link ParseTree} to {@link Expr}, based on the grammar
+ * defined in <a href="../../../../../../src/main/antlr4/org/apache/druid/math/expr/antlr/Expr.g4">Expr.g4</a>. All
+ * {@link Expr} are created on 'exit' so that children {@link Expr} are already constructed.
  */
 public class ExprListenerImpl extends ExprBaseListener
 {
@@ -70,12 +73,38 @@ public class ExprListenerImpl extends ExprBaseListener
   }
 
   @Override
+  public void exitApplyFunctionExpr(ExprParser.ApplyFunctionExprContext ctx)
+  {
+    String fnName = ctx.getChild(0).getText();
+    // Built-in functions.
+    final ApplyFunction function = Parser.getApplyFunction(fnName);
+    if (function == null) {
+      throw new RE("function '%s' is not defined.", fnName);
+    }
+
+    nodes.put(
+        ctx,
+        new ApplyFunctionExpr(function, fnName, (LambdaExpr) nodes.get(ctx.lambda()), (List<Expr>) nodes.get(ctx.fnArgs()))
+    );
+  }
+
+  @Override
   public void exitDoubleExpr(ExprParser.DoubleExprContext ctx)
   {
     nodes.put(
         ctx,
         new DoubleExpr(Double.parseDouble(ctx.getText()))
     );
+  }
+
+  @Override
+  public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
+  {
+    Double[] values = new Double[ctx.DOUBLE().size()];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = Double.parseDouble(ctx.DOUBLE(i).getText());
+    }
+    nodes.put(ctx, new DoubleArrayExpr(values));
   }
 
   @Override
@@ -148,6 +177,16 @@ public class ExprListenerImpl extends ExprBaseListener
   }
 
   @Override
+  public void exitLongArray(ExprParser.LongArrayContext ctx)
+  {
+    Long[] values = new Long[ctx.LONG().size()];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = Long.parseLong(ctx.LONG(i).getText());
+    }
+    nodes.put(ctx, new LongArrayExpr(values));
+  }
+
+  @Override
   public void exitNestedExpr(ExprParser.NestedExprContext ctx)
   {
     nodes.put(ctx, nodes.get(ctx.getChild(1)));
@@ -156,10 +195,7 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitString(ExprParser.StringContext ctx)
   {
-    String text = ctx.getText();
-    String unquoted = text.substring(1, text.length() - 1);
-    String unescaped = unquoted.indexOf('\\') >= 0 ? StringEscapeUtils.unescapeJava(unquoted) : unquoted;
-    nodes.put(ctx, new StringExpr(unescaped));
+    nodes.put(ctx, new StringExpr(escapeStringLiteral(ctx.getText())));
   }
 
   @Override
@@ -322,15 +358,26 @@ public class ExprListenerImpl extends ExprBaseListener
   }
 
   @Override
+  public void exitLambda(ExprParser.LambdaContext ctx)
+  {
+    List<IdentifierExpr> identifiers = new ArrayList<>(ctx.IDENTIFIER().size());
+    for (int i = 0; i < ctx.IDENTIFIER().size(); i++) {
+      String text = ctx.IDENTIFIER(i).getText();
+      if (text.charAt(0) == '"' && text.charAt(text.length() - 1) == '"') {
+        text = StringEscapeUtils.unescapeJava(text.substring(1, text.length() - 1));
+      }
+      identifiers.add(i, new IdentifierExpr(text));
+    }
+
+    nodes.put(ctx, new LambdaExpr(identifiers, (Expr) nodes.get(ctx.expr())));
+  }
+
+  @Override
   public void exitFunctionArgs(ExprParser.FunctionArgsContext ctx)
   {
     List<Expr> args = new ArrayList<>();
-    args.add((Expr) nodes.get(ctx.getChild(0)));
-
-    if (ctx.getChildCount() > 1) {
-      for (int i = 1; i <= ctx.getChildCount() / 2; i++) {
-        args.add((Expr) nodes.get(ctx.getChild(2 * i)));
-      }
+    for (ParseTree exprCtx : ctx.expr()) {
+      args.add((Expr) nodes.get(exprCtx));
     }
 
     nodes.put(ctx, args);
@@ -340,5 +387,27 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitNull(ExprParser.NullContext ctx)
   {
     nodes.put(ctx, new StringExpr(null));
+  }
+
+  @Override
+  public void exitStringArray(ExprParser.StringArrayContext ctx)
+  {
+    String[] values = new String[ctx.STRING().size()];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = escapeStringLiteral(ctx.STRING(i).getText());
+    }
+    nodes.put(ctx, new StringArrayExpr(values));
+  }
+
+  @Override
+  public void exitEmptyArray(ExprParser.EmptyArrayContext ctx)
+  {
+    nodes.put(ctx, new StringArrayExpr(new String[0]));
+  }
+
+  private static String escapeStringLiteral(String text)
+  {
+    String unquoted = text.substring(1, text.length() - 1);
+    return unquoted.indexOf('\\') >= 0 ? StringEscapeUtils.unescapeJava(unquoted) : unquoted;
   }
 }

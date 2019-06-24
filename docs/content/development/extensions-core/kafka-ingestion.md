@@ -214,11 +214,60 @@ offsets as reported by Kafka, the consumer lag per partition, as well as the agg
 consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
 response from Kafka. The aggregate lag value will always be >= 0.
 
+The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
+`recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
+There are two fields related to the supervisor's state - `state` and `detailedState`. The `state` field will always be
+one of a small number of generic states that are applicable to any type of supervisor, while the `detailedState` field
+will contain a more descriptive, implementation-specific state that may provide more insight into the supervisor's
+activities than the generic `state` field.
+
+The list of possible `state` values are: [`PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`]
+
+The list of `detailedState` values and their corresponding `state` mapping is as follows:
+
+|Detailed State|Corresponding State|Description|
+|--------------|-------------------|-----------|
+|UNHEALTHY_SUPERVISOR|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
+|UNABLE_TO_CONNECT_TO_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kafka and has not successfully connected in the past|
+|LOST_CONTACT_WITH_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kafka but has successfully connected in the past|
+|PENDING (first iteration only)|PENDING|The supervisor has been initialized and hasn't started connecting to the stream|
+|CONNECTING_TO_STREAM (first iteration only)|RUNNING|The supervisor is trying to connect to the stream and update partition data|
+|DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
+|CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
+|RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
+|SUSPENDED|SUSPENDED|The supervisor has been suspended|
+|STOPPING|STOPPING|The supervisor is stopping|
+
+On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
+  1) Fetch the list of partitions from Kafka and determine the starting offset for each partition (either based on the
+  last processed offset if continuing, or starting from the beginning or ending of the stream if this is a new topic).
+  2) Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match
+  the supervisor's configuration, else signal them to stop.
+  3) Send a status request to each supervised task to update our view of the state of the tasks under our supervision.
+  4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
+  5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
+  6) Handle tasks that have failed and clean up the supervisor's internal state.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
+
+The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
+supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
+initialization-type issues, where the supervisor is unable to reach a stable state (perhaps because it can't connect to
+Kafka, it can't read from the Kafka topic, or it can't communicate with existing tasks). Once the supervisor is stable -
+that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
+state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
+
 ### Getting Supervisor Ingestion Stats Report
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
 See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+
+### Supervisor Health Check
+
+`GET /druid/indexer/v1/supervisor/<supervisorId>/health` returns `200 OK` if the supervisor is healthy and
+`503 Service Unavailable` if it is unhealthy. Healthiness is determined by the supervisor's `state` (as returned by the
+`/status` endpoint) and the `druid.supervisor.*` Overlord configuration thresholds.
 
 ### Updating Existing Supervisors
 

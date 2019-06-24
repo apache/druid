@@ -33,7 +33,6 @@ Compaction tasks merge all segments of the given interval. The syntax is:
     "dataSource": <task_datasource>,
     "interval": <interval to specify segments to be merged>,
     "dimensions" <custom dimensionsSpec>,
-    "keepSegmentGranularity": <true or false>,
     "segmentGranularity": <segment granularity after compaction>,
     "targetCompactionSizeBytes": <target size of compacted segments>
     "tuningConfig" <index task tuningConfig>,
@@ -50,21 +49,10 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`dimensionsSpec`|Custom dimensionsSpec. Compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
 |`metricsSpec`|Custom metricsSpec. Compaction task will use this metricsSpec if specified rather than generating one.|No|
 |`segmentGranularity`|If this is set, compactionTask will change the segment granularity for the given interval. See [segmentGranularity of Uniform Granularity Spec](./ingestion-spec.html#uniform-granularity-spec) for more details. See the below table for the behavior.|No|
-|`keepSegmentGranularity`|Deprecated. Please use `segmentGranularity` instead. See the below table for its behavior.|No|
 |`targetCompactionSizeBytes`|Target segment size after comapction. Cannot be used with `maxRowsPerSegment`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native_tasks.html#tuningconfig)|No|
 |`context`|[Task context](../ingestion/locking-and-priority.html#task-context)|No|
 
-### Used segmentGranularity based on `segmentGranularity` and `keepSegmentGranularity`
-
-|SegmentGranularity|keepSegmentGranularity|Used SegmentGranularity|
-|------------------|----------------------|-----------------------|
-|Non-null|True|Error|
-|Non-null|False|Given segmentGranularity|
-|Non-null|Null|Given segmentGranularity|
-|Null|True|Original segmentGranularity|
-|Null|False|ALL segmentGranularity. All events will fall into the single time chunk.|
-|Null|Null|Original segmentGranularity|
 
 An example of compaction task is
 
@@ -77,12 +65,12 @@ An example of compaction task is
 ```
 
 This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
-Since both `segmentGranularity` and `keepSegmentGranularity` are null, the original segment granularity will be remained and not changed after compaction.
+Since `segmentGranularity` is null, the original segment granularity will be remained and not changed after compaction.
 To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.html#compaction-dynamic-configuration) or [numShards](../ingestion/native_tasks.html#tuningconfig).
 Please note that you can run multiple compactionTasks at the same time. For example, you can run 12 compactionTasks per month instead of running a single task for the entire year.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
-For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html#ingestsegmentfirehose), and `dimensionsSpec` and `metricsSpec`
+For example, its `firehose` is always the [ingestSegmentFirehose](./firehose.html#ingestsegmentfirehose), and `dimensionsSpec` and `metricsSpec`
 include all dimensions and metrics of the input segments by default.
 
 Compaction tasks will exit with a failure status code, without doing anything, if the interval you specify has no

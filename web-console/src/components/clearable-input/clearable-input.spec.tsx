@@ -16,25 +16,25 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {ClearableInput} from './clearable-input';
-
+import { ClearableInput } from './clearable-input';
 
 describe('decribe clearable-input', () => {
-  it('clearable-input snapshot', () => {
-    const centerMessage =
+  it('matches snapshot', () => {
+    const centerMessage = (
       <ClearableInput
         className={'testClassName'}
         value={'testValue'}
         placeholder={'testPlaceholder'}
         onChange={(value: string) => null}
-      >;
-        <div>Hello World</div>
-      </ClearableInput>;
+      >
+        ;<div>Hello World</div>
+      </ClearableInput>
+    );
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

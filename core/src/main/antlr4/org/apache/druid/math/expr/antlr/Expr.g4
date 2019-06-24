@@ -23,12 +23,20 @@ expr : 'null'                                         # null
      | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr        # logicalOpExpr
      | expr ('&&'|'||') expr                          # logicalAndOrExpr
      | '(' expr ')'                                   # nestedExpr
+     | IDENTIFIER '(' lambda ',' fnArgs ')'           # applyFunctionExpr
      | IDENTIFIER '(' fnArgs? ')'                     # functionExpr
      | IDENTIFIER                                     # identifierExpr
      | DOUBLE                                         # doubleExpr
      | LONG                                           # longExpr
      | STRING                                         # string
+     | '[' DOUBLE  (',' DOUBLE)* ']'                  # doubleArray
+     | '[' LONG (',' LONG)* ']'                       # longArray
+     | '[' STRING (',' STRING)* ']'                   # stringArray
+     | '[]'                                           # emptyArray
      ;
+
+lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
+       ;
 
 fnArgs : expr (',' expr)*                             # functionArgs
        ;

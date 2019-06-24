@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 
 import { reorderArray } from './retention-dialog';
 
 describe('reorderArray', () => {
-
   it('works when nothing changes', () => {
     const array = ['a', 'b', 'c', 'd', 'e'];
 
@@ -54,4 +53,4 @@ describe('reorderArray', () => {
     expect(newArray).toEqual(['a', 'b', 'd', 'c', 'e']);
     expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
-})
+});

@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-
-const UNSAFE_CHAR = /[^a-z0-9 ,._\-;:(){}\[\]<>!@#$%^&*`~?]/ig;
+const UNSAFE_CHAR = /[^a-z0-9 ,._\-;:(){}\[\]<>!@#$%^&*`~?]/gi;
 
 function escape(str: string): string {
-  return str.replace(UNSAFE_CHAR, (s) => {
+  return str.replace(UNSAFE_CHAR, s => {
     return '\\u' + ('000' + s.charCodeAt(0).toString(16)).substr(-4);
   });
 }

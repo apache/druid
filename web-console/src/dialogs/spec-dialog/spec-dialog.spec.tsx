@@ -16,21 +16,17 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {SpecDialog} from './spec-dialog';
+import { SpecDialog } from './spec-dialog';
 
-describe('describe spec dialog', () => {
-  it('spec dialog snapshot', () => {
-    const specDialog =
-      <SpecDialog
-        onSubmit={(spec: JSON) => null}
-        onClose={() => null}
-        title={'test'}
-      />;
-    const { container, getByText } = render(specDialog, { container: document.body });
+describe('spec dialog', () => {
+  it('matches snapshot', () => {
+    const specDialog = (
+      <SpecDialog onSubmit={(spec: JSON) => null} onClose={() => null} title={'test'} />
+    );
+    const { container } = render(specDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

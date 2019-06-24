@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+@import '../../variables';
 
 .view-control-bar {
   height: $view-control-bar-height;
@@ -41,7 +41,7 @@
     margin-bottom: 8px;
   }
 
-  .table-column-selection {
+  .table-column-selector {
     margin-right: 0;
   }
 }

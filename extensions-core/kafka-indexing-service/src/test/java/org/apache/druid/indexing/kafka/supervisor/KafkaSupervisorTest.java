@@ -61,10 +61,13 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -144,7 +147,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   private final int numThreads;
 
-  private KafkaSupervisor supervisor;
+  private TestableKafkaSupervisor supervisor;
   private KafkaSupervisorTuningConfig tuningConfig;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
@@ -155,6 +158,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private String topic;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private ExceptionCapturingServiceEmitter serviceEmitter;
+  private SupervisorStateManagerConfig supervisorConfig;
 
   private static String getTopic()
   {
@@ -237,6 +241,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
+    supervisorConfig = new SupervisorStateManagerConfig();
   }
 
   @After
@@ -616,7 +621,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testBadMetadataOffsets() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -637,6 +642,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+
+    Assert.assertEquals(
+        "org.apache.druid.java.util.common.ISE",
+        supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
+    );
   }
 
   @Test
@@ -1252,12 +1262,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1358,12 +1370,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1495,12 +1509,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(1, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -2107,6 +2123,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final DateTime startTime = DateTimes.nowUtc();
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -2203,6 +2221,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -2420,6 +2440,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null);
+    supervisor.getStateManager().markRunFinished();
+
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -3126,7 +3148,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private KafkaSupervisor getTestableSupervisor(
+  private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3147,7 +3169,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  private KafkaSupervisor getTestableSupervisor(
+  private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3216,7 +3238,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            new SupervisorStateManagerConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3225,7 +3248,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   /**
    * Use when you want to mock the return value of SeekableStreamSupervisor#isTaskCurrent()
    */
-  private KafkaSupervisor getTestableSupervisorCustomIsTaskCurrent(
+  private TestableKafkaSupervisor getTestableSupervisorCustomIsTaskCurrent(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3295,7 +3318,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            supervisorConfig
         ),
         rowIngestionMetersFactory,
         isTaskCurrentReturn
@@ -3378,7 +3402,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
@@ -3564,6 +3589,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
       return StringUtils.format("sequenceName-%d", groupId);
+    }
+
+    private SeekableStreamSupervisorStateManager getStateManager()
+    {
+      return stateManager;
     }
   }
 

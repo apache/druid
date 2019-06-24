@@ -1,0 +1,52 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`sql view matches snapshot 1`] = `
+<div
+  className="query-view app-view"
+>
+  <ColumnTree
+    columnMetadata={null}
+    columnMetadataLoading={true}
+    onQueryStringChange={[Function]}
+  />
+  <t
+    customClassName=""
+    onDragEnd={null}
+    onDragStart={null}
+    onSecondaryPaneSizeChange={[Function]}
+    percentage={true}
+    primaryIndex={0}
+    primaryMinSize={30}
+    secondaryInitialSize={60}
+    secondaryMinSize={30}
+    vertical={true}
+  >
+    <div
+      className="control-pane"
+    >
+      <QueryInput
+        columnMetadata={null}
+        onQueryStringChange={[Function]}
+        queryString="test"
+        runeMode={false}
+      />
+      <div
+        className="control-bar"
+      >
+        <HotkeysTarget(RunButton)
+          onExplain={[Function]}
+          onQueryContextChange={[Function]}
+          onRun={[Function]}
+          queryContext={Object {}}
+          runeMode={false}
+        />
+      </div>
+    </div>
+    <QueryOutput
+      error={null}
+      loading={false}
+      result={null}
+    />
+  </t>
+</div>
+`;

@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-
-import { ITagInputProps, TextArea } from '@blueprintjs/core';
-import * as React from 'react';
+import { TextArea } from '@blueprintjs/core';
+import React from 'react';
 
 export interface ArrayInputProps {
   className?: string;
@@ -29,11 +28,11 @@ export interface ArrayInputProps {
   disabled?: boolean;
 }
 
-export class ArrayInput extends React.Component<ArrayInputProps, { stringValue: string }> {
+export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringValue: string }> {
   constructor(props: ArrayInputProps) {
     super(props);
     this.state = {
-      stringValue: Array.isArray(props.values) ? props.values.join(', ') : ''
+      stringValue: Array.isArray(props.values) ? props.values.join(', ') : '',
     };
   }
 
@@ -43,22 +42,25 @@ export class ArrayInput extends React.Component<ArrayInputProps, { stringValue: 
     const newValues = stringValue.split(',').map((v: string) => v.trim());
     const newValuesFiltered = newValues.filter(Boolean);
     this.setState({
-      stringValue: newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue
+      stringValue:
+        newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue,
     });
     if (onChange) onChange(stringValue === '' ? undefined : newValuesFiltered);
-  }
+  };
 
   render() {
     const { className, placeholder, large, disabled } = this.props;
     const { stringValue } = this.state;
-    return <TextArea
-      className={className}
-      value={stringValue}
-      onChange={this.handleChange}
-      placeholder={placeholder}
-      large={large}
-      disabled={disabled}
-      fill
-    />;
+    return (
+      <TextArea
+        className={className}
+        value={stringValue}
+        onChange={this.handleChange}
+        placeholder={placeholder}
+        large={large}
+        disabled={disabled}
+        fill
+      />
+    );
   }
 }

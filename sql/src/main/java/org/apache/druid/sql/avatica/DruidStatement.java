@@ -21,6 +21,7 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
@@ -39,7 +40,6 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;

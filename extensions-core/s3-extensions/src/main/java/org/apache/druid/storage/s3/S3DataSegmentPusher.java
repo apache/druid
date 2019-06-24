@@ -20,7 +20,6 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -96,7 +95,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            uploadFileIfPossible(config.getBucket(), s3Path, zipOutFile);
+            S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
 
             return outSegment;
           }
@@ -139,14 +138,4 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void uploadFileIfPossible(String bucket, String key, File file)
-  {
-    final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
-
-    if (!config.getDisableAcl()) {
-      indexFilePutRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(s3Client, bucket));
-    }
-    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    s3Client.putObject(indexFilePutRequest);
-  }
 }

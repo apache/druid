@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import { ActionCell} from './action-cell';
+import { ActionCell } from './action-cell';
 
-describe('describe action cell', () => {
-  it('action cell snapshot', () => {
-    const actionCell = <ActionCell
-      onDetail={() => null}
-      actions={[]}
-    />;
-    const { container, getByText } = render(actionCell);
+describe('action cell', () => {
+  it('matches snapshot', () => {
+    const actionCell = <ActionCell onDetail={() => null} actions={[]} />;
+    const { container } = render(actionCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

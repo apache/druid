@@ -34,6 +34,7 @@ public class ExprMacroTest
   private static final Expr.ObjectBinding BINDINGS = Parser.withMap(
       ImmutableMap.<String, Object>builder()
           .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
+          .put("t1", DateTimes.of("2000-02-03T00:00:00").getMillis())
           .put("tstr", "2000-02-03T04:05:06")
           .put("tstr_sql", "2000-02-03 04:05:06")
           .put("x", "foo")
@@ -88,6 +89,7 @@ public class ExprMacroTest
     assertExpr("timestamp_ceil(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-04T01").getMillis());
+    assertExpr("timestamp_ceil(t1, 'P1D')", DateTimes.of("2000-02-03").getMillis());
   }
 
   @Test

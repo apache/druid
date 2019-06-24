@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe header bar header bar snapshot 1`] = `
+exports[`header bar matches snapshot 1`] = `
 <Blueprint3.Navbar
   className="header-bar"
 >
@@ -234,7 +234,7 @@ exports[`describe header bar header bar snapshot 1`] = `
           />
           <Blueprint3.MenuItem
             disabled={false}
-            href="http://druid.io/docs/latest"
+            href="https://druid.apache.org/docs/latest"
             icon="th"
             multiline={false}
             popoverProps={Object {}}

@@ -257,6 +257,8 @@ SOURCE/JAVA-CORE
       * core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
       DirectExecutorService class:
       * core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
+      CartesianList class:
+      * core/src/main/java/org/apache/druid/math/expr/CartesianList.java
 
     This product contains modified versions of the Dockerfile, scripts, and related configuration files
      used for building SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
@@ -302,7 +304,7 @@ SOURCE/WEB-CONSOLE
 
 SOURCE/JAVA-CORE
     This product contains Porter stemmer adapted from a Javascript Porter Stemmer (https://github.com/kristopolous/Porter-Stemmer)
-     which is available under a BSD-3-Clause License.
+     which is available under a BSD-3-Clause License. For details, see licenses/src/porter-stemmer.BSD3.
       * processing/src/test/java/org/apache/druid/query/extraction/JavaScriptExtractionFnTest.java
 
 Public Domain

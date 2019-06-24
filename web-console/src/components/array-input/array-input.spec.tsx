@@ -16,24 +16,23 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {MenuCheckbox} from '../menu-checkbox/menu-checkbox';
+import { ArrayInput } from './array-input';
 
-import {ArrayInput} from './array-input';
-
-describe('describe array input', () => {
-  it('array input snapshot', () => {
-    const arrayInput =
+describe('array input', () => {
+  it('matches snapshot', () => {
+    const arrayInput = (
       <ArrayInput
         values={['apple', 'banana', 'pear']}
         className={'test'}
         placeholder={'test'}
         onChange={() => null}
-      />;
-    const { container, getByText } = render(arrayInput);
+      />
+    );
+
+    const { container } = render(arrayInput);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

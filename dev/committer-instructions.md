@@ -50,7 +50,7 @@ committer who visits an issue or a PR authored by a non-committer.
    API elements (`@PublicApi` or `@ExtensionPoint`), runtime configuration options, emitted metric names, HTTP endpoint
    behavior, or server behavior in some way that affects one of the following:
 
-     - Ability to do a rolling update [as documented](http://druid.io/docs/latest/operations/rolling-updates.html)
+     - Ability to do a rolling update [as documented](https://druid.apache.org/docs/latest/operations/rolling-updates.html)
      without needing any modifications to server configurations or query workload.
      - Ability to roll back a Druid cluster to a prior version.
      - Ability to continue using old Druid extensions without recompiling them.

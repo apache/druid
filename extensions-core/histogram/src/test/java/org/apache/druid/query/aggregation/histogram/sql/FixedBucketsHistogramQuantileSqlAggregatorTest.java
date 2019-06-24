@@ -140,7 +140,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                                              20,
                                                              0,
                                                              10,
-                                                             FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                                             FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -244,25 +245,55 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                            )
                            .aggregators(ImmutableList.of(
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a0:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a0:agg",
+                                   "m1",
+                                   20,
+                                   0.0d,
+                                   10.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a4:agg", "v0", 40, 0.0d, 20.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a4:agg",
+                                   "v0",
+                                   40,
+                                   0.0d,
+                                   20.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
-                                       "a5:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       "a5:agg",
+                                       "m1",
+                                       20,
+                                       0.0d,
+                                       10.0d,
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new SelectorDimFilter("dim1", "abc", null)
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
-                                       "a6:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       "a6:agg",
+                                       "m1",
+                                       20,
+                                       0.0d,
+                                       10.0d,
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a8:agg", "cnt", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a8:agg",
+                                   "cnt",
+                                   20,
+                                   0.0d,
+                                   10.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                )
                            ))
                            .postAggregators(
@@ -335,7 +366,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                    20,
                                    0.0,
                                    10.0,
-                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
                                    "a2:agg",
@@ -343,7 +375,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                    30,
                                    0.0,
                                    10.0,
-                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
@@ -352,7 +385,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                        20,
                                        0.0,
                                        10.0,
-                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new SelectorDimFilter("dim1", "abc", null)
                                ),
@@ -363,7 +397,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                        20,
                                        0.0,
                                        10.0,
-                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                                )
@@ -442,7 +477,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                          100,
                                          0,
                                          100.0d,
-                                         FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                         FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                         false
                                      )
                                  )
                                  .setPostAggregatorSpecs(

@@ -5887,7 +5887,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "lookyloo",
         false,
         null,
-        false,
+        null,
         true
     );
 
@@ -5940,7 +5940,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "lookyloo",
         false,
         null,
-        false,
+        null,
         true
     );
 
@@ -7906,4 +7906,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testTimestampCeil() throws Exception
+  {
+    testQuery(
+        "SELECT CEIL(TIMESTAMP '2000-01-01 00:00:00' TO DAY), \n"
+        + "CEIL(TIMESTAMP '2000-01-01 01:00:00' TO DAY) \n"
+        + "FROM druid.foo\n"
+        + "LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "946684800000", ValueType.LONG),
+                    expressionVirtualColumn("v1", "946771200000", ValueType.LONG)
+                )
+                .columns("v0", "v1")
+                .limit(1)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+
+        ),
+        ImmutableList.of(
+            new Object[]{
+                Calcites.jodaToCalciteTimestamp(
+                    DateTimes.of("2000-01-01"),
+                    DateTimeZone.UTC
+                ),
+                Calcites.jodaToCalciteTimestamp(
+                    DateTimes.of("2000-01-02"),
+                    DateTimeZone.UTC
+                )
+            }
+        )
+    );
+  }
+
 }

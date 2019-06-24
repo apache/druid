@@ -45,8 +45,7 @@ import static org.mockito.Mockito.when;
  */
 public class SchemaRegistryBasedAvroBytesDecoderTest
 {
-
-  SchemaRegistryClient registry;
+  private SchemaRegistryClient registry;
 
   @Before
   public void setUp()
@@ -96,7 +95,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
+  private byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
   {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);

@@ -16,24 +16,25 @@
  * limitations under the License.
  */
 
-
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
-import {AsyncActionDialog} from './async-action-dialog';
+import { AsyncActionDialog } from './async-action-dialog';
 
-
-describe('describe async action dialog', () => {
-  it('async action dialog snapshot', () => {
-    const asyncActionDialog =
+describe('async action dialog', () => {
+  it('matches snapshot', () => {
+    const asyncActionDialog = (
       <AsyncActionDialog
-        action={() => {return  Promise.resolve(); }}
+        action={() => {
+          return Promise.resolve();
+        }}
         onClose={(success: boolean) => null}
         confirmButtonText={'test'}
         successText={'test'}
         failText={'test'}
       />
-    const { container, getByText } = render(asyncActionDialog, { container: document.body });
+    );
+    const { container } = render(asyncActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
 });
