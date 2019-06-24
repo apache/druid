@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -86,5 +87,11 @@ public class NewSpatialDimensionSchema extends DimensionSchema
   public int hashCode()
   {
     return dims != null ? dims.hashCode() : 0;
+  }
+
+  @Override
+  public List<String> getActualDimentionNames()
+  {
+    return Collections.unmodifiableList(dims);
   }
 }

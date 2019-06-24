@@ -30,6 +30,8 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -191,5 +193,16 @@ public abstract class DimensionSchema
            ", multiValueHandling=" + multiValueHandling +
            ", createBitmapIndex=" + createBitmapIndex +
            '}';
+  }
+
+  /**
+   * Names of the dimention. For computed dimentions return actual columns that produce dimention.
+   * @see NewSpatialDimensionSchema
+   * @return list of dimentins
+   */
+  @JsonIgnore
+  public List<String> getActualDimentionNames()
+  {
+    return Collections.singletonList(getName());
   }
 }

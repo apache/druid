@@ -132,4 +132,43 @@ public class JSONParseSpecTest
     Assert.assertEquals(Arrays.asList("bar", "foo"), serde.getDimensionsSpec().getDimensionNames());
     Assert.assertEquals(feature, serde.getFeatureSpec());
   }
+
+
+  @Test
+  public void testSpec() throws IOException
+  {
+    String json = "\n{" +
+            "                    \"dimensionsSpec\": {\n" +
+            "                        \"dimensionExclusions\": [],\n" +
+            "                        \"dimensions\": [\n" +
+            "                            \"ip_address\",\n" +
+            "                            \"radius\",\n" +
+            "                            \"confidence\"\n" +
+            "                        ],\n" +
+            "                        \"spatialDimensions\": [\n" +
+            "                            {\n" +
+            "                                \"dimName\": \"geo\",\n" +
+            "                                \"dims\": [\n" +
+            "                                    \"latitude\",\n" +
+            "                                    \"longitude\"\n" +
+            "                                ]\n" +
+            "                            }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"format\": \"json\",\n" +
+            "                    \"timestampSpec\": {\n" +
+            "                        \"column\": \"ts\",\n" +
+            "                        \"format\": \"millis\"\n" +
+            "                    }\n" +
+            "                },\n" +
+            "                \"type\": \"lzo\"" +
+            "}";
+
+    final JSONParseSpec serde = (JSONParseSpec) jsonMapper.readValue(json, ParseSpec.class);
+
+    Assert.assertEquals("ts", serde.getTimestampSpec().getTimestampColumn());
+    Assert.assertEquals("millis", serde.getTimestampSpec().getTimestampFormat());
+
+    Assert.assertEquals(Arrays.asList("ip_address", "radius", "confidence", "geo"), serde.getDimensionsSpec().getDimensionNames());
+  }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import org.apache.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -125,5 +126,55 @@ public class DelimitedParseSpecTest
         false,
         0
     );
+  }
+
+
+  @Test
+  public void testSpatial() throws IOException
+  {
+
+
+    String json = "\n{" +
+            "                    \"columns\": [\n" +
+            "                        \"ts\",\n" +
+            "                        \"ip_address\",\n" +
+            "                        \"latitude\",\n" +
+            "                        \"longitude\",\n" +
+            "                        \"radius\",\n" +
+            "                        \"confidence\"\n" +
+            "                    ],\n" +
+            "                    \"dimensionsSpec\": {\n" +
+            "                        \"dimensionExclusions\": [],\n" +
+            "                        \"dimensions\": [\n" +
+            "                            \"ip_address\",\n" +
+            "                            \"radius\",\n" +
+            "                            \"confidence\"\n" +
+            "                        ],\n" +
+            "                        \"spatialDimensions\": [\n" +
+            "                            {\n" +
+            "                                \"dimName\": \"geo\",\n" +
+            "                                \"dims\": [\n" +
+            "                                    \"latitude\",\n" +
+            "                                    \"longitude\"\n" +
+            "                                ]\n" +
+            "                            }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"format\": \"tsv\",\n" +
+            "                    \"timestampSpec\": {\n" +
+            "                        \"column\": \"ts\",\n" +
+            "                        \"format\": \"millis\"\n" +
+            "                    }\n" +
+            "                },\n" +
+            "                \"type\": \"lzo\"" +
+            "}";
+
+    final DelimitedParseSpec serde = jsonMapper.readValue(json, DelimitedParseSpec.class);
+
+    Assert.assertEquals("ts", serde.getTimestampSpec().getTimestampColumn());
+    Assert.assertEquals("millis", serde.getTimestampSpec().getTimestampFormat());
+
+    Assert.assertEquals(Lists.newArrayList("ts", "ip_address", "latitude", "longitude", "radius", "confidence"), serde.getColumns());
+    Assert.assertEquals(Lists.newArrayList("ip_address", "radius", "confidence", "geo"), serde.getDimensionsSpec().getDimensionNames());
   }
 }

@@ -21,10 +21,14 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.parsers.DelimitedParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -60,7 +64,19 @@ public class DelimitedParseSpec extends ParseSpec
       for (String column : this.columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(dimensionsSpec.getDimensionNames());
+      final Iterable<String> dimNames = Iterables.concat(
+              Iterables.transform(dimensionsSpec.getDimensions(), new Function<DimensionSchema, Iterable<String>>()
+              {
+                @Override
+                public Iterable<String> apply(@Nullable DimensionSchema dimensionSchema)
+                {
+                  return dimensionSchema.getActualDimentionNames();
+                }
+              })
+      );
+
+      verify(Lists.newArrayList(dimNames));
+
     } else {
       Preconditions.checkArgument(
           hasHeaderRow,
