@@ -25,6 +25,7 @@ import {
   Card,
   Classes,
   Code,
+  Elevation,
   FormGroup,
   H5,
   HTMLSelect,
@@ -50,6 +51,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
+import { UrlBaser } from '../../singletons/url-baser';
 import {
   filterMap,
   getDruidErrorMessage,
@@ -72,18 +74,20 @@ import {
   fillDataSourceName,
   fillParser,
   FlattenField,
-  getBlankSpec,
   getDimensionMode,
   getDimensionSpecFormFields,
   getEmptyTimestampSpec,
   getFilterFormFields,
   getFlattenFieldFormFields,
   getIngestionComboType,
+  getIngestionImage,
+  getIngestionTitle,
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
   getMetricSpecFormFields,
   getParseSpecFormFields,
   getPartitionRelatedTuningSpecFormFields,
+  getRequiredModule,
   getRollup,
   getSpecType,
   getTimestampSpecFormFields,
@@ -108,6 +112,7 @@ import {
   TimestampSpec,
   Transform,
   TuningConfig,
+  updateIngestionType,
 } from '../../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
@@ -163,6 +168,7 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
 }
 
 type Step =
+  | 'welcome'
   | 'connect'
   | 'parser'
   | 'timestamp'
@@ -172,9 +178,11 @@ type Step =
   | 'partition'
   | 'tuning'
   | 'publish'
-  | 'json-spec'
+  | 'spec'
   | 'loading';
+
 const STEPS: Step[] = [
+  'welcome',
   'connect',
   'parser',
   'timestamp',
@@ -184,18 +192,19 @@ const STEPS: Step[] = [
   'partition',
   'tuning',
   'publish',
-  'json-spec',
+  'spec',
   'loading',
 ];
 
 const SECTIONS: { name: string; steps: Step[] }[] = [
-  { name: 'Connect and parse raw data', steps: ['connect', 'parser', 'timestamp'] },
+  { name: 'Connect and parse raw data', steps: ['welcome', 'connect', 'parser', 'timestamp'] },
   { name: 'Transform and configure schema', steps: ['transform', 'filter', 'schema'] },
   { name: 'Tune parameters', steps: ['partition', 'tuning', 'publish'] },
-  { name: 'Verify and submit', steps: ['json-spec'] },
+  { name: 'Verify and submit', steps: ['spec'] },
 ];
 
 const VIEW_TITLE: Record<Step, string> = {
+  welcome: 'Start',
   connect: 'Connect',
   parser: 'Parse data',
   timestamp: 'Parse time',
@@ -205,7 +214,7 @@ const VIEW_TITLE: Record<Step, string> = {
   partition: 'Partition',
   tuning: 'Tune',
   publish: 'Publish',
-  'json-spec': 'Edit JSON spec',
+  spec: 'Edit JSON spec',
   loading: 'Loading',
 };
 
@@ -224,9 +233,11 @@ export interface LoadDataViewState {
   newRollup: boolean | null;
   newDimensionMode: DimensionMode | null;
 
-  // general
+  // welcome
   overlordModules: string[] | null;
-  overlordModuleNeededMessage: string | null;
+  selectedComboType: IngestionComboType | 'other' | null;
+
+  // general
   sampleStrategy: SampleStrategy;
   columnFilter: string;
   specialColumnsOnly: boolean;
@@ -278,7 +289,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
-      step: 'connect',
+      step: 'welcome',
       spec,
       cacheKey: undefined,
 
@@ -287,9 +298,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       newRollup: null,
       newDimensionMode: null,
 
-      // general
+      // welcome
       overlordModules: null,
-      overlordModuleNeededMessage: null,
+      selectedComboType: null,
+
+      // general
       sampleStrategy: 'start',
       columnFilter: '',
       specialColumnsOnly: false,
@@ -337,7 +350,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.updateStep('loading');
       this.getSupervisorJson();
     } else {
-      this.updateStep('connect');
+      this.updateStep('welcome');
     }
   }
 
@@ -389,19 +402,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   render() {
-    const { step, spec } = this.state;
-    if (!Object.keys(spec).length && !this.props.initSupervisorId && !this.props.initTaskId) {
-      return (
-        <div className={classNames('load-data-view', 'app-view', 'init')}>
-          {this.renderInitStep()}
-        </div>
-      );
-    }
-
+    const { step } = this.state;
     return (
       <div className={classNames('load-data-view', 'app-view', step)}>
         {this.renderStepNav()}
 
+        {step === 'welcome' && this.renderWelcomeStep()}
         {step === 'connect' && this.renderConnectStep()}
         {step === 'parser' && this.renderParserStep()}
         {step === 'timestamp' && this.renderTimestampStep()}
@@ -414,7 +420,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'tuning' && this.renderTuningStep()}
         {step === 'publish' && this.renderPublishStep()}
 
-        {step === 'json-spec' && this.renderJsonSpecStep()}
+        {step === 'spec' && this.renderSpecStep()}
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
@@ -437,7 +443,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   key={s}
                   active={s === step}
                   onClick={() => this.updateStep(s)}
-                  icon={s === 'json-spec' && IconNames.MANUALLY_ENTERED_DATA}
+                  icon={s === 'spec' && IconNames.MANUALLY_ENTERED_DATA}
                   text={VIEW_TITLE[s]}
                 />
               ))}
@@ -484,78 +490,154 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  initWith(comboType: IngestionComboType) {
-    this.setState({
-      spec: getBlankSpec(comboType),
-    });
-    setTimeout(() => {
-      this.updateStep('connect');
-    }, 10);
-  }
-
-  renderIngestionCard(title: string, comboType: IngestionComboType, requiredModule?: string) {
-    const { overlordModules } = this.state;
+  renderIngestionCard(comboType: IngestionComboType | 'other') {
+    const { overlordModules, selectedComboType } = this.state;
     if (!overlordModules) return null;
+    const requiredModule = getRequiredModule(comboType);
     const goodToGo = !requiredModule || overlordModules.includes(requiredModule);
 
     return (
       <Card
-        className={classNames({ disabled: !goodToGo })}
+        className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         onClick={() => {
-          if (goodToGo) {
-            this.initWith(comboType);
-          } else {
-            this.setState({
-              overlordModuleNeededMessage: `${title} ingestion requires the '${requiredModule}' to be loaded.`,
-            });
-          }
+          this.setState({ selectedComboType: comboType });
         }}
       >
-        {title}
+        <img src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)} />
+        <p>{getIngestionTitle(comboType)}</p>
       </Card>
     );
   }
 
-  renderInitStep() {
+  renderWelcomeStep() {
     const { goToTask } = this.props;
-    const { overlordModuleNeededMessage } = this.state;
+    const { spec, selectedComboType, overlordModules } = this.state;
+
+    let message: JSX.Element | null = null;
+    let controls: JSX.Element | null = null;
+    if (selectedComboType === 'other') {
+      message = <p>You can ingest whatever you want by submitting a raw spec.</p>;
+      controls = (
+        <>
+          <FormGroup>
+            <Button
+              text="Submit supervisor"
+              rightIcon={IconNames.ARROW_RIGHT}
+              onClick={() => goToTask(null, 'supervisor')}
+              intent={Intent.PRIMARY}
+            />
+          </FormGroup>
+          <FormGroup>
+            <Button
+              text="Submit task"
+              rightIcon={IconNames.ARROW_RIGHT}
+              onClick={() => goToTask(null, 'task')}
+              intent={Intent.PRIMARY}
+            />
+          </FormGroup>
+        </>
+      );
+    } else if (selectedComboType) {
+      const requiredModule = getRequiredModule(selectedComboType);
+      if (requiredModule && overlordModules && !overlordModules.includes(requiredModule)) {
+        message = (
+          <p>{`${getIngestionTitle(
+            selectedComboType,
+          )} ingestion requires the '${requiredModule}' to be loaded.`}</p>
+        );
+      }
+
+      switch (selectedComboType) {
+        case 'index:http':
+          message = message || (
+            <>
+              <p>Load data accessible from the web.</p>
+              <p>
+                Files must be in a text format and must be reachable from every node in the cluster.
+              </p>
+            </>
+          );
+          break;
+
+        case 'index:local':
+          message = message || (
+            <>
+              <p>Load data directly from file on the file system.</p>
+              <p>
+                Files must be in a text format and must be accessible to all the nodes in the
+                cluster.
+              </p>
+            </>
+          );
+          break;
+
+        case 'index:static-s3':
+          message = message || <p>Load text based data from Amazon S3</p>;
+          break;
+
+        case 'index:static-google-blobstore':
+          message = message || <p>Load text based data from the Google Blobstore</p>;
+          break;
+
+        case 'kafka':
+          message = message || <p>Stream data from Apache Kafka</p>;
+          break;
+
+        case 'kinesis':
+          message = message || <p>Stream data from Amazon Kinesis</p>;
+          break;
+
+        default:
+          message = message || <p>Unknown ingestion type</p>;
+          break;
+      }
+      controls = (
+        <FormGroup>
+          <Button
+            text="Connect data"
+            rightIcon={IconNames.ARROW_RIGHT}
+            onClick={() => {
+              this.setState({
+                spec: updateIngestionType(spec, selectedComboType),
+              });
+              setTimeout(() => {
+                this.updateStep('connect');
+              }, 10);
+            }}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+      );
+    } else {
+      message = <p>Please specify where your raw data is located</p>;
+    }
 
     return (
       <>
-        <div className="intro">Please specify where your raw data is located</div>
-
-        <div className="cards">
-          {this.renderIngestionCard('Apache Kafka', 'kafka', 'druid-kafka-indexing-service')}
-          {this.renderIngestionCard('AWS Kinesis', 'kinesis', 'druid-kinesis-indexing-service')}
-          {this.renderIngestionCard('HTTP(s)', 'index:http')}
-          {this.renderIngestionCard('AWS S3', 'index:static-s3', 'druid-s3-extensions')}
-          {this.renderIngestionCard(
-            'Google Cloud Storage',
-            'index:static-google-blobstore',
-            'druid-google-extensions',
-          )}
-          {this.renderIngestionCard('Local disk', 'index:local')}
-          <Card interactive onClick={() => goToTask(null, 'supervisor')}>
-            Other (streaming)
-          </Card>
-          <Card interactive onClick={() => goToTask(null, 'task')}>
-            Other (batch)
-          </Card>
+        <div className="main">
+          {this.renderIngestionCard('kafka')}
+          {this.renderIngestionCard('kinesis')}
+          {this.renderIngestionCard('index:http')}
+          {this.renderIngestionCard('index:static-s3')}
+          {this.renderIngestionCard('index:static-google-blobstore')}
+          {this.renderIngestionCard('index:local')}
+          {this.renderIngestionCard('other')}
         </div>
-
-        <Alert
-          icon={IconNames.WARNING_SIGN}
-          intent={Intent.WARNING}
-          isOpen={Boolean(overlordModuleNeededMessage)}
-          confirmButtonText="Close"
-          onConfirm={() => this.setState({ overlordModuleNeededMessage: null })}
-        >
-          <p>{overlordModuleNeededMessage}</p>
-        </Alert>
+        <div className="control">
+          <Callout className="intro">{message}</Callout>
+          {controls}
+          {deepGet(spec, 'type') && (
+            <Button icon={IconNames.UNDO} text="Reset spec" onClick={this.handleResetConfirm} />
+          )}
+        </div>
       </>
     );
   }
+
+  private handleResetConfirm = () => {
+    this.setState({ showResetConfirm: true });
+  };
 
   renderResetConfirm() {
     const { showResetConfirm } = this.state;
@@ -713,8 +795,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             if (!inputQueryState.data) return;
             this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
           },
-          prevLabel: 'Restart',
-          onPrevStep: () => this.setState({ showResetConfirm: true }),
         })}
       </>
     );
@@ -2399,7 +2479,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(normalizeSpecType(resp.data));
-      this.updateStep('json-spec');
+      this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get supervisor spec: ${getDruidErrorMessage(e)}`,
@@ -2414,7 +2494,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(normalizeSpecType(resp.data.payload.spec));
-      this.updateStep('json-spec');
+      this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
         message: `Failed to get task spec: ${getDruidErrorMessage(e)}`,
@@ -2427,7 +2507,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return <Loader loading />;
   }
 
-  renderJsonSpecStep() {
+  renderSpecStep() {
     const { goToTask } = this.props;
     const { spec } = this.state;
 
@@ -2455,6 +2535,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
         </div>
         <div className="next-bar">
+          {deepGet(spec, 'type') && (
+            <Button
+              className="left"
+              icon={IconNames.UNDO}
+              text="Reset spec"
+              onClick={this.handleResetConfirm}
+            />
+          )}
           <Button
             text="Submit"
             intent={Intent.PRIMARY}

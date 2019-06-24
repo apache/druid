@@ -27,31 +27,31 @@
     'main ctrl'
     'main next';
 
-  &.init {
-    display: block;
+  &.welcome {
+    .main {
+      margin-left: -10px;
 
-    & > * {
-      margin-bottom: 15px;
-    }
-
-    .intro {
-      font-size: 20px;
-    }
-
-    .cards {
       .bp3-card {
         display: inline-block;
         vertical-align: top;
         width: 250px;
         height: 140px;
-        margin-right: 15px;
+        margin-left: 15px;
         margin-bottom: 15px;
-        font-size: 24px;
+        font-size: 16px;
         text-align: center;
-        padding-top: 47px;
+
+        &.active {
+          box-shadow: 0 0 4px 2px #2de4f0;
+        }
 
         &.disabled {
           opacity: 0.4;
+        }
+
+        img {
+          width: 100px;
+          display: inline-block;
         }
       }
     }
@@ -192,7 +192,7 @@
     text-align: right;
     padding: 0 5px;
 
-    .prev {
+    .left {
       float: left;
     }
   }

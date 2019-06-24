@@ -87,6 +87,70 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
   return null;
 }
 
+export function getIngestionTitle(ingestionType: IngestionComboType | 'other'): string {
+  switch (ingestionType) {
+    case 'index:local':
+      return 'Local disk';
+
+    case 'index:http':
+      return 'HTTP(s)';
+
+    case 'index:static-s3':
+      return 'AWS S3';
+
+    case 'index:static-google-blobstore':
+      return 'Google Cloud Storage';
+
+    case 'kafka':
+      return 'Apache Kafka';
+
+    case 'kinesis':
+      return 'Amazon Kinesis';
+
+    case 'other':
+      return 'Other';
+
+    default:
+      return 'Unknown ingestion';
+  }
+}
+
+export function getIngestionImage(ingestionType: IngestionComboType | 'other'): string {
+  switch (ingestionType) {
+    case 'index:local':
+    case 'index:http':
+    case 'index:static-s3':
+    case 'index:static-google-blobstore':
+      return ingestionType.split(':')[1];
+
+    case 'kafka':
+    case 'kinesis':
+      return ingestionType;
+
+    default:
+      return 'other';
+  }
+}
+
+export function getRequiredModule(ingestionType: IngestionComboType | 'other'): string | null {
+  switch (ingestionType) {
+    case 'index:static-s3':
+      return 'druid-s3-extensions';
+
+    case 'index:static-google-blobstore':
+      return 'druid-google-extensions';
+
+    case 'kafka':
+      return 'druid-kafka-indexing-service';
+
+    case 'kinesis':
+      return 'druid-kinesis-indexing-service';
+
+    default:
+      return null;
+  }
+}
+
 // --------------
 
 export interface DataSchema {
@@ -851,7 +915,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ],
           info: (
             <>
-              The AWS Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
+              The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
               <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">
                 here
               </ExternalLink>
@@ -1662,40 +1726,40 @@ export interface Bitmap {
 
 // --------------
 
-export function getBlankSpec(comboType: IngestionComboType): IngestionSpec {
+export function updateIngestionType(
+  spec: IngestionSpec,
+  comboType: IngestionComboType,
+): IngestionSpec {
   let [ingestionType, firehoseType] = comboType.split(':');
   if (ingestionType === 'index') ingestionType = 'index_parallel';
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
   );
 
-  const granularitySpec: GranularitySpec = {
-    type: 'uniform',
-    segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
-    queryGranularity: 'HOUR',
-  };
-
-  const spec: IngestionSpec = {
-    type: ingestionType,
-    dataSchema: {
-      dataSource: 'new-data-source',
-      granularitySpec,
-    },
-    ioConfig: {
-      type: ioAndTuningConfigType,
-    },
-    tuningConfig: {
-      type: ioAndTuningConfigType,
-    },
-  } as any;
+  let newSpec = spec;
+  newSpec = deepSet(newSpec, 'type', ingestionType);
+  newSpec = deepSet(newSpec, 'ioConfig.type', ioAndTuningConfigType);
+  newSpec = deepSet(newSpec, 'tuningConfig.type', ioAndTuningConfigType);
 
   if (firehoseType) {
-    spec.ioConfig.firehose = {
-      type: firehoseType,
-    };
+    newSpec = deepSet(newSpec, 'ioConfig.firehose', { type: firehoseType });
   }
 
-  return spec;
+  if (!deepGet(spec, 'dataSchema.dataSource')) {
+    newSpec = deepSet(newSpec, 'dataSchema.dataSource', 'new-data-source');
+  }
+
+  if (!deepGet(spec, 'dataSchema.granularitySpec')) {
+    const granularitySpec: GranularitySpec = {
+      type: 'uniform',
+      segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
+      queryGranularity: 'HOUR',
+    };
+
+    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
+  }
+
+  return newSpec;
 }
 
 export function fillParser(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
