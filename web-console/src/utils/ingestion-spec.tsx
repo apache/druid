@@ -37,6 +37,10 @@ export interface IngestionSpec {
   tuningConfig?: TuningConfig;
 }
 
+export function isEmptyIngestionSpec(spec: IngestionSpec) {
+  return Object.keys(spec).length === 0;
+}
+
 export type IngestionType = 'kafka' | 'kinesis' | 'index_hadoop' | 'index' | 'index_parallel';
 
 // A combination of IngestionType and firehose
@@ -47,6 +51,9 @@ export type IngestionComboType =
   | 'index:local'
   | 'index:static-s3'
   | 'index:static-google-blobstore';
+
+// Some extra values that can be selected in the initial screen
+export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
@@ -87,7 +94,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
   return null;
 }
 
-export function getIngestionTitle(ingestionType: IngestionComboType | 'other'): string {
+export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
   switch (ingestionType) {
     case 'index:local':
       return 'Local disk';
@@ -107,6 +114,12 @@ export function getIngestionTitle(ingestionType: IngestionComboType | 'other'): 
     case 'kinesis':
       return 'Amazon Kinesis';
 
+    case 'hadoop':
+      return 'HDFS';
+
+    case 'example':
+      return 'Example data';
+
     case 'other':
       return 'Other';
 
@@ -115,24 +128,13 @@ export function getIngestionTitle(ingestionType: IngestionComboType | 'other'): 
   }
 }
 
-export function getIngestionImage(ingestionType: IngestionComboType | 'other'): string {
-  switch (ingestionType) {
-    case 'index:local':
-    case 'index:http':
-    case 'index:static-s3':
-    case 'index:static-google-blobstore':
-      return ingestionType.split(':')[1];
-
-    case 'kafka':
-    case 'kinesis':
-      return ingestionType;
-
-    default:
-      return 'other';
-  }
+export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
+  const parts = ingestionType.split(':');
+  if (parts.length === 2) return parts[1];
+  return ingestionType;
 }
 
-export function getRequiredModule(ingestionType: IngestionComboType | 'other'): string | null {
+export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | null {
   switch (ingestionType) {
     case 'index:static-s3':
       return 'druid-s3-extensions';

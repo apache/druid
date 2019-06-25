@@ -95,10 +95,11 @@ import {
   getTuningSpecFormFields,
   GranularitySpec,
   hasParallelAbility,
-  IngestionComboType,
+  IngestionComboTypeWithExtra,
   IngestionSpec,
   IoConfig,
   isColumnTimestampSpec,
+  isEmptyIngestionSpec,
   isParallel,
   issueWithIoConfig,
   issueWithParser,
@@ -235,7 +236,7 @@ export interface LoadDataViewState {
 
   // welcome
   overlordModules: string[] | null;
-  selectedComboType: IngestionComboType | 'other' | null;
+  selectedComboType: IngestionComboTypeWithExtra | null;
 
   // general
   sampleStrategy: SampleStrategy;
@@ -342,6 +343,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   componentDidMount(): void {
+    const { spec } = this.state;
+
     this.getOverlordModules();
     if (this.props.initTaskId) {
       this.updateStep('loading');
@@ -349,8 +352,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (this.props.initSupervisorId) {
       this.updateStep('loading');
       this.getSupervisorJson();
-    } else {
+    } else if (isEmptyIngestionSpec(spec)) {
       this.updateStep('welcome');
+    } else {
+      this.updateStep('connect');
     }
   }
 
@@ -487,7 +492,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  renderIngestionCard(comboType: IngestionComboType | 'other') {
+  renderIngestionCard(comboType: IngestionComboTypeWithExtra) {
     const { overlordModules, selectedComboType } = this.state;
     if (!overlordModules) return null;
     const requiredModule = getRequiredModule(comboType);
@@ -508,107 +513,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStep() {
-    const { goToTask } = this.props;
-    const { spec, selectedComboType, overlordModules } = this.state;
-
-    let message: JSX.Element | null = null;
-    let controls: JSX.Element | null = null;
-    if (selectedComboType === 'other') {
-      message = <p>You can ingest whatever you want by submitting a raw spec.</p>;
-      controls = (
-        <>
-          <FormGroup>
-            <Button
-              text="Submit supervisor"
-              rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(null, 'supervisor')}
-              intent={Intent.PRIMARY}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Button
-              text="Submit task"
-              rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(null, 'task')}
-              intent={Intent.PRIMARY}
-            />
-          </FormGroup>
-        </>
-      );
-    } else if (selectedComboType) {
-      const requiredModule = getRequiredModule(selectedComboType);
-      if (requiredModule && overlordModules && !overlordModules.includes(requiredModule)) {
-        message = (
-          <p>{`${getIngestionTitle(
-            selectedComboType,
-          )} ingestion requires the '${requiredModule}' to be loaded.`}</p>
-        );
-      }
-
-      switch (selectedComboType) {
-        case 'index:http':
-          message = message || (
-            <>
-              <p>Load data accessible from the web.</p>
-              <p>
-                Files must be in a text format and must be reachable from every node in the cluster.
-              </p>
-            </>
-          );
-          break;
-
-        case 'index:local':
-          message = message || (
-            <>
-              <p>Load data directly from file on the file system.</p>
-              <p>
-                Files must be in a text format and must be accessible to all the nodes in the
-                cluster.
-              </p>
-            </>
-          );
-          break;
-
-        case 'index:static-s3':
-          message = message || <p>Load text based data from Amazon S3</p>;
-          break;
-
-        case 'index:static-google-blobstore':
-          message = message || <p>Load text based data from the Google Blobstore</p>;
-          break;
-
-        case 'kafka':
-          message = message || <p>Stream data from Apache Kafka</p>;
-          break;
-
-        case 'kinesis':
-          message = message || <p>Stream data from Amazon Kinesis</p>;
-          break;
-
-        default:
-          message = message || <p>Unknown ingestion type</p>;
-          break;
-      }
-      controls = (
-        <FormGroup>
-          <Button
-            text="Connect data"
-            rightIcon={IconNames.ARROW_RIGHT}
-            onClick={() => {
-              this.setState({
-                spec: updateIngestionType(spec, selectedComboType),
-              });
-              setTimeout(() => {
-                this.updateStep('connect');
-              }, 10);
-            }}
-            intent={Intent.PRIMARY}
-          />
-        </FormGroup>
-      );
-    } else {
-      message = <p>Please specify where your raw data is located</p>;
-    }
+    const { spec } = this.state;
 
     return (
       <>
@@ -619,16 +524,176 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:static-s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
           {this.renderIngestionCard('index:local')}
+          {this.renderIngestionCard('hadoop')}
+          {/* this.renderIngestionCard('example') */}
           {this.renderIngestionCard('other')}
         </div>
         <div className="control">
-          <Callout className="intro">{message}</Callout>
-          {controls}
-          {deepGet(spec, 'type') && (
+          <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
+          {this.renderWelcomeStepControls()}
+          {!isEmptyIngestionSpec(spec) && (
             <Button icon={IconNames.UNDO} text="Reset spec" onClick={this.handleResetConfirm} />
           )}
         </div>
       </>
+    );
+  }
+
+  renderWelcomeStepMessage() {
+    const { selectedComboType, overlordModules } = this.state;
+
+    if (!selectedComboType) {
+      return <p>Please specify where your raw data is located</p>;
+    }
+
+    const issue = this.selectedIngestionTypeIssue();
+    if (issue) return issue;
+
+    switch (selectedComboType) {
+      case 'index:http':
+        return (
+          <>
+            <p>Load data accessible from the web.</p>
+            <p>
+              Files must be in a text format and must be reachable from every node in the cluster.
+            </p>
+          </>
+        );
+
+      case 'index:local':
+        return (
+          <>
+            <p>Load data directly from file on the file system.</p>
+            <p>
+              Files must be in a text format and must be accessible to all the nodes in the cluster.
+            </p>
+          </>
+        );
+
+      case 'index:static-s3':
+        return <p>Load text based data from Amazon S3.</p>;
+
+      case 'index:static-google-blobstore':
+        return <p>Load text based data from the Google Blobstore.</p>;
+
+      case 'kafka':
+        return <p>Stream data from Apache Kafka.</p>;
+
+      case 'kinesis':
+        return <p>Stream data from Amazon Kinesis.</p>;
+
+      case 'hadoop':
+        return (
+          <>
+            <p>You can not ingest data from HDFS via the data loader at this time.</p>
+            <p>
+              To ingest data from HDFS please follow{' '}
+              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/hadoop.html">
+                the hadoop docs
+              </ExternalLink>{' '}
+              and submit a batch task.
+            </p>
+          </>
+        );
+
+      case 'example':
+        return <p>Pick one of these examples to get you started.</p>;
+
+      case 'other':
+        return <p>You can ingest whatever you want by submitting a raw spec.</p>;
+
+      default:
+        return <p>Unknown ingestion type.</p>;
+    }
+  }
+
+  renderWelcomeStepControls() {
+    const { goToTask } = this.props;
+    const { spec, selectedComboType } = this.state;
+
+    const issue = this.selectedIngestionTypeIssue();
+    if (issue) return null;
+
+    switch (selectedComboType) {
+      case 'index:http':
+      case 'index:local':
+      case 'index:static-s3':
+      case 'index:static-google-blobstore':
+      case 'kafka':
+      case 'kinesis':
+        return (
+          <FormGroup>
+            <Button
+              text="Connect data"
+              rightIcon={IconNames.ARROW_RIGHT}
+              onClick={() => {
+                this.setState({
+                  spec: updateIngestionType(spec, selectedComboType as any),
+                });
+                setTimeout(() => {
+                  this.updateStep('connect');
+                }, 10);
+              }}
+              intent={Intent.PRIMARY}
+            />
+          </FormGroup>
+        );
+
+      case 'hadoop':
+        return (
+          <FormGroup>
+            <Button
+              text="Submit task"
+              rightIcon={IconNames.ARROW_RIGHT}
+              onClick={() => goToTask(null, 'task')}
+              intent={Intent.PRIMARY}
+            />
+          </FormGroup>
+        );
+
+      case 'example':
+        return null;
+
+      case 'other':
+        return (
+          <>
+            <FormGroup>
+              <Button
+                text="Submit supervisor"
+                rightIcon={IconNames.ARROW_RIGHT}
+                onClick={() => goToTask(null, 'supervisor')}
+                intent={Intent.PRIMARY}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Button
+                text="Submit task"
+                rightIcon={IconNames.ARROW_RIGHT}
+                onClick={() => goToTask(null, 'task')}
+                intent={Intent.PRIMARY}
+              />
+            </FormGroup>
+          </>
+        );
+
+      default:
+        return null;
+    }
+  }
+
+  selectedIngestionTypeIssue(): JSX.Element | null {
+    const { selectedComboType, overlordModules } = this.state;
+    if (!selectedComboType || !overlordModules) return null;
+
+    const requiredModule = getRequiredModule(selectedComboType);
+    if (!requiredModule || overlordModules.includes(requiredModule)) return null;
+
+    return (
+      <p>
+        {`${getIngestionTitle(selectedComboType)} ingestion requires the `}
+        <strong>{requiredModule}</strong>
+        {` extension to be loaded.`}
+      </p>
     );
   }
 
@@ -2532,7 +2597,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
         </div>
         <div className="next-bar">
-          {deepGet(spec, 'type') && (
+          {!isEmptyIngestionSpec(spec) && (
             <Button
               className="left"
               icon={IconNames.UNDO}
