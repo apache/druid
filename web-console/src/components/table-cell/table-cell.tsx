@@ -46,7 +46,6 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
 
     const { prefix, omitted, suffix } = TableCell.shortenString(str);
-    console.log(TableCell.shortenString(str));
     return (
       <span className="table-cell truncated">
         {prefix}
