@@ -24,18 +24,32 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 public class TestUtils
 {
 
-  public static boolean assertEqualsImmutableDruidDataSource(Object expected, Object actual)
+  /**
+   * This method is to check equality of {@link ImmutableDruidDataSource} objects to be called from test code.
+   * @param expected expected object
+   * @param actual actual object
+   *
+   */
+  public static void assertEqualsImmutableDruidDataSource(Object expected, Object actual)
   {
+    if (equalsRegardingNull(expected, actual)) {
+      return;
+    } else {
+      throw new AssertionError("Expected and actual objects differ.");
+    }
+  }
+
+  private static boolean equalsRegardingNull(Object expected, Object actual)
+  {
+    if (expected == null) {
+      return actual == null;
+    }
+
     if (expected instanceof ImmutableDruidDataSource && actual instanceof ImmutableDruidDataSource) {
-      return isEquals((ImmutableDruidDataSource) expected, (ImmutableDruidDataSource) actual);
+      return ((ImmutableDruidDataSource)expected).equalsForTesting((ImmutableDruidDataSource)actual);
     }
 
     return false;
-  }
-
-  private static boolean isEquals(ImmutableDruidDataSource expected, ImmutableDruidDataSource actual)
-  {
-    return expected.equalsForTesting(actual);
   }
 
 }
