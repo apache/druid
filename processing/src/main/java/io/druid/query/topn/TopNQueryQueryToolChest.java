@@ -407,9 +407,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   }
               );
 
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
-              }
               if (isResultLevelCache) {
                 Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
                 while (postItr.hasNext() && resultIter.hasNext()) {
