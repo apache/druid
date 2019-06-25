@@ -168,12 +168,4 @@ public class ImmutableDruidDataSource
     return this.idToSegments.equals(that.idToSegments);
   }
 
-  /**
-   * This method should only be used in tests.
-   */
-  @VisibleForTesting
-  public int hashCodeForTesting()
-  {
-    return Objects.hash(name, properties, idToSegments);
-  }
 }
