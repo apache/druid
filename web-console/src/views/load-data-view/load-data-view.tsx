@@ -520,11 +520,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
-          {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:static-s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
-          {this.renderIngestionCard('index:local')}
           {this.renderIngestionCard('hadoop')}
+          {this.renderIngestionCard('index:http')}
+          {this.renderIngestionCard('index:local')}
           {/* this.renderIngestionCard('example') */}
           {this.renderIngestionCard('other')}
         </div>

@@ -32,6 +32,7 @@
       margin-left: -10px;
 
       .bp3-card {
+        position: relative;
         display: inline-block;
         vertical-align: top;
         width: 250px;
@@ -46,8 +47,15 @@
           pointer-events: none;
         }
 
-        &.active {
-          box-shadow: 0 0 4px 2px #2de4f0;
+        &.active::after {
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          content: '';
+          border: 2px solid #48aff0;
+          border-radius: 2px;
         }
 
         &.disabled {
