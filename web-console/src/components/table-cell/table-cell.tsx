@@ -30,6 +30,7 @@ export interface NullTableCellProps extends React.Props<any> {
   value?: any;
   timestamp?: boolean;
   unparseable?: boolean;
+  openModal?: (str: string) => void;
 }
 
 interface ShortParts {
@@ -41,24 +42,19 @@ interface ShortParts {
 export class TableCell extends React.PureComponent<NullTableCellProps> {
   static MAX_CHARS_TO_SHOW = 50;
 
-  static possiblyTruncate(str: string): React.ReactNode {
+  possiblyTruncate(str: string): React.ReactNode {
     if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
 
     const { prefix, omitted, suffix } = TableCell.shortenString(str);
+    console.log(TableCell.shortenString(str));
     return (
       <span className="table-cell truncated">
         {prefix}
         <span className="omitted">{omitted}</span>
         {suffix}
         <ActionIcon
-          icon={IconNames.CLIPBOARD}
-          onClick={() => {
-            copy(str, { format: 'text/plain' });
-            AppToaster.show({
-              message: 'Value copied to clipboard',
-              intent: Intent.SUCCESS,
-            });
-          }}
+          icon={IconNames.MORE}
+          onClick={() => (this.props.openModal ? this.props.openModal(str) : null)}
         />
       </span>
     );
@@ -72,7 +68,7 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     const suffix = str.substr(str.length - 10);
     return {
       prefix,
-      omitted: `...${omit} omitted...`,
+      omitted: omit ? `...${omit} omitted...` : `...`,
       suffix,
     };
   }
@@ -89,9 +85,9 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
           </span>
         );
       } else if (Array.isArray(value)) {
-        return TableCell.possiblyTruncate(`[${value.join(', ')}]`);
+        return this.possiblyTruncate(`[${value.join(', ')}]`);
       } else {
-        return TableCell.possiblyTruncate(String(value));
+        return this.possiblyTruncate(String(value));
       }
     } else {
       if (timestamp) {

@@ -25,6 +25,7 @@ import {
   Card,
   Classes,
   Code,
+  Dialog,
   FormGroup,
   H5,
   HTMLSelect,
@@ -49,6 +50,7 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { ClipboardDialog } from '../../dialogs/clipboard-dialog/clipboard-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -223,6 +225,8 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup: boolean | null;
   newDimensionMode: DimensionMode | null;
+  showClipboardModal: boolean;
+  str: string;
 
   // general
   overlordModules: string[] | null;
@@ -284,8 +288,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
+      showClipboardModal: false,
       newRollup: null,
       newDimensionMode: null,
+      str: '',
 
       // general
       overlordModules: null,
@@ -418,6 +424,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
+        {this.renderClipboardModal()}
       </div>
     );
   }
@@ -554,6 +561,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <p>{overlordModuleNeededMessage}</p>
         </Alert>
       </>
+    );
+  }
+
+  renderClipboardModal() {
+    const { showClipboardModal, str } = this.state;
+    if (!showClipboardModal) return null;
+    return (
+      <ClipboardDialog onClose={() => this.setState({ showClipboardModal: false })} str={str} />
     );
   }
 
@@ -809,6 +824,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
+            openModal={str => this.setState({ showClipboardModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}
