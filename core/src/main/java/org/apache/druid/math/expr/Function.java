@@ -2116,7 +2116,11 @@ interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      return ImmutableSet.of(args.get(1), args.get(2));
+      if (args.size() == 3) {
+        return ImmutableSet.of(args.get(1), args.get(2));
+      } else {
+        return ImmutableSet.of(args.get(1));
+      }
     }
 
     @Override
@@ -2126,47 +2130,71 @@ interface Function
     }
   }
 
-  class ArrayUnshiftFunction extends ArrayScalarFunction
+  class ArrayPrependFunction implements Function
   {
     @Override
     public String name()
     {
-      return "array_unshift";
+      return "array_prepend";
     }
 
     @Override
-    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    public void validateArguments(List<Expr> args)
     {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval scalarExpr = args.get(0).eval(bindings);
+      final ExprEval arrayExpr = args.get(1).eval(bindings);
+      if (arrayExpr.asArray() == null) {
+        return ExprEval.of(null);
+      }
       switch (arrayExpr.type()) {
         case STRING:
         case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.unshift(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
+          return ExprEval.ofStringArray(this.prepend(scalarExpr.asString(), arrayExpr.asStringArray()).toArray(String[]::new));
         case LONG:
         case LONG_ARRAY:
           return ExprEval.ofLongArray(
-              this.unshift(
-                  arrayExpr.asLongArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
+              this.prepend(
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong(),
+                  arrayExpr.asLongArray()).toArray(Long[]::new
               )
           );
         case DOUBLE:
         case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(
-              this.unshift(
-                  arrayExpr.asDoubleArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
+              this.prepend(
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble(),
+                  arrayExpr.asDoubleArray()).toArray(Double[]::new
               )
           );
       }
 
-      throw new RE("Unable to unshift to unknown type %s", arrayExpr.type());
+      throw new RE("Unable to prepend to unknown type %s", arrayExpr.type());
     }
 
-    private <T> Stream<T> unshift(T[] array, T val)
+    private <T> Stream<T> prepend(T val, T[] array)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(0, val);
       return l.stream();
+    }
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(1));
     }
   }
 }

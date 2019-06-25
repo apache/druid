@@ -272,12 +272,12 @@ public class FunctionTest
   }
 
   @Test
-  public void testArrayUnshift()
+  public void testArrayPrepend()
   {
-    assertExpr("array_unshift([1, 2, 3], 4)", new Long[]{4L, 1L, 2L, 3L});
-    assertExpr("array_unshift([1, 2, 3], 'bar')", new Long[]{null, 1L, 2L, 3L});
-    assertExpr("array_unshift([], 1)", new String[]{"1"});
-    assertExpr("array_unshift(cast([], 'LONG_ARRAY'), 1)", new Long[]{1L});
+    assertExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
+    assertExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
+    assertExpr("array_prepend(1, [])", new String[]{"1"});
+    assertExpr("array_prepend(1, cast([], 'LONG_ARRAY'))", new Long[]{1L});
   }
 
   private void assertExpr(final String expression, final Object expectedResult)
