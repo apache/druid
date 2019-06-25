@@ -24,7 +24,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelector, ViewControlBar } from '../../components';
+import { RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import {
   addFilter,
   formatBytes,
@@ -454,14 +454,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return (
       <div className="segments-view app-view">
         <ViewControlBar label="Segments">
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() =>
+          <RefreshButton
+            onRefresh={auto =>
               noSqlMode
-                ? this.segmentsJsonQueryManager.rerunLastQuery()
-                : this.segmentsSqlQueryManager.rerunLastQuery()
+                ? this.segmentsJsonQueryManager.rerunLastQueryInBackground(auto)
+                : this.segmentsSqlQueryManager.rerunLastQueryInBackground(auto)
             }
+            localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
           />
           {!noSqlMode && (
             <Button
