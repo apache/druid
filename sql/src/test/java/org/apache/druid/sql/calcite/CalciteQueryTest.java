@@ -7985,6 +7985,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueStringWorksLikeStringGroupByWithFilter() throws Exception
+  {
+    testQuery(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo where concat(dim3, 'foo') = 'bfoo' GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setDimFilter(selector("v0", "bfoo", null))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"bfoo", 2L},
+            new Object[]{"afoo", 1L},
+            new Object[]{"cfoo", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueStringWorksLikeStringScan() throws Exception
   {
     testQuery(
