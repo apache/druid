@@ -31,7 +31,6 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.

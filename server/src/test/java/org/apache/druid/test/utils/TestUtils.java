@@ -20,6 +20,10 @@
 package org.apache.druid.test.utils;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.junit.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestUtils
 {
@@ -45,8 +49,19 @@ public class TestUtils
       return actual == null;
     }
 
-    if (expected instanceof ImmutableDruidDataSource && actual instanceof ImmutableDruidDataSource) {
-      return ((ImmutableDruidDataSource)expected).equalsForTesting((ImmutableDruidDataSource)actual);
+    if (expected instanceof ArrayList<?> && actual instanceof ArrayList<?>) {
+      List<ImmutableDruidDataSource> expected1 = (ArrayList<ImmutableDruidDataSource>) expected;
+      List<ImmutableDruidDataSource> actual1 = (ArrayList<ImmutableDruidDataSource>) actual;
+      Assert.assertEquals("expected and actual ImmutableDruidDataSource lists should be of equal size", expected1.size(), actual1.size());
+
+      for (int i = 0; i < expected1.size(); i++) {
+        if (!expected1.get(i).equalsForTesting(actual1.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    } else if (expected instanceof ImmutableDruidDataSource && actual instanceof ImmutableDruidDataSource) {
+      return ((ImmutableDruidDataSource) expected).equalsForTesting((ImmutableDruidDataSource) actual);
     }
 
     return false;
