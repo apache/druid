@@ -23,7 +23,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
@@ -85,7 +85,7 @@ export interface SegmentsViewState {
   datasourceTableActionDialogId: string | null;
   actions: BasicAction[];
   terminateSegmentId: string | null;
-  terminatetDatasourceId: string | null;
+  terminateDatasourceId: string | null;
   hiddenColumns: LocalStorageBackedArray<string>;
 }
 
@@ -127,7 +127,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       datasourceTableActionDialogId: null,
       actions: [],
       terminateSegmentId: null,
-      terminatetDatasourceId: null,
+      terminateDatasourceId: null,
       segmentsLoading: true,
       segments: null,
       segmentsError: null,
@@ -291,7 +291,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       icon: IconNames.IMPORT,
       title: 'Drop segment (disable)',
       intent: Intent.DANGER,
-      onAction: () => this.setState({ terminateSegmentId: id, terminatetDatasourceId: datasource }),
+      onAction: () => this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
     });
     return actions;
   }
@@ -481,7 +481,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   renderTerminateSegmentAction() {
-    const { terminateSegmentId, terminatetDatasourceId } = this.state;
+    const { terminateSegmentId, terminateDatasourceId } = this.state;
 
     return (
       <AsyncActionDialog
@@ -489,7 +489,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           terminateSegmentId
             ? async () => {
                 const resp = await axios.delete(
-                  `/druid/coordinator/v1/datasources/${terminatetDatasourceId}/segments/${terminateSegmentId}`,
+                  `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
                   {},
                 );
                 return resp.data;
@@ -527,14 +527,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <>
         <div className="segments-view app-view">
           <ViewControlBar label="Segments">
-            <Button
-              icon={IconNames.REFRESH}
-              text="Refresh"
-              onClick={() =>
+            <RefreshButton
+              onRefresh={auto =>
                 noSqlMode
-                  ? this.segmentsJsonQueryManager.rerunLastQuery()
-                  : this.segmentsSqlQueryManager.rerunLastQuery()
+                  ? this.segmentsJsonQueryManager.rerunLastQueryInBackground(auto)
+                  : this.segmentsSqlQueryManager.rerunLastQueryInBackground(auto)
               }
+              localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
             {!noSqlMode && (
               <Button
@@ -552,7 +551,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           </ViewControlBar>
           {this.renderSegmentsTable()}
         </div>
-        ;{this.renderTerminateSegmentAction()}
+        {this.renderTerminateSegmentAction()}
         {segmentTableActionDialogId && (
           <SegmentTableActionDialog
             segmentId={segmentTableActionDialogId}

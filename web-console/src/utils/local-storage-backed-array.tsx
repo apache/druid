@@ -59,7 +59,7 @@ export class LocalStorageBackedArray<T> {
     return new LocalStorageBackedArray<T>(this.key, toggledArray);
   }
 
-  exists(value: any): boolean {
+  exists(value: T): boolean {
     return !this.storedArray.includes(value);
   }
 }

@@ -31,7 +31,13 @@ import axios from 'axios';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { ActionCell, RuleEditor, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ActionCell,
+  RefreshButton,
+  RuleEditor,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import { ActionIcon } from '../../components/action-icon/action-icon';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
@@ -775,10 +781,9 @@ GROUP BY 1`);
     return (
       <div className="data-sources-view app-view">
         <ViewControlBar label="Datasources">
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.datasourceQueryManager.rerunLastQuery()}
+          <RefreshButton
+            onRefresh={auto => this.datasourceQueryManager.rerunLastQueryInBackground(auto)}
+            localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
           {!noSqlMode && (
             <Button

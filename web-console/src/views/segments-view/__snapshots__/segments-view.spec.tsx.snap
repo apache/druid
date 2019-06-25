@@ -8,10 +8,9 @@ exports[`segments-view matches snapshot 1`] = `
     <ViewControlBar
       label="Segments"
     >
-      <Blueprint3.Button
-        icon="refresh"
-        onClick={[Function]}
-        text="Refresh"
+      <RefreshButton
+        localStorageKey="segments-refresh-rate"
+        onRefresh={[Function]}
       />
       <Blueprint3.Button
         hidden={false}
@@ -306,7 +305,6 @@ exports[`segments-view matches snapshot 1`] = `
       subRowsKey="_subRows"
     />
   </div>
-  ;
   <AsyncActionDialog
     action={null}
     confirmButtonText="Drop Segment"
