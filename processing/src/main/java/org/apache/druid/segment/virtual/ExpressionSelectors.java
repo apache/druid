@@ -108,7 +108,11 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         //noinspection ConstantConditions
-        return baseSelector.getObject().value();
+        ExprEval eval = baseSelector.getObject();
+        if (eval.isArray()) {
+          return Arrays.stream(eval.asArray()).map(String::valueOf).collect(Collectors.toList());
+        }
+        return eval.value();
       }
 
       @Override

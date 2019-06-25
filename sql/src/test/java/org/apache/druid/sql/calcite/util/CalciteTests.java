@@ -218,9 +218,6 @@ public class CalciteTests
   );
 
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
-      new SelectQueryConfig(true)
-  );
 
   private static final Injector INJECTOR = Guice.createInjector(
       (Module) binder -> {
