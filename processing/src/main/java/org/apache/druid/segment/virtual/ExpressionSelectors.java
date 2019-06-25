@@ -107,10 +107,11 @@ public class ExpressionSelectors
       public Object getObject()
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
-        //noinspection ConstantConditions
         ExprEval eval = baseSelector.getObject();
         if (eval.isArray()) {
-          return Arrays.stream(eval.asArray()).map(String::valueOf).collect(Collectors.toList());
+          return Arrays.stream(eval.asStringArray())
+                .map(NullHandling::emptyToNullIfNeeded)
+                .collect(Collectors.toList());
         }
         return eval.value();
       }
@@ -502,7 +503,7 @@ public class ExpressionSelectors
    */
   private static Object coerceListDimToStringArray(List val)
   {
-    Object[] arrayVal = val.stream().map(Object::toString).toArray(String[]::new);
+    Object[] arrayVal = val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
     if (arrayVal.length > 0) {
       return arrayVal;
     }

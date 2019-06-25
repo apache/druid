@@ -7949,6 +7949,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
   {
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"foo", 3L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L},
+          new Object[]{"foo", 1L}
+      );
+    }
     testQuery(
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -7974,13 +7993,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.replaceWithDefault() ? "foo" : null, 3L},
-            new Object[]{"bfoo", 2L},
-            new Object[]{"afoo", 1L},
-            new Object[]{"cfoo", 1L},
-            new Object[]{"dfoo", 1L}
-        )
+        expected
     );
   }
 
@@ -8024,6 +8037,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringScan() throws Exception
   {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
     testQuery(
         "SELECT concat(dim3, 'foo') FROM druid.numfoo",
         ImmutableList.of(
@@ -8042,8 +8056,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"bfoo\",\"cfoo\"]"},
             new Object[]{"[\"dfoo\"]"},
             new Object[]{"[\"foo\"]"},
-            new Object[]{"[\"foo\"]"},
-            new Object[]{"[\"foo\"]"}
+            new Object[]{nullVal},
+            new Object[]{nullVal}
         )
     );
   }
