@@ -42,7 +42,7 @@ export class ClipboardDialog extends React.PureComponent<ClipboardDialogProps> {
       <Dialog className="clipboard-dialog" isOpen onClose={onClose} title={'Copy table cell'}>
         <TextArea value={str} />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button text={'Cancel'} intent={'primary'} onClick={onClose} />
+          <Button text={'Close'} intent={'primary'} onClick={onClose} />
           <Button
             icon={IconNames.DUPLICATE}
             text={'Copy'}
