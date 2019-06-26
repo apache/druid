@@ -69,8 +69,8 @@ public class PropertiesModule implements Module
 
         if (stream != null) {
           log.info("Loading properties from %s", propertiesFile);
-          try {
-            fileProps.load(new InputStreamReader(stream, StandardCharsets.UTF_8));
+          try (InputStreamReader isr = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            fileProps.load(isr);
           }
           catch (IOException e) {
             throw new RuntimeException(e);

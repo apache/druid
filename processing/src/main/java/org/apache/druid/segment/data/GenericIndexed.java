@@ -508,47 +508,49 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
     int count = 0;
 
-    HeapByteBufferWriteOutBytes headerOut = new HeapByteBufferWriteOutBytes();
-    HeapByteBufferWriteOutBytes valuesOut = new HeapByteBufferWriteOutBytes();
-    try {
-      T prevVal = null;
-      do {
-        count++;
-        T next = objects.next();
-        if (allowReverseLookup && prevVal != null && !(strategy.compare(prevVal, next) < 0)) {
-          allowReverseLookup = false;
+    try (HeapByteBufferWriteOutBytes valuesOut = new HeapByteBufferWriteOutBytes()) {
+      try (HeapByteBufferWriteOutBytes headerOut = new HeapByteBufferWriteOutBytes()) {
+        try {
+          T prevVal = null;
+          do {
+            count++;
+            T next = objects.next();
+            if (allowReverseLookup && prevVal != null && !(strategy.compare(prevVal, next) < 0)) {
+              allowReverseLookup = false;
+            }
+
+            if (next != null) {
+              valuesOut.writeInt(0);
+              strategy.writeTo(next, valuesOut);
+            } else {
+              valuesOut.writeInt(NULL_VALUE_SIZE_MARKER);
+            }
+
+            headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
+
+            if (prevVal instanceof Closeable) {
+              CloseQuietly.close((Closeable) prevVal);
+            }
+            prevVal = next;
+          } while (objects.hasNext());
+
+          if (prevVal instanceof Closeable) {
+            CloseQuietly.close((Closeable) prevVal);
+          }
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
         }
 
-        if (next != null) {
-          valuesOut.writeInt(0);
-          strategy.writeTo(next, valuesOut);
-        } else {
-          valuesOut.writeInt(NULL_VALUE_SIZE_MARKER);
-        }
+        ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(Integer.BYTES + headerOut.size() + valuesOut.size()));
+        theBuffer.putInt(count);
+        headerOut.writeTo(theBuffer);
+        valuesOut.writeTo(theBuffer);
+        theBuffer.flip();
 
-        headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
-
-        if (prevVal instanceof Closeable) {
-          CloseQuietly.close((Closeable) prevVal);
-        }
-        prevVal = next;
-      } while (objects.hasNext());
-
-      if (prevVal instanceof Closeable) {
-        CloseQuietly.close((Closeable) prevVal);
+        return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), resultObjectStrategy, allowReverseLookup);
       }
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(Integer.BYTES + headerOut.size() + valuesOut.size()));
-    theBuffer.putInt(count);
-    headerOut.writeTo(theBuffer);
-    valuesOut.writeTo(theBuffer);
-    theBuffer.flip();
-
-    return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), resultObjectStrategy, allowReverseLookup);
   }
 
   private long getSerializedSizeVersionOne()

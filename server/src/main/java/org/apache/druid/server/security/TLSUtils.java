@@ -183,10 +183,12 @@ public class TLSUtils
       KeyStore trustStore = KeyStore.getInstance(trustStoreType == null
                                                ? KeyStore.getDefaultType()
                                                : trustStoreType);
-      trustStore.load(
-          new FileInputStream(trustStorePath),
-          trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
-      );
+      try (FileInputStream fis = new FileInputStream(trustStorePath)) {
+        trustStore.load(
+            fis,
+            trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
+        );
+      }
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(trustStoreAlgorithm == null
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()
                                                                                 : trustStoreAlgorithm);
@@ -197,10 +199,13 @@ public class TLSUtils
         KeyStore keyStore = KeyStore.getInstance(keyStoreType == null
                                                  ? KeyStore.getDefaultType()
                                                  : keyStoreType);
-        keyStore.load(
-            new FileInputStream(keyStorePath),
-            keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
-        );
+
+        try (FileInputStream fis = new FileInputStream(keyStorePath)) {
+          keyStore.load(
+              fis,
+              keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
+          );
+        }
 
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
             keyStoreAlgorithm == null ?

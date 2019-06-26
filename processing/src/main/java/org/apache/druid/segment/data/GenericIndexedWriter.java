@@ -35,7 +35,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
 import javax.annotation.Nullable;
-import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -454,11 +453,13 @@ public class GenericIndexedWriter<T> implements Serializer
   private void initializeHeaderOutLong() throws IOException
   {
     headerOutLong = new LongArrayList();
-    DataInput headerOutAsIntInput = new DataInputStream(headerOut.asInputStream());
-    for (int i = 0; i < numWritten; i++) {
-      int count = headerOutAsIntInput.readInt();
-      headerOutLong.add(count);
+    try (InputStream is = headerOut.asInputStream()) {
+      try (DataInputStream headerOutAsIntInput = new DataInputStream(is)) {
+        for (int i = 0; i < numWritten; i++) {
+          int count = headerOutAsIntInput.readInt();
+          headerOutLong.add(count);
+        }
+      }
     }
   }
-
 }
