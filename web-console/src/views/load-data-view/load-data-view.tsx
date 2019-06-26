@@ -540,7 +540,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStepMessage() {
-    const { selectedComboType, overlordModules } = this.state;
+    const { selectedComboType } = this.state;
 
     if (!selectedComboType) {
       return <p>Please specify where your raw data is located</p>;
