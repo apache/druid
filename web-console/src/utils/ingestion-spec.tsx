@@ -37,6 +37,10 @@ export interface IngestionSpec {
   tuningConfig?: TuningConfig;
 }
 
+export function isEmptyIngestionSpec(spec: IngestionSpec) {
+  return Object.keys(spec).length === 0;
+}
+
 export type IngestionType = 'kafka' | 'kinesis' | 'index_hadoop' | 'index' | 'index_parallel';
 
 // A combination of IngestionType and firehose
@@ -47,6 +51,9 @@ export type IngestionComboType =
   | 'index:local'
   | 'index:static-s3'
   | 'index:static-google-blobstore';
+
+// Some extra values that can be selected in the initial screen
+export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
@@ -85,6 +92,65 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
   }
 
   return null;
+}
+
+export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
+  switch (ingestionType) {
+    case 'index:local':
+      return 'Local disk';
+
+    case 'index:http':
+      return 'HTTP(s)';
+
+    case 'index:static-s3':
+      return 'Amazon S3';
+
+    case 'index:static-google-blobstore':
+      return 'Google Cloud Storage';
+
+    case 'kafka':
+      return 'Apache Kafka';
+
+    case 'kinesis':
+      return 'Amazon Kinesis';
+
+    case 'hadoop':
+      return 'HDFS';
+
+    case 'example':
+      return 'Example data';
+
+    case 'other':
+      return 'Other';
+
+    default:
+      return 'Unknown ingestion';
+  }
+}
+
+export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
+  const parts = ingestionType.split(':');
+  if (parts.length === 2) return parts[1];
+  return ingestionType;
+}
+
+export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | null {
+  switch (ingestionType) {
+    case 'index:static-s3':
+      return 'druid-s3-extensions';
+
+    case 'index:static-google-blobstore':
+      return 'druid-google-extensions';
+
+    case 'kafka':
+      return 'druid-kafka-indexing-service';
+
+    case 'kinesis':
+      return 'druid-kinesis-indexing-service';
+
+    default:
+      return null;
+  }
 }
 
 // --------------
@@ -138,7 +204,7 @@ export function getRollup(spec: IngestionSpec): boolean {
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
 
-export function getSpecType(spec: IngestionSpec): IngestionType | undefined {
+export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undefined {
   return (
     deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type')
   );
@@ -158,13 +224,21 @@ export function changeParallel(spec: IngestionSpec, parallel: boolean): Ingestio
  * Make sure that the types are set in the root, ioConfig, and tuningConfig
  * @param spec
  */
-export function normalizeSpecType(spec: IngestionSpec) {
+export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
+  if (!spec || typeof spec !== 'object') {
+    // This does not match the type of IngestionSpec but this dialog is robust enough to deal with anything but spec must be an object
+    spec = {};
+  }
+
+  // Make sure that if we actually get a task payload we extract the spec
+  if (typeof (spec as any).spec === 'object') spec = (spec as any).spec;
+
   const specType = getSpecType(spec);
-  if (!specType) return spec;
+  if (!specType) return spec as IngestionSpec;
   if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
   if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
   if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
-  return spec;
+  return spec as IngestionSpec;
 }
 
 const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
@@ -851,7 +925,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ],
           info: (
             <>
-              The AWS Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
+              The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
               <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">
                 here
               </ExternalLink>
@@ -1662,40 +1736,40 @@ export interface Bitmap {
 
 // --------------
 
-export function getBlankSpec(comboType: IngestionComboType): IngestionSpec {
+export function updateIngestionType(
+  spec: IngestionSpec,
+  comboType: IngestionComboType,
+): IngestionSpec {
   let [ingestionType, firehoseType] = comboType.split(':');
   if (ingestionType === 'index') ingestionType = 'index_parallel';
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
   );
 
-  const granularitySpec: GranularitySpec = {
-    type: 'uniform',
-    segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
-    queryGranularity: 'HOUR',
-  };
-
-  const spec: IngestionSpec = {
-    type: ingestionType,
-    dataSchema: {
-      dataSource: 'new-data-source',
-      granularitySpec,
-    },
-    ioConfig: {
-      type: ioAndTuningConfigType,
-    },
-    tuningConfig: {
-      type: ioAndTuningConfigType,
-    },
-  } as any;
+  let newSpec = spec;
+  newSpec = deepSet(newSpec, 'type', ingestionType);
+  newSpec = deepSet(newSpec, 'ioConfig.type', ioAndTuningConfigType);
+  newSpec = deepSet(newSpec, 'tuningConfig.type', ioAndTuningConfigType);
 
   if (firehoseType) {
-    spec.ioConfig.firehose = {
-      type: firehoseType,
-    };
+    newSpec = deepSet(newSpec, 'ioConfig.firehose', { type: firehoseType });
   }
 
-  return spec;
+  if (!deepGet(spec, 'dataSchema.dataSource')) {
+    newSpec = deepSet(newSpec, 'dataSchema.dataSource', 'new-data-source');
+  }
+
+  if (!deepGet(spec, 'dataSchema.granularitySpec')) {
+    const granularitySpec: GranularitySpec = {
+      type: 'uniform',
+      segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
+      queryGranularity: 'HOUR',
+    };
+
+    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
+  }
+
+  return newSpec;
 }
 
 export function fillParser(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
