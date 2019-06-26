@@ -22,6 +22,7 @@ package org.apache.druid.emitter.dropwizard;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import org.apache.curator.shaded.com.google.common.io.Closeables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -38,19 +39,23 @@ import java.util.Map;
 public class DropwizardConverter
 {
   private static final Logger log = new Logger(DropwizardConverter.class);
-  private Map<String, DropwizardMetricSpec> metricMap;
+  private final Map<String, DropwizardMetricSpec> metricMap;
 
   public DropwizardConverter(ObjectMapper mapper, String dimensionMapPath)
   {
     metricMap = readMap(mapper, dimensionMapPath);
   }
 
+  /**
+   * Filters user dimensions for given metric and adds them to filteredDimensions.
+   * Returns null if there is no mapping present for the given metric.
+   */
   @Nullable
   public DropwizardMetricSpec addFilteredUserDims(
       String service,
       String metric,
       Map<String, Object> userDims,
-      Map<String, String> builder
+      Map<String, String> filteredDimensions
   )
   {
      /*
@@ -58,27 +63,29 @@ public class DropwizardConverter
         This is because some metrics are reported differently, but with the same name, from different services.
        */
     DropwizardMetricSpec metricSpec = null;
-    if (metricMap.containsKey(metric)) {
-      metricSpec = metricMap.get(metric);
+    DropwizardMetricSpec dropwizardMetricSpec = metricMap.get(metric);
+    if (dropwizardMetricSpec != null) {
+      metricSpec = dropwizardMetricSpec;
     } else if (metricMap.containsKey(service + "-" + metric)) {
       metricSpec = metricMap.get(service + "-" + metric);
     }
     if (metricSpec != null) {
       for (String dim : metricSpec.getDimensions()) {
         if (userDims.containsKey(dim)) {
-          builder.put(dim, userDims.get(dim).toString());
+          filteredDimensions.put(dim, userDims.get(dim).toString());
         }
       }
       return metricSpec;
     } else {
+      // No mapping found for given metric, return null
       return null;
     }
   }
 
   private Map<String, DropwizardMetricSpec> readMap(ObjectMapper mapper, String dimensionMapPath)
   {
+    InputStream is = null;
     try {
-      InputStream is;
       if (Strings.isNullOrEmpty(dimensionMapPath)) {
         log.info("Using default metric dimension and types");
         is = this.getClass().getClassLoader().getResourceAsStream("defaultMetricDimensions.json");
@@ -91,6 +98,7 @@ public class DropwizardConverter
       }).readValue(is);
     }
     catch (IOException e) {
+      Closeables.closeQuietly(is);
       throw new ISE(e, "Failed to parse metric dimensions and types");
     }
   }

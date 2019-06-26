@@ -43,7 +43,7 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 |`druid.emitter.dropwizard.prefix`|Optional prefix to be used for metrics name|no|none|
 |`druid.emitter.dropwizard.includeHost`|Flag to include the hostname as part of the metric name.|no|yes|
 |`druid.emitter.dropwizard.includeDimensionNames`|Flag to include the dimension names as part of the metric name.|no|yes|
-|`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
+|`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the dropwizard metric type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
 
 
@@ -51,9 +51,8 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 
 Each metric emitted using Dropwizard must specify a type, one of `[timer, counter, guage, meter, histogram, ]`. Dropwizard Emitter expects this mapping to
 be provided as a JSON file.  Additionally, this mapping specifies which dimensions should be included for each metric.
-If the user does not specify their own JSON file, a default mapping is used.
-All metrics are expected to be mapped. Metrics which are not mapped will log an error.
-
+If the user does not specify their own JSON file, a [default mapping](https://github.com/apache/incubator-druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json) is used.
+All metrics are expected to be mapped. Metrics which are not mapped will be ignored.
 Dropwizard metric path is organized using the following schema:
 
 `<druid metric name> : { "dimensions" : <dimension list>, "type" : <Dropwizard metric type>, "timeUnit" : <For timers, timeunit in which metric is emitted>}`

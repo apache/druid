@@ -36,11 +36,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DropwizardEmitter implements Emitter
 {
-  private static Logger log = new Logger(DropwizardEmitter.class);
+  private static final Logger log = new Logger(DropwizardEmitter.class);
   private final MetricRegistry metricsRegistry = new MetricRegistry();
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final DropwizardConverter converter;
@@ -67,15 +68,22 @@ public class DropwizardEmitter implements Emitter
   @Override
   public void start()
   {
-    for (DropwizardReporter reporter : reporters) {
-      reporter.start(metricsRegistry);
+    final boolean alreadyStarted = started.getAndSet(true);
+    if (!alreadyStarted) {
+      for (DropwizardReporter reporter : reporters) {
+        reporter.start(metricsRegistry);
+      }
     }
-    started.set(true);
   }
 
   @Override
   public void emit(Event event)
   {
+    synchronized (started) {
+      if (!started.get()) {
+        throw new RejectedExecutionException("Dropwizard emitter Service not started.");
+      }
+    }
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
       String host = metricEvent.getHost();
@@ -88,24 +96,15 @@ public class DropwizardEmitter implements Emitter
       final DropwizardMetricSpec metricSpec = converter.addFilteredUserDims(service, metric, userDims, dims);
 
       if (metricSpec != null) {
-        if (config.isIncludeDimensionNames()) {
-          if (config.getPrefix() != null) {
-            nameBuilder.add(config.getPrefix());
-          }
-          nameBuilder.add("metric=" + metric);
-          nameBuilder.add("service=" + service);
-          if (config.getIncludeHost()) {
-            nameBuilder.add("hostname=" + host);
-          }
-          dims.forEach((key, value1) -> nameBuilder.add(key + "=" + value1));
-        } else {
-          nameBuilder.add(metric);
-          nameBuilder.add(service);
-          if (config.getIncludeHost()) {
-            nameBuilder.add(host);
-          }
-          nameBuilder.addAll(dims.values());
+        if (config.getPrefix() != null) {
+          nameBuilder.add(config.getPrefix());
         }
+        nameBuilder.add("metric=" + metric);
+        nameBuilder.add("service=" + service);
+        if (config.getIncludeHost()) {
+          nameBuilder.add("hostname=" + host);
+        }
+        dims.forEach((key, value1) -> nameBuilder.add(key + "=" + value1));
 
         String fullName = StringUtils.replaceChar(Joiner.on(",").join(nameBuilder.build()), '/', ".");
         updateMetric(fullName, value, metricSpec);
@@ -157,8 +156,11 @@ public class DropwizardEmitter implements Emitter
   @Override
   public void close()
   {
-    for (DropwizardReporter reporter : reporters) {
-      reporter.close();
+    final boolean wasStarted = started.getAndSet(false);
+    if (wasStarted) {
+      for (DropwizardReporter reporter : reporters) {
+        reporter.close();
+      }
     }
   }
 

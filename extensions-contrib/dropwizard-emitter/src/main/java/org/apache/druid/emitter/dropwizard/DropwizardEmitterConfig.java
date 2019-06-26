@@ -38,8 +38,6 @@ public class DropwizardEmitterConfig
   @JsonProperty
   private final String dimensionMapPath;
   @JsonProperty
-  private final Boolean includeDimensionNames;
-  @JsonProperty
   private final List<String> alertEmitters;
 
   @JsonCreator
@@ -48,7 +46,6 @@ public class DropwizardEmitterConfig
       @JsonProperty("prefix") String prefix,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("includeDimensionNames") Boolean includeDimensionNames,
       @JsonProperty("alertEmitters") List<String> alertEmitters
   )
   {
@@ -57,7 +54,6 @@ public class DropwizardEmitterConfig
     this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
     this.includeHost = includeHost != null ? includeHost : true;
     this.dimensionMapPath = dimensionMapPath;
-    this.includeDimensionNames = includeDimensionNames != null ? includeDimensionNames : true;
   }
 
   @JsonProperty
@@ -85,12 +81,6 @@ public class DropwizardEmitterConfig
   }
 
   @JsonProperty
-  public Boolean isIncludeDimensionNames()
-  {
-    return includeDimensionNames;
-  }
-
-  @JsonProperty
   public List<String> getAlertEmitters()
   {
     return alertEmitters;
@@ -110,14 +100,13 @@ public class DropwizardEmitterConfig
            Objects.equals(prefix, that.prefix) &&
            Objects.equals(includeHost, that.includeHost) &&
            Objects.equals(dimensionMapPath, that.dimensionMapPath) &&
-           Objects.equals(includeDimensionNames, that.includeDimensionNames) &&
            Objects.equals(alertEmitters, that.alertEmitters);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, includeDimensionNames, alertEmitters);
+    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, alertEmitters);
   }
 
   @Override
@@ -128,7 +117,6 @@ public class DropwizardEmitterConfig
            ", prefix='" + prefix + '\'' +
            ", includeHost=" + includeHost +
            ", dimensionMapPath='" + dimensionMapPath + '\'' +
-           ", includeDimensionNames=" + includeDimensionNames +
            ", alertEmitters=" + alertEmitters +
            '}';
   }

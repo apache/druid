@@ -123,9 +123,6 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
-
-
-              //KubernetesTaskRunner
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);

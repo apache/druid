@@ -85,6 +85,7 @@ public class DropwizardConsoleReporter implements DropwizardReporter
   @Override
   public void flush()
   {
+
   }
 
   @Override
