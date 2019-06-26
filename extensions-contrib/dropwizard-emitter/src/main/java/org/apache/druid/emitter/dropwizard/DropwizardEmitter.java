@@ -32,10 +32,10 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -50,7 +50,7 @@ public class DropwizardEmitter implements Emitter
   private final DropwizardEmitterConfig config;
   // Note: the gauges do not represent the actual instantaneous value for the metrics.
   // Instead they have the last known value for it.
-  private final ConcurrentHashMap<String, Number> gagues = new ConcurrentHashMap<>();
+  private final Map<String, Number> gagues;
 
   public DropwizardEmitter(
       DropwizardEmitterConfig config,
@@ -62,6 +62,7 @@ public class DropwizardEmitter implements Emitter
     this.config = config;
     this.reporters = config.getReporters();
     this.converter = new DropwizardConverter(mapper, config.getDimensionMapPath());
+    this.gagues = Collections.synchronizedMap(new GaugesCache<>(config.getMaxGaugeCount()));
   }
 
 

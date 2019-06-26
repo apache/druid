@@ -44,6 +44,7 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 |`druid.emitter.dropwizard.includeHost`|Flag to include the hostname as part of the metric name.|no|yes|
 |`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the dropwizard metric type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
+|`druid.emitter.dropwizard.maxGaugeCount`| Maximum size of distinct gauge metrics to be cached at any time. |no| 100K|
 
 
 ### Druid to Dropwizard Event Conversion

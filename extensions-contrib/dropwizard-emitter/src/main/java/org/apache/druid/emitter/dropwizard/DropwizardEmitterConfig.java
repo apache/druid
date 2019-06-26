@@ -29,6 +29,7 @@ import java.util.Objects;
 
 public class DropwizardEmitterConfig
 {
+  private static int DEFAULT_MAX_GAUGE_COUNT = 100_000;
   @JsonProperty
   private final List<DropwizardReporter> reporters;
   @JsonProperty
@@ -39,6 +40,8 @@ public class DropwizardEmitterConfig
   private final String dimensionMapPath;
   @JsonProperty
   private final List<String> alertEmitters;
+  @JsonProperty
+  private final int maxGaugeCount;
 
   @JsonCreator
   public DropwizardEmitterConfig(
@@ -46,7 +49,8 @@ public class DropwizardEmitterConfig
       @JsonProperty("prefix") String prefix,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("alertEmitters") List<String> alertEmitters
+      @JsonProperty("alertEmitters") List<String> alertEmitters,
+      @JsonProperty("maxGaugeCount") Integer maxGaugeCount
   )
   {
     this.reporters = reporters;
@@ -54,6 +58,7 @@ public class DropwizardEmitterConfig
     this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
     this.includeHost = includeHost != null ? includeHost : true;
     this.dimensionMapPath = dimensionMapPath;
+    this.maxGaugeCount = maxGaugeCount == null ? DEFAULT_MAX_GAUGE_COUNT : maxGaugeCount;
   }
 
   @JsonProperty
@@ -86,6 +91,12 @@ public class DropwizardEmitterConfig
     return alertEmitters;
   }
 
+  @JsonProperty
+  public int getMaxGaugeCount()
+  {
+    return maxGaugeCount;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -96,7 +107,8 @@ public class DropwizardEmitterConfig
       return false;
     }
     DropwizardEmitterConfig that = (DropwizardEmitterConfig) o;
-    return Objects.equals(reporters, that.reporters) &&
+    return maxGaugeCount == that.maxGaugeCount &&
+           Objects.equals(reporters, that.reporters) &&
            Objects.equals(prefix, that.prefix) &&
            Objects.equals(includeHost, that.includeHost) &&
            Objects.equals(dimensionMapPath, that.dimensionMapPath) &&
@@ -106,7 +118,7 @@ public class DropwizardEmitterConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, alertEmitters);
+    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, alertEmitters, maxGaugeCount);
   }
 
   @Override
@@ -118,6 +130,7 @@ public class DropwizardEmitterConfig
            ", includeHost=" + includeHost +
            ", dimensionMapPath='" + dimensionMapPath + '\'' +
            ", alertEmitters=" + alertEmitters +
+           ", maxGaugeCount=" + maxGaugeCount +
            '}';
   }
 }

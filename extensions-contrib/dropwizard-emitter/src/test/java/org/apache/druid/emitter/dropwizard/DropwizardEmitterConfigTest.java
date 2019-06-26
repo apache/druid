@@ -52,7 +52,8 @@ public class DropwizardEmitterConfigTest
         "my-prefix",
         false,
         "my/config/path",
-        null
+        null,
+        400
     );
     String dropwizardEmitterConfigString = mapper.writeValueAsString(dropwizardEmitterConfig);
     DropwizardEmitterConfig dropwizardEmitterConfigExpected = mapper.readerFor(DropwizardEmitterConfig.class).readValue(
