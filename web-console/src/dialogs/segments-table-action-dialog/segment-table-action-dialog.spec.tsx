@@ -16,9 +16,24 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './query-manager';
-export * from './query-state';
-export * from './rune-decoder';
-export * from './local-storage-keys';
+import React from 'react';
+import { render } from 'react-testing-library';
+
+import { SegmentTableActionDialog } from './segment-table-action-dialog';
+
+const basicAction = { title: 'test', onAction: () => null };
+describe('task table action dialog', () => {
+  it('matches snapshot', () => {
+    const taskTableActionDialog = (
+      <SegmentTableActionDialog
+        dataSourceId="test"
+        segmentId="test"
+        actions={[]}
+        onClose={() => null}
+        isOpen
+      />
+    );
+    const { container } = render(taskTableActionDialog, { container: document.body });
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
