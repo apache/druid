@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
@@ -58,6 +59,8 @@ import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -203,6 +206,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           // value coercion operators
           .add(new CastOperatorConversion())
           .add(new ReinterpretOperatorConversion())
+          // array and multi-value string operators
+          .add(new ArrayConstructorOperatorConversion())
+          .add(new ArrayContainsOperatorConversion())
+          .add(new ArrayOverlapOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayContainsOperatorConversion(), "MV_CONTAINS"))
+          .add(new AliasedOperatorConversion(new ArrayOverlapOperatorConversion(), "MV_OVERLAP"))
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

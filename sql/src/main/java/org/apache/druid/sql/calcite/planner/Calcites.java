@@ -151,6 +151,9 @@ public class Calcites
       return ValueType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       return ValueType.COMPLEX;
+    } else if (sqlTypeName == SqlTypeName.ARRAY) {
+      // until we have array ValueType, this let's us have array constants and use them at least
+      return ValueType.STRING;
     } else {
       return null;
     }

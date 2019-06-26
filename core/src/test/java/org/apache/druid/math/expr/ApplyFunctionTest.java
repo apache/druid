@@ -113,19 +113,19 @@ public class ApplyFunctionTest
   @Test
   public void testAnyMatch()
   {
-    assertExpr("any(x -> x > 3, [1, 2, 3, 4])", "true");
-    assertExpr("any(x -> x > 3, [1, 2, 3])", "false");
-    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3, 4]))", "true");
-    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3]))", "false");
+    assertExpr("any(x -> x > 3, [1, 2, 3, 4])", 1L);
+    assertExpr("any(x -> x > 3, [1, 2, 3])", 0L);
+    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3, 4]))", 1L);
+    assertExpr("any(x -> x, map(x -> x > 3, [1, 2, 3]))", 0L);
   }
 
   @Test
   public void testAllMatch()
   {
-    assertExpr("all(x -> x > 0, [1, 2, 3, 4])", "true");
-    assertExpr("all(x -> x > 1, [1, 2, 3, 4])", "false");
-    assertExpr("all(x -> x, map(x -> x > 0, [1, 2, 3, 4]))", "true");
-    assertExpr("all(x -> x, map(x -> x > 1, [1, 2, 3, 4]))", "false");
+    assertExpr("all(x -> x > 0, [1, 2, 3, 4])", 1L);
+    assertExpr("all(x -> x > 1, [1, 2, 3, 4])", 0L);
+    assertExpr("all(x -> x, map(x -> x > 0, [1, 2, 3, 4]))", 1L);
+    assertExpr("all(x -> x, map(x -> x > 1, [1, 2, 3, 4]))", 0L);
   }
 
   @Test

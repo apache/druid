@@ -17,28 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression;
+package org.apache.druid.sql.calcite.expression.builtin;
 
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
-public class DirectOperatorConversion implements SqlOperatorConversion
-{
-  private final SqlOperator operator;
-  private final String druidFunctionName;
+import java.util.stream.Collectors;
 
-  public DirectOperatorConversion(final SqlOperator operator, final String druidFunctionName)
-  {
-    this.operator = operator;
-    this.druidFunctionName = druidFunctionName;
-  }
+public class ArrayConstructorOperatorConversion implements SqlOperatorConversion
+{
+  private static final SqlOperator SQL_FUNCTION = SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR;
 
   @Override
   public SqlOperator calciteOperator()
   {
-    return operator;
+    return SQL_FUNCTION;
   }
 
   @Override
@@ -52,12 +53,10 @@ public class DirectOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands))
+        druidExpressions -> DruidExpression.of(
+            null,
+            DruidExpression.functionCall("array", druidExpressions)
+        )
     );
-  }
-
-  public String getDruidFunctionName()
-  {
-    return druidFunctionName;
   }
 }
