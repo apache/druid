@@ -21,7 +21,6 @@ package org.apache.druid.emitter.dropwizard;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class DropwizardEmitterModule implements DruidModule
 {
@@ -61,10 +61,15 @@ public class DropwizardEmitterModule implements DruidModule
       final Injector injector
   )
   {
-    List<Emitter> alertEmitters = Lists.transform(
-        dropwizardEmitterConfig.getAlertEmitters(),
-        s -> injector.getInstance(Key.get(Emitter.class, Names.named(s)))
-    );
+    List<Emitter> alertEmitters = dropwizardEmitterConfig.getAlertEmitters()
+                                                         .stream()
+                                                         .map(s -> injector.getInstance(
+                                                             Key.get(
+                                                                 Emitter.class,
+                                                                 Names.named(s)
+                                                             )))
+                                                         .collect(Collectors.toList());
+
     return new DropwizardEmitter(dropwizardEmitterConfig, mapper, alertEmitters);
   }
 }

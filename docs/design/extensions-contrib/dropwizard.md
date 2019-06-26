@@ -42,7 +42,6 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 |`druid.emitter.dropwizard.reporters`|List of dropwizard reporters to be used.|yes|none|
 |`druid.emitter.dropwizard.prefix`|Optional prefix to be used for metrics name|no|none|
 |`druid.emitter.dropwizard.includeHost`|Flag to include the hostname as part of the metric name.|no|yes|
-|`druid.emitter.dropwizard.includeDimensionNames`|Flag to include the dimension names as part of the metric name.|no|yes|
 |`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the dropwizard metric type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
 

@@ -85,13 +85,13 @@ public class DropwizardConsoleReporter implements DropwizardReporter
   @Override
   public void flush()
   {
-
+    // no-op
   }
 
   @Override
   public void close()
   {
-
+    consoleReporter.stop();
   }
 
 

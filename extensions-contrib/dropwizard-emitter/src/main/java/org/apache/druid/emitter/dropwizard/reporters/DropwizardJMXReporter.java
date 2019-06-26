@@ -31,6 +31,7 @@ import java.util.Objects;
 public class DropwizardJMXReporter implements DropwizardReporter
 {
   private String domain = "org.apache.druid";
+  private JmxReporter reporter;
 
   @JsonProperty
   public String getDomain()
@@ -41,20 +42,21 @@ public class DropwizardJMXReporter implements DropwizardReporter
   @Override
   public void start(MetricRegistry metricRegistry)
   {
-    final JmxReporter reporter = JmxReporter.forRegistry(metricRegistry)
-                                            .inDomain(domain).build();
+    reporter = JmxReporter.forRegistry(metricRegistry)
+                          .inDomain(domain).build();
     reporter.start();
   }
 
   @Override
   public void flush()
   {
+    // no-op
   }
 
   @Override
   public void close()
   {
-
+    reporter.close();
   }
 
   @Override
