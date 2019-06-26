@@ -47,7 +47,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
-import org.apache.druid.test.utils.TestUtils;
+import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -182,7 +182,7 @@ public class DataSourcesResourceTest
     Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(2, result.size());
-    TestUtils.assertEqualsImmutableDruidDataSource(
+    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(
         listDataSources.stream().map(DruidDataSource::toImmutableDruidDataSource).collect(Collectors.toList()),
         new ArrayList<>(result)
     );
@@ -268,7 +268,7 @@ public class DataSourcesResourceTest
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(1, result.size());
-    TestUtils.assertEqualsImmutableDruidDataSource(
+    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(
         listDataSources.subList(0, 1).stream()
                        .map(DruidDataSource::toImmutableDruidDataSource)
                        .collect(Collectors.toList()),
@@ -337,7 +337,7 @@ public class DataSourcesResourceTest
     Response response = dataSourcesResource.getTheDataSource("datasource1", "full");
     ImmutableDruidDataSource result = (ImmutableDruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
-    TestUtils.assertEqualsImmutableDruidDataSource(dataSource1.toImmutableDruidDataSource(), result);
+    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(dataSource1.toImmutableDruidDataSource(), result);
     EasyMock.verify(inventoryView, server);
   }
 

@@ -122,23 +122,30 @@ public class ImmutableDruidDataSource
 
   /**
    *
-   * Look at https://github.com/apache/incubator-druid/issues/7858 for explanation of why equals method is not supported.
+   * ImmutableDruidDataSource should be considered a container, not a data class.
+   * The idea is the same as behind prohibiting/limiting equals() (and therefore usage as HashSet/HashMap keys) of DataSegment: see #6358.
+   * When somebody wants to deduplicate ImmutableDruidDataSource objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name manually.
    *
+   * See https://github.com/apache/incubator-druid/issues/7858
    */
   @Override
   public boolean equals(Object o)
   {
-    throw new UnsupportedOperationException("equals:ImmutableDruidDataSource shouldn't be used as the key in containers");
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
   }
 
   /**
-   * Look at https://github.com/apache/incubator-druid/issues/7858 for explanation of why hashCode method is not supported.
    *
+   * ImmutableDruidDataSource should be considered a container, not a data class.
+   * The idea is the same as behind prohibiting/limiting hashCode() (and therefore usage as HashSet/HashMap keys) of DataSegment: see #6358.
+   * When somebody wants to deduplicate ImmutableDruidDataSource objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name manually.
+   *
+   * See https://github.com/apache/incubator-druid/issues/7858
    */
   @Override
   public int hashCode()
   {
-    throw new UnsupportedOperationException("hashCode:ImmutableDruidDataSource shouldn't be used as the key in containers");
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
   }
 
   /**

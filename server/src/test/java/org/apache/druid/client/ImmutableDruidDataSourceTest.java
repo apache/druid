@@ -26,16 +26,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.test.utils.TestUtils;
+import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneLoadSpecHolder;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 
 public class ImmutableDruidDataSourceTest
 {
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -46,12 +51,15 @@ public class ImmutableDruidDataSourceTest
         .setInjectableValues(new Std().addValue(PruneLoadSpecHolder.class, PruneLoadSpecHolder.DEFAULT));
     final String json = objectMapper.writeValueAsString(dataSource);
 
-    TestUtils.assertEqualsImmutableDruidDataSource(dataSource, objectMapper.readValue(json, ImmutableDruidDataSource.class));
+    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(dataSource, objectMapper.readValue(json, ImmutableDruidDataSource.class));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testEqualsMethodThrowsUnsupportedOperationException()
   {
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("equals() method is not supported as ImmutableDruidDataSource should be considered a container, not a data class");
+
     final DataSegment segment1 = getTestSegment();
 
     final ImmutableDruidDataSource dataSource1 = getImmutableDruidDataSource(segment1);
@@ -63,7 +71,6 @@ public class ImmutableDruidDataSourceTest
     dataSource1.equals(dataSource2);
   }
 
-  @Nonnull
   private ImmutableDruidDataSource getImmutableDruidDataSource(DataSegment segment1)
   {
     return new ImmutableDruidDataSource(
@@ -73,7 +80,6 @@ public class ImmutableDruidDataSourceTest
     );
   }
 
-  @Nonnull
   private DataSegment getTestSegment()
   {
     return new DataSegment(
@@ -90,9 +96,11 @@ public class ImmutableDruidDataSourceTest
     );
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testhashCodeMethodThrowsUnsupportedOperationException()
   {
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("hashCode() method is not supported as ImmutableDruidDataSource should be considered a container, not a data class");
     final DataSegment segment = getTestSegment();
     final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
 

@@ -25,7 +25,7 @@ import org.junit.Assert;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TestUtils
+public class ImmutableDruidDataSourceTestUtils
 {
 
   /**
@@ -39,7 +39,7 @@ public class TestUtils
     if (equalsRegardingNull(expected, actual)) {
       return;
     } else {
-      throw new AssertionError("Expected and actual objects differ.");
+      throw new AssertionError("Expected and actual objects are not equal as per equals() method");
     }
   }
 
@@ -61,7 +61,7 @@ public class TestUtils
       }
       return true;
     } else if (expected instanceof ImmutableDruidDataSource && actual instanceof ImmutableDruidDataSource) {
-      return ((ImmutableDruidDataSource) expected).equalsForTesting((ImmutableDruidDataSource) actual);
+      return ((ImmutableDruidDataSource) expected).equalsForTesting(actual);
     }
 
     return false;
