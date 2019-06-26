@@ -9,6 +9,7 @@ target
 .classpath
 .idea
 .project
+.PVS-Studio
 .settings/
 *.log
 *.DS_Store

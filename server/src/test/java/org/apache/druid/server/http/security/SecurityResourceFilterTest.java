@@ -119,8 +119,8 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
       Assert.fail();
     }
     catch (ForbiddenException e) {
+      EasyMock.verify(req, request, authorizerMapper);
       throw e;
     }
-    EasyMock.verify(req, request, authorizerMapper);
   }
 }

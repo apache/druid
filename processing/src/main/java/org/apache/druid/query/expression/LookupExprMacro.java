@@ -71,8 +71,13 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         null
     );
 
-    class LookupExpr implements Expr
+    class LookupExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private LookupExpr(Expr arg)
+      {
+        super(arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -81,13 +86,13 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new LookupExpr(newArg));
       }
     }
 
-    return new LookupExpr();
+    return new LookupExpr(arg);
   }
 }

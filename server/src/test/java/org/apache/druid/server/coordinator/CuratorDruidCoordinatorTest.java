@@ -32,6 +32,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -96,6 +97,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private JacksonConfigManager configManager;
   private DruidNode druidNode;
+  private DataSourcesSnapshot dataSourcesSnapshot;
   private static final String SEGPATH = "/druid/segments";
   private static final String SOURCE_LOAD_PATH = "/druid/loadQueue/localhost:1";
   private static final String DESTINATION_LOAD_PATH = "/druid/loadQueue/localhost:2";
@@ -127,6 +129,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
@@ -160,10 +163,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         10,
         null,
-        false,
-        false,
-        new Duration("PT0s"),
-        Duration.millis(10)
+        new Duration("PT0s")
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
@@ -368,6 +368,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(databaseSegmentManager.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
     EasyMock.replay(databaseSegmentManager);
 
+    coordinator.setDataSourcesSnapshotForTest(dataSourcesSnapshot);
+    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
+    EasyMock.replay(dataSourcesSnapshot);
     coordinator.moveSegment(
         source.toImmutableDruidServer(),
         dest.toImmutableDruidServer(),

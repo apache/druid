@@ -292,7 +292,10 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realti
 ```
 
 ## Delete Lookup
-A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster.
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster. If it was last lookup in the tier, then tier is deleted as well.
+
+## Delete Tier
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}` will remove that tier from the cluster.
 
 ## List tier names
 A `GET` to `/druid/coordinator/v1/lookups/config` will return a list of known tier names in the dynamic configuration.

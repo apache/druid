@@ -27,6 +27,7 @@ export function parseHtmlError(htmlStr: string): string | null {
   return htmlStr
     .substring(startIndex + 10, endIndex)
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, `'`)
     .replace(/&gt;/g, '>');
 }
 
@@ -60,7 +61,7 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
   return runeResultResp.data;
 }
 
-export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[]> {
+export async function queryDruidSql<T = any>(sqlQuery: Record<string, any>): Promise<T[]> {
   let sqlResultResp: AxiosResponse<any>;
   try {
     sqlResultResp = await axios.post('/druid/v2/sql', sqlQuery);

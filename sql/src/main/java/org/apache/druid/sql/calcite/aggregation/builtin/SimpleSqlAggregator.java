@@ -29,7 +29,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -44,7 +44,8 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final DruidQuerySignature querySignature,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -56,7 +57,6 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     if (aggregateCall.isDistinct()) {
       return null;
     }
-    final RowSignature rowSignature = querySignature.getRowSignature();
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
         plannerContext,

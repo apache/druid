@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`view control bar snapshot matches snapshot 1`] = `
+<div
+  class="view-control-bar"
+>
+  <div
+    class="control-label"
+  >
+    A label
+  </div>
+  <div>
+    Hello world
+  </div>
+</div>
+`;

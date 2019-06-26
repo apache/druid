@@ -19,25 +19,25 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
-import * as React from 'react';
+import classNames from 'classnames';
+import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink } from './components/external-link';
-import { HeaderActiveTab, HeaderBar } from './components/header-bar';
-import { Loader } from './components/loader';
+import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
 import { UrlBaser } from './singletons/url-baser';
 import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
-import { DatasourcesView } from './views/datasource-view';
-import { HomeView } from './views/home-view';
-import { LoadDataView, LoadDataViewSeed } from './views/load-data-view';
-import { LookupsView } from './views/lookups-view';
-import { SegmentsView } from './views/segments-view';
-import { ServersView } from './views/servers-view';
-import { SqlView } from './views/sql-view';
-import { TasksView } from './views/tasks-view';
+import {
+  DatasourcesView,
+  HomeView,
+  LoadDataView,
+  LookupsView,
+  QueryView,
+  SegmentsView,
+  ServersView,
+  TasksView
+} from './views';
 
 import './console-application.scss';
 
@@ -54,7 +54,7 @@ export interface ConsoleApplicationState {
   capabilitiesLoading: boolean;
 }
 
-export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
+export class ConsoleApplication extends React.PureComponent<ConsoleApplicationProps, ConsoleApplicationState> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
   private capabilitiesQueryManager: QueryManager<string, string>;
@@ -100,11 +100,12 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     });
   }
 
-  private loadDataViewSeed: LoadDataViewSeed | null;
+  private supervisorId: string | null;
   private taskId: string | null;
+  private openDialog: string | null;
   private datasource: string | null;
   private onlyUnavailable: boolean | null;
-  private initSql: string | null;
+  private initQuery: string | null;
   private middleManager: string | null;
 
   constructor(props: ConsoleApplicationProps, context: any) {
@@ -150,23 +151,26 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.loadDataViewSeed = null;
       this.taskId = null;
+      this.supervisorId = null;
+      this.openDialog = null;
       this.datasource = null;
       this.onlyUnavailable = null;
-      this.initSql = null;
+      this.initQuery = null;
       this.middleManager = null;
     }, 50);
   }
 
-  private goToLoadDataView = (loadDataViewSeed?: LoadDataViewSeed) => {
-    if (loadDataViewSeed) this.loadDataViewSeed = loadDataViewSeed;
+  private goToLoadDataView = (supervisorId?: string, taskId?: string ) => {
+    if (taskId) this.taskId = taskId;
+    if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   }
 
-  private goToTask = (taskId: string | null) => {
+  private goToTask = (taskId: string | null, openDialog?: string) => {
     this.taskId = taskId;
+    if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
   }
@@ -184,17 +188,17 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.resetInitialsWithDelay();
   }
 
-  private goToSql = (initSql: string) => {
-    this.initSql = initSql;
+  private goToQuery = (initQuery: string) => {
+    this.initQuery = initQuery;
     window.location.hash = 'query';
     this.resetInitialsWithDelay();
   }
 
-  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'scrollable' | 'narrow-pad' = 'normal') => {
+  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'narrow-pad' = 'normal') => {
     const { hideLegacy } = this.props;
 
     return <>
-      <HeaderBar active={active} hideLegacy={hideLegacy} goToLoadDataView={this.goToLoadDataView}/>
+      <HeaderBar active={active} hideLegacy={hideLegacy}/>
       <div className={classNames('view-container', classType)}>{el}</div>
     </>;
   }
@@ -205,31 +209,32 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   private wrappedLoadDataView = () => {
-    return this.wrapInViewContainer('load-data', <LoadDataView seed={this.loadDataViewSeed} goToTask={this.goToTask}/>, 'narrow-pad');
+
+    return this.wrapInViewContainer('load-data', <LoadDataView initSupervisorId={this.supervisorId} initTaskId={this.taskId} goToTask={this.goToTask}/>, 'narrow-pad');
   }
 
-  private wrappedSqlView = () => {
-    return this.wrapInViewContainer('query', <SqlView initSql={this.initSql}/>);
+  private wrappedQueryView = () => {
+    return this.wrapInViewContainer('query', <QueryView initQuery={this.initQuery}/>);
   }
 
   private wrappedDatasourcesView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
+    return this.wrapInViewContainer('datasources', <DatasourcesView goToQuery={this.goToQuery} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedSegmentsView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql} noSqlMode={noSqlMode}/>);
+    return this.wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToQuery={this.goToQuery} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToQuery={this.goToQuery} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedServersView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, 'scrollable');
+    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToQuery={this.goToQuery} goToTask={this.goToTask} noSqlMode={noSqlMode}/>);
   }
 
   private wrappedLookupsView = () => {
@@ -252,8 +257,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       <div className="console-application">
         <Switch>
           <Route path="/load-data" component={this.wrappedLoadDataView}/>
-          <Route path="/query" component={this.wrappedSqlView}/>
-          <Route path="/sql" component={this.wrappedSqlView}/>
+          <Route path="/query" component={this.wrappedQueryView}/>
 
           <Route path="/datasources" component={this.wrappedDatasourcesView}/>
           <Route path="/segments" component={this.wrappedSegmentsView}/>

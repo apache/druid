@@ -19,6 +19,7 @@
 @import '../node_modules/normalize.css/normalize';
 @import '../node_modules/@blueprintjs/core/lib/css/blueprint';
 @import '../lib/react-table';
+@import '../node_modules/react-splitter-layout/lib/index.css';
 
 html,
 body {
@@ -71,3 +72,5 @@ svg {
     }
   }
 }
+
+// Some SplitterLayout globals
