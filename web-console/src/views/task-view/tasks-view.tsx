@@ -34,7 +34,7 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import {
   AsyncActionDialog,
   SpecDialog,
@@ -905,10 +905,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         >
           <div className={'top-pane'}>
             <ViewControlBar label="Supervisors">
-              <Button
-                icon={IconNames.REFRESH}
-                text="Refresh"
-                onClick={() => this.supervisorQueryManager.rerunLastQuery()}
+              <RefreshButton
+                localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
+                onRefresh={auto => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
               />
               <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
                 <Button icon={IconNames.PLUS} text="Submit supervisor" />
@@ -952,10 +951,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   Status
                 </Button>
               </ButtonGroup>
-              <Button
-                icon={IconNames.REFRESH}
-                text="Refresh"
-                onClick={() => this.taskQueryManager.rerunLastQuery()}
+              <RefreshButton
+                localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
+                onRefresh={auto => this.taskQueryManager.rerunLastQueryInBackground(auto)}
               />
               {!noSqlMode && (
                 <Button

@@ -24,7 +24,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
@@ -639,10 +639,9 @@ ORDER BY "rank" DESC, "server" DESC`);
               Tier
             </Button>
           </ButtonGroup>
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.serverQueryManager.rerunLastQuery()}
+          <RefreshButton
+            onRefresh={auto => this.serverQueryManager.rerunLastQueryInBackground(auto)}
+            localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
           />
           {!noSqlMode && (
             <Button

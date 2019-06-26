@@ -125,6 +125,15 @@ export class QueryManager<Q, R> {
     this.trigger();
   }
 
+  public rerunLastQueryInBackground(auto: boolean): void {
+    this.nextQuery = this.lastQuery;
+    if (auto) {
+      this.runWhenIdle();
+    } else {
+      this.trigger();
+    }
+  }
+
   public getLastQuery(): Q {
     return this.lastQuery;
   }

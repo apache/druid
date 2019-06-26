@@ -44,7 +44,6 @@ export class SupervisorTableActionDialog extends React.PureComponent<
       activeTab: 'status',
     };
   }
-
   render(): React.ReactNode {
     const { supervisorId, actions, onClose } = this.props;
     const { activeTab } = this.state;
