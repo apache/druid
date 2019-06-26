@@ -60,7 +60,6 @@
     <Bug pattern="MS_MUTABLE_COLLECTION_PKGPROTECT"/>
     <Bug pattern="MS_OOI_PKGPROTECT"/>
     <Bug pattern="MS_PKGPROTECT"/>
-    <Bug pattern="MS_SHOULD_BE_FINAL"/>
     <Bug pattern="NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT"/>
     <Bug pattern="NP_GUARANTEED_DEREF"/>
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>

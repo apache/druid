@@ -42,7 +42,7 @@ export class QueryManager<Q, R> {
   private state: QueryStateInt<R> = {
     result: null,
     loading: false,
-    error: null
+    error: null,
   };
   private currentQueryId = 0;
 
@@ -77,27 +77,26 @@ export class QueryManager<Q, R> {
     const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
-    this.processQuery(this.lastQuery)
-      .then(
-        (result) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result,
-            loading: false,
-            error: null
-          });
-        },
-        (e: Error) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result: null,
-            loading: false,
-            error: e.message
-          });
-        }
-      );
+    this.processQuery(this.lastQuery).then(
+      result => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result,
+          loading: false,
+          error: null,
+        });
+      },
+      (e: Error) => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result: null,
+          loading: false,
+          error: e.message,
+        });
+      },
+    );
   }
 
   private trigger() {
@@ -106,7 +105,7 @@ export class QueryManager<Q, R> {
     this.setState({
       result: null,
       loading: true,
-      error: null
+      error: null,
     });
 
     if (currentActuallyLoading) {
@@ -124,6 +123,15 @@ export class QueryManager<Q, R> {
   public rerunLastQuery(): void {
     this.nextQuery = this.lastQuery;
     this.trigger();
+  }
+
+  public rerunLastQueryInBackground(auto: boolean): void {
+    this.nextQuery = this.lastQuery;
+    if (auto) {
+      this.runWhenIdle();
+    } else {
+      this.trigger();
+    }
   }
 
   public getLastQuery(): Q {

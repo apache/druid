@@ -71,7 +71,7 @@ public class IndexIngestionBenchmark
   @Setup
   public void setup()
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     rows = new ArrayList<InputRow>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);

@@ -23,16 +23,15 @@ import { QueryView } from './query-view';
 
 describe('sql view', () => {
   it('matches snapshot', () => {
-    const sqlView = shallow(
-      <QueryView
-        initQuery={'test'}
-      />);
+    const sqlView = shallow(<QueryView initQuery={'test'} />);
     expect(sqlView).toMatchSnapshot();
   });
 
   it('trimSemicolon', () => {
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
+    expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual(
+      'SELECT * FROM tbl --hello  ',
+    );
   });
 });

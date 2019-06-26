@@ -23,10 +23,11 @@ import { ExternalLink } from './external-link';
 
 describe('external link', () => {
   it('matches snapshot', () => {
-    const externalLink =
+    const externalLink = (
       <ExternalLink href={'http://test/'}>
         <div>hello world</div>
-      </ExternalLink>;
+      </ExternalLink>
+    );
 
     const { container } = render(externalLink);
     expect(container.firstChild).toMatchSnapshot();

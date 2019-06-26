@@ -74,20 +74,12 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
-
-    if (ComplexMetrics.getSerdeForType("preComputedHyperUnique") == null) {
-      ComplexMetrics.registerSerde(
-          "preComputedHyperUnique",
-          new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault())
-      );
-    }
-
-    if (ComplexMetrics.getSerdeForType("serializablePairLongString") == null) {
-      ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde(
+        "preComputedHyperUnique",
+        () -> new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault())
+    );
+    ComplexMetrics.registerSerde("serializablePairLongString", SerializablePairLongStringSerde::new);
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);

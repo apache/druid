@@ -79,9 +79,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),

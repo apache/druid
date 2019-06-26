@@ -22,12 +22,16 @@ import { getDruidErrorMessage } from './druid-query';
 import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  getEmptyTimestampSpec, getSpecType,
+  getEmptyTimestampSpec,
+  getSpecType,
   IngestionSpec,
-  IoConfig, isColumnTimestampSpec, MetricSpec,
+  IoConfig,
+  isColumnTimestampSpec,
+  MetricSpec,
   Parser,
   ParseSpec,
-  Transform, TransformSpec
+  Transform,
+  TransformSpec,
 } from './ingestion-spec';
 import { deepGet, deepSet, whitelistKeys } from './object-change';
 
@@ -35,7 +39,7 @@ const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   // skipCache: true,
   numRows: 500,
-  timeoutMs: 15000
+  timeoutMs: 15000,
 };
 
 export interface SampleSpec {
@@ -70,7 +74,7 @@ export interface HeaderAndRows {
 
 function dedupe(xs: string[]): string[] {
   const seen: Record<string, boolean> = {};
-  return xs.filter((x) => {
+  return xs.filter(x => {
     if (seen[x]) {
       return false;
     } else {
@@ -88,12 +92,20 @@ export function getSamplerType(spec: IngestionSpec): SamplerType {
   return 'index';
 }
 
-export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, columnOrder?: string[]): string[] {
+export function headerFromSampleResponse(
+  sampleResponse: SampleResponse,
+  ignoreColumn?: string,
+  columnOrder?: string[],
+): string[] {
   let columns = sortWithPrefixSuffix(
-    dedupe([].concat(...(filterMap(sampleResponse.data, s => s.parsed ? Object.keys(s.parsed) : null) as any))).sort(),
+    dedupe(
+      [].concat(
+        ...(filterMap(sampleResponse.data, s => (s.parsed ? Object.keys(s.parsed) : null)) as any),
+      ),
+    ).sort(),
     columnOrder || ['__time'],
     [],
-    alphanumericCompare
+    alphanumericCompare,
   );
 
   if (ignoreColumn) {
@@ -103,10 +115,15 @@ export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreC
   return columns;
 }
 
-export function headerAndRowsFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, columnOrder?: string[], parsedOnly = false): HeaderAndRows {
+export function headerAndRowsFromSampleResponse(
+  sampleResponse: SampleResponse,
+  ignoreColumn?: string,
+  columnOrder?: string[],
+  parsedOnly = false,
+): HeaderAndRows {
   return {
     header: headerFromSampleResponse(sampleResponse, ignoreColumn, columnOrder),
-    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data
+    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
   };
 }
 
@@ -134,7 +151,11 @@ async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<Sa
 
 export type SampleStrategy = 'start' | 'end';
 
-function makeSamplerIoConfig(ioConfig: IoConfig, samplerType: SamplerType, sampleStrategy: SampleStrategy): IoConfig {
+function makeSamplerIoConfig(
+  ioConfig: IoConfig,
+  samplerType: SamplerType,
+  sampleStrategy: SampleStrategy,
+): IoConfig {
   ioConfig = deepSet(ioConfig || {}, 'type', samplerType);
   if (samplerType === 'kafka') {
     ioConfig = deepSet(ioConfig, 'useEarliestOffset', sampleStrategy === 'start');
@@ -144,9 +165,16 @@ function makeSamplerIoConfig(ioConfig: IoConfig, samplerType: SamplerType, sampl
   return ioConfig;
 }
 
-export async function sampleForConnect(spec: IngestionSpec, sampleStrategy: SampleStrategy): Promise<SampleResponse> {
+export async function sampleForConnect(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -162,20 +190,28 @@ export async function sampleForConnect(spec: IngestionSpec, sampleStrategy: Samp
             pattern: '(.*)',
             columns: ['a'],
             dimensionsSpec: {},
-            timestampSpec: getEmptyTimestampSpec()
-          }
-        }
-      }
+            timestampSpec: getEmptyTimestampSpec(),
+          },
+        },
+      },
     } as any,
-    samplerConfig: BASE_SAMPLER_CONFIG
+    samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
   return postToSampler(sampleSpec, 'connect');
 }
 
-export async function sampleForParser(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+export async function sampleForParser(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+  cacheKey: string | undefined,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
   const sampleSpec: SampleSpec = {
@@ -187,31 +223,38 @@ export async function sampleForParser(spec: IngestionSpec, sampleStrategy: Sampl
         dataSource: 'sample',
         parser: {
           type: parser.type,
-          parseSpec: (
-            parser.parseSpec ?
-              Object.assign({}, parser.parseSpec, {
+          parseSpec: (parser.parseSpec
+            ? Object.assign({}, parser.parseSpec, {
                 dimensionsSpec: {},
-                timestampSpec: getEmptyTimestampSpec()
-              }) :
-              undefined
-          ) as any
-        }
-      }
+                timestampSpec: getEmptyTimestampSpec(),
+              })
+            : undefined) as any,
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+      cacheKey,
+    }),
   };
 
   return postToSampler(sampleSpec, 'parser');
 }
 
-export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+export async function sampleForTimestamp(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+  cacheKey: string | undefined,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-  const timestampSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || getEmptyTimestampSpec();
+  const timestampSpec: ParseSpec =
+    deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || getEmptyTimestampSpec();
   const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
 
   // First do a query with a static timestamp spec
@@ -224,20 +267,18 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
         dataSource: 'sample',
         parser: {
           type: parser.type,
-          parseSpec: (
-            parser.parseSpec ?
-              Object.assign({}, parseSpec, {
+          parseSpec: (parser.parseSpec
+            ? Object.assign({}, parseSpec, {
                 dimensionsSpec: {},
-                timestampSpec: columnTimestampSpec ? getEmptyTimestampSpec() : timestampSpec
-              }) :
-              undefined
-          ) as any
-        }
-      }
+                timestampSpec: columnTimestampSpec ? getEmptyTimestampSpec() : timestampSpec,
+              })
+            : undefined) as any,
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+      cacheKey,
+    }),
   };
 
   const sampleColumns = await postToSampler(sampleSpecColumns, 'timestamp-columns');
@@ -257,14 +298,14 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
         parser: {
           type: parser.type,
           parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: {}
-          })
-        }
-      }
+            dimensionsSpec: {},
+          }),
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey: sampleColumns.cacheKey || cacheKey
-    })
+      cacheKey: sampleColumns.cacheKey || cacheKey,
+    }),
   };
 
   const sampleTime = await postToSampler(sampleSpec, 'timestamp-time');
@@ -286,13 +327,21 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
       const timeDatumParsed = sampleTimeData[i].parsed;
       d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
       return d;
-    })
+    }),
   });
 }
 
-export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+export async function sampleForTransform(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+  cacheKey: string | undefined,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
   const parserColumns: string[] = deepGet(parseSpec, 'columns') || [];
@@ -301,7 +350,6 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
   // Extra step to simulate auto detecting dimension with transforms
   const specialDimensionSpec: DimensionsSpec = {};
   if (transforms && transforms.length) {
-
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
@@ -312,19 +360,25 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
           parser: {
             type: parser.type,
             parseSpec: Object.assign({}, parseSpec, {
-              dimensionsSpec: {}
-            })
-          }
-        }
+              dimensionsSpec: {},
+            }),
+          },
+        },
       },
       samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-        cacheKey
-      })
+        cacheKey,
+      }),
     };
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'transform-pre');
 
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time', ['__time'].concat(parserColumns)).concat(transforms.map(t => t.name)));
+    specialDimensionSpec.dimensions = dedupe(
+      headerFromSampleResponse(
+        sampleResponseHack,
+        '__time',
+        ['__time'].concat(parserColumns),
+      ).concat(transforms.map(t => t.name)),
+    );
   }
 
   const sampleSpec: SampleSpec = {
@@ -337,25 +391,33 @@ export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: Sa
         parser: {
           type: parser.type,
           parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: specialDimensionSpec // Hack Hack Hack
-          })
+            dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
+          }),
         },
         transformSpec: {
-          transforms
-        }
-      }
+          transforms,
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+      cacheKey,
+    }),
   };
 
   return postToSampler(sampleSpec, 'transform');
 }
 
-export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+export async function sampleForFilter(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+  cacheKey: string | undefined,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
   const parserColumns: string[] = deepGet(parser, 'columns') || [];
@@ -365,7 +427,6 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
   // Extra step to simulate auto detecting dimension with transforms
   const specialDimensionSpec: DimensionsSpec = {};
   if (transforms && transforms.length) {
-
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
@@ -376,19 +437,25 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
           parser: {
             type: parser.type,
             parseSpec: Object.assign({}, parseSpec, {
-              dimensionsSpec: {}
-            })
-          }
-        }
+              dimensionsSpec: {},
+            }),
+          },
+        },
       },
       samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-        cacheKey
-      })
+        cacheKey,
+      }),
     };
 
     const sampleResponseHack = await postToSampler(sampleSpecHack, 'filter-pre');
 
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time', ['__time'].concat(parserColumns)).concat(transforms.map(t => t.name)));
+    specialDimensionSpec.dimensions = dedupe(
+      headerFromSampleResponse(
+        sampleResponseHack,
+        '__time',
+        ['__time'].concat(parserColumns),
+      ).concat(transforms.map(t => t.name)),
+    );
   }
 
   const sampleSpec: SampleSpec = {
@@ -401,30 +468,40 @@ export async function sampleForFilter(spec: IngestionSpec, sampleStrategy: Sampl
         parser: {
           type: parser.type,
           parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: specialDimensionSpec // Hack Hack Hack
-          })
+            dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
+          }),
         },
         transformSpec: {
           transforms,
-          filter
-        }
-      }
+          filter,
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+      cacheKey,
+    }),
   };
 
   return postToSampler(sampleSpec, 'filter');
 }
 
-export async function sampleForSchema(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {
+export async function sampleForSchema(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+  cacheKey: string | undefined,
+): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
-  const transformSpec: TransformSpec = deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
+  const transformSpec: TransformSpec =
+    deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
   const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || [];
-  const queryGranularity: string = deepGet(spec, 'dataSchema.granularitySpec.queryGranularity') || 'NONE';
+  const queryGranularity: string =
+    deepGet(spec, 'dataSchema.granularitySpec.queryGranularity') || 'NONE';
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -437,13 +514,13 @@ export async function sampleForSchema(spec: IngestionSpec, sampleStrategy: Sampl
         transformSpec,
         metricsSpec,
         granularitySpec: {
-          queryGranularity
-        }
-      }
+          queryGranularity,
+        },
+      },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+      cacheKey,
+    }),
   };
 
   return postToSampler(sampleSpec, 'schema');
