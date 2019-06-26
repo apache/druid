@@ -36,7 +36,6 @@
     <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
     <Bug pattern="CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE"/>
     <Bug pattern="DC_DOUBLECHECK"/>
-    <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
     <Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
     <Bug pattern="DM_EXIT"/>
     <Bug pattern="DM_NUMBER_CTOR"/>
