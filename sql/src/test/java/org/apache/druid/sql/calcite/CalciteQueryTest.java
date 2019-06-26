@@ -7945,4 +7945,144 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @Test
+  public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
+  {
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"foo", 3L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L},
+          new Object[]{"foo", 1L}
+      );
+    }
+    testQuery(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringGroupByWithFilter() throws Exception
+  {
+    testQuery(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo where concat(dim3, 'foo') = 'bfoo' GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setDimFilter(selector("v0", "bfoo", null))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"bfoo", 2L},
+            new Object[]{"afoo", 1L},
+            new Object[]{"cfoo", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringScan() throws Exception
+  {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
+    testQuery(
+        "SELECT concat(dim3, 'foo') FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE3)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .columns(ImmutableList.of("v0"))
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .legacy(false)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"afoo\",\"bfoo\"]"},
+            new Object[]{"[\"bfoo\",\"cfoo\"]"},
+            new Object[]{"[\"dfoo\"]"},
+            new Object[]{"[\"foo\"]"},
+            new Object[]{nullVal},
+            new Object[]{nullVal}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringScanWithFilter() throws Exception
+  {
+    testQuery(
+        "SELECT concat(dim3, 'foo') FROM druid.numfoo where concat(dim3, 'foo') = 'bfoo'",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .filters(selector("v0", "bfoo", null))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"afoo\",\"bfoo\"]"},
+            new Object[]{"[\"bfoo\",\"cfoo\"]"}
+        )
+    );
+  }
 }
