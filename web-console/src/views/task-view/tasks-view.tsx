@@ -53,9 +53,9 @@ import {
   localStorageSet,
   queryDruidSql,
   QueryManager,
-  TableColumnSelectionHandler,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './tasks-view.scss';
 
@@ -114,6 +114,8 @@ export interface TasksViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId: string | null;
   supervisorTableActionDialogActions: BasicAction[];
+  hiddenTaskColumns: LocalStorageBackedArray<string>;
+  hiddenSupervisorColumns: LocalStorageBackedArray<string>;
 }
 
 interface TaskQueryResultRow {
@@ -172,8 +174,6 @@ function stateToColor(status: string): string {
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
-  private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
-  private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -192,6 +192,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       resumeSupervisorId: null,
       suspendSupervisorId: null,
       resetSupervisorId: null,
+      supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
 
       tasksLoading: true,
@@ -210,19 +211,15 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
       taskTableActionDialogId: null,
       taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
-      supervisorTableActionDialogId: null,
       supervisorTableActionDialogActions: [],
+
+      hiddenTaskColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
+      ),
+      hiddenSupervisorColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
+      ),
     };
-
-    this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
-
-    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -248,6 +245,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   componentDidMount(): void {
     const { noSqlMode } = this.props;
+
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -521,8 +519,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   renderSupervisorTable() {
-    const { supervisors, supervisorsLoading, supervisorsError } = this.state;
-    const { supervisorTableColumnSelectionHandler } = this;
+    const {
+      supervisors,
+      supervisorsLoading,
+      supervisorsError,
+      hiddenSupervisorColumns,
+    } = this.state;
     return (
       <>
         <ReactTable
@@ -540,7 +542,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               id: 'datasource',
               accessor: 'id',
               width: 300,
-              show: supervisorTableColumnSelectionHandler.showColumn('Datasource'),
+              show: hiddenSupervisorColumns.exists('Datasource'),
             },
             {
               Header: 'Type',
@@ -552,7 +554,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 if (!tuningConfig) return '';
                 return tuningConfig.type;
               },
-              show: supervisorTableColumnSelectionHandler.showColumn('Type'),
+              show: hiddenSupervisorColumns.exists('Type'),
             },
             {
               Header: 'Topic/Stream',
@@ -564,7 +566,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 if (!ioConfig) return '';
                 return ioConfig.topic || ioConfig.stream || '';
               },
-              show: supervisorTableColumnSelectionHandler.showColumn('Topic/Stream'),
+              show: hiddenSupervisorColumns.exists('Topic/Stream'),
             },
             {
               Header: 'Status',
@@ -582,7 +584,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   </span>
                 );
               },
-              show: supervisorTableColumnSelectionHandler.showColumn('Status'),
+              show: hiddenSupervisorColumns.exists('Status'),
             },
             {
               Header: ActionCell.COLUMN_LABEL,
@@ -607,7 +609,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   />
                 );
               },
-              show: supervisorTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+              show: hiddenSupervisorColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
         />
@@ -668,8 +670,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
-    const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy } = this.state;
-    const { taskTableColumnSelectionHandler } = this;
+    const {
+      tasks,
+      tasksLoading,
+      tasksError,
+      taskFilter,
+      groupTasksBy,
+      hiddenTaskColumns,
+    } = this.state;
 
     return (
       <>
@@ -690,7 +698,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               accessor: 'task_id',
               width: 300,
               Aggregated: row => '',
-              show: taskTableColumnSelectionHandler.showColumn('Task ID'),
+              show: hiddenTaskColumns.exists('Task ID'),
             },
             {
               Header: 'Type',
@@ -707,7 +715,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   </a>
                 );
               },
-              show: taskTableColumnSelectionHandler.showColumn('Type'),
+              show: hiddenTaskColumns.exists('Type'),
             },
             {
               Header: 'Datasource',
@@ -724,8 +732,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   </a>
                 );
               },
-              show: taskTableColumnSelectionHandler.showColumn('Datasource'),
+              show: hiddenTaskColumns.exists('Datasource'),
             },
+
             {
               Header: 'Location',
               accessor: 'location',
@@ -733,14 +742,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.location);
               },
-              show: taskTableColumnSelectionHandler.showColumn('Location'),
+              show: hiddenTaskColumns.exists('Location'),
             },
             {
               Header: 'Created time',
               accessor: 'created_time',
               width: 120,
               Aggregated: row => '',
-              show: taskTableColumnSelectionHandler.showColumn('Created time'),
+              show: hiddenTaskColumns.exists('Created time'),
             },
             {
               Header: 'Status',
@@ -800,7 +809,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.status.status);
               },
-              show: taskTableColumnSelectionHandler.showColumn('Status'),
+              show: hiddenTaskColumns.exists('Status'),
             },
             {
               Header: 'Duration',
@@ -808,7 +817,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               filterable: false,
               Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
               Aggregated: () => '',
-              show: taskTableColumnSelectionHandler.showColumn('Duration'),
+              show: hiddenTaskColumns.exists('Duration'),
             },
             {
               Header: ActionCell.COLUMN_LABEL,
@@ -836,7 +845,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 );
               },
               Aggregated: row => '',
-              show: taskTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+              show: hiddenTaskColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
         />
@@ -857,8 +866,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       supervisorTableActionDialogId,
       supervisorTableActionDialogActions,
       taskTableActionDialogStatus,
+      hiddenSupervisorColumns,
+      hiddenTaskColumns,
     } = this.state;
-    const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
     const submitSupervisorMenu = (
       <Menu>
@@ -915,9 +925,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <TableColumnSelector
                 columns={supervisorTableColumns}
                 onChange={column =>
-                  supervisorTableColumnSelectionHandler.changeTableColumnSelector(column)
+                  this.setState({ hiddenSupervisorColumns: hiddenSupervisorColumns.toggle(column) })
                 }
-                tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
+                tableColumnsHidden={hiddenSupervisorColumns.storedArray}
               />
             </ViewControlBar>
             {this.renderSupervisorTable()}
@@ -968,9 +978,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               <TableColumnSelector
                 columns={taskTableColumns}
                 onChange={column =>
-                  taskTableColumnSelectionHandler.changeTableColumnSelector(column)
+                  this.setState({ hiddenTaskColumns: hiddenTaskColumns.toggle(column) })
                 }
-                tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
+                tableColumnsHidden={hiddenTaskColumns.storedArray}
               />
             </ViewControlBar>
             {this.renderTaskTable()}
