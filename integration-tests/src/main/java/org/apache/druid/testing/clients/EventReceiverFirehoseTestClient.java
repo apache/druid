@@ -61,7 +61,7 @@ public class EventReceiverFirehoseTestClient
   {
     this.host = host;
     this.jsonMapper = jsonMapper;
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    this.responseHandler = StatusResponseHandler.getInstance();
     this.httpClient = httpClient;
     this.chatID = chatID;
     this.smileMapper = smileMapper;

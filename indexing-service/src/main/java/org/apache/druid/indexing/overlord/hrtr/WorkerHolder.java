@@ -45,7 +45,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +70,7 @@ public class WorkerHolder
   {
   };
 
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
+  private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
 
   private final Worker worker;
   private Worker disabledWorker;

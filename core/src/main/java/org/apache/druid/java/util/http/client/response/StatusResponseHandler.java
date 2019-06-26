@@ -23,6 +23,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  */
@@ -30,9 +31,16 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
 {
   private final Charset charset;
 
-  public StatusResponseHandler(Charset charset)
+  private static StatusResponseHandler statusResponseHandler = new StatusResponseHandler();
+
+  private StatusResponseHandler()
   {
-    this.charset = charset;
+    this.charset = StandardCharsets.UTF_8;
+  }
+
+  public static StatusResponseHandler getInstance()
+  {
+    return statusResponseHandler;
   }
 
   @Override

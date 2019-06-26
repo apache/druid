@@ -48,7 +48,6 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -210,7 +209,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       LOG.info("Event Receiver Found at host [%s]", host);
 
       LOG.info("Checking worker /status/health for [%s]", host);
-      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
+      final StatusResponseHandler handler = StatusResponseHandler.getInstance();
       RetryUtil.retryUntilTrue(
           () -> {
             try {

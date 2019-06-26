@@ -56,7 +56,6 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -114,7 +113,7 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+  StatusResponseHandler responseHandler = StatusResponseHandler.getInstance();
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;

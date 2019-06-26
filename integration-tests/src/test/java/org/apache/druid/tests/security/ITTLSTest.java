@@ -54,7 +54,6 @@ import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTLSTest
@@ -85,7 +84,7 @@ public class ITTLSTest
   @Inject
   TLSCertificateChecker certificateChecker;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+  StatusResponseHandler responseHandler = StatusResponseHandler.getInstance();
 
   @Test
   public void testPlaintextAccess()

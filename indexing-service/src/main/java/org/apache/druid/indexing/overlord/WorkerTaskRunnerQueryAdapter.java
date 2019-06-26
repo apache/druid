@@ -36,7 +36,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 public class WorkerTaskRunnerQueryAdapter
@@ -95,7 +94,7 @@ public class WorkerTaskRunnerQueryAdapter
     try {
       final StatusResponseHolder response = httpClient.go(
           new Request(HttpMethod.POST, workerUrl),
-          new StatusResponseHandler(StandardCharsets.UTF_8)
+          StatusResponseHandler.getInstance()
       ).get();
 
       log.info(

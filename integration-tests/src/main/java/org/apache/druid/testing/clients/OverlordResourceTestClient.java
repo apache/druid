@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -64,7 +63,7 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getIndexerUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   private String getIndexerURL()

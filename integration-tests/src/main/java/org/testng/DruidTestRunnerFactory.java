@@ -39,7 +39,6 @@ import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -119,7 +118,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
 
     public void waitUntilInstanceReady(final HttpClient client, final String host)
     {
-      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
+      final StatusResponseHandler handler = StatusResponseHandler.getInstance();
       RetryUtil.retryUntilTrue(
           () -> {
             try {
