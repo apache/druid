@@ -121,28 +121,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info("Compressing files from[%s] to [%s]", inDir, outIndexFile);
 
     final long size;
-    try (FSDataOutputStream out = fs.create(outIndexFile)) {
+    try (FSDataOutputStream out = fs.create(outIndexFile, false)) {
       size = CompressionUtils.zip(inDir, out);
     }
 
     return segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
                   .withSize(size)
                   .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
-  }
-
-  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
-  {
-    if (!HadoopFsWrapper.rename(fs, from, to)) {
-      if (fs.exists(to)) {
-        log.info(
-            "Unable to rename temp file [%s] to segment path [%s], it may have already been pushed by a replica task.",
-            from,
-            to
-        );
-      } else {
-        throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
-      }
-    }
   }
 
   @Override
