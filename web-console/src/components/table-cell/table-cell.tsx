@@ -43,7 +43,7 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
   static MAX_CHARS_TO_SHOW = 50;
 
   possiblyTruncate(str: string): React.ReactNode {
-    if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
+    if (str.length <= TableCell.MAX_CHARS_TO_SHOW) return str;
 
     const { prefix, omitted, suffix } = TableCell.shortenString(str);
     return (
@@ -62,12 +62,12 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
   static shortenString(str: string): ShortParts {
     // Print something like:
     // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
-    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW + 17);
+    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW - 17);
     const prefix = str.substr(0, str.length - (omit + 10));
     const suffix = str.substr(str.length - 10);
     return {
       prefix,
-      omitted: omit ? `...${omit} omitted...` : `...`,
+      omitted: `...${omit} omitted...`,
       suffix,
     };
   }

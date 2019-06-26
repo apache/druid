@@ -19,12 +19,12 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { ClipboardDialog } from './clipboard-dialog';
+import { ShowValueDialog } from './show-value-dialog';
 
 describe('clipboard dialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
-      <ClipboardDialog
+      <ShowValueDialog
         onClose={() => null}
         str={
           'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'

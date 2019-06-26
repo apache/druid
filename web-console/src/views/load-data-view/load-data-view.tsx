@@ -50,7 +50,7 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { ClipboardDialog } from '../../dialogs/clipboard-dialog/clipboard-dialog';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   filterMap,
@@ -225,7 +225,7 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup: boolean | null;
   newDimensionMode: DimensionMode | null;
-  showClipboardModal: boolean;
+  showViewValueModal: boolean;
   str: string;
 
   // general
@@ -288,7 +288,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
-      showClipboardModal: false,
+      showViewValueModal: false,
       newRollup: null,
       newDimensionMode: null,
       str: '',
@@ -424,7 +424,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
-        {this.renderClipboardModal()}
+        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -564,11 +564,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderClipboardModal() {
-    const { showClipboardModal, str } = this.state;
-    if (!showClipboardModal) return null;
+  renderViewValueModal() {
+    const { showViewValueModal, str } = this.state;
+    if (!showViewValueModal) return null;
     return (
-      <ClipboardDialog onClose={() => this.setState({ showClipboardModal: false })} str={str} />
+      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
   }
 
@@ -824,7 +824,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
-            openModal={str => this.setState({ showClipboardModal: true, str: str })}
+            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}

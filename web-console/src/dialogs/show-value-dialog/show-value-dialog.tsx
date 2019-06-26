@@ -22,15 +22,15 @@ import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
-import './clipboard-dialog.scss';
+import './show-value-dialog.scss';
 
-export interface ClipboardDialogProps extends React.Props<any> {
+export interface ShowValueDialogProps extends React.Props<any> {
   onClose: () => void;
   str: string;
 }
 
-export class ClipboardDialog extends React.PureComponent<ClipboardDialogProps> {
-  constructor(props: ClipboardDialogProps) {
+export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
+  constructor(props: ShowValueDialogProps) {
     super(props);
     this.state = {};
   }
@@ -39,10 +39,9 @@ export class ClipboardDialog extends React.PureComponent<ClipboardDialogProps> {
     const { onClose, str } = this.props;
 
     return (
-      <Dialog className="clipboard-dialog" isOpen onClose={onClose} title={'Copy table cell'}>
+      <Dialog className="show-value-dialog" isOpen onClose={onClose} title={'Show Value'}>
         <TextArea value={str} />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button text={'Close'} intent={'primary'} onClick={onClose} />
           <Button
             icon={IconNames.DUPLICATE}
             text={'Copy'}
@@ -54,6 +53,7 @@ export class ClipboardDialog extends React.PureComponent<ClipboardDialogProps> {
               });
             }}
           />
+          <Button text={'Close'} intent={'primary'} onClick={onClose} />
         </div>
       </Dialog>
     );
