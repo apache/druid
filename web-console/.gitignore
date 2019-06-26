@@ -2,8 +2,8 @@ node/
 node_modules/
 resources/
 public/
-assets/
 lib/*.css
+coverage/
 
 coordinator-console/
 pages/

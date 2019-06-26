@@ -29,7 +29,6 @@ import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
-import org.apache.druid.guice.AWSModule;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
@@ -378,7 +377,6 @@ public class Initialization
         new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
-        new AWSModule(),
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),

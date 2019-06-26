@@ -26,8 +26,9 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SequenceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -112,14 +113,14 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SeekableStreamPartitions<Integer, Long> deserializePartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<Integer, Long> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
   {
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
-        SeekableStreamPartitions.class,
-        SeekableStreamPartitions.class,
+        SeekableStreamEndSequenceNumbers.class,
+        SeekableStreamEndSequenceNumbers.class,
         Integer.class,
         Long.class
     ));
@@ -185,7 +186,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
-      SeekableStreamPartitions<Integer, Long> partitions
+      SeekableStreamSequenceNumbers<Integer, Long> partitions
   )
   {
     return new KafkaDataSourceMetadata(partitions);
@@ -201,8 +202,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
       RecordSupplier<Integer, Long> recordSupplier,
-      Set<StreamPartition<Integer>> assignment,
-      Map<Integer, Long> currOffsets
+      Set<StreamPartition<Integer>> assignment
   )
   {
     // do nothing

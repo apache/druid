@@ -68,7 +68,7 @@ There are 7 main parts to a timeseries query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "timeseries"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
+|queryType|This String should always be "timeseries"; this is the first thing Apache Druid (incubating) looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
 |descending|Whether to make descending ordered result. Default is `false`(ascending).|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
@@ -76,6 +76,7 @@ There are 7 main parts to a timeseries query:
 |filter|See [Filters](../querying/filters.html)|no|
 |aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
+|limit|An integer that limits the number of results. The default is unlimited.|no|
 |context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [zero-filling](#zero-filling). See also [Context](../querying/query-context.html) for parameters that apply to all query types.|no|
 
 To pull it all together, the above query would return 2 data points, one for each day between 2012-01-01 and 2012-01-03, from the "sample\_datasource" table. Each data point would be the (long) sum of sample\_fieldName1, the (double) sum of sample\_fieldName2 and the (double) result of sample\_fieldName1 divided by sample\_fieldName2 for the filter set. The output looks like this:

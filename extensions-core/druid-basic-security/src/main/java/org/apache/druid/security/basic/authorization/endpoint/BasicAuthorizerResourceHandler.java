@@ -37,7 +37,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response getAllGroupMappings(String authorizerName);
 
-  Response getUser(String authorizerName, String userName, boolean isFull);
+  Response getUser(String authorizerName, String userName, boolean isFull, boolean simplifyPermissions);
 
   Response getGroupMapping(String authorizerName, String groupMappingName, boolean isFull);
 
@@ -51,7 +51,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response getAllRoles(String authorizerName);
 
-  Response getRole(String authorizerName, String roleName, boolean isFull);
+  Response getRole(String authorizerName, String roleName, boolean isFull, boolean simplifyPermissions);
 
   Response createRole(String authorizerName, String roleName);
 

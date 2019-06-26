@@ -22,32 +22,38 @@ package org.apache.druid.query.aggregation.bloom;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.DimensionSelector;
 
+import java.nio.ByteBuffer;
+
 public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator<DimensionSelector>
 {
-  StringBloomFilterAggregator(DimensionSelector selector, BloomKFilter collector)
+  StringBloomFilterAggregator(DimensionSelector selector, int maxNumEntries, boolean onHeap)
   {
-    super(selector, collector);
+    super(selector, maxNumEntries, onHeap);
   }
 
   @Override
-  public void aggregate()
+  public void bufferAdd(ByteBuffer buf)
   {
-    // note: there might be room for optimization here but behavior must match BloomDimFilter implementation
+    stringBufferAdd(buf, selector);
+  }
+
+  static void stringBufferAdd(ByteBuffer buf, DimensionSelector selector)
+  {
     if (selector.getRow().size() > 1) {
       selector.getRow().forEach(v -> {
         String value = selector.lookupName(v);
         if (value == null) {
-          collector.addBytes(null, 0, 0);
+          BloomKFilter.addBytes(buf, null, 0, 0);
         } else {
-          collector.addString(value);
+          BloomKFilter.addString(buf, value);
         }
       });
     } else {
       String value = (String) selector.getObject();
       if (value == null) {
-        collector.addBytes(null, 0, 0);
+        BloomKFilter.addBytes(buf, null, 0, 0);
       } else {
-        collector.addString(value);
+        BloomKFilter.addString(buf, value);
       }
     }
   }

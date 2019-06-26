@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -151,18 +150,6 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false
-    );
-  }
-
-  @Override
-  public DruidOuterQueryRel asBindable()
-  {
-    return new DruidOuterQueryRel(
-        getCluster(),
-        getTraitSet().plus(BindableConvention.INSTANCE),
-        sourceRel,
-        partialQuery,
-        getQueryMaker()
     );
   }
 

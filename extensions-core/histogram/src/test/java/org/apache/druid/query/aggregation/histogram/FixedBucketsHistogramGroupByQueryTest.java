@@ -164,7 +164,8 @@ public class FixedBucketsHistogramGroupByQueryTest
         10,
         0,
         2000,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
@@ -206,7 +207,7 @@ public class FixedBucketsHistogramGroupByQueryTest
                 0,
                 0,
                 0
-            )
+            ).toString()
         )
     );
 
@@ -223,7 +224,8 @@ public class FixedBucketsHistogramGroupByQueryTest
         10,
         0,
         2000,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
     );
 
     GroupByQuery query = new GroupByQuery.Builder()

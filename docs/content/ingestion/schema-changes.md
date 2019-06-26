@@ -24,7 +24,7 @@ title: "Schema Changes"
 
 # Schema Changes
 
-Schemas for datasources can change at any time and Druid supports different schemas among segments.
+Schemas for datasources can change at any time and Apache Druid (incubating) supports different schemas among segments.
 
 ## Replacing Segments
 

@@ -26,7 +26,7 @@ title: "Loading extensions"
 
 ## Loading core extensions
 
-Druid bundles all [core extensions](../development/extensions.html#core-extensions) out of the box. 
+Apache Druid (incubating) bundles all [core extensions](../development/extensions.html#core-extensions) out of the box. 
 See the [list of extensions](../development/extensions.html#core-extensions) for your options. You 
 can load bundled extensions by adding their names to your common.runtime.properties 
 `druid.extensions.loadList` property. For example, to load the *postgresql-metadata-storage* and 

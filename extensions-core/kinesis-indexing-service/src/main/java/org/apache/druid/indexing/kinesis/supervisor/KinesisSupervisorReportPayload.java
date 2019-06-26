@@ -19,9 +19,11 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 
 import java.util.Collections;
+import java.util.List;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -31,7 +33,11 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Integer partitions,
       Integer replicas,
       Long durationSeconds,
-      boolean suspended
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
@@ -44,7 +50,11 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         Collections.emptyMap(),
         null,
         null,
-        suspended
+        suspended,
+        healthy,
+        state,
+        detailedState,
+        recentErrors
     );
   }
 
@@ -59,7 +69,11 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", durationSeconds=" + getDurationSeconds() +
            ", active=" + getActiveTasks() +
            ", publishing=" + getPublishingTasks() +
-           ", suspended=" + getSuspended() +
+           ", suspended=" + isSuspended() +
+           ", healthy=" + isHealthy() +
+           ", state=" + getState() +
+           ", detailedState=" + getDetailedState() +
+           ", recentErrors=" + getRecentErrors() +
            '}';
   }
 

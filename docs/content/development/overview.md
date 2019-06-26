@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Developing on Druid"
+title: "Developing on Apache Druid (incubating)"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Developing on Druid"
   ~ under the License.
   -->
 
-# Developing on Druid
+# Developing on Apache Druid (incubating)
 
 Druid's codebase consists of several major components. For developers interested in learning the code, this document provides 
 a high level overview of the main components that make up Druid and the relevant classes to start from to learn the code.
@@ -73,4 +73,4 @@ At some point in the future, we will likely move the internal UI code out of cor
 ## Client Libraries
 
 We welcome contributions for new client libraries to interact with Druid. See client 
-[libraries](../development/libraries.html) for existing client libraries.
+[libraries](/libraries.html) for existing client libraries.

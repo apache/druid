@@ -22,15 +22,17 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -38,9 +40,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -48,24 +49,25 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +75,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
@@ -102,9 +105,17 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
-  private ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
+  // Volatile since this reference is reassigned in "poll" and then read from in other threads.
+  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty dataSources map and
+  // empty overshadowedSegments set).
+  // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
+  // null and nonnull multiple times as stop() and start() are called.
+  @Nullable
+  private volatile DataSourcesSnapshot dataSourcesSnapshot = null;
 
-  /** The number of times this SQLMetadataSegmentManager was started. */
+  /**
+   * The number of times this SQLMetadataSegmentManager was started.
+   */
   private long startCount = 0;
   /**
    * Equal to the current {@link #startCount} value, if the SQLMetadataSegmentManager is currently started; -1 if
@@ -199,8 +210,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       if (!isStarted()) {
         return;
       }
-
-      dataSources = new ConcurrentHashMap<>();
+      dataSourcesSnapshot = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -210,83 +220,200 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  private Pair<DataSegment, Boolean> usedPayloadMapper(
+      final int index,
+      final ResultSet resultSet,
+      final StatementContext context
+  ) throws SQLException
+  {
+    try {
+      return new Pair<>(
+          jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class),
+          resultSet.getBoolean("used")
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Gets a list of all datasegments that overlap the provided interval along with thier used status.
+   */
+  private List<Pair<DataSegment, Boolean>> getDataSegmentsOverlappingInterval(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> handle.createQuery(
+            StringUtils.format(
+                "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start",
+                getSegmentsTable(),
+                connector.getQuoteString()
+            )
+        )
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("dataSource", dataSource)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString())
+        .map(this::usedPayloadMapper)
+        .list()
+    );
+  }
+
+  private List<Pair<DataSegment, Boolean>> getDataSegments(
+      final String dataSource,
+      final Collection<String> segmentIds,
+      final Handle handle
+  )
+  {
+    return segmentIds.stream().map(
+        segmentId -> Optional.ofNullable(
+            handle.createQuery(
+                StringUtils.format(
+                    "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
+                    getSegmentsTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("id", segmentId)
+            .map(this::usedPayloadMapper)
+            .first()
+        )
+        .orElseThrow(() -> new UnknownSegmentIdException(StringUtils.format("Cannot find segment id [%s]", segmentId)))
+    )
+    .collect(Collectors.toList());
+  }
+
+  /**
+   * Builds a VersionedIntervalTimeline containing used segments that overlap the intervals passed.
+   */
+  private VersionedIntervalTimeline<String, DataSegment> buildVersionedIntervalTimeline(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final Handle handle
+  )
+  {
+    return VersionedIntervalTimeline.forSegments(intervals
+        .stream()
+        .flatMap(interval -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end AND %2$send%2$s > :start AND used = true",
+                    getSegmentsTable(),
+                    connector.getQuoteString()
+                )
+            )
+            .setFetchSize(connector.getStreamingFetchSize())
+            .bind("dataSource", dataSource)
+            .bind("start", interval.getStart().toString())
+            .bind("end", interval.getEnd().toString())
+            .map((i, resultSet, context) -> {
+              try {
+                return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            })
+            .list()
+            .stream()
+        )
+        .iterator()
+    );
+  }
+
   @Override
   public boolean enableDataSource(final String dataSource)
   {
     try {
-      final IDBI dbi = connector.getDBI();
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          (handle, status) -> VersionedIntervalTimeline.forSegments(
-              Iterators.transform(
-                  handle
-                      .createQuery(
-                          StringUtils.format(
-                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                              getSegmentsTable()
-                          )
-                      )
-                      .setFetchSize(connector.getStreamingFetchSize())
-                      .bind("dataSource", dataSource)
-                      .map(ByteArrayMapper.FIRST)
-                      .iterator(),
-                  payload -> {
-                    try {
-                      return jsonMapper.readValue(payload, DataSegment.class);
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-              )
-
-          )
-      );
-
-      final List<DataSegment> segments = new ArrayList<>();
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
-          Intervals.of("0000-01-01/3000-01-01")
-      );
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
-        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
-          segments.add(partitionChunk.getObject());
-        }
-      }
-
-      if (segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return false;
-      }
-
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              Batch batch = handle.createBatch();
-
-              for (DataSegment segment : segments) {
-                batch.add(
-                    StringUtils.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
-                        getSegmentsTable(),
-                        segment.getId()
-                    )
-                );
-              }
-              batch.execute();
-
-              return null;
-            }
-          }
-      );
+      return enableSegments(dataSource, Intervals.ETERNITY) != 0;
     }
     catch (Exception e) {
       log.error(e, "Exception enabling datasource %s", dataSource);
       return false;
     }
+  }
 
-    return true;
+  @Override
+  public int enableSegments(final String dataSource, final Interval interval)
+  {
+    List<Pair<DataSegment, Boolean>> segments = getDataSegmentsOverlappingInterval(dataSource, interval);
+    List<DataSegment> segmentsToEnable = segments.stream()
+        .filter(segment -> !segment.rhs && interval.contains(segment.lhs.getInterval()))
+        .map(segment -> segment.lhs)
+        .collect(Collectors.toList());
+
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = VersionedIntervalTimeline.forSegments(
+        segments.stream().filter(segment -> segment.rhs).map(segment -> segment.lhs).iterator()
+    );
+    VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segmentsToEnable.iterator());
+
+    return enableSegments(
+        segmentsToEnable,
+        versionedIntervalTimeline
+    );
+  }
+
+  @Override
+  public int enableSegments(final String dataSource, final Collection<String> segmentIds)
+  {
+    Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> data = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          List<DataSegment> segments = getDataSegments(dataSource, segmentIds, handle)
+              .stream()
+              .filter(pair -> !pair.rhs)
+              .map(pair -> pair.lhs)
+              .collect(Collectors.toList());
+
+          VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = buildVersionedIntervalTimeline(
+              dataSource,
+              JodaUtils.condenseIntervals(segments.stream().map(segment -> segment.getInterval()).collect(Collectors.toList())),
+              handle
+          );
+          VersionedIntervalTimeline.addSegments(versionedIntervalTimeline, segments.iterator());
+
+          return new Pair<>(
+              segments,
+              versionedIntervalTimeline
+          );
+        }
+    );
+
+    return enableSegments(
+        data.lhs,
+        data.rhs
+    );
+  }
+
+  private int enableSegments(
+      final Collection<DataSegment> segments,
+      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline
+  )
+  {
+    if (segments.isEmpty()) {
+      log.warn("No segments found to update!");
+      return 0;
+    }
+
+    return connector.getDBI().withHandle(handle -> {
+      Batch batch = handle.createBatch();
+      segments
+          .stream()
+          .map(segment -> segment.getId())
+          .filter(segmentId -> !versionedIntervalTimeline.isOvershadowed(
+              segmentId.getInterval(),
+              segmentId.getVersion()
+          ))
+          .forEach(segmentId -> batch.add(
+              StringUtils.format(
+                  "UPDATE %s SET used=true WHERE id = '%s'",
+                  getSegmentsTable(),
+                  segmentId
+              )
+          ));
+      return batch.execute().length;
+    });
   }
 
   @Override
@@ -325,8 +452,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
-      dataSources.remove(dataSource);
-
       if (removed == 0) {
         return false;
       }
@@ -339,30 +464,15 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     return true;
   }
 
+  /**
+   * This method does not update {@code dataSourcesSnapshot}, see the comments in {@code doPoll()} about
+   * snapshot update. The segment removal will be reflected after next poll cyccle runs.
+   */
   @Override
-  public boolean removeSegment(String dataSourceName, final String segmentId)
+  public boolean removeSegment(String segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId);
-
-      // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
-      // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
-      List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      dataSources.computeIfPresent(
-          dataSourceName,
-          (dsName, dataSource) -> {
-            for (SegmentId possibleSegmentId : possibleSegmentIds) {
-              if (dataSource.removeSegment(possibleSegmentId) != null) {
-                break;
-              }
-            }
-            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
-            return dataSource.isEmpty() ? null : dataSource;
-          }
-      );
-
-      return removed;
+      return removeSegmentFromTable(segmentId);
     }
     catch (Exception e) {
       log.error(e, e.toString());
@@ -371,24 +481,57 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeSegment(SegmentId segmentId)
+  public long disableSegments(String dataSource, Collection<String> segmentIds)
   {
+    if (segmentIds.isEmpty()) {
+      return 0;
+    }
+    final long[] result = new long[1];
     try {
-      final boolean removed = removeSegmentFromTable(segmentId.toString());
-      dataSources.computeIfPresent(
-          segmentId.getDataSource(),
-          (dsName, dataSource) -> {
-            dataSource.removeSegment(segmentId);
-            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
-            return dataSource.isEmpty() ? null : dataSource;
-          }
-      );
-      return removed;
+      connector.getDBI().withHandle(handle -> {
+        Batch batch = handle.createBatch();
+        segmentIds
+            .forEach(segmentId -> batch.add(
+                StringUtils.format(
+                    "UPDATE %s SET used=false WHERE datasource = '%s' AND id = '%s' ",
+                    getSegmentsTable(),
+                    dataSource,
+                    segmentId
+                )
+            ));
+        final int[] resultArr = batch.execute();
+        result[0] = Arrays.stream(resultArr).filter(x -> x > 0).count();
+        return result[0];
+      });
     }
     catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
+      throw new RuntimeException(e);
+    }
+    return result[0];
+  }
+
+  @Override
+  public int disableSegments(String dataSource, Interval interval)
+  {
+    try {
+      return connector.getDBI().withHandle(
+          handle -> handle
+              .createStatement(
+                  StringUtils
+                      .format(
+                          "UPDATE %s SET used=false WHERE datasource = :datasource "
+                          + "AND start >= :start AND %2$send%2$s <= :end",
+                          getSegmentsTable(),
+                          connector.getQuoteString()
+                      ))
+              .bind("datasource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -422,17 +565,47 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public ImmutableDruidDataSource getDataSource(String dataSourceName)
   {
-    final DruidDataSource dataSource = dataSources.get(dataSourceName);
-    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
+    final ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                        .map(m -> m.getDataSourcesMap().get(dataSourceName))
+                                                        .orElse(null);
+    return dataSource == null ? null : dataSource;
   }
 
   @Override
+  @Nullable
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return dataSources.values()
-                      .stream()
-                      .map(DruidDataSource::toImmutableDruidDataSource)
-                      .collect(Collectors.toList());
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getDataSources()).orElse(null);
+  }
+
+  @Override
+  @Nullable
+  public Iterable<DataSegment> iterateAllSegments()
+  {
+    final Collection<ImmutableDruidDataSource> dataSources = Optional.ofNullable(dataSourcesSnapshot)
+                                                                     .map(m -> m.getDataSources())
+                                                                     .orElse(null);
+    if (dataSources == null) {
+      return null;
+    }
+
+    return () -> dataSources.stream()
+                            .flatMap(dataSource -> dataSource.getSegments().stream())
+                            .iterator();
+  }
+
+  @Override
+  @Nullable
+  public Set<SegmentId> getOvershadowedSegments()
+  {
+    return Optional.ofNullable(dataSourcesSnapshot).map(m -> m.getOvershadowedSegments()).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
   }
 
   @Override
@@ -537,13 +710,26 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
-    dataSources = newDataSources;
+    // dataSourcesSnapshot is updated only here, please note that if datasources or segments are enabled or disabled
+    // outside of poll, the dataSourcesSnapshot can become invalid until the next poll cycle.
+    // DataSourcesSnapshot computes the overshadowed segments, which makes it an expensive operation if the
+    // snapshot is invalidated on each segment removal, especially if a user issues a lot of single segment remove
+    // calls in rapid succession. So the snapshot update is not done outside of poll at this time.
+    // Updates outside of poll(), were primarily for the user experience, so users would immediately see the effect of
+    // a segment remove call reflected in MetadataResource API calls. These updates outside of scheduled poll may be
+    // added back in removeDataSource and removeSegment methods after the on-demand polling changes from
+    // https://github.com/apache/incubator-druid/pull/7653 are in.
+    final Map<String, ImmutableDruidDataSource> updatedDataSources = CollectionUtils.mapValues(
+        newDataSources,
+        v -> v.toImmutableDruidDataSource()
+    );
+    dataSourcesSnapshot = new DataSourcesSnapshot(updatedDataSources);
   }
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and then replace them in {@link #dataSources}. This method allows to use already
+   * existing segments each time, and then replace them in {@link #dataSourcesSnapshot}. This method allows to use already
    * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
    * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
@@ -551,7 +737,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = dataSources.get(segment.getDataSource());
+    ImmutableDruidDataSource dataSource = Optional.ofNullable(dataSourcesSnapshot)
+                                                  .map(m -> m.getDataSourcesMap().get(segment.getDataSource()))
+                                                  .orElse(null);
     if (dataSource == null) {
       return segment;
     }

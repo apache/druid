@@ -1,0 +1,42 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`load data view matches snapshot 1`] = `
+<div
+  className="load-data-view app-view init"
+>
+  <div
+    className="intro"
+  >
+    Please specify where your raw data is located
+  </div>
+  <div
+    className="cards"
+  >
+    <Blueprint3.Card
+      elevation={0}
+      interactive={true}
+      onClick={[Function]}
+    >
+      Other (streaming)
+    </Blueprint3.Card>
+    <Blueprint3.Card
+      elevation={0}
+      interactive={true}
+      onClick={[Function]}
+    >
+      Other (batch)
+    </Blueprint3.Card>
+  </div>
+  <Blueprint3.Alert
+    canEscapeKeyCancel={false}
+    canOutsideClickCancel={false}
+    confirmButtonText="Close"
+    icon="warning-sign"
+    intent="warning"
+    isOpen={false}
+    onConfirm={[Function]}
+  >
+    <p />
+  </Blueprint3.Alert>
+</div>
+`;

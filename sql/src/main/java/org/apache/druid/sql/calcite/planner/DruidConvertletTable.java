@@ -42,10 +42,6 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   // Apply a convertlet that doesn't do anything other than a "dumb" call translation.
   private static final SqlRexConvertlet BYPASS_CONVERTLET = StandardConvertletTable.INSTANCE::convertCall;
 
-  // Apply the default convertlet found in StandardConvertletTable, which may do "smart" things.
-  private static final SqlRexConvertlet STANDARD_CONVERTLET =
-      (cx, call) -> StandardConvertletTable.INSTANCE.get(call).convertCall(cx, call);
-
   private static final List<SqlOperator> CURRENT_TIME_CONVERTLET_OPERATORS =
       ImmutableList.<SqlOperator>builder()
           .add(SqlStdOperatorTable.CURRENT_TIMESTAMP)
@@ -68,6 +64,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
           .add(SqlStdOperatorTable.SYMMETRIC_NOT_BETWEEN)
           .add(SqlStdOperatorTable.ITEM)
           .add(SqlStdOperatorTable.TIMESTAMP_ADD)
+          .add(SqlStdOperatorTable.TIMESTAMP_DIFF)
           .add(SqlStdOperatorTable.UNION)
           .add(SqlStdOperatorTable.UNION_ALL)
           .build();
@@ -111,10 +108,6 @@ public class DruidConvertletTable implements SqlRexConvertletTable
 
     for (SqlOperator operator : CURRENT_TIME_CONVERTLET_OPERATORS) {
       table.put(operator, currentTimestampAndFriends);
-    }
-
-    for (SqlOperator operator : STANDARD_CONVERTLET_OPERATORS) {
-      table.put(operator, STANDARD_CONVERTLET);
     }
 
     return table;

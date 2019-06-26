@@ -31,7 +31,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.16.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -87,8 +87,8 @@
                         <configuration>
                             <target>
                                 <concat destfile="${project.build.directory}/../../README.BINARY">
-                                    <fileset file="${project.build.directory}/../../README.md" />
-                                    <fileset file="${project.build.directory}/../../LABELS.md" />
+                                    <fileset file="${project.build.directory}/../../README" />
+                                    <fileset file="${project.build.directory}/../../LABELS" />
                                 </concat>
                             </target>
                         </configuration>
@@ -116,6 +116,20 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
+                            <execution>
+                                <id>versionify-readme</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.parent.basedir}/docs/_bin/build-textfile-readme.sh</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.parent.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
@@ -170,6 +184,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-orc-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
@@ -177,6 +193,10 @@
                                         <argument>org.apache.druid.extensions:druid-kerberos</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-stats</argument>
                                         <argument>-c</argument>
@@ -300,11 +320,11 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-influx-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
@@ -315,8 +335,6 @@
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
@@ -331,6 +349,9 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

@@ -24,7 +24,7 @@ title: "Aggregations"
 
 # Aggregations
 
-Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Druid. 
+Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid (incubating). 
 Aggregations can also be specified as part of many queries at query time.
 
 Available aggregations are:
@@ -271,29 +271,40 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 
 #### DataSketches Theta Sketch
 
-The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](https://datasketches.github.io/) library.
 
 #### DataSketches HLL Sketch
 
-The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator gives distinct count estimates using the HyperLogLog algorithm. The HLL Sketch is faster and requires less storage than the Theta Sketch, but does not support intersection or difference operations.
+The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator gives distinct count estimates using the HyperLogLog algorithm.
 
-#### Cardinality/HyperUnique (Deprecated)
+Compared to the Theta sketch, the HLL sketch does not support set operations and has slightly slower update and merge speed, but requires significantly less space.
 
-<div class="note caution">
-The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+#### Cardinality, hyperUnique
+
+<div class="note info">
+For new use cases, we recommend evaluating <a href="../development/extensions-core/datasketches-theta.html">DataSketches Theta Sketch</a> or <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+The DataSketches aggregators are generally able to offer more flexibility and better accuracy than the classic Druid `cardinality` and `hyperUnique` aggregators.
 </div>
 
-The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator has superior accuracy and performance and is recommended instead. 
+The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer DataSketches Theta and HLL extension-provided aggregators described above have superior accuracy and performance and are recommended instead. 
 
-The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we have deprecated Druid's original HLL aggregator.
+The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we are recommending using them in preference to Druid's original HLL-based aggregators.
+However, to ensure backwards compatibility, we will continue to support the classic aggregators.
 
-Please note that DataSketches HLL aggregators and `hyperUnique` aggregators are not mutually compatible.
+Please note that `hyperUnique` aggregators are not mutually compatible with Datasketches HLL or Theta sketches.
+
+##### Multi-column handling
+
+Note the DataSketches Theta and HLL aggregators currently only support single-column inputs. If you were previously using the Cardinality aggregator with multiple-column inputs, equivalent operations using Theta or HLL sketches are described below:
+
+* Multi-column `byValue` Cardinality can be replaced with a union of Theta sketches on the individual input columns
+* Multi-column `byRow` Cardinality can be replaced with a Theta or HLL sketch on a single [virtual column](../querying/virtual-columns.html) that combines the individual input columns.
 
 ### Histograms and quantiles
 
 #### DataSketches Quantiles Sketch
 
-The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](https://datasketches.github.io/) library.
 
 We recommend this aggregator in general for quantiles/histogram use cases, as it provides formal error bounds and has distribution-independent accuracy.
 
@@ -307,13 +318,19 @@ As a general guideline for experimentation, the [Moments Sketch paper](https://a
 
 #### Fixed Buckets Histogram
 
-Druid also provides a [simple histogram implementation]((../development/extensions-core/approxiate-histograms.html#fixed-buckets-histogram) that uses a fixed range and fixed number of buckets with support for quantile estimation, backed by an array of bucket count values.
+Druid also provides a [simple histogram implementation](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) that uses a fixed range and fixed number of buckets with support for quantile estimation, backed by an array of bucket count values.
 
 The fixed buckets histogram can perform well when the distribution of the input data allows a small number of buckets to be used.
 
 We do not recommend the fixed buckets histogram for general use, as its usefulness is extremely data dependent. However, it is made available for users that have already identified use cases where a fixed buckets histogram is suitable.
 
-#### Approximate Histogram (Deprecated)
+#### Approximate Histogram (deprecated)
+
+<div class="note caution">
+The Approximate Histogram aggregator is deprecated.
+There are a number of other quantile estimation algorithms that offer better performance, accuracy, and memory footprint.
+We recommend using <a href="../development/extensions-core/datasketches-quantiles.html">DataSketches Quantiles</a> instead.
+</div>
 
 The [Approximate Histogram](../development/extensions-core/approximate-histograms.html) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 
@@ -326,7 +343,7 @@ A [study published by the DataSketches team](https://datasketches.github.io/docs
 
 It is not possible to determine a priori how well this aggregator will behave for a given input stream, nor does the aggregator provide any indication that serious distortions are present in the output.
 
-For these reasons, we have deprecated this aggregator and do not recommend its use.
+For these reasons, we have deprecated this aggregator and recommend using the DataSketches Quantiles aggregator instead for new and existing use cases, although we will continue to support Approximate Histogram for backwards compatibility.
 
 ## Miscellaneous Aggregations
 

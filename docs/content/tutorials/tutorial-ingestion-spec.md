@@ -26,7 +26,7 @@ title: "Tutorial: Writing an ingestion spec"
 
 This tutorial will guide the reader through the process of defining an ingestion spec, pointing out key considerations and guidelines.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in 
+For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).
@@ -634,7 +634,7 @@ We've finished defining the ingestion spec, it should now look like the followin
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/post-index-task --file quickstart/ingestion-tutorial-index.json 
+bin/post-index-task --file quickstart/ingestion-tutorial-index.json --url http://localhost:8081
 ```
 
 After the script completes, we will query the data.

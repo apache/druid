@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -82,18 +81,16 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      Supplier<SelectQueryConfig> configSupplier
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, DefaultSelectQueryMetricsFactory.instance());
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, DefaultSelectQueryMetricsFactory.instance());
   }
 
   @Inject
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      Supplier<SelectQueryConfig> configSupplier,
       SelectQueryMetricsFactory queryMetricsFactory
   )
   {
@@ -234,6 +231,12 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         queryCacheKey.put(virtualColumnsCacheKey);
 
         return queryCacheKey.array();
+      }
+
+      @Override
+      public byte[] computeResultLevelCacheKey(SelectQuery query)
+      {
+        return computeCacheKey(query);
       }
 
       @Override

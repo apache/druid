@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -232,6 +234,15 @@ public class HavingSpecTest
     {
       counter.incrementAndGet();
       return value;
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_COUNTING)
+          .appendByte((byte) (value ? 1 : 0))
+          .appendByteArray(StringUtils.toUtf8(String.valueOf(counter)))
+          .build();
     }
   }
 

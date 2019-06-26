@@ -26,7 +26,7 @@ title: "Tutorial: Updating existing data"
 
 This tutorial demonstrates how to update existing data, showing both overwrites and appends.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in 
+For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).
@@ -44,7 +44,7 @@ The spec we'll use for this tutorial is located at `quickstart/tutorial/updates-
 Let's submit that task:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/updates-init-index.json 
+bin/post-index-task --file quickstart/tutorial/updates-init-index.json --url http://localhost:8081
 ```
 
 We have three initial rows containing an "animal" dimension and "number" metric:
@@ -72,7 +72,7 @@ Note that this task reads input from `quickstart/tutorial/updates-data2.json`, a
 Let's submit that task:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/updates-overwrite-index.json 
+bin/post-index-task --file quickstart/tutorial/updates-overwrite-index.json --url http://localhost:8081
 ```
 
 When Druid finishes loading the new segment from this overwrite task, the "tiger" row now has the value "lion", the "aardvark" row has a different number, and the "giraffe" row has been replaced. It may take a couple of minutes for the changes to take effect:
@@ -98,7 +98,7 @@ The `quickstart/tutorial/updates-append-index.json` task spec has been configure
 Let's submit that task:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/updates-append-index.json 
+bin/post-index-task --file quickstart/tutorial/updates-append-index.json --url http://localhost:8081
 ```
 
 When Druid finishes loading the new segment from this overwrite task, the new rows will have been added to the datasource. Note that roll-up occurred for the "lion" row:
@@ -127,7 +127,7 @@ The `quickstart/tutorial/updates-append-index2.json` task spec reads input from 
 Let's submit that task:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/updates-append-index2.json 
+bin/post-index-task --file quickstart/tutorial/updates-append-index2.json --url http://localhost:8081
 ```
 
 When the new data is loaded, we can see two additional rows after "octopus". Note that the new "bear" row with number 222 has not been rolled up with the existing bear-111 row, because the new data is held in a separate segment.

@@ -30,7 +30,9 @@ import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 
 public class TaskRealtimeMetricsMonitorBuilder
 {
-  private TaskRealtimeMetricsMonitorBuilder() {}
+  private TaskRealtimeMetricsMonitorBuilder()
+  {
+  }
 
   public static RealtimeMetricsMonitor build(Task task, FireDepartment fireDepartment)
   {

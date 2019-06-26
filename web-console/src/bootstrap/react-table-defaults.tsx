@@ -16,20 +16,17 @@
  * limitations under the License.
  */
 
-import { Button } from "@blueprintjs/core";
-import * as React from 'react';
-import { Filter, ReactTableDefaults } from "react-table";
+import React from 'react';
+import { Filter, ReactTableDefaults } from 'react-table';
 
-import { Loader } from '../components/loader';
-import { countBy, makeTextFilter } from '../utils';
+import { Loader } from '../components';
+import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
-class FullButton extends React.Component {
-  render() {
-    return <Button className="pt-fill" {...this.props}/>;
-  }
-}
+import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
-class NoData extends React.Component {
+/* tslint:disable:max-classes-per-file */
+
+class NoData extends React.PureComponent {
   render() {
     const { children } = this.props;
     if (!children) return null;
@@ -37,21 +34,33 @@ class NoData extends React.Component {
   }
 }
 
+/* tslint:enable:max-classes-per-file */
+
 Object.assign(ReactTableDefaults, {
+  className: '-striped -highlight',
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
     const id = filter.pivotId || filter.id;
-    return row[id] !== undefined ? String(row[id]).includes(filter.value) : true;
+    return booleanCustomTableFilter(filter, row[id]);
   },
   LoadingComponent: Loader,
   loadingText: '',
   NoDataComponent: NoData,
   FilterComponent: makeTextFilter(),
-  PreviousComponent: FullButton,
-  NextComponent: FullButton,
+  PaginationComponent: ReactTableCustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
-    const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);
+    const previewValues = subRows
+      .filter((d: any) => typeof d[column.id] !== 'undefined')
+      .map((row: any) => row[column.id]);
     const previewCount = countBy(previewValues);
-    return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
-  }
+    return (
+      <span>
+        {Object.keys(previewCount)
+          .sort()
+          .map(v => `${v} (${previewCount[v]})`)
+          .join(', ')}
+      </span>
+    );
+  },
+  defaultPageSize: 20,
 });

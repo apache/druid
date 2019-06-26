@@ -26,7 +26,7 @@ title: "Tutorial: Configuring data retention"
 
 This tutorial demonstrates how to configure retention rules on a datasource to set the time intervals of data that will be retained or dropped.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in 
+For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
@@ -38,7 +38,7 @@ For this tutorial, we'll be using the Wikipedia edits sample data, with an inges
 The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/retention-index.json 
+bin/post-index-task --file quickstart/tutorial/retention-index.json --url http://localhost:8081
 ```
 
 After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the Druid Console's datasource view.

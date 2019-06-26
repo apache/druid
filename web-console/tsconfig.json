@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "experimentalDecorators": true,
     "noImplicitAny": true,
     "noEmitOnError": true,
     "declaration": false,
@@ -10,6 +11,7 @@
     "strictFunctionTypes": false,
     "skipLibCheck": true,
     "importHelpers": true,
+    "esModuleInterop": true,
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -19,13 +21,9 @@
 
     "outDir": "build"
   },
-
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "lib/sql-function-doc.ts"
-  ],
-  "exclude": [
-    "**/*.test.ts"
   ]
 }

@@ -24,7 +24,7 @@ title: "Hadoop-based Batch Ingestion"
 
 # Hadoop-based Batch Ingestion
 
-Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
+Apache Hadoop-based batch ingestion in Apache Druid (incubating) is supported via a Hadoop-ingestion task. These tasks can be posted to a running
 instance of a Druid [Overlord](../design/overlord.html).
 
 Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
@@ -198,6 +198,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
 |logParseExceptions|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
 |maxParseExceptions|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overrides `ignoreInvalidRows` if `maxParseExceptions` is defined.|unlimited|no|
+|useYarnRMJobStatusFallback|Boolean|If the Hadoop jobs created by the indexing task are unable to retrieve their completion status from the JobHistory server, and this parameter is true, the indexing task will try to fetch the application status from `http://<yarn-rm-address>/ws/v1/cluster/apps/<application-id>`, where `<yarn-rm-address>` is the value of `yarn.resourcemanager.webapp.address` in your Hadoop configuration. This flag is intended as a fallback for cases where an indexing task's jobs succeed, but the JobHistory server is unavailable, causing the indexing task to fail because it cannot determine the job statuses.|no (default = true)|
 
 ### jobProperties field of TuningConfig
 

@@ -24,7 +24,7 @@ title: "HTTP Compression"
 
 # HTTP Compression
 
-Druid supports http request decompression and response compression, to use this, http request header `Content-Encoding:gzip` and  `Accept-Encoding:gzip` is needed to be set.
+Apache Druid (incubating) supports http request decompression and response compression, to use this, http request header `Content-Encoding:gzip` and  `Accept-Encoding:gzip` is needed to be set.
 
 # General Configuration
 

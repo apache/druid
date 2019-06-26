@@ -54,7 +54,7 @@ import java.util.List;
 
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+  private static final List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/status/health",
       // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
@@ -62,17 +62,17 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       DruidAvaticaHandler.AVATICA_PATH
   );
 
-  protected static List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
       "/",
       "/coordinator-console/*",
       "/public/*",
-      "/assets/*",
       "/old-console/*",
       "/pages/*",
       "/unified-console.html",
       "/favicon.png",
       "/console.html",
-      "/index.html"
+      "/index.html",
+      "/console-config.js"
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
@@ -114,7 +114,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    root.addServlet(buildServletHolder(asyncQueryForwardingServlet, routerHttpClientConfig), "/druid/v2/*");
+    ServletHolder queryServletHolder = buildServletHolder(asyncQueryForwardingServlet, routerHttpClientConfig);
+    root.addServlet(queryServletHolder, "/druid/v2/*");
+    root.addServlet(queryServletHolder, "/druid/v1/lookups/*");
 
     if (managementProxyConfig.isEnabled()) {
       ServletHolder managementForwardingServletHolder = buildServletHolder(

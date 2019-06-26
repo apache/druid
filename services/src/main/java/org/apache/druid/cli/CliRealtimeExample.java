@@ -50,11 +50,11 @@ import java.util.concurrent.Executor;
  */
 @Command(
     name = "realtime",
-    description = "Runs a standalone realtime node for examples, see http://druid.io/docs/latest/Realtime.html for a description"
+    description = "Runs a standalone realtime node for examples, see https://druid.apache.org/docs/latest/Realtime.html for a description"
 )
 public class CliRealtimeExample extends ServerRunnable
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  private static final Logger log = new Logger(CliRealtimeExample.class);
 
   @Inject
   private Properties properties;

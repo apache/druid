@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Management UIs"
+title: "Apache Druid (incubating) Management UIs"
 ---
 
 <!--
@@ -42,6 +42,8 @@ http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 The Druid Console contains all of the functionality provided by the older consoles described below, which are still available if needed. The legacy consoles may be replaced by the Druid Console in the future.
+
+For more information on the features of the Druid Console have a look at the [Druid Console overview](./druid-console.html)
 
 ## Legacy Consoles
 

@@ -175,9 +175,7 @@ public class SelectBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     executorService = Execs.multiThreaded(numSegments, "SelectThreadPool");
 
@@ -233,8 +231,7 @@ public class SelectBenchmark
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator(),
-            selectConfigSupplier
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new SelectQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER

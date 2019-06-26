@@ -82,7 +82,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   )
   {
     this.connector = connector;
-    this.jsonMapper = jsonMapper;
+    //fully qualified references required below due to identical package names across project modules.
+    //noinspection UnnecessaryFullyQualifiedName
+    this.jsonMapper = jsonMapper.copy().addMixIn(org.apache.druid.metadata.PasswordProvider.class,
+            org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.logType = types.getLogType();
@@ -357,7 +360,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         task = objectMapper.readValue(resultSet.getBytes("payload"), entryType);
       }
       catch (IOException e) {
-        log.error(e, "Encountered exception while deserializing task payload, setting task to null");
+        log.warn("Encountered exception[%s] while deserializing task payload, setting payload to null", e.getMessage());
         task = null;
       }
       try {

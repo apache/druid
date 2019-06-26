@@ -223,11 +223,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<Throwable>(
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      buildSegmentsSavedParseExceptions = new CircularBuffer<Throwable>(
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
     }
@@ -731,8 +731,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
-    int thrownAway = 0;
-    int unparseable = 0;
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
     try (
@@ -770,9 +768,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
 
           if (determineNumPartitions) {
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-            }
+            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
                 queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
@@ -783,9 +779,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           } else {
             // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
             // for the interval and don't instantiate a HLL collector
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.absent());
-            }
+            hllCollectors.putIfAbsent(interval, Optional.absent());
           }
           determinePartitionsMeters.incrementProcessed();
         }
@@ -807,12 +801,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     // These metrics are reported in generateAndPublishSegments()
-    if (thrownAway > 0) {
-      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
+    if (determinePartitionsMeters.getThrownAway() > 0) {
+      log.warn("Unable to find a matching interval for [%,d] events", determinePartitionsMeters.getThrownAway());
     }
-    if (unparseable > 0) {
-      log.warn("Unable to parse [%,d] events", unparseable);
+    if (determinePartitionsMeters.getUnparseable() > 0) {
+      log.warn("Unable to parse [%,d] events", determinePartitionsMeters.getUnparseable());
     }
+
     return hllCollectors;
   }
 
@@ -1430,6 +1425,28 @@ public class IndexTask extends AbstractTask implements ChatHandler
           reportParseExceptions,
           pushTimeout,
           dir,
+          segmentWriteOutMediumFactory,
+          logParseExceptions,
+          maxParseExceptions,
+          maxSavedParseExceptions
+      );
+    }
+
+    public IndexTuningConfig withMaxTotalRows(Long maxTotalRows)
+    {
+      return new IndexTuningConfig(
+          maxRowsPerSegment,
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxTotalRows,
+          numShards,
+          partitionDimensions,
+          indexSpec,
+          maxPendingPersists,
+          forceGuaranteedRollup,
+          reportParseExceptions,
+          pushTimeout,
+          basePersistDirectory,
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,

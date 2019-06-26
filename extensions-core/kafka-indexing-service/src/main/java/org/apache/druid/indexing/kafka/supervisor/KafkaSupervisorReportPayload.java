@@ -19,15 +19,16 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
 {
-
   public KafkaSupervisorReportPayload(
       String dataSource,
       String topic,
@@ -38,7 +39,11 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable Map<Integer, Long> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
-      boolean suspended
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
@@ -51,10 +56,13 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         minimumLag,
         aggregateLag,
         offsetsLastUpdated,
-        suspended
+        suspended,
+        healthy,
+        state,
+        detailedState,
+        recentErrors
     );
   }
-
 
   @Override
   public String toString()
@@ -71,8 +79,11 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
            (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
            (getOffsetsLastUpdated() != null ? ", sequenceLastUpdated=" + getOffsetsLastUpdated() : "") +
-           ", suspended=" + getSuspended() +
+           ", suspended=" + isSuspended() +
+           ", healthy=" + isHealthy() +
+           ", state=" + getState() +
+           ", detailedState=" + getDetailedState() +
+           ", recentErrors=" + getRecentErrors() +
            '}';
   }
-
 }

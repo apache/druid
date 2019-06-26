@@ -69,7 +69,7 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public synchronized Object get(final ByteBuffer buffer, final int position)
   {
-    return sketches.get(buffer).get(position);
+    return sketches.get(buffer).get(position).compact();
   }
 
   @Override

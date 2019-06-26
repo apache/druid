@@ -19,12 +19,12 @@
 
 package org.apache.druid.common.config;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.util.Cancellable;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -158,7 +158,9 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
     private synchronized boolean compareAndSet(State expected, State transition)
     {
       if (current == expected) {
-        return transition(transition);
+        current = transition;
+        notifyAll();
+        return true;
       }
       return false;
     }
@@ -187,13 +189,6 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
         }
       }
       return current;
-    }
-
-    private synchronized boolean transition(State transition)
-    {
-      current = transition;
-      notifyAll();
-      return true;
     }
 
     private synchronized State get()
