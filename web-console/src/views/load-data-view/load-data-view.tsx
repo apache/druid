@@ -532,7 +532,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
-            <Button icon={IconNames.UNDO} text="Reset spec" onClick={this.handleResetConfirm} />
+            <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
           )}
         </div>
       </>
@@ -2619,7 +2619,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {!isEmptyIngestionSpec(spec) && (
             <Button
               className="left"
-              icon={IconNames.UNDO}
+              icon={IconNames.RESET}
               text="Reset spec"
               onClick={this.handleResetConfirm}
             />
