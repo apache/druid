@@ -553,9 +553,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:http':
         return (
           <>
-            <p>Load data accessible from the web.</p>
+            <p>Load data accessible through HTTP(s).</p>
             <p>
-              Files must be in a text format and must be reachable from every node in the cluster.
+              Data must be in a text format and the HTTP(s) endpoint must be reachable by every
+              Druid process in the cluster.
             </p>
           </>
         );
@@ -563,9 +564,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:local':
         return (
           <>
-            <p>Load data directly from file on the file system.</p>
             <p>
-              Files must be in a text format and must be accessible to all the nodes in the cluster.
+              <em>Recommended only in single server deployments.</em>
+            </p>
+            <p>Load data directly from a local file.</p>
+            <p>
+              Files must be in a text format and must be accessible to all the Druid processes in
+              the cluster.
             </p>
           </>
         );
@@ -577,21 +582,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return <p>Load text based data from the Google Blobstore.</p>;
 
       case 'kafka':
-        return <p>Stream data from Apache Kafka.</p>;
+        return <p>Load streaming data in real-time from Apache Kafka.</p>;
 
       case 'kinesis':
-        return <p>Stream data from Amazon Kinesis.</p>;
+        return <p>Load streaming data in real-time from Amazon Kinesis.</p>;
 
       case 'hadoop':
         return (
           <>
-            <p>You can not ingest data from HDFS via the data loader at this time.</p>
             <p>
-              To ingest data from HDFS please follow{' '}
+              <em>Data loader support coming soon!</em>
+            </p>
+            <p>
+              You can not ingest data from HDFS via the data loader at this time, however you can
+              ingest it through a Druid task.
+            </p>
+            <p>
+              Please follow{' '}
               <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/hadoop.html">
                 the hadoop docs
               </ExternalLink>{' '}
-              and submit a batch task.
+              and submit a JSON spec to start the task.
             </p>
           </>
         );
@@ -600,7 +611,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return <p>Pick one of these examples to get you started.</p>;
 
       case 'other':
-        return <p>You can ingest whatever you want by submitting a raw spec.</p>;
+        return (
+          <p>
+            If you do not see your source of raw data here, you can try to ingest it by submitting a{' '}
+            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/index.html">
+              JSON task or supervisor spec
+            </ExternalLink>
+            .
+          </p>
+        );
 
       default:
         return <p>Unknown ingestion type.</p>;
