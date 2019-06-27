@@ -39,7 +39,7 @@ export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
     const { onClose, str } = this.props;
 
     return (
-      <Dialog className="show-value-dialog" isOpen onClose={onClose} title={'Show Value'}>
+      <Dialog className="show-value-dialog" isOpen onClose={onClose} title={'Show value'}>
         <TextArea value={str} />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button
