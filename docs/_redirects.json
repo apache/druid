@@ -166,5 +166,5 @@
   {"source": "development/community-extensions/rabbitmq.html", "target": "../extensions-contrib/rabbitmq.html"},
   {"source": "development/extensions-core/namespaced-lookup.html", "target": "lookups-cached-global.html"},
   {"source": "operations/performance-faq.html", "target": "../operations/basic-cluster-tuning.html"},
-  {"source": "development/extensions-contrib/orc.html", "target": "development/extensions-core/orc.html"}
+  {"source": "development/extensions-contrib/orc.html", "target": "../extensions-core/orc.html"}
 ]
