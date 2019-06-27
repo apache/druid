@@ -44,6 +44,7 @@ public class ComplexMetrics
       if (!complexSerializers.get(type).getClass().getCanonicalName().equals(clazz.getCanonicalName())) {
         throw new ISE(
             "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
+            type,
             clazz.getCanonicalName(),
             complexSerializers.get(type).getClass().getCanonicalName()
         );
