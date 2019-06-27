@@ -19,7 +19,7 @@
 .load-data-view {
   height: 100%;
   display: grid;
-  grid-gap: 10px 5px;
+  grid-gap: 15px 5px;
   grid-template-columns: 1fr 280px;
   grid-template-rows: 55px 1fr 28px;
   grid-template-areas:
@@ -29,7 +29,8 @@
 
   &.welcome {
     .main {
-      margin-left: -10px;
+      height: 100%;
+      padding: 0;
 
       .bp3-card {
         position: relative;
@@ -37,8 +38,8 @@
         vertical-align: top;
         width: 250px;
         height: 140px;
-        margin-left: 15px;
-        margin-bottom: 15px;
+        margin-top: 10px;
+        margin-left: 10px;
         font-size: 16px;
         text-align: center;
 

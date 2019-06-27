@@ -25,8 +25,6 @@ import {
   Card,
   Classes,
   Code,
-  Dialog,
-  Elevation,
   FormGroup,
   H5,
   HTMLSelect,
@@ -524,7 +522,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <>
-        <div className="main">
+        <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index:static-s3')}
