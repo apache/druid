@@ -113,7 +113,6 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = StatusResponseHandler.getInstance();
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
@@ -619,7 +618,7 @@ public class ITBasicAuthConfigurationTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
         if (!response.getStatus().equals(expectedStatus)) {

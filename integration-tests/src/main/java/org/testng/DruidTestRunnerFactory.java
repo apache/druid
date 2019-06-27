@@ -118,13 +118,12 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
 
     public void waitUntilInstanceReady(final HttpClient client, final String host)
     {
-      final StatusResponseHandler handler = StatusResponseHandler.getInstance();
       RetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = client.go(
                   new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
-                  handler
+                  StatusResponseHandler.getInstance()
               ).get();
 
               LOG.info("%s %s", response.getStatus(), response.getContent());

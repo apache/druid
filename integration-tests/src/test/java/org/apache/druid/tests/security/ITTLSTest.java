@@ -84,7 +84,6 @@ public class ITTLSTest
   @Inject
   TLSCertificateChecker certificateChecker;
 
-  StatusResponseHandler responseHandler = StatusResponseHandler.getInstance();
 
   @Test
   public void testPlaintextAccess()
@@ -503,7 +502,7 @@ public class ITTLSTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
         if (!response.getStatus().equals(HttpResponseStatus.OK)) {

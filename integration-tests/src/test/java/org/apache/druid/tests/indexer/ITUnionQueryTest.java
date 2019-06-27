@@ -209,13 +209,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       LOG.info("Event Receiver Found at host [%s]", host);
 
       LOG.info("Checking worker /status/health for [%s]", host);
-      final StatusResponseHandler handler = StatusResponseHandler.getInstance();
       RetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.GET, new URL(StringUtils.format("https://%s/status/health", host))),
-                  handler
+                  StatusResponseHandler.getInstance()
               ).get();
               return response.getStatus().equals(HttpResponseStatus.OK);
             }

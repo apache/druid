@@ -128,7 +128,6 @@ import java.util.concurrent.TimeUnit;
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
-  private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
   private static final Joiner JOINER = Joiner.on("/");
 
   private final ObjectMapper jsonMapper;
@@ -563,7 +562,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         url = TaskRunnerUtils.makeWorkerURL(zkWorker.getWorker(), "/druid/worker/v1/task/%s/shutdown", taskId);
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
-            RESPONSE_HANDLER,
+            StatusResponseHandler.getInstance(),
             shutdownTimeout
         ).get();
 

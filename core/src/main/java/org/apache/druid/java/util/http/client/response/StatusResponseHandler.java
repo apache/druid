@@ -22,25 +22,22 @@ package org.apache.druid.java.util.http.client.response;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
  */
 public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
 {
-  private final Charset charset;
 
-  private static StatusResponseHandler statusResponseHandler = new StatusResponseHandler();
+  private static final StatusResponseHandler INSTANCE = new StatusResponseHandler();
 
   private StatusResponseHandler()
   {
-    this.charset = StandardCharsets.UTF_8;
   }
 
   public static StatusResponseHandler getInstance()
   {
-    return statusResponseHandler;
+    return INSTANCE;
   }
 
   @Override
@@ -49,7 +46,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
     return ClientResponse.unfinished(
         new StatusResponseHolder(
             response.getStatus(),
-            new StringBuilder(response.getContent().toString(charset))
+            new StringBuilder(response.getContent().toString(StandardCharsets.UTF_8))
         )
     );
   }
@@ -67,7 +64,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
       return ClientResponse.finished(null);
     }
 
-    builder.append(chunk.getContent().toString(charset));
+    builder.append(chunk.getContent().toString(StandardCharsets.UTF_8));
     return response;
   }
 

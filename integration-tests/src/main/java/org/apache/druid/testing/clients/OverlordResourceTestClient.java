@@ -51,7 +51,6 @@ public class OverlordResourceTestClient
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;
-  private final StatusResponseHandler responseHandler;
 
   @Inject
   OverlordResourceTestClient(
@@ -63,7 +62,6 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getIndexerUrl();
-    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   private String getIndexerURL()
@@ -85,7 +83,7 @@ public class OverlordResourceTestClient
                         "application/json",
                         StringUtils.toUtf8(task)
                     ),
-                responseHandler
+                StatusResponseHandler.getInstance()
             ).get();
             if (!response.getStatus().equals(HttpResponseStatus.OK)) {
               throw new ISE(
@@ -211,7 +209,7 @@ public class OverlordResourceTestClient
                   "application/json",
                   StringUtils.toUtf8(spec)
               ),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -244,7 +242,7 @@ public class OverlordResourceTestClient
                   StringUtils.urlEncode(id)
               ))
           ),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -264,7 +262,7 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = this.httpClient
-          .go(new Request(method, new URL(url)), responseHandler).get();
+          .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }

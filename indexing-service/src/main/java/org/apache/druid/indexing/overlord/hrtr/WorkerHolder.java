@@ -70,7 +70,6 @@ public class WorkerHolder
   {
   };
 
-  private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
 
   private final Worker worker;
   private Worker disabledWorker;
@@ -230,7 +229,7 @@ public class WorkerHolder
                   new Request(HttpMethod.POST, url)
                       .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                       .setContent(smileMapper.writeValueAsBytes(task)),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getAssignRequestHttpTimeout().toStandardDuration()
               ).get();
 
@@ -275,7 +274,7 @@ public class WorkerHolder
             try {
               final StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.POST, url),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getShutdownRequestHttpTimeout().toStandardDuration()
               ).get();
 
