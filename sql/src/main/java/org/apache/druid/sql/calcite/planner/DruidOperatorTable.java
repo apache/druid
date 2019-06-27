@@ -66,6 +66,8 @@ import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringPrependOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringSliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -228,6 +230,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           // multi-value string operators
           .add(new MultiValueStringAppendOperatorConversion())
           .add(new MultiValueStringConcatOperatorConversion())
+          .add(new MultiValueStringPrependOperatorConversion())
+          .add(new MultiValueStringSliceOperatorConversion())
           .add(new StringToMultiValueStringOperatorConversion())
           .build();
 
