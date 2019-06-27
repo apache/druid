@@ -8153,7 +8153,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 2, 1L},
+            new Object[]{"", 2, 1L},
             new Object[]{"10.1", 2, 1L},
             new Object[]{"1", 1, 1L},
             new Object[]{"2", 1, 1L},
@@ -8166,6 +8166,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringAppend() throws Exception
   {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
     testQuery(
         "SELECT MV_APPEND(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -8191,20 +8212,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{"foo", 6L},
-            new Object[]{NullHandling.defaultStringValue(), 3L},
-            new Object[]{"b", 2L},
-            new Object[]{"a", 1L},
-            new Object[]{"c", 1L},
-            new Object[]{"d", 1L}
-        )
+        results
     );
   }
 
   @Test
   public void testMultiValueStringPrepend() throws Exception
   {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
     testQuery(
         "SELECT MV_PREPEND('foo', dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -8230,20 +8265,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{"foo", 6L},
-            new Object[]{NullHandling.defaultStringValue(), 3L},
-            new Object[]{"b", 2L},
-            new Object[]{"a", 1L},
-            new Object[]{"c", 1L},
-            new Object[]{"d", 1L}
-        )
+        results
     );
   }
 
   @Test
   public void testMultiValueStringConcat() throws Exception
   {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"", 6L},
+          new Object[]{"b", 4L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null, 4L},
+          new Object[]{"b", 4L},
+          new Object[]{"", 2L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    }
     testQuery(
         "SELECT MV_CONCAT(dim3, dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -8269,13 +8316,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 6L},
-            new Object[]{"b", 4L},
-            new Object[]{"a", 2L},
-            new Object[]{"c", 2L},
-            new Object[]{"d", 2L}
-        )
+        results
     );
   }
 
