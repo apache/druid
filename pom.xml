@@ -1609,6 +1609,7 @@
                                 <exclude>NOTICE.BINARY</exclude>
                                 <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
+                                <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
@@ -1619,7 +1620,8 @@
                 </plugins>
             </build>
         </profile>
-        <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running so we can control it ourselves -->
+        <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running
+             so we can control it ourselves -->
         <profile>
             <id>apache-release</id>
             <build>
