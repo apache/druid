@@ -69,8 +69,20 @@ public class SketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(THETA_SKETCH, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(THETA_SKETCH_MERGE_AGG, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(THETA_SKETCH_BUILD_AGG, SketchBuildComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(
+        THETA_SKETCH,
+        SketchMergeComplexMetricSerde.class,
+        SketchMergeComplexMetricSerde::new
+    );
+    ComplexMetrics.registerSerde(
+        THETA_SKETCH_MERGE_AGG,
+        SketchMergeComplexMetricSerde.class,
+        SketchMergeComplexMetricSerde::new
+    );
+    ComplexMetrics.registerSerde(
+        THETA_SKETCH_BUILD_AGG,
+        SketchBuildComplexMetricSerde.class,
+        SketchBuildComplexMetricSerde::new
+    );
   }
 }

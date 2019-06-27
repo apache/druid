@@ -47,9 +47,21 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH, ArrayOfDoublesSketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG, ArrayOfDoublesSketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG, ArrayOfDoublesSketchBuildComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(
+        ARRAY_OF_DOUBLES_SKETCH,
+        ArrayOfDoublesSketchMergeComplexMetricSerde.class,
+        ArrayOfDoublesSketchMergeComplexMetricSerde::new
+    );
+    ComplexMetrics.registerSerde(
+        ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
+        ArrayOfDoublesSketchMergeComplexMetricSerde.class,
+        ArrayOfDoublesSketchMergeComplexMetricSerde::new
+    );
+    ComplexMetrics.registerSerde(
+        ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
+        ArrayOfDoublesSketchBuildComplexMetricSerde.class,
+        ArrayOfDoublesSketchBuildComplexMetricSerde::new
+    );
   }
 
   @Override

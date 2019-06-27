@@ -68,7 +68,10 @@ public class TDigestSketchModule implements DruidModule
   @VisibleForTesting
   static void registerSerde()
   {
-    ComplexMetrics.registerSerde(TDigestBuildSketchAggregatorFactory.TYPE_NAME, TDigestSketchComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(
+        TDigestBuildSketchAggregatorFactory.TYPE_NAME,
+        TDigestSketchComplexMetricSerde.class,
+        TDigestSketchComplexMetricSerde::new
+    );
   }
-
 }

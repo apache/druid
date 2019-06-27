@@ -233,7 +233,11 @@ public class TopNTypeInterfaceBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde(
+        "hyperUnique",
+        HyperUniquesSerde.class,
+        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
+    );
 
     setupQueries();
 

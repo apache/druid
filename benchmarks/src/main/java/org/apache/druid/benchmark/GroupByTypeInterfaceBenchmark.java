@@ -265,7 +265,11 @@ public class GroupByTypeInterfaceBenchmark
   {
     log.info("SETUP CALLED AT %d", System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde(
+        "hyperUnique",
+        HyperUniquesSerde.class,
+        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
+    );
 
     setupQueries();
 

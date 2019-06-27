@@ -240,7 +240,11 @@ public class TimeseriesBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde(
+        "hyperUnique",
+        HyperUniquesSerde.class,
+        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
+    );
 
     executorService = Execs.multiThreaded(numSegments, "TimeseriesThreadPool");
 
