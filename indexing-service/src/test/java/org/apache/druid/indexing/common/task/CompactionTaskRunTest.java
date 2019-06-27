@@ -53,6 +53,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -104,6 +105,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private CoordinatorClient coordinatorClient;
   private SegmentLoaderFactory segmentLoaderFactory;
   private ExecutorService exec;
+  private AppenderatorsManager appenderatorsManager;
   private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
   public CompactionTaskRunTest()
@@ -119,6 +121,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
+    appenderatorsManager = new TestAppenderatorsManager();
   }
 
   @Before
@@ -146,7 +149,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -179,7 +183,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask1 = builder
@@ -228,7 +233,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     // day segmentGranularity
@@ -301,7 +307,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     return runTask(indexTask);

@@ -81,6 +81,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -3506,7 +3507,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         rowIngestionMetersFactory,
-        objectMapper
+        objectMapper,
+        new DummyForInjectionAppenderatorsManager()
     );
   }
 

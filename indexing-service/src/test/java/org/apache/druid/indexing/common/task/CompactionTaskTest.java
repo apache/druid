@@ -96,6 +96,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
@@ -154,6 +155,7 @@ public class CompactionTaskTest
   private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   private static Map<DataSegment, File> segmentMap = new HashMap<>();
   private static CoordinatorClient coordinatorClient = new TestCoordinatorClient(segmentMap);
+  private static AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
@@ -244,6 +246,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
                   binder.bind(CoordinatorClient.class).toInstance(coordinatorClient);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
+                  binder.bind(AppenderatorsManager.class).toInstance(appenderatorsManager);
                 }
             )
         )
@@ -327,7 +330,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
     final CompactionTask task = builder
         .interval(COMPACTION_INTERVAL)
@@ -351,7 +355,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -375,7 +380,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask task = builder
@@ -820,7 +826,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask task = builder

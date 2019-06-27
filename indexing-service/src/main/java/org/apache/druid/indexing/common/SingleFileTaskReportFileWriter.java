@@ -17,22 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexing.common;
 
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.File;
 import java.util.Map;
 
-public class NoopTestTaskFileWriter extends SingleFileTaskReportFileWriter
+public class SingleFileTaskReportFileWriter extends TaskReportFileWriter
 {
-  public NoopTestTaskFileWriter()
+  private static final Logger log = new Logger(SingleFileTaskReportFileWriter.class);
+
+  private final File reportsFile;
+
+  public SingleFileTaskReportFileWriter(File reportsFile)
   {
-    super(null);
+    this.reportsFile = reportsFile;
   }
 
   @Override
-  public void write(String id, Map<String, TaskReport> reports)
+  public void write(String taskId, Map<String, TaskReport> reports)
   {
+    try {
+      final File reportsFileParent = reportsFile.getParentFile();
+      if (reportsFileParent != null) {
+        FileUtils.forceMkdir(reportsFileParent);
+      }
+      objectMapper.writeValue(reportsFile, reports);
+    }
+    catch (Exception e) {
+      log.error(e, "Encountered exception in write().");
+    }
   }
 }

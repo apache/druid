@@ -317,7 +317,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         getContext(),
         authorizerMapper,
         chatHandlerProvider,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     ).run(toolbox);
   }
 

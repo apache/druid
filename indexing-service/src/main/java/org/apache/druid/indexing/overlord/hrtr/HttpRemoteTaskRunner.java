@@ -463,6 +463,32 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
     );
 
+    DruidNodeDiscovery druidNodeDiscoveryIndexer = druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER);
+    druidNodeDiscoveryIndexer.registerListener(
+        new DruidNodeDiscovery.Listener()
+        {
+          @Override
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
+          {
+            nodes.forEach(node -> addWorker(toWorker(node)));
+          }
+
+          @Override
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
+          {
+            nodes.forEach(node -> removeWorker(toWorker(node)));
+          }
+
+          @Override
+          public void nodeViewInitialized()
+          {
+            //CountDownLatch.countDown() does nothing when count has already reached 0.
+            workerViewInitialized.countDown();
+          }
+        }
+    );
+
+
     long workerDiscoveryStartTime = System.currentTimeMillis();
     while (!workerViewInitialized.await(30, TimeUnit.SECONDS)) {
       if (System.currentTimeMillis() - workerDiscoveryStartTime > TimeUnit.MINUTES.toMillis(5)) {

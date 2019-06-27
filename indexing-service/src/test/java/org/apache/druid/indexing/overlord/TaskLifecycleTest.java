@@ -68,6 +68,7 @@ import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
@@ -108,6 +109,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
@@ -226,6 +228,7 @@ public class TaskLifecycleTest
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
+  private AppenderatorsManager appenderatorsManager;
 
   private int pushedSegments;
   private int announcedSinks;
@@ -527,6 +530,8 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
+    appenderatorsManager = new TestAppenderatorsManager();
+
     taskLockbox = new TaskLockbox(taskStorage);
     tac = new LocalTaskActionClientFactory(
         taskStorage,
@@ -550,6 +555,7 @@ public class TaskLifecycleTest
         return new ArrayList<>();
       }
     };
+
     return new TaskToolboxFactory(
         taskConfig,
         tac,
@@ -705,7 +711,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        appenderatorsManager
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -786,7 +793,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1174,7 +1182,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        appenderatorsManager
     );
 
     final long startTime = System.currentTimeMillis();

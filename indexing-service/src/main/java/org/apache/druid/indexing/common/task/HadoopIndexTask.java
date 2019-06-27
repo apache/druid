@@ -254,7 +254,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       errorMsg = Throwables.getStackTraceAsString(effectiveException);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -318,7 +318,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       indexerSchema = determineConfigStatus.getSchema();
       if (indexerSchema == null) {
         errorMsg = determineConfigStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -365,7 +365,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             specVersion,
             version
         );
-        toolbox.getTaskReportFileWriter().write(null);
+        toolbox.getTaskReportFileWriter().write(getId(), null);
         return TaskStatus.failure(getId());
       }
     }
@@ -404,14 +404,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (buildSegmentsStatus.getDataSegments() != null) {
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(
             getId(),
             null
         );
       } else {
         errorMsg = buildSegmentsStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg

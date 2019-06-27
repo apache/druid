@@ -158,6 +158,8 @@ public abstract class WorkerTaskManager
 
     synchronized (lock) {
       try {
+        // When stopping, the task status should not be communicated to the overlord, so the listener and exec
+        // are shut down before the taskRunner is stopped.
         taskRunner.unregisterListener("WorkerTaskManager");
         exec.shutdownNow();
         taskRunner.stop();
@@ -693,7 +695,6 @@ public abstract class WorkerTaskManager
 
         changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
         taskAnnouncementChanged(latest);
-
         log.info(
             "Job's finished. Completed [%s] with status [%s]",
             task.getId(),

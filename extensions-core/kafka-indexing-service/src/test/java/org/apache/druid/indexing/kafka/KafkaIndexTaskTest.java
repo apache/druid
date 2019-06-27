@@ -51,9 +51,9 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -67,6 +67,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
@@ -140,6 +141,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -213,6 +215,7 @@ public class KafkaIndexTaskTest
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
 
+  private AppenderatorsManager appenderatorsManager;
   private TaskToolboxFactory toolboxFactory;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskStorage taskStorage;
@@ -350,6 +353,7 @@ public class KafkaIndexTaskTest
     topic = getTopicName();
     records = generateRecords(topic);
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    appenderatorsManager = new TestAppenderatorsManager();
     makeToolboxFactory();
   }
 
@@ -2485,7 +2489,8 @@ public class KafkaIndexTaskTest
         null,
         null,
         rowIngestionMetersFactory,
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        appenderatorsManager
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
@@ -2651,6 +2656,7 @@ public class KafkaIndexTaskTest
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
+
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -2676,7 +2682,7 @@ public class KafkaIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new TaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile)
     );
   }
 

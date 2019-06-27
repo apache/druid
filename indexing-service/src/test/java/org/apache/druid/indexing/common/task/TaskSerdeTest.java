@@ -217,7 +217,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -299,7 +300,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {

@@ -75,6 +75,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -176,6 +177,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @JsonIgnore
   private final RowIngestionMeters buildSegmentsMeters;
 
+  @JsonIgnore
+  private final AppenderatorsManager appenderatorsManager;
+
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
@@ -184,7 +188,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     this(
@@ -196,7 +201,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         context,
         authorizerMapper,
         chatHandlerProvider,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
   }
 
@@ -209,7 +215,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       Map<String, Object> context,
       AuthorizerMapper authorizerMapper,
       ChatHandlerProvider chatHandlerProvider,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -234,6 +241,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.ingestionState = IngestionState.NOT_STARTED;
     this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -478,7 +486,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -1006,7 +1014,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -1020,7 +1028,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         );
         log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
 
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       }
     }
@@ -1098,14 +1106,15 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       IndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,

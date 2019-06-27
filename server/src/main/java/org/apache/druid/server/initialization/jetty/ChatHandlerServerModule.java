@@ -48,10 +48,12 @@ public class ChatHandlerServerModule implements Module
 {
   private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
   private final Properties properties;
+  private final boolean useSeparatePort;
 
-  public ChatHandlerServerModule(Properties properties)
+  public ChatHandlerServerModule(Properties properties, boolean useSeparatePort)
   {
     this.properties = properties;
+    this.useSeparatePort = useSeparatePort;
   }
 
   @Override
@@ -67,11 +69,21 @@ public class ChatHandlerServerModule implements Module
 
     Multibinder.newSetBinder(binder, ServletFilterHolder.class).addBinding().to(TaskIdResponseHeaderFilterHolder.class);
 
-    /**
-     * We bind {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
-     * so that same Jetty Server is used for querying as well as ingestion.
-     */
-    binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
+    if (useSeparatePort) {
+      // bind a modified DruidNode that will be used by the Jetty server installed below
+      binder.bind(DruidNode.class)
+            .annotatedWith(RemoteChatHandler.class)
+            .toInstance(makeDruidNodeForSeparateChatHandler());
+
+      // this installs a separate Jetty server for chat handling
+      LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
+    } else {
+      /**
+       * We bind {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
+       * so that same Jetty Server is used for querying as well as ingestion.
+       */
+      binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
+    }
     binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
     binder.bind(TLSServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(TLSServerConfig.class));
   }
@@ -105,5 +117,34 @@ public class ChatHandlerServerModule implements Module
         injector.getExistingBinding(Key.get(SslContextFactory.class)),
         injector.getInstance(TLSCertificateChecker.class)
     );
+  }
+
+
+  /**
+   * @return Creates a DruidNode identical to the @Self DruidNode but with the port numbers incremented by 1.
+   */
+  private DruidNode makeDruidNodeForSeparateChatHandler()
+  {
+    String serviceName = properties.getProperty("druid.service");
+    String host = properties.getProperty("druid.host");
+    String bindOnHost = properties.getProperty("druid.bindOnHost", "false");
+    String plaintextPort = properties.getProperty("druid.plaintextPort");
+    String port = properties.getProperty("druid.port");
+    String tlsPort = properties.getProperty("druid.tlsPort");
+    String enablePlaintextPort = properties.getProperty("druid.enablePlaintextPort", "true");
+    String enableTlsPort = properties.getProperty("druid.enableTlsPort", "false");
+
+    DruidNode chatHandlerNode = new DruidNode(
+        serviceName,
+        host,
+        Boolean.parseBoolean(bindOnHost),
+        plaintextPort == null ? null : Integer.parseInt(plaintextPort),
+        port == null ? null : Integer.parseInt(port) + 1,
+        tlsPort == null ? null : Integer.parseInt(tlsPort) + 1,
+        Boolean.parseBoolean(enablePlaintextPort),
+        Boolean.parseBoolean(enableTlsPort)
+    );
+
+    return chatHandlerNode;
   }
 }
