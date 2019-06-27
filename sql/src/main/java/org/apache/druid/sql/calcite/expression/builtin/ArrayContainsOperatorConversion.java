@@ -44,7 +44,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+      .returnTypeInference(ReturnTypes.BOOLEAN)
       .build();
 
   public ArrayContainsOperatorConversion()

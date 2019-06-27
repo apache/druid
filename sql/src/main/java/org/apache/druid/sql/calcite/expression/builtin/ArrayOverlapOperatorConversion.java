@@ -44,7 +44,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+      .returnTypeInference(ReturnTypes.BOOLEAN)
       .build();
 
   public ArrayOverlapOperatorConversion()
