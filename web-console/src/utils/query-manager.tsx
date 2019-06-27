@@ -107,7 +107,6 @@ export class QueryManager<Q, R> {
       loading: true,
       error: null,
     });
-
     if (currentActuallyLoading) {
       this.runWhenLoading();
     } else {

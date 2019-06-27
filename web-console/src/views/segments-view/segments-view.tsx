@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -87,6 +87,8 @@ export interface SegmentsViewState {
   terminateSegmentId: string | null;
   terminateDatasourceId: string | null;
   hiddenColumns: LocalStorageBackedArray<string>;
+  groupSegmentsBy: null | 'interval';
+  loaded: boolean;
 }
 
 interface QueryAndSkip {
@@ -114,7 +116,7 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-
+  private previousTableState: any;
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
 
@@ -128,6 +130,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       actions: [],
       terminateSegmentId: null,
       terminateDatasourceId: null,
+      groupSegmentsBy: null,
       segmentsLoading: true,
       segments: null,
       segmentsError: null,
@@ -135,6 +138,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
+      loaded: false,
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
@@ -214,8 +218,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsJsonQueryManager.terminate();
   }
 
-  private fetchData = (state: any, instance: any) => {
-    const { page, pageSize, filtered, sorted } = state;
+  private fetchData = (state?: any) => {
+    const { page, pageSize, filtered, sorted } = state ? state : this.previousTableState;
+    if (state) this.previousTableState = state;
     const totalQuerySize = (page + 1) * pageSize;
 
     const queryParts = [
@@ -256,8 +261,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
-  private fecthClientSideData = (state: any, instance: any) => {
-    const { page, pageSize, filtered, sorted } = state;
+  private fetchGroupData = (state?: any) => {
+    const { page, pageSize } = state ? state : this.previousTableState;
+    if (state) this.previousTableState = state;
+    const totalQuerySize = (page + 1) * pageSize;
+
+    const queryParts = [
+      'SELECT ("start" || \'/\' || "end") AS "interval", * FROM sys.segments',
+      `WHERE ("start" || \'/\' || "end") IN (SELECT "start" || \'/\' || "end" FROM sys.segments GROUP BY 1 LIMIT  ${totalQuerySize})`,
+      `LIMIT ${totalQuerySize * 1000}`,
+    ];
+
+    const query = queryParts.join('\n');
+    this.segmentsSqlQueryManager.runQuery({
+      query,
+      skip: totalQuerySize - pageSize,
+    });
+  };
+
+  private fetchClientSideData = (state?: any) => {
+    const { page, pageSize, filtered, sorted } = state ? state : this.previousTableState;
+    if (state) this.previousTableState = state;
     const { allSegments } = this.state;
     if (allSegments == null) return;
     const startPage = page * pageSize;
@@ -297,7 +321,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   renderSegmentsTable() {
-    const { segments, segmentsLoading, segmentsError, segmentFilter, hiddenColumns } = this.state;
+    const {
+      segments,
+      segmentsLoading,
+      segmentsError,
+      segmentFilter,
+      groupSegmentsBy,
+      hiddenColumns,
+    } = this.state;
     const { noSqlMode } = this.props;
 
     return (
@@ -315,9 +346,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFilteredChange={(filtered, column) => {
           this.setState({ segmentFilter: filtered });
         }}
-        onFetchData={noSqlMode ? this.fecthClientSideData : this.fetchData}
+        onFetchData={
+          noSqlMode
+            ? this.fetchClientSideData
+            : groupSegmentsBy
+            ? this.fetchGroupData
+            : this.fetchData
+        }
         showPageJump={false}
         ofText=""
+        pivotBy={groupSegmentsBy ? ['interval'] : []}
         columns={[
           {
             Header: 'Segment ID',
@@ -341,6 +379,25 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               );
             },
             show: hiddenColumns.exists('Datasource'),
+          },
+          {
+            Header: 'Interval',
+            accessor: 'interval',
+            width: 120,
+            defaultSortDesc: true,
+            Cell: row => {
+              const value = row.value;
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({ segmentFilter: addFilter(segmentFilter, 'interval', value) });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+            show: hiddenColumns.exists('interval') && groupSegmentsBy === 'interval',
           },
           {
             Header: 'Start',
@@ -522,6 +579,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       hiddenColumns,
     } = this.state;
     const { goToQuery, noSqlMode } = this.props;
+    const { groupSegmentsBy } = this.state;
 
     return (
       <>
@@ -543,6 +601,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 onClick={() => goToQuery(this.segmentsSqlQueryManager.getLastQuery().query)}
               />
             )}
+            <Label>Group by</Label>
+            <ButtonGroup>
+              <Button
+                active={groupSegmentsBy === null}
+                onClick={() => {
+                  noSqlMode ? this.fetchClientSideData() : this.fetchData();
+                  this.setState({ groupSegmentsBy: null });
+                }}
+              >
+                None
+              </Button>
+              <Button
+                active={groupSegmentsBy === 'interval'}
+                onClick={() => {
+                  this.setState({ groupSegmentsBy: 'interval' });
+                  this.fetchGroupData();
+                }}
+              >
+                Interval
+              </Button>
+            </ButtonGroup>
             <TableColumnSelector
               columns={noSqlMode ? tableColumnsNoSql : tableColumns}
               onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
