@@ -46,6 +46,14 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringAppendOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringConcatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayLengthOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
@@ -69,6 +77,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.StringToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TextcatOperatorConversion;
@@ -203,6 +212,23 @@ public class DruidOperatorTable implements SqlOperatorTable
           // value coercion operators
           .add(new CastOperatorConversion())
           .add(new ReinterpretOperatorConversion())
+          // array/multi-value string operators
+          .add(new ArrayLengthOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayLengthOperatorConversion(), "MV_LENGTH"))
+          .add(new ArrayOffsetOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOperatorConversion(), "MV_OFFSET"))
+          .add(new ArrayOrdinalOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOperatorConversion(), "MV_ORDINAL"))
+          .add(new ArrayOffsetOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOfOperatorConversion(), "MV_OFFSET_OF"))
+          .add(new ArrayOrdinalOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOfOperatorConversion(), "MV_ORDINAL_OF"))
+          .add(new ArrayToStringOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayToStringOperatorConversion(), "MV_TO_STRING"))
+          // multi-value string operators
+          .add(new MultiValueStringAppendOperatorConversion())
+          .add(new MultiValueStringConcatOperatorConversion())
+          .add(new StringToMultiValueStringOperatorConversion())
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.
