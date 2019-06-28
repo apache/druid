@@ -24,7 +24,7 @@ exports[`clipboard dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Show Value
+            Show value
           </h4>
           <button
             aria-label="Close"
