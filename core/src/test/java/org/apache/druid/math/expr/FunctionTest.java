@@ -260,6 +260,26 @@ public class FunctionTest
     assertExpr("cast(['1.0', '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
   }
 
+  @Test
+  public void testArraySlice()
+  {
+    assertExpr("array_slice([1, 2, 3, 4], 1, 3)", new Long[] {2L, 3L});
+    assertExpr("array_slice([1.0, 2.1, 3.2, 4.3], 2)", new Double[] {3.2, 4.3});
+    assertExpr("array_slice(['a', 'b', 'c', 'd'], 4, 6)", new String[] {null, null});
+    assertExpr("array_slice([1, 2, 3, 4], 2, 2)", new Long[] {});
+    assertExpr("array_slice([1, 2, 3, 4], 5, 7)", null);
+    assertExpr("array_slice([1, 2, 3, 4], 2, 1)", null);
+  }
+
+  @Test
+  public void testArrayPrepend()
+  {
+    assertExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
+    assertExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
+    assertExpr("array_prepend(1, [])", new String[]{"1"});
+    assertExpr("array_prepend(1, cast([], 'LONG_ARRAY'))", new Long[]{1L});
+  }
+
   private void assertExpr(final String expression, final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());

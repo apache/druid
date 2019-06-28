@@ -105,10 +105,10 @@ public interface ApplyFunction
             stringsOut[i] = evaluated.asString();
             break;
           case LONG:
-            longsOut[i] = evaluated.asLong();
+            longsOut[i] = evaluated.isNumericNull() ? null : evaluated.asLong();
             break;
           case DOUBLE:
-            doublesOut[i] = evaluated.asDouble();
+            doublesOut[i] = evaluated.isNumericNull() ? null : evaluated.asDouble();
             break;
         }
       }
