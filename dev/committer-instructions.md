@@ -133,6 +133,7 @@ the author of the PR) or in a comment (if you have added tags to a PR submitted 
    - [`Area - Zookeeper/Curator`](https://github.com/apache/incubator-druid/labels/Area%20-%20Zookeeper%2FCurator) - for
    any PRs and issues related to ZooKeeper, Curator, and node discovery in Druid.
 
+<a name="milestone"/>
 
 4. **Consider adding any `Bug` and `Security` PRs to the next Druid milestone** whenever they are important enough to
 fix before the next release. This ensures that they will be considered by the next release manager as potential release
