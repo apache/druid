@@ -74,15 +74,11 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
     ComplexMetrics.registerSerde(
         "preComputedHyperUnique",
         PreComputedHyperUniquesSerde.class,
-        () -> new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault())
+        PreComputedHyperUniquesSerde::new
     );
     ComplexMetrics.registerSerde(
         "serializablePairLongString",

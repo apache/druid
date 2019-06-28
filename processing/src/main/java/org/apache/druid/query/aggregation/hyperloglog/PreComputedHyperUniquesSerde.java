@@ -30,6 +30,11 @@ import java.nio.ByteBuffer;
 
 public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
 {
+  public PreComputedHyperUniquesSerde()
+  {
+    super();
+  }
+
   public PreComputedHyperUniquesSerde(HyperLogLogHash hyperLogLogHash)
   {
     super(hyperLogLogHash);

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.junit.Assert;
@@ -35,11 +34,7 @@ public class ComplexMetricsTest
   @Test
   public void testRegister()
   {
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
 
     ComplexMetricSerde serde = ComplexMetrics.getSerdeForType("hyperUnique");
     Assert.assertNotNull(serde);
@@ -49,21 +44,13 @@ public class ComplexMetricsTest
   @Test
   public void testRegisterDuplicate()
   {
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
 
     ComplexMetricSerde serde = ComplexMetrics.getSerdeForType("hyperUnique");
     Assert.assertNotNull(serde);
     Assert.assertTrue(serde instanceof HyperUniquesSerde);
 
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
 
     serde = ComplexMetrics.getSerdeForType("hyperUnique");
     Assert.assertNotNull(serde);
@@ -73,11 +60,7 @@ public class ComplexMetricsTest
   @Test
   public void testConflicting()
   {
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
 
     ComplexMetricSerde serde = ComplexMetrics.getSerdeForType("hyperUnique");
     Assert.assertNotNull(serde);

@@ -161,11 +161,7 @@ public class TestIndex
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
   }
 
   private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(

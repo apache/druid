@@ -244,11 +244,7 @@ public class ScanBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde(
-        "hyperUnique",
-        HyperUniquesSerde.class,
-        () -> new HyperUniquesSerde(HyperLogLogHash.getDefault())
-    );
+    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
 
     executorService = Execs.multiThreaded(numProcessingThreads, "ScanThreadPool");
 
