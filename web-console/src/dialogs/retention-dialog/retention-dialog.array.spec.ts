@@ -21,7 +21,6 @@ import React from 'react';
 import { reorderArray } from './retention-dialog';
 
 describe('reorderArray', () => {
-
   it('works when nothing changes', () => {
     const array = ['a', 'b', 'c', 'd', 'e'];
 

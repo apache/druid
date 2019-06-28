@@ -132,7 +132,7 @@ public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/favicon.png",
       "/console.html",

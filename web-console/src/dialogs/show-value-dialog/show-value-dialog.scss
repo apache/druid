@@ -16,6 +16,18 @@
  * limitations under the License.
  */
 
-.run-button {
+.show-value-dialog{
+  &.bp3-dialog{
+    padding-bottom: 10px;
+  }
 
+  .bp3-input{
+    margin: 10px;
+    height: 400px;
+  }
+
+  .bp3-dialog-footer-actions{
+    padding-right: 10px;
+
+  }
 }

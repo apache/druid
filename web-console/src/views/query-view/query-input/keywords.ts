@@ -33,7 +33,7 @@ export const SQL_KEYWORDS: string[] = [
   'ASC',
   'DESC',
   'LIMIT',
-  'UNION ALL'
+  'UNION ALL',
 ];
 
 export const SQL_EXPRESSION_PARTS: string[] = [
@@ -66,16 +66,9 @@ export const SQL_EXPRESSION_PARTS: string[] = [
   'QUARTER',
   'YEAR',
   'TIMESTAMP',
-  'INTERVAL'
+  'INTERVAL',
 ];
 
-export const SQL_CONSTANTS: string[] = [
-  'NULL',
-  'FALSE',
-  'TRUE'
-];
+export const SQL_CONSTANTS: string[] = ['NULL', 'FALSE', 'TRUE'];
 
-export const SQL_DYNAMICS: string[] = [
-  'CURRENT_TIMESTAMP',
-  'CURRENT_DATE'
-];
+export const SQL_DYNAMICS: string[] = ['CURRENT_TIMESTAMP', 'CURRENT_DATE'];

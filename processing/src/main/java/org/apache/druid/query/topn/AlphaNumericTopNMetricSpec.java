@@ -34,7 +34,7 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 
-  protected static Comparator<String> comparator = StringComparators.ALPHANUMERIC;
+  protected static final Comparator<String> comparator = StringComparators.ALPHANUMERIC;
 
   @JsonCreator
   public AlphaNumericTopNMetricSpec(

@@ -30,38 +30,40 @@ interface TableColumnSelectorProps extends React.Props<any> {
   tableColumnsHidden: string[];
 }
 
-interface TableColumnSelectorState {
+interface TableColumnSelectorState {}
 
-}
-
-export class TableColumnSelector extends React.PureComponent<TableColumnSelectorProps, TableColumnSelectorState> {
-
+export class TableColumnSelector extends React.PureComponent<
+  TableColumnSelectorProps,
+  TableColumnSelectorState
+> {
   constructor(props: TableColumnSelectorProps) {
     super(props);
-    this.state = {
-
-    };
+    this.state = {};
   }
 
   render() {
     const { columns, onChange, tableColumnsHidden } = this.props;
-    const checkboxes = <Menu className="table-column-selector-menu">
-      {columns.map(column => (
-        <MenuCheckbox
-          label={column}
-          key={column}
-          checked={!tableColumnsHidden.includes(column)}
-          onChange={() => onChange(column)}
-        />
-      ))}
-    </Menu>;
+    const checkboxes = (
+      <Menu className="table-column-selector-menu">
+        {columns.map(column => (
+          <MenuCheckbox
+            label={column}
+            key={column}
+            checked={!tableColumnsHidden.includes(column)}
+            onChange={() => onChange(column)}
+          />
+        ))}
+      </Menu>
+    );
 
-    return <Popover
-      className="table-column-selector"
-      content={checkboxes}
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button rightIcon={IconNames.CARET_DOWN} text="Columns"/>
-    </Popover>;
+    return (
+      <Popover
+        className="table-column-selector"
+        content={checkboxes}
+        position={Position.BOTTOM_RIGHT}
+      >
+        <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
+      </Popover>
+    );
   }
 }

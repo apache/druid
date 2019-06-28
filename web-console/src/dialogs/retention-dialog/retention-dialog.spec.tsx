@@ -23,7 +23,7 @@ import { RetentionDialog } from './retention-dialog';
 
 describe('retention dialog', () => {
   it('matches snapshot', () => {
-    const retentionDialog =
+    const retentionDialog = (
       <RetentionDialog
         datasource={'test'}
         rules={[null]}
@@ -31,7 +31,8 @@ describe('retention dialog', () => {
         onEditDefaults={() => null}
         onCancel={() => null}
         onSave={() => null}
-      />;
+      />
+    );
     const { container } = render(retentionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });
