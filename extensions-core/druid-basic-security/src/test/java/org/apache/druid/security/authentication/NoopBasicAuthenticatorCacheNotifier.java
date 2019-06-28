@@ -26,11 +26,12 @@ public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCa
   @Override
   public void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
+    // Do nothing as this is a noop implementation
   }
 
   @Override
   public void addConfigUpdate(String updatedAuthenticatorPrefix, byte[] updatedConfig)
   {
-
+    // Do nothing as this is a noop implementation
   }
 }
