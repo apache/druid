@@ -45,7 +45,7 @@ matrix:
         - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B --fail-at-end
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile spotbugs:check -B --fail-at-end
 
     # packaging check
     - env:

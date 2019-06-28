@@ -23,14 +23,17 @@ import { AsyncActionDialog } from './async-action-dialog';
 
 describe('async action dialog', () => {
   it('matches snapshot', () => {
-    const asyncActionDialog =
+    const asyncActionDialog = (
       <AsyncActionDialog
-        action={() => {return  Promise.resolve(); }}
+        action={() => {
+          return Promise.resolve();
+        }}
         onClose={(success: boolean) => null}
         confirmButtonText={'test'}
         successText={'test'}
         failText={'test'}
-      />;
+      />
+    );
     const { container } = render(asyncActionDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });

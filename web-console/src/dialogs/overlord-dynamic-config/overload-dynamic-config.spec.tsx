@@ -23,7 +23,7 @@ import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
 
 describe('overload dynamic config', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog =
+    const lookupEditDialog = (
       <LookupEditDialog
         isOpen
         onClose={() => null}
@@ -35,7 +35,8 @@ describe('overload dynamic config', () => {
         lookupSpec={'test'}
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />;
+      />
+    );
     const { container } = render(lookupEditDialog, { container: document.body });
     expect(container.firstChild).toMatchSnapshot();
   });

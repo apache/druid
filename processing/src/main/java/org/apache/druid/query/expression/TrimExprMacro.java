@@ -25,7 +25,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -94,16 +96,15 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TrimStaticCharsExpr implements Expr
+  private static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   {
     private final TrimMode mode;
-    private final Expr stringExpr;
     private final char[] chars;
 
     public TrimStaticCharsExpr(final TrimMode mode, final Expr stringExpr, final char[] chars)
     {
+      super(stringExpr);
       this.mode = mode;
-      this.stringExpr = stringExpr;
       this.chars = chars;
     }
 
@@ -111,7 +112,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final ExprEval stringEval = stringExpr.eval(bindings);
+      final ExprEval stringEval = arg.eval(bindings);
 
       if (chars.length == 0 || stringEval.value() == null) {
         return stringEval;
@@ -150,10 +151,10 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public Expr visit(Shuttle shuttle)
     {
-      stringExpr.visit(visitor);
-      visitor.visit(this);
+      Expr newStringExpr = arg.visit(shuttle);
+      return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars));
     }
   }
 
@@ -225,6 +226,29 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       stringExpr.visit(visitor);
       charsExpr.visit(visitor);
       visitor.visit(this);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      Expr newStringExpr = stringExpr.visit(shuttle);
+      Expr newCharsExpr = charsExpr.visit(shuttle);
+      return shuttle.visit(new TrimDynamicCharsExpr(mode, newStringExpr, newCharsExpr));
+    }
+
+    @Override
+    public BindingDetails analyzeInputs()
+    {
+      final String stringIdentifier = stringExpr.getIdentifierIfIdentifier();
+      final Set<String> scalars = new HashSet<>();
+      if (stringIdentifier != null) {
+        scalars.add(stringIdentifier);
+      }
+      final String charsIdentifier = charsExpr.getIdentifierIfIdentifier();
+      if (charsIdentifier != null) {
+        scalars.add(charsIdentifier);
+      }
+      return stringExpr.analyzeInputs().merge(charsExpr.analyzeInputs()).mergeWithScalars(scalars);
     }
   }
 

@@ -25,7 +25,6 @@ describe('object-change', () => {
       expect(parsePath('hello.{wow.moon}.0')).toEqual(['hello', 'wow.moon', '0']);
       expect(parsePath('hello.#.0.[append]')).toEqual(['hello', '#', '0', '[append]']);
     });
-
   });
 
   describe('makePath', () => {
@@ -33,19 +32,15 @@ describe('object-change', () => {
       expect(makePath(['hello', 'wow', '0'])).toEqual('hello.wow.0');
       expect(makePath(['hello', 'wow.moon', '0'])).toEqual('hello.{wow.moon}.0');
     });
-
   });
 
   describe('deepGet', () => {
     const thing = {
       hello: {
         'consumer.props': 'lol',
-        wow: [
-          'a',
-          { test: 'moon' }
-        ]
+        wow: ['a', { test: 'moon' }],
       },
-      zetrix: null
+      zetrix: null,
     };
 
     it('works', () => {
@@ -53,18 +48,14 @@ describe('object-change', () => {
       expect(deepGet(thing, 'hello.wow.4')).toEqual(undefined);
       expect(deepGet(thing, 'hello.{consumer.props}')).toEqual('lol');
     });
-
   });
 
   describe('deepSet', () => {
     const thing = {
       hello: {
-        wow: [
-          'a',
-          { test: 'moon' }
-        ]
+        wow: ['a', { test: 'moon' }],
       },
-      zetrix: null
+      zetrix: null,
     };
 
     it('works to set an existing thing', () => {
@@ -73,11 +64,11 @@ describe('object-change', () => {
           wow: [
             5,
             {
-              test: 'moon'
-            }
-          ]
+              test: 'moon',
+            },
+          ],
         },
-        zetrix: null
+        zetrix: null,
       });
     });
 
@@ -87,18 +78,18 @@ describe('object-change', () => {
           wow: [
             'a',
             {
-              test: 'moon'
-            }
-          ]
+              test: 'moon',
+            },
+          ],
         },
         lets: {
           do: {
             this: {
-              now: 5
-            }
-          }
+              now: 5,
+            },
+          },
         },
-        zetrix: null
+        zetrix: null,
       });
     });
 
@@ -108,33 +99,29 @@ describe('object-change', () => {
           wow: [
             'a',
             {
-              test: 'moon'
+              test: 'moon',
             },
-            5
-          ]
+            5,
+          ],
         },
-        zetrix: null
+        zetrix: null,
       });
     });
-
   });
 
   describe('deepDelete', () => {
     const thing = {
       hello: {
         moon: 1,
-        wow: [
-          'a',
-          { test: 'moon' }
-        ]
+        wow: ['a', { test: 'moon' }],
       },
-      zetrix: null
+      zetrix: null,
     };
 
     it('works to delete an existing thing', () => {
       expect(deepDelete(thing, 'hello.wow')).toEqual({
         hello: { moon: 1 },
-        zetrix: null
+        zetrix: null,
       });
     });
 
@@ -144,7 +131,7 @@ describe('object-change', () => {
 
     it('removes things completely', () => {
       expect(deepDelete(deepDelete(thing, 'hello.wow'), 'hello.moon')).toEqual({
-        zetrix: null
+        zetrix: null,
       });
     });
 
@@ -154,14 +141,12 @@ describe('object-change', () => {
           moon: 1,
           wow: [
             {
-              test: 'moon'
-            }
-          ]
+              test: 'moon',
+            },
+          ],
         },
-        zetrix: null
+        zetrix: null,
       });
     });
-
   });
-
 });

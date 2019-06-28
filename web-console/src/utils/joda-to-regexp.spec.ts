@@ -24,14 +24,15 @@ describe('jodaFormatToRegExp', () => {
     expect(jodaFormatToRegExp('MM/dd/YYYY').toString()).toMatchSnapshot();
     expect(jodaFormatToRegExp('M/d/YY').toString()).toMatchSnapshot();
     expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('MM/dd/YYYY hh:mm:ss a' ).toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss' ).toString()).toMatchSnapshot();
+    expect(jodaFormatToRegExp('MM/dd/YYYY hh:mm:ss a').toString()).toMatchSnapshot();
+    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss').toString()).toMatchSnapshot();
     expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').toString()).toMatchSnapshot();
   });
 
   it('matches dates when needed', () => {
     expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').test('26-4-1986 01:23:40 am')).toEqual(true);
-    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').test('26-4-1986 01:23:40 am')).toEqual(false);
+    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').test('26-4-1986 01:23:40 am')).toEqual(
+      false,
+    );
   });
-
 });

@@ -23,12 +23,13 @@ import { TableColumnSelector } from './table-column-selector';
 
 describe('table column', () => {
   it('matches snapshot', () => {
-    const tableColumn =
+    const tableColumn = (
       <TableColumnSelector
         columns={['a', 'b', 'c']}
         onChange={(column: string) => {}}
         tableColumnsHidden={['a', 'b', 'c']}
-      />;
+      />
+    );
     const { container } = render(tableColumn);
     expect(container.firstChild).toMatchSnapshot();
   });
