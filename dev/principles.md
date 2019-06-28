@@ -559,9 +559,9 @@ the codebase) or misleading, give them more meaningful and/or accurate names and
 <h4>2.6.c. Simplify tricky code and add explaining comments</h4>
 
 If while working on a PR you encounter some expression, part of code, or class without comments that you couldn't easily
-understand and has spent some time figuring things out, take time to simplify the logic and/or add [explaining comments
-](#explaining-comments) so that future readers (including likely yourself) don't have to spend that time again and again
-when working with the code.
+understand and has spent some time figuring things out, take time to simplify the logic and/or add [explaining
+comments](#explaining-comments) so that future readers (including likely yourself) don't have to spend that time again
+and again when working with the code.
 
 <a name="do-optional"/>
 <h3><a href="#do-optional">#</a> 2.7. Do everything "optional" that reviewers ask you to do</h3>
@@ -704,9 +704,9 @@ right not to follow these principles](#respect-principles-ignoring).
 
 The principles are redundant: even if only one participant in an issue or PR (either author or reviewer) the outcome
 should be the same as if all participants followed the principles. Don't count on this: always be that participant who
-asks the [conceptual](#review-problem-and-solution) and [design](#design) questions, [checks that the PR is reviewed
-](#ensure-review) on [different levels](#review-levels), [features are documented comprehensively
-](#document-comprehensively), etc.
+asks the [conceptual](#review-problem-and-solution) and [design](#design) questions, [checks that the PR is
+reviewed](#ensure-review) on [different levels](#review-levels), [features are documented
+comprehensively](#document-comprehensively), etc.
 
 <h2>4. Operational principles</h2>
 
@@ -730,8 +730,8 @@ before instead of creating another separate "proposal" issue.
 
 Whenever you have an idea (even a vague one) about any new feature in Druid or how the project or a particular place in
 the codebase can be improved, don't hesitate to open an issue (or add a comment to an existing issue if there is one
-relevant). Ideas *shouldn't* be "thought out well" to be worth sharing. See also principle [Open more issues yourself
-](#open-more-issues).
+relevant). Ideas *shouldn't* be "thought out well" to be worth sharing. See also principle [Open more issues
+yourself](#open-more-issues).
 
 <a name="small-pr">
 <h3><a href="#small-pr">#</a> 4.2. Split your work into reasonably-sized PRs</h3>
@@ -1057,8 +1057,8 @@ because you cannot know what is on the minds of other people.
 
 When a disagreement between you and some other developers arises regarding the qualities of some solution or a design,
 or the processes of development, or the directions of the project, try to understand why there is a difference in your
-opinions by [probing other developers' reasoning](#probe-reasoning) as well as [exposing your own reasoning
-](#explain-yourself).
+opinions by [probing other developers' reasoning](#probe-reasoning) as well as [exposing your own
+reasoning](#explain-yourself).
 
 <h4>5.4.a. Express your position assertively</h4>
 
@@ -1150,8 +1150,8 @@ libraries such as Guava into durable and linkable project's assets as much as po
 
 If during a code or a design review you find yourself explaining something to the author of the work or to other
 developers at length suggest them to add [explaining comments](#explaining-comments) at certain places in the code
-instead (according to principle [Propose exact code changes and comments to be added in the code
-](#exact-review-suggestions)).
+instead (according to principle [Propose exact code changes and comments to be added in the
+code](#exact-review-suggestions)).
 
 You can also create a PR with these comments yourself if you want to preserve your authorship in the project's commit
 log and you don't mind the overhead of creating a separate PR.
@@ -1160,10 +1160,10 @@ log and you don't mind the overhead of creating a separate PR.
 <h4><a href="#add-checklist-item">#</a> 6.1.b. Add code review checklist items, one at a time</h4>
 
 If during review you notice yourself (or anyone else) leaving a comment about some problem with the code or the design
-that looks like a pattern but can't be easily [automated using any of the static analysis tools
-](#open-issues-defects-static-analysis) (in which case you should create an issue about that) create a new checklist
-item to some document in `dev/code-review/` directory in the project. If there is no relevant file in the directory yet,
-create a new one.
+that looks like a pattern but can't be easily [automated using any of the static analysis
+tools](#open-issues-defects-static-analysis) (in which case you should create an issue about that) create a new
+checklist item to some document in `dev/code-review/` directory in the project. If there is no relevant file in the
+directory yet, create a new one.
 
 Practically, there are two problems with putting this principle into practice:
  - Adding a new checklist item while you are reviewing or developing code disturbs the working flow.
@@ -1215,8 +1215,8 @@ When you learn something new about the programming: useful API from one of the l
 project, effective programming technique or a pattern, or find a good learning resource, share these findings in a
 message to the development mailing list.
 
-Think if the thing that you have learned can be turned into [static analysis rules](#automate) or [checklist items
-](add-checklist-item).
+Think if the thing that you have learned can be turned into [static analysis rules](#automate) or [checklist
+items](add-checklist-item).
 
 <h2>7. Respect</h2>
 
@@ -1228,8 +1228,8 @@ PR in itself, although you may demand some specific things such as adding [docum
 [tests](#tests). Regardless of how the work and the communication is conducted, only the merits of the final result
 should be considered when deciding whether a PR is good for merge or not.
 
-However, never lower your own standard. [Always follow the principles no matter if other people do that
-](#lead-yourself).
+However, never lower your own standard. [Always follow the principles no matter if other people do
+that](#lead-yourself).
 
 <h3>7.2. Don't "ping" people in PRs too often</h3>
 
