@@ -25,6 +25,7 @@ import {
   Card,
   Classes,
   Code,
+  Dialog,
   Elevation,
   FormGroup,
   H5,
@@ -50,6 +51,7 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -233,6 +235,8 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup: boolean | null;
   newDimensionMode: DimensionMode | null;
+  showViewValueModal: boolean;
+  str: string;
 
   // welcome
   overlordModules: string[] | null;
@@ -296,8 +300,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
+      showViewValueModal: false,
       newRollup: null,
       newDimensionMode: null,
+      str: '',
 
       // welcome
       overlordModules: null,
@@ -426,6 +432,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
+        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -536,6 +543,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
         </div>
       </>
+    );
+  }
+
+  renderViewValueModal() {
+    const { showViewValueModal, str } = this.state;
+    if (!showViewValueModal) return null;
+    return (
+      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
   }
 
@@ -970,6 +985,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
+            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}

@@ -16,38 +16,22 @@
  * limitations under the License.
  */
 
-.table-cell {
-  &.null {
-    font-style: italic;
-  }
+import React from 'react';
+import { render } from 'react-testing-library';
 
-  &.unparseable {
-    color: #9e2b0e;
-  }
+import { ShowValueDialog } from './show-value-dialog';
 
-  &.timestamp {
-    font-weight: bold;
-  }
-
-  &.truncated {
-    position: relative;
-    width: 100%;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    padding-right: 16px;
-
-    .omitted {
-      margin: 0 0.2em;
-      font-style: italic;
-    }
-
-    .action-icon {
-      position: absolute;
-      top: 0;
-      right: 0;
-      color: #f5f8fa;
-    }
-  }
-}
+describe('clipboard dialog', () => {
+  it('matches snapshot', () => {
+    const compactionDialog = (
+      <ShowValueDialog
+        onClose={() => null}
+        str={
+          'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
+        }
+      />
+    );
+    const { container } = render(compactionDialog, { container: document.body });
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
