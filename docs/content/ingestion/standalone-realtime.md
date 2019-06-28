@@ -34,6 +34,10 @@ This processes could be invoked by
 org.apache.druid.cli.Main server realtime
 ```
 
-This model of stream pull ingestion was deprecated and removed completely in Druid 0.16.0. Please consider using the
-[Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html) or
-[Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md) instead.
+This model of stream pull ingestion was deprecated for a number of both operational and architectural reasons, and
+removed completely in Druid 0.16.0. Operationally, realtime nodes were difficult to configure, deploy, and scale because
+each node required an unique configuration. The design of the stream pull ingestion system for realtime nodes also
+suffered from limitations which made it not possible to achieve exactly once ingestion.
+
+Please consider using the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html) or
+[Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md) for stream pull ingestion instead.
