@@ -237,6 +237,14 @@ apache_license_v2 = "\n\
 class DependencyReportParser(HTMLParser):
     # TODO: Change to comments
     states = ["none", "h2_start", "project_dependencies_start", "project_dependencies_end", "h2_end", "h3_start", "compile_start", "compile_end", "h3_end", "table_start", "table_end", "row_start", "th_start", "th_end", "td_start", "td_end", "row_end"]
+
+    # This class parses the given html file to find all dependency reports under "Project dependencies"
+    # and "Projection transparent dependencies" sections.
+    # The parser works based on the state machine and its state is updated whenever it reads a new tag.
+    # The state changes as below:
+    #
+    # none -> h2_start -> project_dependencies_start -> h3_start -> compile_start -> table_start -> row_start -> th_start / td_start -> th_end / td_end -> row_end -> table_end -> compile_end -> h3_end -> project_dependencies_end -> h2_end -> none
+
     attr_index = 0
     group_id = None
     artifact_id = None
@@ -676,7 +684,7 @@ def generate_license(license_yaml):
                     print("")
 
 
-# TODO: add options: fail-on-unchecked-license, debug mode
+# TODO: add options: debug mode
 if len(sys.argv) != 3:
     sys.stderr.write("usage: {} <path to license.yaml> <root to maven dependency reports>".format(sys.argv[0]))
     sys.exit(1)
