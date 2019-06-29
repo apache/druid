@@ -1600,15 +1600,44 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
+    if (sampleResponse.data.length) {
+      this.setState({
+        cacheKey: sampleResponse.cacheKey,
+        filterQueryState: new QueryState({
+          data: headerAndRowsFromSampleResponse(
+            sampleResponse,
+            undefined,
+            ['__time'].concat(parserColumns),
+            true,
+          ),
+        }),
+      });
+      return;
+    }
+
+    // The filters matched no data
+    let sampleResponseNoFilter: SampleResponse;
+    try {
+      const specNoFilter = deepSet(spec, 'dataSchema.transformSpec.filter', null);
+      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheKey);
+    } catch (e) {
+      this.setState({
+        filterQueryState: new QueryState({ error: e.message }),
+      });
+      return;
+    }
+
+    const headerAndRowsNoFilter = headerAndRowsFromSampleResponse(
+      sampleResponseNoFilter,
+      undefined,
+      ['__time'].concat(parserColumns),
+      true,
+    );
+
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheKey: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(
-          sampleResponse,
-          undefined,
-          ['__time'].concat(parserColumns),
-          true,
-        ),
+        data: deepSet(headerAndRowsNoFilter, 'rows', []),
       }),
     });
   }
