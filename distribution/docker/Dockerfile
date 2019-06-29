@@ -21,7 +21,7 @@ FROM maven:3-jdk-8 as builder
 
 COPY . /src
 WORKDIR /src
-RUN mvn install -ff -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
+RUN mvn dependency:go-offline install -ff -q -B -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
 
 RUN \
  VER=$(mvn -B org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate -Dexpression=project.version -q -DforceStdout=true -f pom.xml 2>/dev/null) \
