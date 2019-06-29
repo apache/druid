@@ -56,8 +56,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
@@ -209,22 +207,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public boolean requireLockInputSegments()
+  public boolean requireLockExistingSegments()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
   {
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    final Granularity segmentGranularity = spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
-    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
   }
 
   @Override
@@ -235,14 +226,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   @Nullable
   @Override
-  public Granularity getSegmentGranularity(Interval interval)
+  public Granularity getSegmentGranularity()
   {
-    final GranularitySpec granularitySpec = spec.getDataSchema().getGranularitySpec();
-    if (granularitySpec instanceof ArbitraryGranularitySpec) {
-      return null;
-    } else {
-      return granularitySpec.getSegmentGranularity();
-    }
+    return spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @JsonProperty("spec")

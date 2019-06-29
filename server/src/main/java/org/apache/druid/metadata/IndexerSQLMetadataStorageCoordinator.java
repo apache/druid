@@ -667,12 +667,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return null;
       }
 
+      // max partitionId of the SAME shardSpec
       SegmentIdWithShardSpec maxId = null;
 
       if (!existingChunks.isEmpty()) {
         TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
 
         maxId = StreamSupport.stream(existingHolder.getObject().spliterator(), false)
+                             // Here we check only the segments of the same shardSpec to find out the max partitionId.
+                             // Note that OverwriteShardSpec has the higher range for partitionId than others.
+                             // See PartitionIds.
                              .filter(chunk -> chunk.getObject().getShardSpec().getClass() == shardSpecFactory.getShardSpecClass())
                              .max(Comparator.comparing(chunk -> chunk.getObject().getShardSpec().getPartitionNum()))
                              .map(chunk -> SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))

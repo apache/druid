@@ -63,10 +63,10 @@ public class AllGranularity extends Granularity
   }
 
   /**
-   * All granularity matches no interval.
+   * No interval is aligned with all granularity since it's infinite.
    */
   @Override
-  public boolean match(Interval interval)
+  public boolean isAligned(Interval interval)
   {
     return false;
   }

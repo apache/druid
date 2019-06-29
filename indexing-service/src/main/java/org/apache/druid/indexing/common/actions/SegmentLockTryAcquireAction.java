@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 /**
  * TaskAction to try to acquire a {@link org.apache.druid.indexing.common.SegmentLock}.
+ * This action returns immediately failed {@link LockResult} if it fails to get locks for the given partitionIds.
  */
 public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
 {

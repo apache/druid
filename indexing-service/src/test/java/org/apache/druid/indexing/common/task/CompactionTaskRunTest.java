@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -65,6 +66,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -80,6 +83,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+@RunWith(Parameterized.class)
 public class CompactionTaskRunTest extends IngestionTestBase
 {
   public static final String DATA_SOURCE = "test";
@@ -107,13 +111,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
       0
   );
 
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
-  private CoordinatorClient coordinatorClient;
-  private SegmentLoaderFactory segmentLoaderFactory;
-  private ExecutorService exec;
-  private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
+    );
+  }
 
-  public CompactionTaskRunTest()
+  private static final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final CoordinatorClient coordinatorClient;
+  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final LockGranularity lockGranularity;
+  private ExecutorService exec;
+
+  public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
     TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
@@ -126,6 +140,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
+    this.lockGranularity = lockGranularity;
   }
 
   @Before
@@ -168,8 +183,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1), segments.get(i).getShardSpec());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
     }
   }
 
@@ -201,11 +226,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
-          segments.get(i).getShardSpec()
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
       );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
     }
 
     final CompactionTask compactionTask2 = builder
@@ -220,11 +252,24 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1, 0, 2, (short) 2, (short) 1),
-          segments.get(i).getShardSpec()
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
       );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(
+                PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1,
+                0,
+                2,
+                (short) 2,
+                (short) 1
+            ),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
     }
   }
 
@@ -308,11 +353,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(
-          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
-          segments.get(i).getShardSpec()
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
       );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
     }
   }
 
@@ -451,10 +503,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
-          segments.get(i).getShardSpec()
-      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(
+                PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2,
+                0,
+                2,
+                (short) 1,
+                (short) 2
+            ),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(i % 2, 0), segments.get(i).getShardSpec());
+      }
     }
 
     final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
@@ -512,10 +574,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i / 2, i / 2 + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2, 0, 2, (short) 1, (short) 2),
-          segments.get(i).getShardSpec()
-      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(
+                PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + i % 2,
+                0,
+                2,
+                (short) 1,
+                (short) 2
+            ),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(i % 2, 0), segments.get(i).getShardSpec());
+      }
     }
 
     final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
@@ -649,6 +721,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new NoopTestTaskFileWriter()
     );
 
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     if (task.isReady(box.getTaskActionClient())) {
       if (readyLatchToCountDown != null) {
         readyLatchToCountDown.countDown();

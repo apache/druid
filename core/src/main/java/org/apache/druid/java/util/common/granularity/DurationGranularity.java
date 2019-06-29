@@ -96,7 +96,7 @@ public class DurationGranularity extends Granularity
   }
 
   @Override
-  public boolean match(Interval interval)
+  public boolean isAligned(Interval interval)
   {
     if (interval.toDurationMillis() == duration) {
       return (interval.getStartMillis() - origin) % duration == 0;

@@ -32,6 +32,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
@@ -40,6 +41,8 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.SegmentLockHelper;
+import org.apache.druid.indexing.common.task.SegmentLockHelper.OverwritingRootGenerationPartitions;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
@@ -47,12 +50,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -77,13 +80,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -151,24 +152,12 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient)
+  public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    return !intervals.isPresent() || checkLockAcquired(taskActionClient, intervals.get());
-  }
-
-  private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
-  {
-    try {
-      return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), false);
+    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()) {
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
-    catch (Exception e) {
-      log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
-      return false;
-    }
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
   @JsonProperty
@@ -213,7 +202,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     );
 
     // Find inputSegments overshadowed by pushedSegments
-    final Set<DataSegment> allSegments = new HashSet<>(getAllInputSegments());
+    final Set<DataSegment> allSegments = new HashSet<>(getNonNullSegmentLockHelper().getLockedExistingSegments());
     allSegments.addAll(pushedSegments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
     final Set<DataSegment> oldSegments = timeline.findFullyOvershadowed()
@@ -227,28 +216,21 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public boolean requireLockInputSegments()
+  public boolean requireLockExistingSegments()
   {
     return !ingestionSchema.getIOConfig().isAppendToExisting();
   }
 
   @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return IndexTask.findInputSegments(
+    return findInputSegments(
         getDataSource(),
         taskActionClient,
         intervals,
         ingestionSchema.getIOConfig().getFirehoseFactory()
     );
-  }
-
-  @Override
-  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
-    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
   }
 
   @Override
@@ -259,14 +241,9 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
   @Nullable
   @Override
-  public Granularity getSegmentGranularity(Interval interval)
+  public Granularity getSegmentGranularity()
   {
-    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    if (granularitySpec instanceof ArbitraryGranularitySpec) {
-      return null;
-    } else {
-      return granularitySpec.getSegmentGranularity();
-    }
+    return ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @VisibleForTesting
@@ -280,11 +257,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     private final TaskToolbox toolbox;
     private final ParallelIndexTaskClient taskClient;
 
-    /**
-     * This internalAllocator is initialized lazily to make sure that {@link #isChangeSegmentGranularity()} is called
-     * after the lock is properly acquired. Note that locks can be acquired after the task is started if the interval is
-     * not specified in {@link GranularitySpec}.
-     */
     private SegmentAllocator internalAllocator;
 
     private WrappingSegmentAllocator(TaskToolbox toolbox, ParallelIndexTaskClient taskClient)
@@ -309,18 +281,37 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
     private SegmentAllocator createSegmentAllocator()
     {
-      if (ingestionSchema.getIOConfig().isAppendToExisting() || !isChangeSegmentGranularity()) {
+      final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+      final SegmentLockHelper segmentLockHelper = getNonNullSegmentLockHelper();
+      if (ingestionSchema.getIOConfig().isAppendToExisting() || isUseSegmentLock()) {
         return new ActionBasedSegmentAllocator(
             toolbox.getTaskActionClient(),
             ingestionSchema.getDataSchema(),
             (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
-              final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
               final Interval interval = granularitySpec
                   .bucketInterval(row.getTimestamp())
                   .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
+              final Granularity granularityFromInterval = GranularityType.fromPeriod(interval.toPeriod())
+                                                                         .getDefaultGranularity();
               final ShardSpecFactory shardSpecFactory;
-              if (hasInputSegments() && !isChangeSegmentGranularity()) {
-                final OverwritingRootGenerationPartitions overwritingSegmentMeta = getOverwritingSegmentMeta(interval);
+              if (segmentLockHelper.hasOverwritingRootGenerationPartition(interval)) {
+                if (segmentLockHelper.getKnownSegmentGranularity() != null
+                    && !segmentLockHelper.getKnownSegmentGranularity().equals(granularityFromInterval)) {
+                  throw new ISE(
+                      "Different segment granularity is detected. knownGranularity[%s], granularityFromInterval[%s]",
+                      segmentLockHelper.getKnownSegmentGranularity(),
+                      granularityFromInterval
+                  );
+                }
+                final boolean lockedExistingSegments = segmentLockHelper.tryLockExistingSegments(
+                    toolbox.getTaskActionClient(),
+                    Collections.singletonList(interval)
+                );
+                if (!lockedExistingSegments) {
+                  throw new ISE("Failed to lock segments in interval[%s]", interval);
+                }
+                final OverwritingRootGenerationPartitions overwritingSegmentMeta = segmentLockHelper
+                    .getOverwritingRootGenerationPartition(interval);
                 if (overwritingSegmentMeta == null) {
                   throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
                 }
@@ -343,7 +334,8 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
                       sequenceName,
                       previousSegmentId,
                       skipSegmentLineageCheck,
-                      shardSpecFactory
+                      shardSpecFactory,
+                      isUseSegmentLock() ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK
                   )
               );
             }
@@ -410,7 +402,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      driver.startJob(null);
+      driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
 
@@ -436,12 +428,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
             if (!optInterval.isPresent()) {
               fireDepartmentMetrics.incrementThrownAway();
               continue;
-            }
-          } else {
-            final Granularity segmentGranularity = findSegmentGranularity(granularitySpec);
-            final Interval timeChunk = segmentGranularity.bucket(inputRow.getTimestamp());
-            if (!tryLockWithIntervals(toolbox.getTaskActionClient(), Collections.singletonList(timeChunk), false)) {
-              throw new ISE("Failed to get locks for interval[%s]", timeChunk);
             }
           }
 

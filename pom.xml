@@ -1237,7 +1237,7 @@
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
                         <argLine>
-                            -Xmx4g
+                            -Xmx1500m
                             -XX:MaxDirectMemorySize=512m
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US

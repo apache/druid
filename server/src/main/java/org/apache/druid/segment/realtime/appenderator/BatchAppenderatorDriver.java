@@ -73,6 +73,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
   }
 
+  @Nullable
+  public Object startJob()
+  {
+    return startJob(AppenderatorDriverSegmentLockHelper.NOOP);
+  }
+
   /**
    * This method always returns null because batch ingestion doesn't support restoring tasks on failures.
    *
@@ -80,7 +86,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    */
   @Override
   @Nullable
-  public Object startJob(StreamAppenderatorDriverSegmentLockHelper lockHelper)
+  public Object startJob(AppenderatorDriverSegmentLockHelper lockHelper)
   {
     final Object metadata = appenderator.startJob();
     if (metadata != null) {

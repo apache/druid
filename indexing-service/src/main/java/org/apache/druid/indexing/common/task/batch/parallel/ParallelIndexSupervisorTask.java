@@ -33,9 +33,11 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -51,7 +53,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -77,7 +78,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -217,18 +217,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()), true);
+    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()
+        && !ingestionSchema.getIOConfig().isAppendToExisting()) {
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
   @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return IndexTask.findInputSegments(
+    return findInputSegments(
         getDataSource(),
         taskActionClient,
         intervals,
@@ -237,16 +237,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Override
-  public boolean requireLockInputSegments()
+  public boolean requireLockExistingSegments()
   {
     return !ingestionSchema.getIOConfig().isAppendToExisting();
-  }
-
-  @Override
-  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
-    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
   }
 
   @Override
@@ -257,14 +250,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   @Nullable
   @Override
-  public Granularity getSegmentGranularity(Interval interval)
+  public Granularity getSegmentGranularity()
   {
-    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    if (granularitySpec instanceof ArbitraryGranularitySpec) {
-      return null;
-    } else {
-      return granularitySpec.getSegmentGranularity();
-    }
+    return ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @Override
@@ -331,9 +319,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
-  private TaskStatus runSequential(TaskToolbox toolbox)
+  private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
   {
-    return new IndexTask(
+    final IndexTask indexTask = new IndexTask(
         getId(),
         getGroupId(),
         getTaskResource(),
@@ -347,7 +335,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         authorizerMapper,
         chatHandlerProvider,
         rowIngestionMetersFactory
-    ).run(toolbox);
+    );
+    if (indexTask.isReady(toolbox.getTaskActionClient())) {
+      return indexTask.run(toolbox);
+    } else {
+      return TaskStatus.failure(getId());
+    }
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
@@ -406,38 +399,86 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  // TODO: add test for timeChunkLock without bucket intervals in granularitySpec
+
+  /**
+   * Allocate a new segment for the given timestamp locally.
+   * Since the segments returned by this method overwrites any existing segments, this method should be called only
+   * when the {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   */
   @VisibleForTesting
   SegmentIdWithShardSpec allocateNewSegment(DateTime timestamp) throws IOException
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
+    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
+
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
-    final Map<Interval, String> versions = toolbox
+    final List<TaskLock> locks = toolbox
         .getTaskActionClient()
-        .submit(new LockListAction())
+        .submit(new LockListAction());
+    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
+    if (revokedLock != null) {
+      throw new ISE("Lock revoked: [%s]", revokedLock);
+    }
+    final Map<Interval, String> versions = locks
         .stream()
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
-    final Interval interval = granularitySpec
-        .bucketInterval(timestamp)
-        .or(granularitySpec.getSegmentGranularity().bucket(timestamp));
+    Interval interval;
+    String version;
+    if (bucketIntervals.isPresent()) {
+      // If granularity spec has explicit intervals, we just need to find the version accociated to the interval.
+      // This is because we should have gotten all required locks up front when the task starts up.
+      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+      if (!maybeInterval.isPresent()) {
+        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+      }
+
+      interval = maybeInterval.get();
+      if (!bucketIntervals.get().contains(interval)) {
+        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+      }
+
+      version = findVersion(versions, interval);
+      if (version == null) {
+        throw new ISE("Cannot find a version for interval[%s]", interval);
+      }
+    } else {
+      // We don't have explicit intervals. We can use the segment granularity to figure out what
+      // interval we need, but we might not have already locked it.
+      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
+      version = findVersion(versions, interval);
+      if (version == null) {
+        // We don't have a lock for this interval, so we should lock it now.
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            interval
+        );
+        version = lock.getVersion();
+      }
+    }
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
-        findVersion(versions, interval),
+        version,
         new NumberedShardSpec(partitionNum, 0)
     );
   }
 
+  @Nullable
   private static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+                   .orElse(null);
   }
 
   /**

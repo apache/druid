@@ -58,12 +58,12 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 
   public void add(PartitionChunk<T> chunk)
   {
-    overshadowableManager.add(chunk);
+    overshadowableManager.addChunk(chunk);
   }
 
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    return overshadowableManager.remove(chunk);
+    return overshadowableManager.removeChunk(chunk);
   }
 
   public boolean isEmpty()

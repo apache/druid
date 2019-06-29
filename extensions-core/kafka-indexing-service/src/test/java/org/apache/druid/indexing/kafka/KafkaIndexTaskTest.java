@@ -50,6 +50,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskReport;
@@ -67,6 +68,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
@@ -163,6 +165,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -189,6 +193,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.query.QueryPlus.wrap;
 
+@RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
@@ -205,7 +210,17 @@ public class KafkaIndexTaskTest
     new KafkaIndexTaskModule().getJacksonModules().forEach(OBJECT_MAPPER::registerModule);
   }
 
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
+    );
+  }
+
   private final List<Task> runningTasks = new ArrayList<>();
+  private final LockGranularity lockGranularity;
 
   private long handoffConditionTimeout = 0;
   private boolean reportParseExceptions = false;
@@ -313,6 +328,11 @@ public class KafkaIndexTaskTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
+
+  public KafkaIndexTaskTest(LockGranularity lockGranularity)
+  {
+    this.lockGranularity = lockGranularity;
+  }
 
   @BeforeClass
   public static void setupClass() throws Exception
@@ -2422,6 +2442,7 @@ public class KafkaIndexTaskTest
     return taskExec.submit(
         () -> {
           try {
+            task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
             if (task.isReady(toolbox.getTaskActionClient())) {
               return task.run(toolbox);
             } else {

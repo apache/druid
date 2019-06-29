@@ -42,17 +42,15 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -109,7 +107,6 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -121,7 +118,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -158,6 +154,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonIgnore
+  private final RowIngestionMeters determinePartitionsMeters;
+
+  @JsonIgnore
+  private final RowIngestionMeters buildSegmentsMeters;
+
+  @JsonIgnore
   private FireDepartmentMetrics buildSegmentsFireDepartmentMetrics;
 
   @JsonIgnore
@@ -168,12 +170,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @JsonIgnore
   private String errorMsg;
-
-  @JsonIgnore
-  private final RowIngestionMeters determinePartitionsMeters;
-
-  @JsonIgnore
-  private final RowIngestionMeters buildSegmentsMeters;
 
   @JsonCreator
   public IndexTask(
@@ -250,26 +246,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    if (intervals.isPresent()) {
-      return tryLockIfNecessary(taskActionClient, intervals.get());
-    } else {
-      return true;
-    }
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());
   }
 
   @Override
-  public boolean requireLockInputSegments()
+  public boolean requireLockExistingSegments()
   {
     return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
            || !ingestionSchema.ioConfig.isAppendToExisting();
   }
 
   @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
     return findInputSegments(
@@ -280,61 +268,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     );
   }
 
-  public static List<DataSegment> findInputSegments(
-      String dataSource,
-      TaskActionClient actionClient,
-      List<Interval> intervalsToFind,
-      FirehoseFactory firehoseFactory
-  ) throws IOException
-  {
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      final List<WindowedSegmentId> inputSegments = ((IngestSegmentFirehoseFactory) firehoseFactory).getSegments();
-      if (inputSegments == null) {
-        final Interval inputInterval = Preconditions.checkNotNull(
-            ((IngestSegmentFirehoseFactory) firehoseFactory).getInterval(),
-            "input interval"
-        );
-        return actionClient.submit(
-            new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
-        );
-      } else {
-        final List<String> inputSegmentIds = inputSegments.stream()
-                                                          .map(WindowedSegmentId::getSegmentId)
-                                                          .collect(Collectors.toList());
-        final List<DataSegment> dataSegmentsInIntervals = actionClient.submit(
-            new SegmentListUsedAction(
-                dataSource,
-                null,
-                inputSegments.stream()
-                             .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
-                             .collect(Collectors.toSet())
-            )
-        );
-        return dataSegmentsInIntervals.stream()
-                                      .filter(segment -> inputSegmentIds.contains(segment.getId().toString()))
-                                      .collect(Collectors.toList());
-      }
-    } else {
-      return actionClient.submit(new SegmentListUsedAction(dataSource, null, intervalsToFind));
-    }
-  }
-
-  @Override
-  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
-    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
-  }
-
   @Override
   public boolean isPerfectRollup()
   {
-    return ingestionSchema.tuningConfig.isForceGuaranteedRollup();
+    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig);
   }
 
   @Nullable
   @Override
-  public Granularity getSegmentGranularity(Interval interval)
+  public Granularity getSegmentGranularity()
   {
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
     if (granularitySpec instanceof ArbitraryGranularitySpec) {
@@ -342,18 +284,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     } else {
       return granularitySpec.getSegmentGranularity();
     }
-  }
-
-  private boolean tryLockIfNecessary(TaskActionClient actionClient, Collection<Interval> intervals) throws IOException
-  {
-    // Sanity check preventing empty intervals (which cannot be locked, and don't make sense anyway).
-    for (Interval interval : intervals) {
-      if (interval.toDurationMillis() == 0) {
-        throw new ISE("Cannot run with empty interval[%s]", interval);
-      }
-    }
-
-    return tryLockWithIntervals(actionClient, new ArrayList<>(intervals), true);
   }
 
   @GET
@@ -519,14 +449,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
 
       final List<Interval> allocateIntervals = new ArrayList<>(allocateSpec.keySet());
-      // get locks for found shardSpec intervals
-      if (!tryLockIfNecessary(toolbox.getTaskActionClient(), allocateIntervals)) {
-        throw new ISE("Failed to get a lock for segments");
-      }
-
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!tryLockWithIntervals(toolbox.getTaskActionClient(), allocateIntervals, true)) {
+        if (!determineLockGranularityandTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
@@ -870,14 +795,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
-    if (!isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
-        && (ingestionSchema.ioConfig.isAppendToExisting() || !isChangeSegmentGranularity())) {
+    if (ingestionSchema.ioConfig.isAppendToExisting() || isUseSegmentLock()) {
       return new RemoteSegmentAllocator(
           toolbox,
           getId(),
           dataSchema,
-          hasInputSegments() && !isChangeSegmentGranularity(),
-          getAllOverwritingSegmentMeta()
+          getNonNullSegmentLockHelper(),
+          isUseSegmentLock() ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK,
+          ingestionSchema.ioConfig.isAppendToExisting()
       );
     } else {
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.
@@ -957,7 +882,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      driver.startJob(null);
+      driver.startJob();
 
       while (firehose.hasMore()) {
         try {
@@ -982,17 +907,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             continue;
           }
 
-          final String sequenceName;
-
-          if (isGuaranteedRollup) {
-            // Sequence name is based solely on the shardSpec, and there will only be one segment per sequence.
-            final Interval interval = optInterval.get();
-            sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
-          } else {
-            // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
-            // (in append mode) or may be created on our own authority (in overwrite mode).
-            sequenceName = getId();
-          }
+          final Interval interval = optInterval.get();
+          final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
@@ -1023,8 +939,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       log.info("Pushed segments[%s]", pushed.getSegments());
 
       // Probably we can publish atomicUpdateGroup along with segments.
-      final Set<DataSegment> inputSegments = !isGuaranteedRollup && hasInputSegments() && !isChangeSegmentGranularity()
-                                             ? getAllInputSegments()
+      final Set<DataSegment> inputSegments = isUseSegmentLock()
+                                             ? getNonNullSegmentLockHelper().getLockedExistingSegments()
                                              : null;
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
 

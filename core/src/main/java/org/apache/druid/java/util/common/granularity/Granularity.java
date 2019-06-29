@@ -116,7 +116,7 @@ public abstract class Granularity implements Cacheable
   /**
    * Return true if time chunks populated by this granularity includes the given interval time chunk.
    */
-  public abstract boolean match(Interval interval);
+  public abstract boolean isAligned(Interval interval);
 
   public DateTime bucketEnd(DateTime time)
   {

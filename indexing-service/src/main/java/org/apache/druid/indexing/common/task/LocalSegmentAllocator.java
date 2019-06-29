@@ -86,6 +86,8 @@ class LocalSegmentAllocator implements IndexTaskSegmentAllocator
   @Override
   public String getSequenceName(Interval interval, InputRow inputRow)
   {
+    // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
+    // (in append mode) or may be created on our own authority (in overwrite mode).
     return taskId;
   }
 

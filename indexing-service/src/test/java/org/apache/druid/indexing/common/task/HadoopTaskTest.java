@@ -70,21 +70,15 @@ public class HadoopTaskTest
       }
 
       @Override
-      public boolean requireLockInputSegments()
+      public boolean requireLockExistingSegments()
       {
         return true;
       }
 
       @Override
-      public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+      public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       {
         return Collections.emptyList();
-      }
-
-      @Override
-      public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-      {
-        return true;
       }
 
       @Override
@@ -95,7 +89,7 @@ public class HadoopTaskTest
 
       @Nullable
       @Override
-      public Granularity getSegmentGranularity(Interval interval)
+      public Granularity getSegmentGranularity()
       {
         return null;
       }

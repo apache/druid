@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 
 public class LockRequestForNewSegment implements LockRequest
 {
+  private final LockGranularity lockGranularity;
   private final TaskLockType lockType;
   private final String groupId;
   private final String dataSource;
@@ -43,7 +44,10 @@ public class LockRequestForNewSegment implements LockRequest
   private final String previsousSegmentId;
   private final boolean skipSegmentLineageCheck;
 
+  private String version;
+
   public LockRequestForNewSegment(
+      LockGranularity lockGranularity,
       TaskLockType lockType,
       String groupId,
       String dataSource,
@@ -55,6 +59,7 @@ public class LockRequestForNewSegment implements LockRequest
       boolean skipSegmentLineageCheck
   )
   {
+    this.lockGranularity = lockGranularity;
     this.lockType = lockType;
     this.groupId = groupId;
     this.dataSource = dataSource;
@@ -68,6 +73,7 @@ public class LockRequestForNewSegment implements LockRequest
 
   @VisibleForTesting
   public LockRequestForNewSegment(
+      LockGranularity lockGranularity,
       TaskLockType lockType,
       Task task,
       Interval interval,
@@ -78,6 +84,7 @@ public class LockRequestForNewSegment implements LockRequest
   )
   {
     this(
+        lockGranularity,
         lockType,
         task.getGroupId(),
         task.getDataSource(),
@@ -93,7 +100,7 @@ public class LockRequestForNewSegment implements LockRequest
   @Override
   public LockGranularity getGranularity()
   {
-    return LockGranularity.SEGMENT;
+    return lockGranularity;
   }
 
   @Override
@@ -134,7 +141,10 @@ public class LockRequestForNewSegment implements LockRequest
   @Override
   public String getVersion()
   {
-    return DateTimes.nowUtc().toString();
+    if (version == null) {
+      version = DateTimes.nowUtc().toString();
+    }
+    return version;
   }
 
   @Override
@@ -146,7 +156,10 @@ public class LockRequestForNewSegment implements LockRequest
   @Override
   public TaskLock toLock()
   {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException(
+        "This lockRequest must be converted to SpecificSegmentLockRequest or TimeChunkLockRequest first"
+        + " to convert to TaskLock"
+    );
   }
 
   public String getSequenceName()
@@ -169,7 +182,8 @@ public class LockRequestForNewSegment implements LockRequest
   public String toString()
   {
     return "LockRequestForNewSegment{" +
-           "lockType=" + lockType +
+           "lockGranularity=" + lockGranularity +
+           ", lockType=" + lockType +
            ", groupId='" + groupId + '\'' +
            ", dataSource='" + dataSource + '\'' +
            ", interval=" + interval +

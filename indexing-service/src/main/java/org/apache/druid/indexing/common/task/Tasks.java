@@ -36,9 +36,11 @@ public class Tasks
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
+  public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
+  public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
 
   public static SortedSet<Interval> computeCompactIntervals(SortedSet<Interval> intervals)
   {

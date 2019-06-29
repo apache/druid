@@ -56,6 +56,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskReport;
@@ -74,6 +75,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -163,6 +165,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -197,6 +201,7 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.reset;
 
+@RunWith(Parameterized.class)
 public class KinesisIndexTaskTest extends EasyMockSupport
 {
   private static final Logger log = new Logger(KinesisIndexTaskTest.class);
@@ -211,6 +216,17 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private static ListeningExecutorService taskExec;
 
   private final List<Task> runningTasks = new ArrayList<>();
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
+    );
+  }
+
+  private final LockGranularity lockGranularity;
 
   private long handoffConditionTimeout = 0;
   private boolean reportParseExceptions = false;
@@ -289,6 +305,11 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             Execs.makeThreadFactory("kinesis-task-test-%d")
         )
     );
+  }
+
+  public KinesisIndexTaskTest(LockGranularity lockGranularity)
+  {
+    this.lockGranularity = lockGranularity;
   }
 
   @Before
@@ -2591,6 +2612,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     return taskExec.submit(
         () -> {
           try {
+            task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
             if (task.isReady(toolbox.getTaskActionClient())) {
               return task.run(toolbox);
             } else {

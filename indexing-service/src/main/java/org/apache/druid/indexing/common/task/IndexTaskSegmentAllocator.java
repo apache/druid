@@ -28,5 +28,15 @@ import org.joda.time.Interval;
  */
 interface IndexTaskSegmentAllocator extends SegmentAllocator
 {
+  /**
+   * SequenceName is the key to create the segmentId. If previousSegmentId is given, {@link SegmentAllocator} allocates
+   * segmentId depending on sequenceName and previousSegmentId. If it's missing, it allocates segmentId using
+   * sequenceName and interval. For {@link IndexTask}, it always provides the previousSegmentId to
+   * SegmentAllocator.
+   * See {@link org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator#allocatePendingSegment} for details.
+   *
+   * Implementations should return the correct sequenceName based on the given interval and inputRow, which is passed
+   * to SegmentAllocator.
+   */
   String getSequenceName(Interval interval, InputRow inputRow);
 }

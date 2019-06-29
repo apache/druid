@@ -21,84 +21,54 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.druid.indexing.common.SegmentLock;
+import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.SegmentLockReleaseAction;
-import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
+import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
-import org.apache.druid.indexing.overlord.LockResult;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
  * Abstract class for batch tasks like {@link IndexTask}.
- * Provides some methods ({@link #tryLockWithIntervals} and {@link #tryLockWithSegments}) for easily acquiring task
+ * Provides some methods ({@link #determineSegmentGranularity} and {@link #determineSegmentGranularity}) for easily acquiring task
  * locks.
  */
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
-  @Nullable
-  private Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions;
-  @Nullable
-  private Set<DataSegment> allInputSegments;
+  private static final Logger log = new Logger(AbstractBatchIndexTask.class);
 
-  @Nullable
-  private Boolean changeSegmentGranularity;
-
-  public static class OverwritingRootGenerationPartitions
-  {
-    private final int startRootPartitionId;
-    private final int endRootPartitionId;
-    private final short maxMinorVersion;
-
-    private OverwritingRootGenerationPartitions(int startRootPartitionId, int endRootPartitionId, short maxMinorVersion)
-    {
-      this.startRootPartitionId = startRootPartitionId;
-      this.endRootPartitionId = endRootPartitionId;
-      this.maxMinorVersion = maxMinorVersion;
-    }
-
-    public int getStartRootPartitionId()
-    {
-      return startRootPartitionId;
-    }
-
-    public int getEndRootPartitionId()
-    {
-      return endRootPartitionId;
-    }
-
-    public short getMinorVersionForNewSegments()
-    {
-      return (short) (maxMinorVersion + 1);
-    }
-  }
+  private final SegmentLockHelper segmentLockHelper;
+  private boolean useSegmentLock;
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
     super(id, dataSource, context);
+    segmentLockHelper = new SegmentLockHelper(dataSource);
   }
 
   protected AbstractBatchIndexTask(
@@ -110,60 +80,143 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     super(id, groupId, taskResource, dataSource, context);
+    segmentLockHelper = new SegmentLockHelper(dataSource);
   }
 
-  public abstract boolean requireLockInputSegments();
+  /**
+   * Return true if this task can overwrite existing segments.
+   */
+  public abstract boolean requireLockExistingSegments();
 
-  public abstract List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  /**
+   * Find segments to lock in the given intervals.
+   * If this task is intend to overwrite only some segments in those intervals, this method should return only those
+   * segments instead of entire segments in those intervals.
+   */
+  // TODO: remove this
+  public abstract List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException;
-
-  public abstract boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments);
 
   public abstract boolean isPerfectRollup();
 
-  /**
-   * Returns the segmentGranularity for the given interval. Usually tasks are supposed to return its segmentGranularity
-   * if exists. The compactionTask can return different segmentGranularity depending on its configuration and the input
-   * interval.
-   *
-   * @return segmentGranularity or null if it doesn't support it.
-   */
-  @Nullable
-  public abstract Granularity getSegmentGranularity(Interval interval);
+  public boolean isUseSegmentLock()
+  {
+    return useSegmentLock;
+  }
 
-  protected boolean tryLockWithIntervals(TaskActionClient client, List<Interval> intervals, boolean isInitialRequest)
+  @Nullable
+  public abstract Granularity getSegmentGranularity();
+
+  public boolean determineLockGranularityAndTryLock(
+      TaskActionClient client,
+      GranularitySpec granularitySpec
+  ) throws IOException
+  {
+    final List<Interval> intervals = granularitySpec.bucketIntervals().isPresent()
+                                     ? new ArrayList<>(granularitySpec.bucketIntervals().get())
+                                     : Collections.emptyList();
+    return determineLockGranularityandTryLock(client, intervals);
+  }
+
+  public SegmentLockHelper getNonNullSegmentLockHelper()
+  {
+    return Preconditions.checkNotNull(segmentLockHelper, "segmentLockHelper");
+  }
+
+  protected boolean determineLockGranularityandTryLock(TaskActionClient client, List<Interval> intervals)
       throws IOException
   {
-    if (requireLockInputSegments()) {
-      if (isPerfectRollup()) {
+    final boolean forceTimeChunkLock = getContextValue(
+        Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
+        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
+    );
+    if (forceTimeChunkLock) {
+      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
+      useSegmentLock = false;
+      if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
-      } else if (!intervals.isEmpty()) {
-        // This method finds segments falling in all given intervals and then tries to lock those segments.
-        // Thus, there might be a race between calling findInputSegments() and tryLockWithSegments(),
-        // i.e., a new segment can be added to the interval or an existing segment might be removed.
-        // Removed segments should be fine because indexing tasks would do nothing with removed segments.
-        // However, tasks wouldn't know about new segments added after findInputSegments() call, it may missing those
-        // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
-        return tryLockWithSegments(client, findInputSegments(client, intervals), isInitialRequest);
       } else {
         return true;
       }
     } else {
-      changeSegmentGranularity = false;
-      allInputSegments = Collections.emptySet();
-      overwritingRootGenPartitions = Collections.emptyMap();
-      return true;
+      if (!intervals.isEmpty()) {
+        final LockGranularityDeterminResult result = determineSegmentGranularity(client, intervals);
+        useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
+        return tryLockWithDetermineResult(client, result);
+      } else {
+        return true;
+      }
+    }
+  }
+
+  protected boolean determineLockGranularityandTryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
+      throws IOException
+  {
+    final boolean forceTimeChunkLock = getContextValue(
+        Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
+        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
+    );
+    if (forceTimeChunkLock) {
+      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
+      useSegmentLock = false;
+      return tryTimeChunkLock(
+          client,
+          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
+      );
+    } else {
+      final LockGranularityDeterminResult result = determineSegmentGranularity(segments);
+      useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
+      return tryLockWithDetermineResult(client, result);
+    }
+  }
+
+  private boolean tryLockWithDetermineResult(TaskActionClient client, LockGranularityDeterminResult result)
+      throws IOException
+  {
+    if (result.lockGranularity == LockGranularity.TIME_CHUNK) {
+      return tryTimeChunkLock(client, Preconditions.checkNotNull(result.intervals, "intervals"));
+    } else {
+      final boolean isReady = segmentLockHelper.verifyAndLockExistingSegments(
+          client,
+          Preconditions.checkNotNull(result.segments, "segments")
+      );
+      return isReady;
+    }
+  }
+
+  protected LockGranularityDeterminResult determineSegmentGranularity(
+      TaskActionClient client,
+      List<Interval> intervals
+  ) throws IOException
+  {
+    if (requireLockExistingSegments()) {
+      if (isPerfectRollup()) {
+        log.info("Using timeChunk lock for perfrect rollup");
+        return new LockGranularityDeterminResult(LockGranularity.TIME_CHUNK, intervals, null);
+      } else if (!intervals.isEmpty()) {
+        // This method finds segments falling in all given intervals and then tries to lock those segments.
+        // Thus, there might be a race between calling findSegmentsToLock() and determineSegmentGranularity(),
+        // i.e., a new segment can be added to the interval or an existing segment might be removed.
+        // Removed segments should be fine because indexing tasks would do nothing with removed segments.
+        // However, tasks wouldn't know about new segments added after findSegmentsToLock() call, it may missing those
+        // segments. This is usually fine, but if you want to avoid this, you should use timeChunk lock instead.
+        return determineSegmentGranularity(findSegmentsToLock(client, intervals));
+      } else {
+        log.info("Using segment lock for empty intervals");
+        return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
+      }
+    } else {
+      log.info("Using segment lock since we don't have to lock existing segments");
+      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
   }
 
   private boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
-    allInputSegments = Collections.emptySet();
-    overwritingRootGenPartitions = Collections.emptyMap();
     // In this case, the intervals to lock must be alighed with segmentGranularity if it's defined
     final Set<Interval> uniqueIntervals = new HashSet<>();
     for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
-      final Granularity segmentGranularity = getSegmentGranularity(interval);
+      final Granularity segmentGranularity = getSegmentGranularity();
       if (segmentGranularity == null) {
         uniqueIntervals.add(interval);
       } else {
@@ -180,198 +233,130 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return true;
   }
 
-  boolean tryLockWithSegments(TaskActionClient client, List<DataSegment> segments, boolean isInitialRequest)
-      throws IOException
+  @Nullable
+  public static Granularity findGranularityFromSegments(List<DataSegment> segments)
   {
     if (segments.isEmpty()) {
-      changeSegmentGranularity = false;
-      allInputSegments = Collections.emptySet();
-      overwritingRootGenPartitions = Collections.emptyMap();
-      return true;
+      return null;
+    }
+    final Period firstSegmentPeriod = segments.get(0).getInterval().toPeriod();
+    final boolean allHasSameGranularity = segments
+        .stream()
+        .allMatch(segment -> firstSegmentPeriod.equals(segment.getInterval().toPeriod()));
+    if (allHasSameGranularity) {
+      return GranularityType.fromPeriod(firstSegmentPeriod).getDefaultGranularity();
+    } else {
+      return null;
+    }
+  }
+
+  LockGranularityDeterminResult determineSegmentGranularity(List<DataSegment> segments)
+  {
+    if (segments.isEmpty()) {
+      log.info("Using segment lock for empty segments");
+      // Set useSegmentLock even though we don't get any locks.
+      // Note that we should get any lock before data ingestion if we are supposed to use timChunk lock.
+      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
 
-    if (requireLockInputSegments()) {
-      // Create a timeline to find latest segments only
+    if (requireLockExistingSegments()) {
+      final Granularity granularityFromSegments = findGranularityFromSegments(segments);
+      @Nullable
+      final Granularity segmentGranularityFromSpec = getSegmentGranularity();
       final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
 
-      changeSegmentGranularity = checkIfChangeSegmentGranularity(intervals);
-      if (changeSegmentGranularity) {
-        return tryTimeChunkLock(client, intervals);
+      if (granularityFromSegments == null
+          || segmentGranularityFromSpec != null
+             && (!granularityFromSegments.equals(segmentGranularityFromSpec)
+                 || segments.stream().anyMatch(segment -> !segmentGranularityFromSpec.isAligned(segment.getInterval())))) {
+        // This case is one of the followings:
+        // 1) Segments have different granularities.
+        // 2) Segment granularity in ingestion spec is different from the one of existig segments.
+        // 3) Some existing segments are not aligned with the segment granularity in the ingestion spec.
+        log.info("Detected segmentGranularity change. Using timeChunk lock");
+        return new LockGranularityDeterminResult(LockGranularity.TIME_CHUNK, intervals, null);
       } else {
-        final List<DataSegment> segmentsToLock;
+        // Use segment lock
+        // Create a timeline to find latest segments only
         final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
             segments
         );
-        segmentsToLock = timeline.lookup(JodaUtils.umbrellaInterval(intervals))
-                                 .stream()
-                                 .map(TimelineObjectHolder::getObject)
-                                 .flatMap(partitionHolder -> StreamSupport.stream(
-                                     partitionHolder.spliterator(),
-                                     false
-                                 ))
-                                 .map(PartitionChunk::getObject)
-                                 .collect(Collectors.toList());
 
-        if (allInputSegments == null) {
-          allInputSegments = new HashSet<>(segmentsToLock);
-          overwritingRootGenPartitions = new HashMap<>();
-        }
-
-        final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
-        for (DataSegment segment : segmentsToLock) {
-          intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
-        }
-        intervalToSegments.values().forEach(
-            segmentsToCheck -> verifyAndFindRootPartitionRangeAndMinorVersion(segmentsToCheck, isInitialRequest)
-        );
-        final Closer lockCloserOnError = Closer.create();
-        for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
-          final Interval interval = entry.getKey();
-          final Set<Integer> partitionIds = entry.getValue().stream()
-                                                 .map(s -> s.getShardSpec().getPartitionNum())
-                                                 .collect(Collectors.toSet());
-          final List<LockResult> lockResults = client.submit(
-              new SegmentLockTryAcquireAction(
-                  TaskLockType.EXCLUSIVE,
-                  interval,
-                  entry.getValue().get(0).getMajorVersion(),
-                  partitionIds
-              )
-          );
-
-          lockResults.stream()
-                     .filter(LockResult::isOk)
-                     .map(result -> (SegmentLock) result.getTaskLock())
-                     .forEach(segmentLock -> lockCloserOnError.register(() -> client.submit(
-                         new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
-                     )));
-
-          if (isInitialRequest && (lockResults.isEmpty() || lockResults.stream().anyMatch(result -> !result.isOk()))) {
-            lockCloserOnError.close();
-            return false;
-          }
-        }
-        return true;
+        final List<DataSegment> segmentsToLock = timeline
+            .lookup(JodaUtils.umbrellaInterval(intervals))
+            .stream()
+            .map(TimelineObjectHolder::getObject)
+            .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
+            .map(PartitionChunk::getObject)
+            .collect(Collectors.toList());
+        log.info("No segmentGranularity change detected and it's not perfect rollup. Using segment lock");
+        return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, segmentsToLock);
       }
     } else {
-      changeSegmentGranularity = false;
-      allInputSegments = Collections.emptySet();
-      overwritingRootGenPartitions = Collections.emptyMap();
-      return true;
+      // Set useSegmentLock even though we don't get any locks.
+      // Note that we should get any lock before data ingestion if we are supposed to use timChunk lock.
+      log.info("Using segment lock since we don't have to lock existing segments");
+      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
   }
 
-  /**
-   * This method is called when the task overwrites existing segments with segment locks. It verifies the input segments
-   * can be locked together, so that output segments can overshadow existing ones properly.
-   * <p>
-   * This method checks two things:
-   * <p>
-   * - Are rootPartition range of inputSegments adjacent? Two rootPartition ranges are adjacent if they are consecutive.
-   * - All atomicUpdateGroups of inputSegments must be full. (See {@code AtomicUpdateGroup#isFull()}).
-   */
-  private void verifyAndFindRootPartitionRangeAndMinorVersion(List<DataSegment> inputSegments, boolean isInitialRequest)
+  protected static List<DataSegment> findInputSegments(
+      String dataSource,
+      TaskActionClient actionClient,
+      List<Interval> intervalsToFind, // TODO: must be checked somewhere? probably?
+      FirehoseFactory firehoseFactory
+  ) throws IOException
   {
-    if (inputSegments.isEmpty()) {
-      return;
-    }
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      final List<WindowedSegmentId> inputSegments = ((IngestSegmentFirehoseFactory) firehoseFactory).getSegments();
+      if (inputSegments == null) {
+        final Interval inputInterval = Preconditions.checkNotNull(
+            ((IngestSegmentFirehoseFactory) firehoseFactory).getInterval(),
+            "input interval"
+        );
 
-    final List<DataSegment> sortedSegments = new ArrayList<>(inputSegments);
-    sortedSegments.sort((s1, s2) -> {
-      if (s1.getStartRootPartitionId() != s2.getStartRootPartitionId()) {
-        return Integer.compare(s1.getStartRootPartitionId(), s2.getStartRootPartitionId());
+        return actionClient.submit(
+            new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
+        );
       } else {
-        return Integer.compare(s1.getEndRootPartitionId(), s2.getEndRootPartitionId());
+        final List<String> inputSegmentIds = inputSegments.stream()
+                                                          .map(WindowedSegmentId::getSegmentId)
+                                                          .collect(Collectors.toList());
+        final List<DataSegment> dataSegmentsInIntervals = actionClient.submit(
+            new SegmentListUsedAction(
+                dataSource,
+                null,
+                inputSegments.stream()
+                             .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
+                             .collect(Collectors.toSet())
+            )
+        );
+        return dataSegmentsInIntervals.stream()
+                                      .filter(segment -> inputSegmentIds.contains(segment.getId().toString()))
+                                      .collect(Collectors.toList());
       }
-    });
-    if (isInitialRequest) {
-      verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(sortedSegments);
+    } else {
+      return actionClient.submit(new SegmentListUsedAction(dataSource, null, intervalsToFind));
     }
-    final Interval interval = sortedSegments.get(0).getInterval();
-    final short prevMaxMinorVersion = (short) sortedSegments
-        .stream()
-        .mapToInt(DataSegment::getMinorVersion)
-        .max()
-        .orElseThrow(() -> new ISE("Empty inputSegments"));
-
-    overwritingRootGenPartitions.put(
-        interval,
-        new OverwritingRootGenerationPartitions(
-            sortedSegments.get(0).getStartRootPartitionId(),
-            sortedSegments.get(sortedSegments.size() - 1).getEndRootPartitionId(),
-            prevMaxMinorVersion
-        )
-    );
   }
 
-  public Set<DataSegment> getAllInputSegments()
+  private static class LockGranularityDeterminResult
   {
-    return Preconditions.checkNotNull(allInputSegments, "allInputSegments is not initialized");
-  }
+    private final LockGranularity lockGranularity;
+    @Nullable
+    private final List<Interval> intervals;
+    @Nullable
+    private final List<DataSegment> segments;
 
-  Map<Interval, OverwritingRootGenerationPartitions> getAllOverwritingSegmentMeta()
-  {
-    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
-    return Collections.unmodifiableMap(overwritingRootGenPartitions);
-  }
-
-  public boolean isChangeSegmentGranularity()
-  {
-    return Preconditions.checkNotNull(changeSegmentGranularity, "changeSegmentGranularity is not initialized");
-  }
-
-  public boolean hasInputSegments()
-  {
-    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
-    return !overwritingRootGenPartitions.isEmpty();
-  }
-
-  @Nullable
-  public OverwritingRootGenerationPartitions getOverwritingSegmentMeta(Interval interval)
-  {
-    Preconditions.checkNotNull(overwritingRootGenPartitions, "overwritingRootGenPartitions is not initialized");
-    return overwritingRootGenPartitions.get(interval);
-  }
-
-  public static void verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull(List<DataSegment> sortedSegments)
-  {
-    if (sortedSegments.isEmpty()) {
-      return;
-    }
-
-    Preconditions.checkArgument(
-        sortedSegments.stream().allMatch(segment -> segment.getInterval().equals(sortedSegments.get(0).getInterval()))
-    );
-
-    short atomicUpdateGroupSize = 1;
-    // sanity check
-    for (int i = 0; i < sortedSegments.size() - 1; i++) {
-      final DataSegment curSegment = sortedSegments.get(i);
-      final DataSegment nextSegment = sortedSegments.get(i + 1);
-      if (curSegment.getStartRootPartitionId() == nextSegment.getStartRootPartitionId()
-          && curSegment.getEndRootPartitionId() == nextSegment.getEndRootPartitionId()) {
-        // Input segments should have the same or consecutive rootPartition range
-        if (curSegment.getMinorVersion() != nextSegment.getMinorVersion()
-            || curSegment.getAtomicUpdateGroupSize() != nextSegment.getAtomicUpdateGroupSize()) {
-          throw new ISE(
-              "segment[%s] and segment[%s] have the same rootPartitionRange, but different minorVersion or atomicUpdateGroupSize",
-              curSegment,
-              nextSegment
-          );
-        }
-        atomicUpdateGroupSize++;
-      } else {
-        if (curSegment.getEndRootPartitionId() != nextSegment.getStartRootPartitionId()) {
-          throw new ISE("Can't compact segments of non-consecutive rootPartition range");
-        }
-        if (atomicUpdateGroupSize != curSegment.getAtomicUpdateGroupSize()) {
-          throw new ISE("All atomicUpdateGroup must be compacted together");
-        }
-        atomicUpdateGroupSize = 1;
-      }
-    }
-    if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
-      throw new ISE("All atomicUpdateGroup must be compacted together");
+    private LockGranularityDeterminResult(
+        LockGranularity lockGranularity,
+        @Nullable List<Interval> intervals,
+        @Nullable List<DataSegment> segments
+    )
+    {
+      this.lockGranularity = lockGranularity;
+      this.intervals = intervals;
+      this.segments = segments;
     }
   }
 }

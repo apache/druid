@@ -64,6 +64,8 @@ public class NumberedOverwritingShardSpecFactory implements ShardSpecFactory
   @Override
   public ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
+    // specOfPreviousMaxPartitionId is the max partitionId of the same shardSpec
+    // and could be null if all existing segments are first-generation segments.
     return new NumberedOverwriteShardSpec(
         specOfPreviousMaxPartitionId == null
         ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID

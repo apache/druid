@@ -79,7 +79,7 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
 
   public boolean isFull()
   {
-    return chunks.size() == chunks.get(0).getObject().getAtomicUpdateGroupSize();
+    return !isEmpty() && chunks.size() == chunks.get(0).getObject().getAtomicUpdateGroupSize();
   }
 
   public boolean isEmpty()
@@ -119,24 +119,10 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   }
 
   @Override
-  public short getStartRootPartitionIdAsShort()
-  {
-    Preconditions.checkState(!isEmpty(), "Empty atomicUpdateGroup");
-    return chunks.get(0).getObject().getStartRootPartitionIdAsShort();
-  }
-
-  @Override
   public int getEndRootPartitionId()
   {
     Preconditions.checkState(!isEmpty(), "Empty atomicUpdateGroup");
     return chunks.get(0).getObject().getEndRootPartitionId();
-  }
-
-  @Override
-  public short getEndRootPartitionIdAsShort()
-  {
-    Preconditions.checkState(!isEmpty(), "Empty atomicUpdateGroup");
-    return chunks.get(0).getObject().getEndRootPartitionIdAsShort();
   }
 
   @Override

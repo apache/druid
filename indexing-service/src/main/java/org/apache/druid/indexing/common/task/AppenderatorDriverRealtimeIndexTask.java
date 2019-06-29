@@ -44,12 +44,13 @@ import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentLockAquireAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -282,7 +283,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
           segmentId -> {
             try {
               return toolbox.getTaskActionClient().submit(
-                  new SegmentLockAquireAction(
+                  new SegmentLockAcquireAction(
                       TaskLockType.EXCLUSIVE,
                       segmentId.getInterval(),
                       segmentId.getVersion(),
@@ -755,7 +756,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 sequenceName,
                 previousSegmentId,
                 skipSegmentLineageCheck,
-                NumberedShardSpecFactory.instance()
+                NumberedShardSpecFactory.instance(),
+                LockGranularity.TIME_CHUNK
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

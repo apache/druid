@@ -983,6 +983,7 @@ public class TaskLockboxTest
   {
     for (int i = 0; i < numSegmentsToAllocate; i++) {
       final LockRequestForNewSegment request = new LockRequestForNewSegment(
+          LockGranularity.SEGMENT,
           TaskLockType.EXCLUSIVE,
           task,
           Intervals.of("2015-01-01/2015-01-05"),

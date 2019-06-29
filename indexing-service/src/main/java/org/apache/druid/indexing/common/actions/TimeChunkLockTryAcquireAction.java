@@ -32,6 +32,10 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
+/**
+ * TaskAction to try to acquire a {@link org.apache.druid.indexing.common.TimeChunkLock}.
+ * This action returns null immediately if it fails to get a lock for the given interval.
+ */
 public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
 {
   @JsonIgnore

@@ -65,16 +65,6 @@ public interface Overshadowable<T extends Overshadowable>
    */
   int getEndRootPartitionId();
 
-  default short getStartRootPartitionIdAsShort()
-  {
-    return (short) getStartRootPartitionId();
-  }
-
-  default short getEndRootPartitionIdAsShort()
-  {
-    return (short) getEndRootPartitionId();
-  }
-
   String getMajorVersion();
 
   short getMinorVersion();

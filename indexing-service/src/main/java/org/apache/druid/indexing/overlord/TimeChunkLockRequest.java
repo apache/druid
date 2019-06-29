@@ -50,6 +50,19 @@ public class TimeChunkLockRequest implements LockRequest
     this(lockType, task.getGroupId(), task.getDataSource(), interval, preferredVersion, task.getPriority(), false);
   }
 
+  public TimeChunkLockRequest(LockRequestForNewSegment lockRequestForNewSegment)
+  {
+    this(
+        lockRequestForNewSegment.getType(),
+        lockRequestForNewSegment.getGroupId(),
+        lockRequestForNewSegment.getDataSource(),
+        lockRequestForNewSegment.getInterval(),
+        lockRequestForNewSegment.getVersion(),
+        lockRequestForNewSegment.getPriority(),
+        lockRequestForNewSegment.isRevoked()
+    );
+  }
+
   public TimeChunkLockRequest(
       TaskLockType lockType,
       String groupId,

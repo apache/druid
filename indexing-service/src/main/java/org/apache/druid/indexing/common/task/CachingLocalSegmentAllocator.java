@@ -20,16 +20,22 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,10 +44,20 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * CachingSegmentAllocator which allocates segments locally.
+ * Allocates all necessary segments at the beginning and reuse them.
  */
-class CachingLocalSegmentAllocator extends CachingSegmentAllocator
+class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
+  private final TaskToolbox toolbox;
+  private final String taskId;
+  private final String dataSource;
+  private final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec;
+  @Nullable
+  private final ShardSpecs shardSpecs;
+
+  // sequenceName -> segmentId
+  private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
+
   CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
@@ -49,13 +65,29 @@ class CachingLocalSegmentAllocator extends CachingSegmentAllocator
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
   {
-    // This segment allocator doesn't need inputPartitionIds because the newly created segments don't have to store
-    // direcOvershadowingSegments
-    super(toolbox, taskId, dataSource, allocateSpec);
+    this.toolbox = toolbox;
+    this.taskId = taskId;
+    this.dataSource = dataSource;
+    this.allocateSpec = allocateSpec;
+    this.sequenceNameToSegmentId = new HashMap<>();
+
+    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = getIntervalToSegmentIds();
+    final Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
+
+    for (Map.Entry<Interval, List<SegmentIdWithShardSpec>> entry : intervalToIds.entrySet()) {
+      final Interval interval = entry.getKey();
+      final List<SegmentIdWithShardSpec> idsPerInterval = intervalToIds.get(interval);
+
+      for (SegmentIdWithShardSpec segmentIdentifier : idsPerInterval) {
+        shardSpecMap.computeIfAbsent(interval, k -> new ArrayList<>()).add(segmentIdentifier.getShardSpec());
+        // The shardSpecs for partitinoing and publishing can be different if isExtendableShardSpecs = true.
+        sequenceNameToSegmentId.put(getSequenceName(interval, segmentIdentifier.getShardSpec()), segmentIdentifier);
+      }
+    }
+    shardSpecs = new ShardSpecs(shardSpecMap);
   }
 
-  @Override
-  Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds() throws IOException
+  private Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds() throws IOException
   {
     final Map<Interval, String> intervalToVersion = getToolbox().getTaskActionClient()
                                                                 .submit(new LockListAction())
@@ -94,5 +126,54 @@ class CachingLocalSegmentAllocator extends CachingSegmentAllocator
                             .map(Entry::getValue)
                             .findFirst()
                             .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+  }
+
+
+  TaskToolbox getToolbox()
+  {
+    return toolbox;
+  }
+
+  String getTaskId()
+  {
+    return taskId;
+  }
+
+  String getDataSource()
+  {
+    return dataSource;
+  }
+
+  Map<Interval, Pair<ShardSpecFactory, Integer>> getAllocateSpec()
+  {
+    return allocateSpec;
+  }
+
+  @Override
+  public SegmentIdWithShardSpec allocate(
+      InputRow row,
+      String sequenceName,
+      String previousSegmentId,
+      boolean skipSegmentLineageCheck
+  )
+  {
+    return sequenceNameToSegmentId.get(sequenceName);
+  }
+
+  @Override
+  public String getSequenceName(Interval interval, InputRow inputRow)
+  {
+    // Sequence name is based solely on the shardSpec, and there will only be one segment per sequence.
+    return getSequenceName(interval, shardSpecs.getShardSpec(interval, inputRow));
+  }
+
+  /**
+   * Create a sequence name from the given shardSpec and interval.
+   *
+   * See {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec} as an example of partitioning.
+   */
+  private String getSequenceName(Interval interval, ShardSpec shardSpec)
+  {
+    return StringUtils.format("%s_%s_%d", taskId, interval, shardSpec.getPartitionNum());
   }
 }

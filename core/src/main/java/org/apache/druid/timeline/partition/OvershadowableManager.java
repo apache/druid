@@ -126,11 +126,15 @@ class OvershadowableManager<T extends Overshadowable<T>>
     Preconditions.checkArgument(!atomicUpdateGroup.isEmpty(), "empty atomicUpdateGroup");
 
     removeFrom(atomicUpdateGroup, from);
-    addTo(atomicUpdateGroup, to);
+    addAtomicUpdateGroupWithState(atomicUpdateGroup, to);
   }
 
+  /**
+   * Find the {@link AtomicUpdateGroup} of the given state which has the same {@link RootPartitionRange} and
+   * minorVersion with {@link PartitionChunk}.
+   */
   @Nullable
-  private AtomicUpdateGroup<T> searchForStateOf(PartitionChunk<T> chunk, State state)
+  private AtomicUpdateGroup<T> findAtomicUpdateGroupWith(PartitionChunk<T> chunk, State state)
   {
     final Short2ObjectSortedMap<AtomicUpdateGroup<T>> versionToGroup = getStateMap(state).get(
         RootPartitionRange.of(chunk)
@@ -149,7 +153,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * Can return an empty atomicUpdateGroup.
    */
   @Nullable
-  private AtomicUpdateGroup<T> tryRemoveFromState(PartitionChunk<T> chunk, State state)
+  private AtomicUpdateGroup<T> tryRemoveChunkFromGroupWithState(PartitionChunk<T> chunk, State state)
   {
     final RootPartitionRange rangeKey = RootPartitionRange.of(chunk);
     final Short2ObjectSortedMap<AtomicUpdateGroup<T>> versionToGroup = getStateMap(state).get(rangeKey);
@@ -164,7 +168,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
           }
         }
 
-        handleRemove(atomicUpdateGroup, RootPartitionRange.of(chunk), chunk.getObject().getMinorVersion(), state);
+        determineVisibleGroupAfterRemove(atomicUpdateGroup, RootPartitionRange.of(chunk), chunk.getObject().getMinorVersion(), state);
         return atomicUpdateGroup;
       }
     }
@@ -216,7 +220,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * Handles addition of the atomicUpdateGroup to the given state
    */
-  private void handleAdd(AtomicUpdateGroup<T> aug, State newStateOfAug)
+  private void transitionStandbyGroupIfFull(AtomicUpdateGroup<T> aug, State newStateOfAug)
   {
     if (newStateOfAug == State.STANDBY) {
       // A standby atomicUpdateGroup becomes visible when its all segments are available.
@@ -232,7 +236,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  private void addTo(AtomicUpdateGroup<T> aug, State state)
+  private void addAtomicUpdateGroupWithState(AtomicUpdateGroup<T> aug, State state)
   {
     final AtomicUpdateGroup<T> existing = getStateMap(state)
         .computeIfAbsent(RootPartitionRange.of(aug), k -> createMinorVersionToAugMap(state))
@@ -242,11 +246,12 @@ class OvershadowableManager<T extends Overshadowable<T>>
       throw new ISE("AtomicUpdateGroup[%s] is already in state[%s]", aug, state);
     }
 
-    handleAdd(aug, state);
+    transitionStandbyGroupIfFull(aug, state);
   }
 
-  public void add(PartitionChunk<T> chunk)
+  public void addChunk(PartitionChunk<T> chunk)
   {
+    // Sanity check. ExistingChunk should be usually null.
     final PartitionChunk<T> existingChunk = knownPartitionChunks.put(chunk.getChunkNumber(), chunk);
     if (existingChunk != null && !existingChunk.equals(chunk)) {
       throw new ISE(
@@ -258,18 +263,18 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
 
     // Find atomicUpdateGroup of the new chunk
-    AtomicUpdateGroup<T> atomicUpdateGroup = searchForStateOf(chunk, State.OVERSHADOWED);
+    AtomicUpdateGroup<T> atomicUpdateGroup = findAtomicUpdateGroupWith(chunk, State.OVERSHADOWED);
 
     if (atomicUpdateGroup != null) {
       atomicUpdateGroup.add(chunk);
     } else {
-      atomicUpdateGroup = searchForStateOf(chunk, State.STANDBY);
+      atomicUpdateGroup = findAtomicUpdateGroupWith(chunk, State.STANDBY);
 
       if (atomicUpdateGroup != null) {
         atomicUpdateGroup.add(chunk);
-        handleAdd(atomicUpdateGroup, State.STANDBY);
+        transitionStandbyGroupIfFull(atomicUpdateGroup, State.STANDBY);
       } else {
-        atomicUpdateGroup = searchForStateOf(chunk, State.VISIBLE);
+        atomicUpdateGroup = findAtomicUpdateGroupWith(chunk, State.VISIBLE);
 
         if (atomicUpdateGroup != null) {
           // A new chunk of the same major version and partitionId can be added in segment handoff
@@ -299,9 +304,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
               .anyMatch(group -> group.isOvershadow(newAtomicUpdateGroup));
 
           if (overshadowed) {
-            addTo(newAtomicUpdateGroup, State.OVERSHADOWED);
+            addAtomicUpdateGroupWithState(newAtomicUpdateGroup, State.OVERSHADOWED);
           } else {
-            addTo(newAtomicUpdateGroup, State.STANDBY);
+            addAtomicUpdateGroupWithState(newAtomicUpdateGroup, State.STANDBY);
           }
         }
       }
@@ -311,19 +316,19 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * Handles of removal of an empty atomicUpdateGroup from a state.
    */
-  private void handleRemove(
+  private void determineVisibleGroupAfterRemove(
       AtomicUpdateGroup<T> augOfRemovedChunk,
       RootPartitionRange rangeOfAug,
       short minorVersion,
       State stateOfRemovedAug
   )
   {
-    if (stateOfRemovedAug == State.STANDBY) {
-      // If an atomicUpdateGroup is overshadowed by another standby atomicUpdateGroup, there must be another visible
-      // atomicUpdateGroup which also overshadows the same atomicUpdateGroup.
-      // As a result, the state of overshadowed atomicUpdateGroup shouldn't be changed and we do nothing here.
+    // If an atomicUpdateGroup is overshadowed by another non-visible atomicUpdateGroup, there must be another visible
+    // atomicUpdateGroup which also overshadows the same atomicUpdateGroup.
+    // As a result, the state of overshadowed atomicUpdateGroup should be updated only when a visible atomicUpdateGroup
+    // is removed.
 
-    } else if (stateOfRemovedAug == State.VISIBLE) {
+    if (stateOfRemovedAug == State.VISIBLE) {
       // All segments in the visible atomicUpdateGroup which overshadows this atomicUpdateGroup is removed.
       // Fall back if there is a fully available overshadowed atomicUpdateGroup
 
@@ -332,6 +337,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
           minorVersion
       );
 
+      // If there is no fully available fallback group, then the existing VISIBLE group remains VISIBLE.
+      // Otherwise, the latest fully available group becomes VISIBLE.
       if (!latestFullAugs.isEmpty()) {
         // Move the atomicUpdateGroup to standby
         // and move the fully available overshadowed atomicUpdateGroup to visible
@@ -340,8 +347,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
         }
         latestFullAugs.forEach(group -> transitPartitionChunkState(group, State.OVERSHADOWED, State.VISIBLE));
       }
-    } else {
-      // do nothing
     }
   }
 
@@ -362,7 +367,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     final OvershadowableManager<T> manager = new OvershadowableManager<>();
     overshadowedGroups.stream()
                       .flatMap(entry -> entry.getValue().getChunks().stream())
-                      .forEach(manager::add);
+                      .forEach(manager::addChunk);
 
     return manager.visibleGroup
         .values()
@@ -398,7 +403,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
   }
 
   @Nullable
-  public PartitionChunk<T> remove(PartitionChunk<T> partitionChunk)
+  public PartitionChunk<T> removeChunk(PartitionChunk<T> partitionChunk)
   {
     final PartitionChunk<T> knownChunk = knownPartitionChunks.get(partitionChunk.getChunkNumber());
     if (knownChunk == null) {
@@ -414,12 +419,12 @@ class OvershadowableManager<T extends Overshadowable<T>>
       );
     }
 
-    AtomicUpdateGroup<T> augOfRemovedChunk = tryRemoveFromState(partitionChunk, State.STANDBY);
+    AtomicUpdateGroup<T> augOfRemovedChunk = tryRemoveChunkFromGroupWithState(partitionChunk, State.STANDBY);
 
     if (augOfRemovedChunk == null) {
-      augOfRemovedChunk = tryRemoveFromState(partitionChunk, State.VISIBLE);
+      augOfRemovedChunk = tryRemoveChunkFromGroupWithState(partitionChunk, State.VISIBLE);
       if (augOfRemovedChunk == null) {
-        augOfRemovedChunk = tryRemoveFromState(partitionChunk, State.OVERSHADOWED);
+        augOfRemovedChunk = tryRemoveChunkFromGroupWithState(partitionChunk, State.OVERSHADOWED);
         if (augOfRemovedChunk == null) {
           throw new ISE("Can't find atomicUpdateGroup for partitionChunk[%s]", partitionChunk);
         }
@@ -446,7 +451,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     if (chunk == null) {
       return null;
     }
-    final AtomicUpdateGroup<T> aug = searchForStateOf(chunk, State.VISIBLE);
+    final AtomicUpdateGroup<T> aug = findAtomicUpdateGroupWith(chunk, State.VISIBLE);
     if (aug == null) {
       return null;
     } else {

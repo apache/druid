@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.SegmentLockHelper;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -201,8 +201,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     final Map<Interval, List<DataSegment>> oldSegmentsMap = groupSegmentsByIntervalAndSort(segmentsToBeOverwritten);
     final Map<Interval, List<DataSegment>> newSegmentsMap = groupSegmentsByIntervalAndSort(segments);
 
-    oldSegmentsMap.values().forEach(AbstractBatchIndexTask::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
-    newSegmentsMap.values().forEach(AbstractBatchIndexTask::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    oldSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    newSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
 
     oldSegmentsMap.forEach((interval, oldSegmentsPerInterval) -> {
       final List<DataSegment> newSegmentsPerInterval = Preconditions.checkNotNull(

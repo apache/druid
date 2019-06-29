@@ -95,6 +95,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param sequenceName            name of the group of ingestion tasks producing a segment series
    * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first segment
    * @param interval                interval for which to allocate a segment
+   * @param shardSpecFactory        shardSpecFactory containing all necessary information to create a shardSpec for the
+   *                                new segmentId
    * @param maxVersion              use this version if we have no better version to use. The returned segment identifier may
    *                                have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.

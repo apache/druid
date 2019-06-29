@@ -39,6 +39,8 @@ public interface ShardSpecFactory
   /**
    * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
    * first call for the timeChunk where the new segment is created.
+   * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
+   * in the timeChunk are first-generation segments.
    */
   ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 

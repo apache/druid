@@ -33,6 +33,11 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
+/**
+ * TaskAction to acquire a {@link org.apache.druid.indexing.common.TimeChunkLock}.
+ * This action is a blocking operation and the caller could wait until it gets {@link TaskLock}
+ * (up to timeoutMs if it's > 0). It returns null if it fails to get a lock within timeout.
+ */
 public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
 {
   private final TaskLockType type;

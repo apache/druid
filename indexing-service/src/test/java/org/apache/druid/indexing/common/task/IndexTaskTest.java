@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
@@ -86,6 +87,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -100,6 +103,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
 {
   @Rule
@@ -125,19 +129,29 @@ public class IndexTaskTest extends IngestionTestBase
       0
   );
 
-  private SegmentLoader segmentLoader;
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
+    );
+  }
 
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final LockGranularity lockGranularity;
+  private SegmentLoader segmentLoader;
   private TestTaskRunner taskRunner;
 
-  public IndexTaskTest()
+  public IndexTaskTest(LockGranularity lockGranularity)
   {
-    jsonMapper = getObjectMapper();
-    indexIO = getIndexIO();
-    rowIngestionMetersFactory = getRowIngestionMetersFactory();
+    this.jsonMapper = getObjectMapper();
+    this.indexIO = getIndexIO();
+    this.rowIngestionMetersFactory = getRowIngestionMetersFactory();
+    this.lockGranularity = lockGranularity;
   }
 
   @Before
@@ -1483,17 +1497,23 @@ public class IndexTaskTest extends IngestionTestBase
           Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
           Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
         } else {
-          Assert.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
-          final NumberedOverwriteShardSpec numberedOverwriteShardSpec =
-              (NumberedOverwriteShardSpec) segment.getShardSpec();
-          Assert.assertEquals(
-              j + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
-              numberedOverwriteShardSpec.getPartitionNum()
-          );
-          Assert.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
-          Assert.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
-          Assert.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
-          Assert.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
+          if (lockGranularity == LockGranularity.SEGMENT) {
+            Assert.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
+            final NumberedOverwriteShardSpec numberedOverwriteShardSpec =
+                (NumberedOverwriteShardSpec) segment.getShardSpec();
+            Assert.assertEquals(
+                j + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+                numberedOverwriteShardSpec.getPartitionNum()
+            );
+            Assert.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
+            Assert.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
+            Assert.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
+            Assert.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
+          } else {
+            Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+            final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) segment.getShardSpec();
+            Assert.assertEquals(j, numberedShardSpec.getPartitionNum());
+          }
         }
       }
     }
@@ -1556,6 +1576,7 @@ public class IndexTaskTest extends IngestionTestBase
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception
   {
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     final TaskStatus status = taskRunner.run(task).get();
     final List<DataSegment> segments = taskRunner.getPublishedSegments();
     return Pair.of(status, segments);

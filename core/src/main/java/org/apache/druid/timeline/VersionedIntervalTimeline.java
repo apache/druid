@@ -184,9 +184,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public PartitionChunk<ObjectType> remove(Interval interval, VersionType version, PartitionChunk<ObjectType> chunk)
   {
+    lock.writeLock().lock();
     try {
-      lock.writeLock().lock();
-
       Map<VersionType, TimelineEntry> versionEntries = allTimelineEntries.get(interval);
       if (versionEntries == null) {
         return null;
@@ -219,8 +218,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   @Override
   public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
@@ -251,8 +250,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   @Override
   public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval)
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       return lookup(interval, false);
     }
     finally {
@@ -263,8 +262,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   @Override
   public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       return lookup(interval, true);
     }
     finally {
@@ -274,8 +273,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public boolean isEmpty()
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       return completePartitionsTimeline.isEmpty();
     }
     finally {
@@ -285,8 +284,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public TimelineObjectHolder<VersionType, ObjectType> first()
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       return timelineEntryToObjectHolder(completePartitionsTimeline.firstEntry().getValue());
     }
     finally {
@@ -296,8 +295,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public TimelineObjectHolder<VersionType, ObjectType> last()
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       return timelineEntryToObjectHolder(completePartitionsTimeline.lastEntry().getValue());
     }
     finally {
@@ -376,9 +375,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public boolean isOvershadowed(Interval interval, VersionType version, ObjectType object)
   {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
-
       TimelineEntry entry = completePartitionsTimeline.get(interval);
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
@@ -493,13 +491,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       );
 
       if (versionCompare < 0) {
-        // since the entry version is lower than the existing one, the existing one overwrites the given entry if overlapped.
+        // since the entry version is lower than the existing one, the existing one overwrites the given entry
+        // if overlapped.
         if (currKey.contains(entryInterval)) {
           // the version of the entry of currKey is larger than that of the given entry. Discard it
           return true;
         } else if (currKey.getStart().isBefore(entryInterval.getStart())) {
-          //     | cur |
           //       | entry |
+          //     | cur |
           // =>        |new|
           entryInterval = new Interval(currKey.getEnd(), entryInterval.getEnd());
         } else {
@@ -514,11 +513,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
           if (entryInterval.getEnd().isAfter(currKey.getEnd())) {
             entryInterval = new Interval(currKey.getEnd(), entryInterval.getEnd());
           } else {
-            entryInterval = null; // discard this entry
+            // Discard this entry since there is no portion of the entry interval that goes past the end of the curr
+            // key interval.
+            entryInterval = null;
           }
         }
       } else if (versionCompare > 0) {
-        // since the entry version is greater than the existing one, the given entry overwrites the existing one if overlapped.
+        // since the entry version is greater than the existing one, the given entry overwrites the existing one
+        // if overlapped.
         final TimelineEntry oldEntry = timeline.remove(currKey);
 
         if (currKey.contains(entryInterval)) {

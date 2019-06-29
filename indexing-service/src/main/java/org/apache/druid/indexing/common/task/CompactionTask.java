@@ -222,6 +222,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonProperty
   @Nullable
+  @Override
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
@@ -257,42 +258,26 @@ public class CompactionTask extends AbstractBatchIndexTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.checkAndGetSegments(taskActionClient);
-    return tryLockWithSegments(taskActionClient, segments, true);
+    return determineLockGranularityandTryLockWithSegments(taskActionClient, segments);
   }
 
   @Override
-  public boolean requireLockInputSegments()
+  public boolean requireLockExistingSegments()
   {
     return true;
   }
 
   @Override
-  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
     return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
   }
 
   @Override
-  public boolean checkIfChangeSegmentGranularity(List<Interval> intervalOfExistingSegments)
-  {
-    return segmentGranularity != null;
-  }
-
-  @Override
   public boolean isPerfectRollup()
   {
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
-  }
-
-  @Override
-  public Granularity getSegmentGranularity(Interval interval)
-  {
-    if (segmentGranularity == null) {
-      return GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
-    } else {
-      return segmentGranularity;
-    }
   }
 
   @Override
@@ -315,16 +300,16 @@ public class CompactionTask extends AbstractBatchIndexTask
           .range(0, ingestionSpecs.size())
           .mapToObj(i -> new IndexTask(
               createIndexTaskSpecId(i),
-          getGroupId(),
-          getTaskResource(),
-          getDataSource(),
+              getGroupId(),
+              getTaskResource(),
+              getDataSource(),
               ingestionSpecs.get(i),
-          getContext(),
-          authorizerMapper,
-          chatHandlerProvider,
-          rowIngestionMetersFactory
-      ))
-      .collect(Collectors.toList());
+              getContext(),
+              authorizerMapper,
+              chatHandlerProvider,
+              rowIngestionMetersFactory
+          ))
+          .collect(Collectors.toList());
     }
 
     if (indexTaskSpecs.isEmpty()) {
@@ -340,10 +325,15 @@ public class CompactionTask extends AbstractBatchIndexTask
         log.info("Running indexSpec: " + json);
 
         try {
-          final TaskStatus eachResult = eachSpec.run(toolbox);
-          if (!eachResult.isSuccess()) {
+          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
+            final TaskStatus eachResult = eachSpec.run(toolbox);
+            if (!eachResult.isSuccess()) {
+              failCnt++;
+              log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+            }
+          } else {
             failCnt++;
-            log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+            log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
           }
         }
         catch (Exception e) {

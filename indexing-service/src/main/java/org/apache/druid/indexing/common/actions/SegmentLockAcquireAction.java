@@ -30,9 +30,13 @@ import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
 import org.joda.time.Interval;
 
 /**
- * TaskAction to acquire a task lock for a segment. Used by stream ingestion tasks.
+ * TaskAction to acquire a {@link org.apache.druid.indexing.common.SegmentLock}.
+ * This action is a blocking operation and the caller could wait until it gets {@link LockResult}
+ * (up to timeoutMs if it's > 0).
+ *
+ * This action is currently used by only stream ingestion tasks.
  */
-public class SegmentLockAquireAction implements TaskAction<LockResult>
+public class SegmentLockAcquireAction implements TaskAction<LockResult>
 {
   private final TaskLockType lockType;
   private final Interval interval;
@@ -41,7 +45,7 @@ public class SegmentLockAquireAction implements TaskAction<LockResult>
   private final long timeoutMs;
 
   @JsonCreator
-  public SegmentLockAquireAction(
+  public SegmentLockAcquireAction(
       @JsonProperty("lockType") TaskLockType lockType,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
@@ -124,7 +128,7 @@ public class SegmentLockAquireAction implements TaskAction<LockResult>
   @Override
   public String toString()
   {
-    return "SegmentLockAquireAction{" +
+    return "SegmentLockAcquireAction{" +
            "lockType=" + lockType +
            ", interval=" + interval +
            ", version='" + version + '\'' +

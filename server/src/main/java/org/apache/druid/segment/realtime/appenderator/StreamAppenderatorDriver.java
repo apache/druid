@@ -107,7 +107,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   @Override
   @Nullable
-  public Object startJob(StreamAppenderatorDriverSegmentLockHelper lockHelper)
+  public Object startJob(AppenderatorDriverSegmentLockHelper lockHelper)
   {
     handoffNotifier.start();
 

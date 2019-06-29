@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -75,6 +76,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   private final String previousSegmentId;
   private final boolean skipSegmentLineageCheck;
   private final ShardSpecFactory shardSpecFactory;
+  private final LockGranularity lockGranularity;
 
   @JsonCreator
   public SegmentAllocateAction(
@@ -85,7 +87,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("previousSegmentId") String previousSegmentId,
       @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
-      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory
+      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory, // nullable for backward compatibility
+      @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -99,6 +102,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     this.previousSegmentId = previousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
     this.shardSpecFactory = shardSpecFactory == null ? NumberedShardSpecFactory.instance() : shardSpecFactory;
+    this.lockGranularity = lockGranularity == null ? LockGranularity.TIME_CHUNK : lockGranularity;
   }
 
   @JsonProperty
@@ -147,6 +151,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   public ShardSpecFactory getShardSpecFactory()
   {
     return shardSpecFactory;
+  }
+
+  @JsonProperty
+  public LockGranularity getLockGranularity()
+  {
+    return lockGranularity;
   }
 
   @Override
@@ -278,6 +288,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     final LockResult lockResult = toolbox.getTaskLockbox().tryLock(
         task,
         new LockRequestForNewSegment(
+            lockGranularity,
             TaskLockType.EXCLUSIVE,
             task.getGroupId(),
             dataSource,
@@ -345,6 +356,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
            ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
            ", shardSpecFactory=" + shardSpecFactory +
+           ", lockGranularity=" + lockGranularity +
            '}';
   }
 }

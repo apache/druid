@@ -344,22 +344,39 @@ public class TaskLockbox
       }
       Preconditions.checkArgument(request.getInterval().toDurationMillis() > 0, "interval empty");
 
-      final SegmentIdWithShardSpec newSegmentId;
+      SegmentIdWithShardSpec newSegmentId = null;
       final LockRequest convertedRequest;
       if (request instanceof LockRequestForNewSegment) {
         final LockRequestForNewSegment lockRequestForNewSegment = (LockRequestForNewSegment) request;
-        newSegmentId = allocateSegmentId(lockRequestForNewSegment);
-        if (newSegmentId == null) {
-          return LockResult.fail(false);
+        if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
+          newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
+          if (newSegmentId == null) {
+            return LockResult.fail(false);
+          }
+          convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
+        } else {
+          convertedRequest = new TimeChunkLockRequest(lockRequestForNewSegment);
         }
-        convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
       } else {
-        newSegmentId = null;
         convertedRequest = request;
       }
 
       final TaskLockPosse posseToUse = createOrFindLockPosse(convertedRequest);
       if (posseToUse != null && !posseToUse.getTaskLock().isRevoked()) {
+        if (request instanceof LockRequestForNewSegment) {
+          final LockRequestForNewSegment lockRequestForNewSegment = (LockRequestForNewSegment) request;
+          if (lockRequestForNewSegment.getGranularity() == LockGranularity.TIME_CHUNK) {
+            if (newSegmentId != null) {
+              throw new ISE(
+                  "SegmentId must be allocated after getting a timeChunk lock,"
+                  + " but we already have [%s] before getting the lock?",
+                  newSegmentId
+              );
+            }
+            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion());
+          }
+        }
+
         // Add to existing TaskLockPosse, if necessary
         if (posseToUse.addTask(task)) {
           log.info("Added task[%s] to TaskLock[%s]", task.getId(), posseToUse.getTaskLock());
@@ -503,7 +520,7 @@ public class TaskLockbox
     }
   }
 
-  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request)
+  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request, String version)
   {
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
@@ -511,7 +528,7 @@ public class TaskLockbox
         request.getPrevisousSegmentId(),
         request.getInterval(),
         request.getShardSpecFactory(),
-        request.getVersion(),
+        version,
         request.isSkipSegmentLineageCheck()
     );
   }

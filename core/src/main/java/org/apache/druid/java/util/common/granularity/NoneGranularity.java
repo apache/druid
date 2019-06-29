@@ -61,10 +61,10 @@ public class NoneGranularity extends Granularity
   }
 
   /**
-   * None granularity matches to any interval.
+   * Any interval is aligned with none granularity since it's effectively millisecond granularity.
    */
   @Override
-  public boolean match(Interval interval)
+  public boolean isAligned(Interval interval)
   {
     return true;
   }

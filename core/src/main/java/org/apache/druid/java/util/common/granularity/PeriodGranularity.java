@@ -138,7 +138,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
-  public boolean match(Interval interval)
+  public boolean isAligned(Interval interval)
   {
     return bucket(interval.getStart()).equals(interval);
   }

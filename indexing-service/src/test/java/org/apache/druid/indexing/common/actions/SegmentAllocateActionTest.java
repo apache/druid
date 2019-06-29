@@ -51,6 +51,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -59,6 +61,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class SegmentAllocateActionTest
 {
   @Rule
@@ -70,6 +73,22 @@ public class SegmentAllocateActionTest
   private static final String DATA_SOURCE = "none";
   private static final DateTime PARTY_TIME = DateTimes.of("1999");
   private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
+
+  private final LockGranularity lockGranularity;
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.SEGMENT},
+        new Object[]{LockGranularity.TIME_CHUNK}
+    );
+  }
+
+  public SegmentAllocateActionTest(LockGranularity lockGranularity)
+  {
+    this.lockGranularity = lockGranularity;
+  }
 
   @Before
   public void setUp()
@@ -711,7 +730,8 @@ public class SegmentAllocateActionTest
         "s1",
         "prev",
         false,
-        NumberedShardSpecFactory.instance()
+        NumberedShardSpecFactory.instance(),
+        lockGranularity
     );
 
     final SegmentAllocateAction action2 = (SegmentAllocateAction) objectMapper.readValue(
@@ -761,7 +781,8 @@ public class SegmentAllocateActionTest
         "seq",
         null,
         true,
-        new HashBasedNumberedShardSpecFactory(ImmutableList.of("dim1"), 2)
+        new HashBasedNumberedShardSpecFactory(ImmutableList.of("dim1"), 2),
+        lockGranularity
     );
     final SegmentIdWithShardSpec segmentIdentifier = action.perform(task, taskActionTestKit.getTaskActionToolbox());
     Assert.assertNotNull(segmentIdentifier);
@@ -813,7 +834,8 @@ public class SegmentAllocateActionTest
         sequenceName,
         sequencePreviousId,
         false,
-        shardSpecFactory
+        shardSpecFactory,
+        lockGranularity
     );
     return action.perform(task, taskActionTestKit.getTaskActionToolbox());
   }
