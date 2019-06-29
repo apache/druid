@@ -31,7 +31,7 @@ import {
   LEGACY_OVERLORD_CONSOLE
 } from '../variables';
 
-export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql';
+export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'compaction' | 'sql' ;
 
 export interface HeaderBarProps extends React.Props<any> {
   active: HeaderActiveTab;
@@ -112,6 +112,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'segments' })} iconName={IconNames.STACKED_CHART} text="Segments" href="#segments" />
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'tasks' })} iconName={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'servers' })} iconName={IconNames.DATABASE} text="Data servers" href="#servers" />
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'compaction' })} iconName={IconNames.MULTI_SELECT} text="Compaction" href="#compaction" />
         <NavbarDivider />
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'sql' })} iconName={IconNames.APPLICATION} text="SQL" href="#sql" />
         <Popover className="config-popover" content={configMenu} position={Position.BOTTOM_LEFT} inline>
