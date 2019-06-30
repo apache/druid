@@ -533,12 +533,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {!noSqlMode && lastSegmentsQuery && (
+            {!noSqlMode && (
               <Button
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
-                hidden={noSqlMode}
-                onClick={() => goToQuery(lastSegmentsQuery.query)}
+                disabled={!lastSegmentsQuery}
+                onClick={() => {
+                  if (!lastSegmentsQuery) return;
+                  goToQuery(lastSegmentsQuery.query);
+                }}
               />
             )}
             <TableColumnSelector
