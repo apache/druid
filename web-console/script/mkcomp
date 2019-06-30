@@ -100,7 +100,7 @@ export class ${camelName} extends React.PureComponent<${camelName}Props, ${camel
 
   render() {
     return <div className="${name}">
-    
+      Stuff...
     </div>;
   }
 }
