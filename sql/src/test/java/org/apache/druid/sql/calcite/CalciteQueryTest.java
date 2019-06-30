@@ -7945,7 +7945,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
   {
@@ -8082,6 +8081,44 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"afoo\",\"bfoo\"]"},
             new Object[]{"[\"bfoo\",\"cfoo\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testNvlColumns() throws Exception
+  {
+    testQuery(
+        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
         )
     );
   }
