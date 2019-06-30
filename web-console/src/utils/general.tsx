@@ -232,11 +232,6 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
   return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
 }
 
-export function getHeadProp(results: Record<string, any>[], prop: string): any {
-  if (!results || !results.length) return null;
-  return results[0][prop] || null;
-}
-
 // ----------------------------
 
 export function parseJson(json: string): any {

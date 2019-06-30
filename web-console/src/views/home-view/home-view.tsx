@@ -19,10 +19,12 @@
 import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import { sum } from 'd3-array';
 import React from 'react';
 
 import { UrlBaser } from '../../singletons/url-baser';
-import { getHeadProp, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
+import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
+import { deepGet } from '../../utils/object-change';
 
 import './home-view.scss';
 
@@ -50,6 +52,7 @@ export interface HomeViewState {
 
   segmentCountLoading: boolean;
   segmentCount: number;
+  unavailableSegmentCount: number;
   segmentCountError: string | null;
 
   supervisorCountLoading: boolean;
@@ -97,6 +100,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
 
       segmentCountLoading: false,
       segmentCount: 0,
+      unavailableSegmentCount: 0,
       segmentCountError: null,
 
       supervisorCountLoading: false,
@@ -164,28 +168,33 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
         if (noSqlMode) {
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
-          const unavailableSegmentNum = Object.keys(loadstatus).reduce((sum, key) => {
-            return sum + loadstatus[key];
-          }, 0);
+          const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
           const datasourcesMetaResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const datasourcesMeta = datasourcesMetaResp.data;
-          const availableSegmentNum = datasourcesMeta.reduce((sum: number, curr: any) => {
-            return sum + curr.properties.segments.count;
-          }, 0);
+          const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
+            deepGet(curr, 'properties.segments.count'),
+          );
 
-          return availableSegmentNum + unavailableSegmentNum;
+          return {
+            count: availableSegmentNum + unavailableSegmentNum,
+            unavailable: unavailableSegmentNum,
+          };
         } else {
           const segments = await queryDruidSql({
-            query: `SELECT COUNT(*) as "count" FROM sys.segments`,
+            query: `SELECT
+  COUNT(*) as "count",
+  COUNT(*) FILTER (WHERE is_available = 0) as "unavailable"
+FROM sys.segments`,
           });
-          return getHeadProp(segments, 'count') || 0;
+          return segments.length === 1 ? segments[0] : null;
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           segmentCountLoading: loading,
-          segmentCount: result,
+          segmentCount: result ? result.count : 0,
+          unavailableSegmentCount: result ? result.unavailable : 0,
           segmentCountError: error,
         });
       },
@@ -352,7 +361,14 @@ GROUP BY 1`,
           icon: IconNames.STACKED_CHART,
           title: 'Segments',
           loading: state.segmentCountLoading,
-          content: pluralIfNeeded(state.segmentCount, 'segment'),
+          content: (
+            <>
+              <p>{pluralIfNeeded(state.segmentCount, 'segment')}</p>
+              {Boolean(state.unavailableSegmentCount) && (
+                <p>{pluralIfNeeded(state.unavailableSegmentCount, 'unavailable segment')}</p>
+              )}
+            </>
+          ),
           error: state.datasourceCountError,
         })}
         {this.renderCard({
