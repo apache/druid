@@ -1483,6 +1483,45 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
+    name: 'indexSpec.bitmap.type',
+    label: 'Index bitmap type',
+    type: 'string',
+    defaultValue: 'concise',
+    suggestions: ['concise', 'roaring'],
+    info: <>Compression format for bitmap indexes.</>,
+  },
+  {
+    name: 'indexSpec.dimensionCompression',
+    label: 'Index dimension compression',
+    type: 'string',
+    defaultValue: 'lz4',
+    suggestions: ['lz4', 'lzf', 'uncompressed'],
+    info: <>Compression format for dimension columns.</>,
+  },
+  {
+    name: 'indexSpec.metricCompression',
+    label: 'Index metric compression',
+    type: 'string',
+    defaultValue: 'lz4',
+    suggestions: ['lz4', 'lzf', 'uncompressed'],
+    info: <>Compression format for metric columns.</>,
+  },
+  {
+    name: 'indexSpec.longEncoding',
+    label: 'Index long encoding',
+    type: 'string',
+    defaultValue: 'longs',
+    suggestions: ['longs', 'auto'],
+    info: (
+      <>
+        Encoding format for long-typed columns. Applies regardless of whether they are dimensions or
+        metrics. <Code>auto</Code> encodes the values using offset or lookup table depending on
+        column cardinality, and store them with variable size. <Code>longs</Code> stores the value
+        as-is with 8 bytes each.
+      </>
+    ),
+  },
+  {
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
@@ -1512,10 +1551,6 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
         persist finishes.
       </>
     ),
-  },
-  {
-    name: 'forceExtendableShardSpecs',
-    type: 'boolean',
   },
   {
     name: 'pushTimeout',
