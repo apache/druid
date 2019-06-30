@@ -332,7 +332,7 @@ module: java-core
 license_name: Apache License version 2.0
 version: 1.2
 libraries:
-  - commons-beanutils: commons-cli
+  - commons-cli: commons-cli
 
 ---
 

@@ -150,7 +150,8 @@ class DependencyReportParser(HTMLParser):
             if tag == "tr":
                 self.state = "row_end"
                 # print(json.dumps({"groupId": self.group_id, "artifactId": self.artifact_id, "version": self.version, "classifier": self.classifier, "type": self.dep_type, "license": self.license}))
-                self.dep_to_license[get_dep_key(self.group_id, self.artifact_id, self.version)] = self.license
+                if self.group_id.find("org.apache.druid") < 0:
+                    self.dep_to_license[get_dep_key(self.group_id, self.artifact_id, self.version)] = self.license
         
         if self.state == "row_end":
             if tag == "table":
@@ -179,7 +180,7 @@ class DependencyReportParser(HTMLParser):
         elif self.attr_index == 1:
             self.artifact_id = data
         elif self.attr_index == 2:
-            self.version = data
+            self.version = get_version_string(data)
         elif self.attr_index == 3:
             if self.include_classifier:
                 self.classifier = data
@@ -279,6 +280,13 @@ def module_to_upper(module):
 
 def print_error(str):
     print(str, file=sys.stderr)
+
+
+def get_version_string(version):
+    if type(version) == str:
+        return version
+    else:
+        return str(version)
 
 
 def print_license_phrase(license_phrase):
@@ -402,10 +410,11 @@ def check_licenses(license_yaml, dependency_reports_root):
                         raise Exception("version is missing in {}".format(license))
                     if 'license_name' not in license:
                         raise Exception("name is missing in {}".format(license))
-                    registered_dep_to_licenses[get_dep_key(group_id, artifact_id, license['version'])] = compatible_license_names[license['license_name']]
+                    registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
 
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
+    missing_licenses = []
     unchecked_licenses = []
     # Iterate through registered licenses and check if its license is same with the reported one.
     for key, registered_license in registered_dep_to_licenses.items():
@@ -422,14 +431,28 @@ def check_licenses(license_yaml, dependency_reports_root):
         print_error("Error: found {} mismatches between reported licenses and registered licenses".format(len(mismatched_licenses)))
         for mismatched_license in mismatched_licenses:
             print_error("groupId: {}, artifactId: {}, version: {}, reported_license: {}, registered_license: {}".format(mismatched_license[0], mismatched_license[1], mismatched_license[2], mismatched_license[3], mismatched_license[4]))
-        sys.exit(1)
+        print_error("")
+    
+    # Let's find missing licenses, which are reported but missing in the registry.
+    for key, reported_license in reported_dep_to_licenses.items():
+        if key not in registered_dep_to_licenses:
+            print_error("reported key: {}".format(key))
+            missing_licenses.append((key[0], key[1], key[2], reported_license))
+
+    if len(missing_licenses) > 0:
+        print_error("Error: found {} missing licenses. These licenses are reported, but missing in the registry".format(len(missing_licenses)))
+        for missing_license in missing_licenses:
+            print_error("groupId: {}, artifactId: {}, version: {}, license: {}".format(missing_license[0], missing_license[1], missing_license[2], missing_license[3]))
+        print_error("")
     
     # Let's find unchecked licenses, which are registered but missing in the report.
     # These licenses should be checked manually.
     for key, registered_license in registered_dep_to_licenses.items():
         if key not in reported_dep_to_licenses:
+            print_error("registered key: {}".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
         elif reported_dep_to_licenses[key] == "-":
+            print_error("registered key: {} with - license".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
     
     if len(unchecked_licenses) > 0:
@@ -439,6 +462,8 @@ def check_licenses(license_yaml, dependency_reports_root):
             print_error("groupId: {}, artifactId: {}, version: {}, reported_license: {}".format(unchecked_license[0], unchecked_license[1], unchecked_license[2], unchecked_license[3]))
     print_error("")
 
+    if len(mismatched_licenses) > 0 or len(missing_licenses) > 0:
+        sys.exit(1)
 
 def print_license_name_underbar(license_name):
     underbar = ""
