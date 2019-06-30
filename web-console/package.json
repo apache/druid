@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "A web console for Apache Druid",
   "author": "Imply Data Inc.",
   "license": "Apache-2.0",

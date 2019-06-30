@@ -64,13 +64,13 @@ export interface AutoFormProps<T> extends React.Props<any> {
   large?: boolean;
 }
 
-export interface AutoFormState<T> {
+export interface AutoFormState {
   jsonInputsValidity: any;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
   AutoFormProps<T>,
-  AutoFormState<T>
+  AutoFormState
 > {
   static makeLabelName(label: string): string {
     let newLabel = label

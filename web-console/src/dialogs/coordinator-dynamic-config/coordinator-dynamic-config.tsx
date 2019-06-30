@@ -41,7 +41,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
   CoordinatorDynamicConfigDialogProps,
   CoordinatorDynamicConfigDialogState
 > {
-  private historyQueryManager: QueryManager<string, any>;
+  private historyQueryManager: QueryManager<null, any>;
 
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
@@ -49,24 +49,24 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
       dynamicConfig: null,
       historyRecords: [],
     };
-  }
-
-  componentDidMount() {
-    this.getClusterConfig();
 
     this.historyQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async () => {
         const historyResp = await axios(`/druid/coordinator/v1/config/history?count=100`);
         return historyResp.data;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result }) => {
         this.setState({
           historyRecords: result,
         });
       },
     });
+  }
 
-    this.historyQueryManager.runQuery(`dummy`);
+  componentDidMount() {
+    this.getClusterConfig();
+
+    this.historyQueryManager.runQuery(null);
   }
 
   async getClusterConfig() {

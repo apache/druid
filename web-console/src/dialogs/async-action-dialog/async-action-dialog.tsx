@@ -16,18 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  Classes,
-  Dialog,
-  FormGroup,
-  Icon,
-  Intent,
-  NumericInput,
-  ProgressBar,
-  TagInput,
-} from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, Intent, ProgressBar } from '@blueprintjs/core';
 import { IconName } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';

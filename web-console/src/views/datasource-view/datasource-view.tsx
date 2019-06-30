@@ -16,16 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  FormGroup,
-  Icon,
-  InputGroup,
-  Intent,
-  Popover,
-  Position,
-  Switch,
-} from '@blueprintjs/core';
+import { Button, FormGroup, InputGroup, Intent, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -124,6 +115,15 @@ export class DatasourcesView extends React.PureComponent<
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
 
+  static DATASOURCE_SQL = `SELECT
+  datasource,
+  COUNT(*) AS num_segments,
+  SUM(is_available) AS num_available_segments,
+  SUM("size") AS size,
+  SUM("num_rows") AS num_rows
+FROM sys.segments
+GROUP BY 1`;
+
   static formatRules(rules: any[]): string {
     if (rules.length === 0) {
       return 'No rules';
@@ -135,7 +135,7 @@ export class DatasourcesView extends React.PureComponent<
   }
 
   private datasourceQueryManager: QueryManager<
-    string,
+    boolean,
     { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
   >;
 
@@ -162,17 +162,12 @@ export class DatasourcesView extends React.PureComponent<
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
     };
-  }
-
-  componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    const { hiddenColumns } = this.state;
 
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async noSqlMode => {
         let datasources: DatasourceQueryResultRow[];
         if (!noSqlMode) {
-          datasources = await queryDruidSql({ query });
+          datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
         } else {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
@@ -234,15 +229,11 @@ export class DatasourcesView extends React.PureComponent<
         });
       },
     });
+  }
 
-    this.datasourceQueryManager.runQuery(`SELECT
-  datasource,
-  COUNT(*) AS num_segments,
-  SUM(is_available) AS num_available_segments,
-  SUM("size") AS size,
-  SUM("num_rows") AS num_rows
-FROM sys.segments
-GROUP BY 1`);
+  componentDidMount(): void {
+    const { noSqlMode } = this.props;
+    this.datasourceQueryManager.runQuery(noSqlMode);
   }
 
   componentWillUnmount(): void {
@@ -581,7 +572,7 @@ GROUP BY 1`);
           }
           filterable
           filtered={datasourcesFilter}
-          onFilteredChange={(filtered, column) => {
+          onFilteredChange={filtered => {
             this.setState({ datasourcesFilter: filtered });
           }}
           columns={[
@@ -789,7 +780,7 @@ GROUP BY 1`);
             <Button
               icon={IconNames.APPLICATION}
               text="Go to SQL"
-              onClick={() => goToQuery(this.datasourceQueryManager.getLastQuery())}
+              onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
             />
           )}
           <Switch

@@ -32,7 +32,6 @@ import {
   formatNumber,
   LocalStorageKeys,
   makeBooleanFilter,
-  parseList,
   queryDruidSql,
   QueryManager,
   sqlQueryCustomTableFilter,
@@ -70,8 +69,8 @@ const tableColumnsNoSql: string[] = [
 
 export interface SegmentsViewProps extends React.Props<any> {
   goToQuery: (initSql: string) => void;
-  datasource: string | null;
-  onlyUnavailable: boolean | null;
+  datasource: string | undefined;
+  onlyUnavailable: boolean | undefined;
   noSqlMode: boolean;
 }
 
@@ -113,7 +112,7 @@ interface SegmentQueryResultRow {
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
-  private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
+  private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -158,8 +157,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       },
     });
 
-    this.segmentsJsonQueryManager = new QueryManager({
-      processQuery: async (query: any) => {
+    this.segmentsNoSqlQueryManager = new QueryManager({
+      processQuery: async () => {
         const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
         const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
           datasourceList.map(async (d: string) => {
@@ -185,7 +184,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             });
           }),
         );
-        const results: SegmentQueryResultRow[] = [].concat
+        const results: SegmentQueryResultRow[] = ([] as SegmentQueryResultRow[]).concat
           .apply([], nestedResults)
           .sort((d1: any, d2: any) => {
             return d2.start.localeCompare(d1.start);
@@ -205,16 +204,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   componentDidMount(): void {
     if (this.props.noSqlMode) {
-      this.segmentsJsonQueryManager.runQuery('init');
+      this.segmentsNoSqlQueryManager.runQuery(null);
     }
   }
 
   componentWillUnmount(): void {
     this.segmentsSqlQueryManager.terminate();
-    this.segmentsJsonQueryManager.terminate();
+    this.segmentsNoSqlQueryManager.terminate();
   }
 
-  private fetchData = (state: any, instance: any) => {
+  private fetchData = (state: any) => {
     const { page, pageSize, filtered, sorted } = state;
     const totalQuerySize = (page + 1) * pageSize;
 
@@ -256,7 +255,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
-  private fecthClientSideData = (state: any, instance: any) => {
+  private fetchClientSideData = (state: any) => {
     const { page, pageSize, filtered, sorted } = state;
     const { allSegments } = this.state;
     if (allSegments == null) return;
@@ -312,10 +311,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         filterable
         filtered={segmentFilter}
         defaultSorted={[{ id: 'start', desc: true }]}
-        onFilteredChange={(filtered, column) => {
+        onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
-        onFetchData={noSqlMode ? this.fecthClientSideData : this.fetchData}
+        onFetchData={noSqlMode ? this.fetchClientSideData : this.fetchData}
         showPageJump={false}
         ofText=""
         columns={[
@@ -456,8 +455,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               if (row.aggregated) return '';
               const id = row.value;
               const datasource = row.row.datasource;
-              const dimensions = parseList(row.original.payload.dimensions);
-              const metrics = parseList(row.original.payload.metrics);
               return (
                 <ActionCell
                   onDetail={() => {
@@ -471,7 +468,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 />
               );
             },
-            Aggregated: row => '',
+            Aggregated: () => '',
             show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
           },
         ]}
@@ -503,7 +500,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onClose={success => {
           this.setState({ terminateSegmentId: null });
           if (success) {
-            this.segmentsJsonQueryManager.rerunLastQuery();
+            this.segmentsNoSqlQueryManager.rerunLastQuery();
             this.segmentsSqlQueryManager.rerunLastQuery();
           }
         }}
@@ -522,6 +519,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       hiddenColumns,
     } = this.state;
     const { goToQuery, noSqlMode } = this.props;
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastQuery();
 
     return (
       <>
@@ -530,17 +528,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             <RefreshButton
               onRefresh={auto =>
                 noSqlMode
-                  ? this.segmentsJsonQueryManager.rerunLastQueryInBackground(auto)
+                  ? this.segmentsNoSqlQueryManager.rerunLastQueryInBackground(auto)
                   : this.segmentsSqlQueryManager.rerunLastQueryInBackground(auto)
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {!noSqlMode && (
+            {!noSqlMode && lastSegmentsQuery && (
               <Button
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
                 hidden={noSqlMode}
-                onClick={() => goToQuery(this.segmentsSqlQueryManager.getLastQuery().query)}
+                onClick={() => goToQuery(lastSegmentsQuery.query)}
               />
             )}
             <TableColumnSelector

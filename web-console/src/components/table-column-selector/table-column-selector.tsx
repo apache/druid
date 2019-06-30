@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 

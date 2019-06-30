@@ -148,7 +148,18 @@ exports[`task table action dialog matches snapshot 1`] = `
         >
           <div
             class="footer-actions-left"
-          />
+          >
+            <button
+              class="bp3-button"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                test
+              </span>
+            </button>
+          </div>
           <div
             class="bp3-dialog-footer-actions"
           >

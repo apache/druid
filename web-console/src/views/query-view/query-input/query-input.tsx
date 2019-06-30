@@ -71,7 +71,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       );
 
       langTools.addCompleter({
-        getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
           callback(null, completions);
         },
       });
@@ -103,7 +103,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     );
 
     const keywordCompleter = {
-      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
         return callback(null, keywordList);
       },
     };
@@ -137,7 +137,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     });
 
     langTools.addCompleter({
-      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
         callback(null, functionList);
       },
       getDocTooltip: (item: any) => {

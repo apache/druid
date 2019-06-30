@@ -150,11 +150,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleNodeClick = (
-    nodeData: ITreeNode,
-    nodePath: number[],
-    e: React.MouseEvent<HTMLElement>,
-  ) => {
+  private handleNodeClick = (nodeData: ITreeNode, nodePath: number[]) => {
     const { onQueryStringChange } = this.props;
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return;

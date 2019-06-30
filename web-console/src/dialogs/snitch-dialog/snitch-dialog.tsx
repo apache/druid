@@ -44,7 +44,6 @@ export interface SnitchDialogState {
   comment: string;
 
   showFinalStep?: boolean;
-  saveDisabled?: boolean;
 
   showHistory?: boolean;
 }
@@ -55,7 +54,6 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
 
     this.state = {
       comment: '',
-      saveDisabled: true,
     };
   }
 
@@ -68,11 +66,8 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
   };
 
   changeComment(newComment: string) {
-    const { comment } = this.state;
-
     this.setState({
       comment: newComment,
-      saveDisabled: !newComment,
     });
   }
 
@@ -102,8 +97,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
   };
 
   renderFinalStep() {
-    const { onClose, children } = this.props;
-    const { saveDisabled, comment } = this.state;
+    const { comment } = this.state;
 
     return (
       <Dialog {...this.props}>
@@ -117,8 +111,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             />
           </FormGroup>
         </div>
-
-        <div className={Classes.DIALOG_FOOTER}>{this.renderActions(saveDisabled)}</div>
+        <div className={Classes.DIALOG_FOOTER}>{this.renderActions(!comment)}</div>
       </Dialog>
     );
   }
@@ -178,7 +171,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
   }
 
   render() {
-    const { onClose, className, children, saveDisabled } = this.props;
+    const { children, saveDisabled } = this.props;
     const { showFinalStep, showHistory } = this.state;
 
     if (showFinalStep) return this.renderFinalStep();
@@ -189,7 +182,6 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     return (
       <Dialog isOpen {...propsClone}>
         <div className={Classes.DIALOG_BODY}>{children}</div>
-
         <div className={Classes.DIALOG_FOOTER}>{this.renderActions(saveDisabled)}</div>
       </Dialog>
     );

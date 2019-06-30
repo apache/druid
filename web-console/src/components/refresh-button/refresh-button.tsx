@@ -45,10 +45,10 @@ export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
     return (
       <TimedButton
         defaultValue={30000}
-        label={'Auto refresh every:'}
+        label="Auto refresh every:"
         intervals={intervals}
         icon={IconNames.REFRESH}
-        text={'Refresh'}
+        text="Refresh"
         onRefresh={onRefresh}
         localStorageKey={localStorageKey}
       />

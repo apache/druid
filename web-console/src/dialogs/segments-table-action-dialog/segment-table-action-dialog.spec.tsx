@@ -21,14 +21,13 @@ import { render } from 'react-testing-library';
 
 import { SegmentTableActionDialog } from './segment-table-action-dialog';
 
-const basicAction = { title: 'test', onAction: () => null };
 describe('task table action dialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog = (
       <SegmentTableActionDialog
         dataSourceId="test"
         segmentId="test"
-        actions={[]}
+        actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => null}
         isOpen
       />

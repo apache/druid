@@ -105,7 +105,6 @@ export class LookupEditDialog extends React.PureComponent<
       lookupVersion,
       onChange,
       isEdit,
-      allLookupTiers,
     } = this.props;
 
     const disableSubmit =

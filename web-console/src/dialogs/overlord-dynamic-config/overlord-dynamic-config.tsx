@@ -51,22 +51,22 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
       allJSONValid: true,
       historyRecords: [],
     };
-  }
-
-  componentDidMount() {
-    this.getConfig();
 
     this.historyQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async () => {
         const historyResp = await axios(`/druid/indexer/v1/worker/history?count=100`);
         return historyResp.data;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result }) => {
         this.setState({
           historyRecords: result,
         });
       },
     });
+  }
+
+  componentDidMount() {
+    this.getConfig();
 
     this.historyQueryManager.runQuery(`dummy`);
   }

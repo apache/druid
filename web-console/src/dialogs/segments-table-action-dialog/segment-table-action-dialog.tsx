@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { IDialogProps, TextArea } from '@blueprintjs/core';
+import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';

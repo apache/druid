@@ -28,7 +28,6 @@ import {
   TagInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import './rule-editor.scss';
@@ -241,7 +240,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
   }
 
   render() {
-    const { tiers, onChange, rule, onDelete, moveUp, moveDown } = this.props;
+    const { onChange, rule, onDelete, moveUp, moveDown } = this.props;
     const { isOpen } = this.state;
 
     if (!rule) return null;

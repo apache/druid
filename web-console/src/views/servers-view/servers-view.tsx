@@ -75,7 +75,7 @@ function formatQueues(
 }
 
 export interface ServersViewProps extends React.Props<any> {
-  middleManager: string | null;
+  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   noSqlMode: boolean;
@@ -133,25 +133,33 @@ interface ServerResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
-  private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
+  private serverQueryManager: QueryManager<boolean, ServerResultRow[]>;
 
-  constructor(props: ServersViewProps, context: any) {
-    super(props, context);
-    this.state = {
-      serversLoading: true,
-      servers: null,
-      serversError: null,
-      serverFilter: [],
-      groupServersBy: null,
+  // Ranking
+  //   coordinator => 7
+  //   overlord => 6
+  //   router => 5
+  //   broker => 4
+  //   historical => 3
+  //   middle_manager => 2
+  //   peon => 1
 
-      middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null,
-
-      hiddenColumns: new LocalStorageBackedArray<string>(
-        LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
-      ),
-    };
-  }
+  static SERVER_SQL = `SELECT
+  "server", "server_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  (
+    CASE "server_type"
+    WHEN 'coordinator' THEN 7
+    WHEN 'overlord' THEN 6
+    WHEN 'router' THEN 5
+    WHEN 'broker' THEN 4
+    WHEN 'historical' THEN 3
+    WHEN 'middle_manager' THEN 2
+    WHEN 'peon' THEN 1
+    ELSE 0
+    END
+  ) AS "rank"
+FROM sys.servers
+ORDER BY "rank" DESC, "server" DESC`;
 
   static async getServers(): Promise<ServerQueryResultRow[]> {
     const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
@@ -170,15 +178,28 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
     });
   }
 
-  componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    const { hiddenColumns } = this.state;
+  constructor(props: ServersViewProps, context: any) {
+    super(props, context);
+    this.state = {
+      serversLoading: true,
+      servers: null,
+      serversError: null,
+      serverFilter: [],
+      groupServersBy: null,
+
+      middleManagerDisableWorkerHost: null,
+      middleManagerEnableWorkerHost: null,
+
+      hiddenColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
+      ),
+    };
 
     this.serverQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async noSqlMode => {
         let servers: ServerQueryResultRow[];
         if (!noSqlMode) {
-          servers = await queryDruidSql({ query });
+          servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
         } else {
           servers = await ServersView.getServers();
         }
@@ -229,32 +250,11 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
         });
       },
     });
+  }
 
-    // Ranking
-    //   coordinator => 7
-    //   overlord => 6
-    //   router => 5
-    //   broker => 4
-    //   historical => 3
-    //   middle_manager => 2
-    //   peon => 1
-
-    this.serverQueryManager.runQuery(`SELECT
-  "server", "server_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
-  (
-    CASE "server_type"
-    WHEN 'coordinator' THEN 7
-    WHEN 'overlord' THEN 6
-    WHEN 'router' THEN 5
-    WHEN 'broker' THEN 4
-    WHEN 'historical' THEN 3
-    WHEN 'middle_manager' THEN 2
-    WHEN 'peon' THEN 1
-    ELSE 0
-    END
-  ) AS "rank"
-FROM sys.servers
-ORDER BY "rank" DESC, "server" DESC`);
+  componentDidMount(): void {
+    const { noSqlMode } = this.props;
+    this.serverQueryManager.runQuery(noSqlMode);
   }
 
   componentWillUnmount(): void {
@@ -291,7 +291,7 @@ ORDER BY "rank" DESC, "server" DESC`);
         }
         filterable
         filtered={serverFilter}
-        onFilteredChange={(filtered, column) => {
+        onFilteredChange={filtered => {
           this.setState({ serverFilter: filtered });
         }}
         pivotBy={groupServersBy ? [groupServersBy] : []}
@@ -301,7 +301,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             Header: 'Server',
             accessor: 'server',
             width: 300,
-            Aggregated: row => '',
+            Aggregated: () => '',
             show: hiddenColumns.exists('Server'),
           },
           {
@@ -654,7 +654,7 @@ ORDER BY "rank" DESC, "server" DESC`);
             <Button
               icon={IconNames.APPLICATION}
               text="Go to SQL"
-              onClick={() => goToQuery(this.serverQueryManager.getLastQuery())}
+              onClick={() => goToQuery(ServersView.SERVER_SQL)}
             />
           )}
           <TableColumnSelector

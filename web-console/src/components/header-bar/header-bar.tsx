@@ -22,7 +22,6 @@ import {
   Button,
   Intent,
   Menu,
-  MenuDivider,
   MenuItem,
   Navbar,
   NavbarDivider,

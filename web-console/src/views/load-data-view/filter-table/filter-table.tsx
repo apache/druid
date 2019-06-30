@@ -22,8 +22,8 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { DruidFilter, Transform } from '../../../utils/ingestion-spec';
-import { HeaderAndRows } from '../../../utils/sampler';
+import { DruidFilter } from '../../../utils/ingestion-spec';
+import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
@@ -82,7 +82,7 @@ export class FilterTable extends React.PureComponent<FilterTableProps> {
             headerClassName: columnClassName,
             className: columnClassName,
             id: String(i),
-            accessor: row => (row.parsed ? row.parsed[columnName] : null),
+            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
             Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
           };
         })}

@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import { number } from 'prop-types';
 import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
@@ -184,11 +183,12 @@ export interface ParseSpec {
 
 export function hasParallelAbility(spec: IngestionSpec): boolean {
   const specType = getSpecType(spec);
-  return spec.type === 'index' || spec.type === 'index_parallel';
+  return specType === 'index' || specType === 'index_parallel';
 }
 
 export function isParallel(spec: IngestionSpec): boolean {
-  return spec.type === 'index_parallel';
+  const specType = getSpecType(spec);
+  return specType === 'index_parallel';
 }
 
 export type DimensionMode = 'specific' | 'auto-detect';

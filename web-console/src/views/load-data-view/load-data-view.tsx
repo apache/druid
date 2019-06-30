@@ -222,7 +222,7 @@ const VIEW_TITLE: Record<Step, string> = {
 export interface LoadDataViewProps extends React.Props<any> {
   initSupervisorId?: string | null;
   initTaskId?: string | null;
-  goToTask: (taskId: string | null, supervisor?: string) => void;
+  goToTask: (taskId: string | undefined, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
@@ -677,7 +677,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Submit task"
               rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(null, 'task')}
+              onClick={() => goToTask(undefined, 'task')}
               intent={Intent.PRIMARY}
             />
           </FormGroup>
@@ -693,7 +693,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'supervisor')}
+                onClick={() => goToTask(undefined, 'supervisor')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -701,7 +701,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'task')}
+                onClick={() => goToTask(undefined, 'task')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -2711,7 +2711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 });
 
                 setTimeout(() => {
-                  goToTask(null);
+                  goToTask(undefined); // Can we get the supervisor ID here?
                 }, 1000);
               }
             }}
