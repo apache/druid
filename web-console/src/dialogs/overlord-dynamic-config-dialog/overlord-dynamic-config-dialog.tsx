@@ -26,7 +26,7 @@ import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
-import './overlord-dynamic-config.scss';
+import './overlord-dynamic-config-dialog.scss';
 
 export interface OverlordDynamicConfigDialogProps extends React.Props<any> {
   onClose: () => void;
@@ -120,7 +120,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
 
     return (
       <SnitchDialog
-        className="overlord-dynamic-config"
+        className="overlord-dynamic-config-dialog"
         isOpen
         onSave={this.saveConfig}
         onClose={onClose}

@@ -34,7 +34,7 @@ describe('async action dialog', () => {
         failText={'test'}
       />
     );
-    const { container } = render(asyncActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(asyncActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

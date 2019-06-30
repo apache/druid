@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-.overlord-dynamic-config {
+.coordinator-dynamic-config-dialog {
   &.bp3-dialog {
     margin-top: 5vh;
     top: 5%;
-    width: 600px;
   }
 
   .bp3-dialog-body {
@@ -29,10 +28,6 @@
     .auto-form {
       max-height: 60vh;
       overflow: auto;
-
-      .ace_editor {
-        height: 25vh !important;
-      }
     }
 
     .html-select {

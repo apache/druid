@@ -154,8 +154,6 @@ export class LookupEditDialog extends React.PureComponent<
           value={lookupSpec}
           editorProps={{ $blockScrolling: Infinity }}
           setOptions={{
-            enableBasicAutocompletion: false,
-            enableLiveAutocompletion: false,
             tabSize: 2,
           }}
           style={{}}

@@ -32,7 +32,7 @@ describe('compaction dialog', () => {
         configData={'test'}
       />
     );
-    const { container } = render(compactionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

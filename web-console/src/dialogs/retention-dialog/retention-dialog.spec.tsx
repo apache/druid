@@ -33,8 +33,8 @@ describe('retention dialog', () => {
         onSave={() => null}
       />
     );
-    const { container } = render(retentionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(retentionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   describe('reorderArray', () => {

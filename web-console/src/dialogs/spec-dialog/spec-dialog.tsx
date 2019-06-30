@@ -84,10 +84,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
           value={spec}
           width="100%"
           setOptions={{
-            enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
             showLineNumbers: true,
-            enableSnippets: true,
             tabSize: 2,
           }}
           style={{}}

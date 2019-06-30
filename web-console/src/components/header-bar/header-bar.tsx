@@ -33,8 +33,8 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
-import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config/coordinator-dynamic-config';
-import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config/overlord-dynamic-config';
+import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
+import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,

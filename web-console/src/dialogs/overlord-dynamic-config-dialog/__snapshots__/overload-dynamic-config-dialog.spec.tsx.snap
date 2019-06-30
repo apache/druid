@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`retention dialog matches snapshot 1`] = `
+exports[`overload dynamic config matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -9,13 +9,14 @@ exports[`retention dialog matches snapshot 1`] = `
   >
     <div
       class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
     />
     <div
       class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
       tabindex="0"
     >
       <div
-        class="bp3-dialog snitch-dialog retention-dialog"
+        class="bp3-dialog snitch-dialog overlord-dynamic-config-dialog"
       >
         <div
           class="bp3-dialog-header"
@@ -23,7 +24,7 @@ exports[`retention dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Edit retention rules: test
+            Overlord dynamic config
           </h4>
           <button
             aria-label="Close"
@@ -55,10 +56,10 @@ exports[`retention dialog matches snapshot 1`] = `
           class="bp3-dialog-body"
         >
           <p>
-            Druid uses rules to determine what data should be retained in the cluster. The rules are evaluated in order from top to bottom. For more information please refer to the
+            Edit the overlord dynamic configuration on the fly. For more information please refer to the
              
             <a
-              href="https://druid.apache.org/docs/latest/operations/rule-configuration.html"
+              href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration"
               target="_blank"
             >
               documentation
@@ -66,49 +67,8 @@ exports[`retention dialog matches snapshot 1`] = `
             .
           </p>
           <div
-            class="bp3-form-group"
-          >
-            <div
-              class="bp3-form-content"
-            />
-          </div>
-          <div
-            class="bp3-form-group right"
-          >
-            <div
-              class="bp3-form-content"
-            >
-              <button
-                class="bp3-button"
-                type="button"
-              >
-                <span
-                  class="bp3-icon bp3-icon-plus"
-                  icon="plus"
-                >
-                  <svg
-                    data-icon="plus"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <desc>
-                      plus
-                    </desc>
-                    <path
-                      d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
-                <span
-                  class="bp3-button-text"
-                >
-                  New rule
-                </span>
-              </button>
-            </div>
-          </div>
+            class="auto-form"
+          />
         </div>
         <div
           class="bp3-dialog-footer"
@@ -116,16 +76,6 @@ exports[`retention dialog matches snapshot 1`] = `
           <div
             class="bp3-dialog-footer-actions"
           >
-            <button
-              class="bp3-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Reset
-              </span>
-            </button>
             <button
               class="bp3-button bp3-intent-primary"
               type="button"

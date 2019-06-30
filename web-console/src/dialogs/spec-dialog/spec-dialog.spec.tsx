@@ -24,7 +24,7 @@ import { SpecDialog } from './spec-dialog';
 describe('spec dialog', () => {
   it('matches snapshot', () => {
     const specDialog = <SpecDialog onSubmit={() => null} onClose={() => null} title={'test'} />;
-    const { container } = render(specDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(specDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -26,7 +26,7 @@ import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
-import './coordinator-dynamic-config.scss';
+import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
   onClose: () => void;
@@ -118,7 +118,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
 
     return (
       <SnitchDialog
-        className="coordinator-dynamic-config"
+        className="coordinator-dynamic-config-dialog"
         isOpen
         onSave={this.saveClusterConfig}
         onClose={onClose}

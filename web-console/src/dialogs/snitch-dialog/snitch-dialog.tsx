@@ -90,7 +90,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     });
   };
 
-  goToHistory = () => {
+  handleGoToHistory = () => {
     this.setState({
       showHistory: true,
     });
@@ -118,6 +118,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
 
   renderHistoryDialog() {
     const { historyRecords } = this.props;
+    if (!historyRecords) return;
     return (
       <HistoryDialog {...this.props} className="history-dialog" historyRecords={historyRecords}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -135,8 +136,13 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
 
     return (
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-        {showFinalStep || historyRecords === undefined ? null : (
-          <Button className="left-align-button" minimal text="History" onClick={this.goToHistory} />
+        {!showFinalStep && historyRecords && (
+          <Button
+            className="left-align-button"
+            minimal
+            text="History"
+            onClick={this.handleGoToHistory}
+          />
         )}
 
         {showFinalStep ? (
