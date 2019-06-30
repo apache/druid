@@ -406,7 +406,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'num_rows',
             filterable: false,
             defaultSortDesc: true,
-            Cell: row => formatNumber(row.value),
+            Cell: row => (row.original.is_available ? formatNumber(row.value) : <em>(unknown)</em>),
             show: !noSqlMode && hiddenColumns.exists('Num rows'),
           },
           {

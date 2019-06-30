@@ -46,12 +46,14 @@ import {
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
+import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
 const tableColumns: string[] = [
   'Datasource',
   'Availability',
+  'Segment load/drop',
   'Retention',
   'Compaction',
   'Size',
@@ -61,11 +63,23 @@ const tableColumns: string[] = [
 const tableColumnsNoSql: string[] = [
   'Datasource',
   'Availability',
+  'Segment load/drop',
   'Retention',
   'Compaction',
   'Size',
   ActionCell.COLUMN_LABEL,
 ];
+
+function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
+  const loadDrop: string[] = [];
+  if (segmentsToLoad) {
+    loadDrop.push(`${segmentsToLoad} segments to load`);
+  }
+  if (segmentsToDrop) {
+    loadDrop.push(`${segmentsToDrop} segments to drop`);
+  }
+  return loadDrop.join(', ') || 'No segments to load/drop';
+}
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToQuery: (initSql: string) => void;
@@ -81,10 +95,12 @@ interface Datasource {
 
 interface DatasourceQueryResultRow {
   datasource: string;
-  num_available_segments: number;
-  num_rows: number;
   num_segments: number;
+  num_available_segments: number;
+  num_segments_to_load: number;
+  num_segments_to_drop: number;
   size: number;
+  num_rows: number;
 }
 
 export interface DatasourcesViewState {
@@ -117,10 +133,12 @@ export class DatasourcesView extends React.PureComponent<
 
   static DATASOURCE_SQL = `SELECT
   datasource,
-  COUNT(*) AS num_segments,
-  SUM(is_available) AS num_available_segments,
-  SUM("size") AS size,
-  SUM("num_rows") AS num_rows
+  COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments,
+  COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
+  COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
+  COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
+  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
+  SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_rows
 FROM sys.segments
 GROUP BY 1`;
 
@@ -172,15 +190,21 @@ GROUP BY 1`;
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
-          datasources = datasourcesResp.data.map((d: any) => {
-            return {
-              datasource: d.name,
-              num_available_segments: d.properties.segments.count,
-              size: d.properties.segments.size,
-              num_segments: d.properties.segments.count + loadstatus[d.name],
-              num_rows: -1,
-            };
-          });
+          datasources = datasourcesResp.data.map(
+            (d: any): DatasourceQueryResultRow => {
+              const segmentsToLoad = Number(loadstatus[d.name] || 0);
+              const availableSegments = Number(deepGet(d, 'properties.segments.count'));
+              return {
+                datasource: d.name,
+                num_available_segments: availableSegments,
+                num_segments: availableSegments + segmentsToLoad,
+                num_segments_to_load: segmentsToLoad,
+                num_segments_to_drop: 0,
+                size: d.properties.segments.size,
+                num_rows: -1,
+              };
+            },
+          );
         }
 
         const seen = countBy(datasources, (x: any) => x.datasource);
@@ -659,6 +683,17 @@ GROUP BY 1`;
                 return percentAvailable1 - percentAvailable2 || d1.num_total - d2.num_total;
               },
               show: hiddenColumns.exists('Availability'),
+            },
+            {
+              Header: 'Segment load/drop',
+              id: 'load-drop',
+              accessor: 'num_segments_to_load',
+              filterable: false,
+              Cell: row => {
+                const { num_segments_to_load, num_segments_to_drop } = row.original;
+                return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
+              },
+              show: hiddenColumns.exists('Segment load/drop'),
             },
             {
               Header: 'Retention',
