@@ -41,10 +41,12 @@ class DependencyReportParser(HTMLParser):
     dep_to_license = None
     compatible_license_names = None
     include_classifier = False
+    druid_module_name = None
 
-    def __init__(self, compatible_license_names):
+    def __init__(self, druid_module_name, compatible_license_names):
         HTMLParser.__init__(self)
         self.state = "none"
+        self.druid_module_name = druid_module_name
         self.compatible_license_names = compatible_license_names
 
     def parse(self, f):
@@ -151,7 +153,7 @@ class DependencyReportParser(HTMLParser):
                 self.state = "row_end"
                 # print(json.dumps({"groupId": self.group_id, "artifactId": self.artifact_id, "version": self.version, "classifier": self.classifier, "type": self.dep_type, "license": self.license}))
                 if self.group_id.find("org.apache.druid") < 0:
-                    self.dep_to_license[get_dep_key(self.group_id, self.artifact_id, self.version)] = self.license
+                    self.dep_to_license[get_dep_key(self.group_id, self.artifact_id, self.version)] = (self.license, self.druid_module_name)
         
         if self.state == "row_end":
             if tag == "table":
@@ -374,6 +376,21 @@ def print_license(license):
                 print("      * {}:{}".format(group_id, artifact_id))
 
 
+def find_druid_module_name(dirpath):
+    ext_start = dirpath.find("/ext/")
+    if ext_start > 0:
+        # Found an extension
+        subpath = dirpath[(len("/ext/") + ext_start):]
+        ext_name_end = subpath.find("/")
+        if ext_name_end < 0:
+            raise Exception("Can't determine extension name from [{}]".format(dirpath))
+        else:
+            return subpath[0:ext_name_end]
+    else:
+        # Druid core
+        return "core"
+
+
 def check_licenses(license_yaml, dependency_reports_root):
     # Build a dictionary to facilitate comparing reported licenses and registered ones.
     # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
@@ -385,9 +402,11 @@ def check_licenses(license_yaml, dependency_reports_root):
         for filename in filenames:
             if filename == "dependencies.html":
                 full_path = os.path.join(dirpath, filename)
+                # Determine if it's druid core or an extension
+                druid_module_name = find_druid_module_name(dirpath)
                 print_error("Parsing {}".format(full_path))
                 with open(full_path) as report_file:
-                    parser = DependencyReportParser(compatible_license_names)
+                    parser = DependencyReportParser(druid_module_name, compatible_license_names)
                     reported_dep_to_licenses.update(parser.parse(report_file))
     
     print_error("Found {} reported licenses\n".format(len(reported_dep_to_licenses)))
@@ -419,30 +438,32 @@ def check_licenses(license_yaml, dependency_reports_root):
     # Iterate through registered licenses and check if its license is same with the reported one.
     for key, registered_license in registered_dep_to_licenses.items():
         if key in reported_dep_to_licenses: # key is (group_id, artifact_id, version)
-            reported_license = reported_dep_to_licenses[key]
+            reported_license_druid_module = reported_dep_to_licenses[key]
+            reported_license = reported_license_druid_module[0]
+            druid_module = reported_license_druid_module[1]
             if reported_license is not None and reported_license != "-" and reported_license != registered_license:
                 group_id = key[0]
                 artifact_id = key[1]
                 version = key[2]
-                mismatched_licenses.append((group_id, artifact_id, version, reported_license, registered_license))
+                mismatched_licenses.append((druid_module, group_id, artifact_id, version, reported_license, registered_license))
     
     # If we find any mismatched license, stop immediately.
     if len(mismatched_licenses) > 0:
         print_error("Error: found {} mismatches between reported licenses and registered licenses".format(len(mismatched_licenses)))
         for mismatched_license in mismatched_licenses:
-            print_error("groupId: {}, artifactId: {}, version: {}, reported_license: {}, registered_license: {}".format(mismatched_license[0], mismatched_license[1], mismatched_license[2], mismatched_license[3], mismatched_license[4]))
+            print_error("druid_module: {}, groupId: {}, artifactId: {}, version: {}, reported_license: {}, registered_license: {}".format(mismatched_license[0], mismatched_license[1], mismatched_license[2], mismatched_license[3], mismatched_license[4], mismatched_license[5]))
         print_error("")
     
     # Let's find missing licenses, which are reported but missing in the registry.
-    for key, reported_license in reported_dep_to_licenses.items():
+    for key, reported_license_druid_module in reported_dep_to_licenses.items():
         if key not in registered_dep_to_licenses:
             print_error("reported key: {}".format(key))
-            missing_licenses.append((key[0], key[1], key[2], reported_license))
+            missing_licenses.append((reported_license_druid_module[1], key[0], key[1], key[2], reported_license_druid_module[0]))
 
     if len(missing_licenses) > 0:
         print_error("Error: found {} missing licenses. These licenses are reported, but missing in the registry".format(len(missing_licenses)))
         for missing_license in missing_licenses:
-            print_error("groupId: {}, artifactId: {}, version: {}, license: {}".format(missing_license[0], missing_license[1], missing_license[2], missing_license[3]))
+            print_error("druid_module: {}, groupId: {}, artifactId: {}, version: {}, license: {}".format(missing_license[0], missing_license[1], missing_license[2], missing_license[3], missing_license[4]))
         print_error("")
     
     # Let's find unchecked licenses, which are registered but missing in the report.
@@ -451,7 +472,7 @@ def check_licenses(license_yaml, dependency_reports_root):
         if key not in reported_dep_to_licenses:
             print_error("registered key: {}".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
-        elif reported_dep_to_licenses[key] == "-":
+        elif reported_dep_to_licenses[key][0] == "-":
             print_error("registered key: {} with - license".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
     
