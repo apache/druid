@@ -28,7 +28,7 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
-export interface TransformTableProps extends React.Props<any> {
+export interface TransformTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;

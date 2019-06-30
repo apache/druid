@@ -55,7 +55,7 @@ export type HeaderActiveTab =
   | 'servers'
   | 'lookups';
 
-export interface HeaderBarProps extends React.Props<any> {
+export interface HeaderBarProps {
   active: HeaderActiveTab;
   hideLegacy: boolean;
 }

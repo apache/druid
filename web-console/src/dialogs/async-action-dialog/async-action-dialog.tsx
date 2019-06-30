@@ -23,7 +23,7 @@ import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
-export interface AsyncAlertDialogProps extends React.Props<any> {
+export interface AsyncAlertDialogProps {
   action: null | (() => Promise<void>);
   onClose: (success: boolean) => void;
   confirmButtonText: string;

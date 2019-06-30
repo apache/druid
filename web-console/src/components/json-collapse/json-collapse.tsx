@@ -19,7 +19,7 @@
 import { Button, Collapse, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-interface JSONCollapseProps extends React.Props<any> {
+interface JSONCollapseProps {
   stringValue: string;
   buttonText: string;
 }

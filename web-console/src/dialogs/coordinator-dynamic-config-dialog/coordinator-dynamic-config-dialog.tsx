@@ -28,7 +28,7 @@ import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './coordinator-dynamic-config-dialog.scss';
 
-export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
+export interface CoordinatorDynamicConfigDialogProps {
   onClose: () => void;
 }
 

@@ -22,7 +22,7 @@ import AceEditor from 'react-ace';
 
 import './spec-dialog.scss';
 
-export interface SpecDialogProps extends React.Props<any> {
+export interface SpecDialogProps {
   onSubmit: (spec: JSON) => void;
   onClose: () => void;
   title: string;

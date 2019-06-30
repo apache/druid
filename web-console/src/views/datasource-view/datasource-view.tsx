@@ -81,7 +81,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
   return loadDrop.join(', ') || 'No segments to load/drop';
 }
 
-export interface DatasourcesViewProps extends React.Props<any> {
+export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
   noSqlMode: boolean;

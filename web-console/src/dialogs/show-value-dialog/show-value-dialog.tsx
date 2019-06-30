@@ -24,7 +24,7 @@ import { AppToaster } from '../../singletons/toaster';
 
 import './show-value-dialog.scss';
 
-export interface ShowValueDialogProps extends React.Props<any> {
+export interface ShowValueDialogProps {
   onClose: () => void;
   str: string;
 }

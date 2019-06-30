@@ -67,7 +67,7 @@ const tableColumnsNoSql: string[] = [
   'Size',
 ];
 
-export interface SegmentsViewProps extends React.Props<any> {
+export interface SegmentsViewProps {
   goToQuery: (initSql: string) => void;
   datasource: string | undefined;
   onlyUnavailable: boolean | undefined;

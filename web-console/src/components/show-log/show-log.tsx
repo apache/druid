@@ -35,7 +35,7 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
-export interface ShowLogProps extends React.Props<any> {
+export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;

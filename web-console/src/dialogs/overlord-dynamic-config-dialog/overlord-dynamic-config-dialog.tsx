@@ -28,7 +28,7 @@ import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './overlord-dynamic-config-dialog.scss';
 
-export interface OverlordDynamicConfigDialogProps extends React.Props<any> {
+export interface OverlordDynamicConfigDialogProps {
   onClose: () => void;
 }
 

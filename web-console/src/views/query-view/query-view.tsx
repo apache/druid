@@ -56,7 +56,7 @@ interface QueryWithContext {
   wrapQuery?: boolean;
 }
 
-export interface QueryViewProps extends React.Props<any> {
+export interface QueryViewProps {
   initQuery: string | undefined;
 }
 

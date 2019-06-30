@@ -24,7 +24,7 @@ import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
 import './table-column-selector.scss';
 
-interface TableColumnSelectorProps extends React.Props<any> {
+interface TableColumnSelectorProps {
   columns: string[];
   onChange: (column: string) => void;
   tableColumnsHidden: string[];

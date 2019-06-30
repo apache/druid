@@ -43,7 +43,7 @@ import './console-application.scss';
 
 type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
-export interface ConsoleApplicationProps extends React.Props<any> {
+export interface ConsoleApplicationProps {
   hideLegacy: boolean;
   baseURL?: string;
   customHeaderName?: string;

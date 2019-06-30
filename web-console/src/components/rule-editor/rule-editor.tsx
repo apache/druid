@@ -52,7 +52,7 @@ export interface Rule {
 export type LoadType = 'load' | 'drop' | 'broadcast';
 export type TimeType = 'Forever' | 'ByInterval' | 'ByPeriod';
 
-export interface RuleEditorProps extends React.Props<any> {
+export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
   onChange: (newRule: Rule) => void;

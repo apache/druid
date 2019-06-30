@@ -40,7 +40,7 @@ export interface Field<T> {
   min?: number;
 }
 
-export interface AutoFormProps<T> extends React.Props<any> {
+export interface AutoFormProps<T> {
   fields: Field<T>[];
   model: T | null;
   onChange: (newModel: T) => void;

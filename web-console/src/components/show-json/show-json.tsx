@@ -27,7 +27,7 @@ import { downloadFile } from '../../utils';
 
 import './show-json.scss';
 
-export interface ShowJsonProps extends React.Props<any> {
+export interface ShowJsonProps {
   endpoint: string;
   transform?: (x: any) => any;
   downloadFilename?: string;

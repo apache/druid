@@ -76,7 +76,7 @@ const taskTableColumns: string[] = [
   ActionCell.COLUMN_LABEL,
 ];
 
-export interface TasksViewProps extends React.Props<any> {
+export interface TasksViewProps {
   taskId: string | undefined;
   openDialog: string | undefined;
   goToQuery: (initSql: string) => void;

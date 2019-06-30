@@ -35,7 +35,7 @@ const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', Action
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
 
-export interface LookupsViewProps extends React.Props<any> {}
+export interface LookupsViewProps {}
 
 export interface LookupsViewState {
   lookups: {}[] | null;

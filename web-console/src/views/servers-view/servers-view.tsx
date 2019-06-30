@@ -74,7 +74,7 @@ function formatQueues(
   return queueParts.join(', ') || 'Empty load/drop queues';
 }
 
-export interface ServersViewProps extends React.Props<any> {
+export interface ServersViewProps {
   middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;

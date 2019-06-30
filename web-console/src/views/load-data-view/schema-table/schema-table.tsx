@@ -35,7 +35,7 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './schema-table.scss';
 
-export interface SchemaTableProps extends React.Props<any> {
+export interface SchemaTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
     dimensionsSpec: DimensionsSpec;

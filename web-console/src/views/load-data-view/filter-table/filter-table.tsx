@@ -27,7 +27,7 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
-export interface FilterTableProps extends React.Props<any> {
+export interface FilterTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];

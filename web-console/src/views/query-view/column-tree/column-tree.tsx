@@ -26,7 +26,7 @@ import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './column-tree.scss';
 
-export interface ColumnTreeProps extends React.Props<any> {
+export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata: ColumnMetadata[] | null;
   onQueryStringChange: (queryString: string) => void;

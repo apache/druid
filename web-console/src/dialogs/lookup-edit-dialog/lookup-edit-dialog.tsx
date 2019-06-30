@@ -32,7 +32,7 @@ import { validJson } from '../../utils';
 
 import './lookup-edit-dialog.scss';
 
-export interface LookupEditDialogProps extends React.Props<any> {
+export interface LookupEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;

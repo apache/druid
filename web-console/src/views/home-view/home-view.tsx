@@ -37,7 +37,7 @@ export interface CardOptions {
   error?: string | null;
 }
 
-export interface HomeViewProps extends React.Props<any> {
+export interface HomeViewProps {
   noSqlMode: boolean;
 }
 

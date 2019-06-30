@@ -23,7 +23,7 @@ import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
-export interface NullTableCellProps extends React.Props<any> {
+export interface NullTableCellProps {
   value?: any;
   timestamp?: boolean;
   unparseable?: boolean;

@@ -21,7 +21,7 @@ import React from 'react';
 import { LocalStorageKeys } from '../../utils';
 import { TimedButton } from '../timed-button/timed-button';
 
-export interface RefreshButtonProps extends React.Props<any> {
+export interface RefreshButtonProps {
   onRefresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
 }

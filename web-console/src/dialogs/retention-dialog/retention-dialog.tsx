@@ -37,7 +37,7 @@ export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number):
   return newItems;
 }
 
-export interface RetentionDialogProps extends React.Props<any> {
+export interface RetentionDialogProps {
   datasource: string;
   rules: any[];
   tiers: string[];

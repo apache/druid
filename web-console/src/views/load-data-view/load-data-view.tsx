@@ -219,7 +219,7 @@ const VIEW_TITLE: Record<Step, string> = {
   loading: 'Loading',
 };
 
-export interface LoadDataViewProps extends React.Props<any> {
+export interface LoadDataViewProps {
   initSupervisorId?: string | null;
   initTaskId?: string | null;
   goToTask: (taskId: string | undefined, supervisor?: string) => void;

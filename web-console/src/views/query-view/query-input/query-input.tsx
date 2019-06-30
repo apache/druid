@@ -33,7 +33,7 @@ import './query-input.scss';
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
-export interface QueryInputProps extends React.Props<any> {
+export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
