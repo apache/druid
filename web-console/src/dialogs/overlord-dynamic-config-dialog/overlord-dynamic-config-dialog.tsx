@@ -26,9 +26,9 @@ import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
-import './overlord-dynamic-config.scss';
+import './overlord-dynamic-config-dialog.scss';
 
-export interface OverlordDynamicConfigDialogProps extends React.Props<any> {
+export interface OverlordDynamicConfigDialogProps {
   onClose: () => void;
 }
 
@@ -51,22 +51,22 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
       allJSONValid: true,
       historyRecords: [],
     };
-  }
-
-  componentDidMount() {
-    this.getConfig();
 
     this.historyQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async () => {
         const historyResp = await axios(`/druid/indexer/v1/worker/history?count=100`);
         return historyResp.data;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result }) => {
         this.setState({
           historyRecords: result,
         });
       },
     });
+  }
+
+  componentDidMount() {
+    this.getConfig();
 
     this.historyQueryManager.runQuery(`dummy`);
   }
@@ -120,7 +120,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
 
     return (
       <SnitchDialog
-        className="overlord-dynamic-config"
+        className="overlord-dynamic-config-dialog"
         isOpen
         onSave={this.saveConfig}
         onClose={onClose}

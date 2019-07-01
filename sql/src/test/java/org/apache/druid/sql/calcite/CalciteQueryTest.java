@@ -7953,7 +7953,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
   {
@@ -8090,6 +8089,180 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"afoo\",\"bfoo\"]"},
             new Object[]{"[\"bfoo\",\"cfoo\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testNvlColumns() throws Exception
+  {
+    testQuery(
+        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectConstantArrayExpressionFromTable() throws Exception
+  {
+    testQuery(
+        "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.STRING))
+                .columns("dim1", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"1\",\"2\"]", ""}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectNonConstantArrayExpressionFromTable() throws Exception
+  {
+    testQuery(
+        "SELECT ARRAY[CONCAT(dim1, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING))
+                .columns("dim1", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"word\",\"up\"]", ""},
+            new Object[]{"[\"10.1word\",\"up\"]", "10.1"},
+            new Object[]{"[\"2word\",\"up\"]", "2"},
+            new Object[]{"[\"1word\",\"up\"]", "1"},
+            new Object[]{"[\"defword\",\"up\"]", "def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectNonConstantArrayExpressionFromTableFailForMultival() throws Exception
+  {
+    // without expression output type inference to prevent this, the automatic translation will try to turn this into
+    //
+    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+    //
+    // This error message will get better in the future. The error without translation would be:
+    //
+    //    org.apache.druid.java.util.common.RE: Unhandled array constructor element type [STRING_ARRAY]
+
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Unhandled map function output type [STRING_ARRAY]");
+    testQuery(
+        "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_overlap(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterNonConstant() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_overlap(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringContainsFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_contains(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
         )
     );
   }

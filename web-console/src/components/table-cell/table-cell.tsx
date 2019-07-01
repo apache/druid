@@ -16,20 +16,18 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { AppToaster } from '../../singletons/toaster';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
-export interface NullTableCellProps extends React.Props<any> {
+export interface NullTableCellProps {
   value?: any;
   timestamp?: boolean;
   unparseable?: boolean;
+  openModal?: (str: string) => void;
 }
 
 interface ShortParts {
@@ -41,8 +39,8 @@ interface ShortParts {
 export class TableCell extends React.PureComponent<NullTableCellProps> {
   static MAX_CHARS_TO_SHOW = 50;
 
-  static possiblyTruncate(str: string): React.ReactNode {
-    if (str.length < TableCell.MAX_CHARS_TO_SHOW) return str;
+  possiblyTruncate(str: string): React.ReactNode {
+    if (str.length <= TableCell.MAX_CHARS_TO_SHOW) return str;
 
     const { prefix, omitted, suffix } = TableCell.shortenString(str);
     return (
@@ -51,14 +49,8 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
         <span className="omitted">{omitted}</span>
         {suffix}
         <ActionIcon
-          icon={IconNames.CLIPBOARD}
-          onClick={() => {
-            copy(str, { format: 'text/plain' });
-            AppToaster.show({
-              message: 'Value copied to clipboard',
-              intent: Intent.SUCCESS,
-            });
-          }}
+          icon={IconNames.MORE}
+          onClick={() => (this.props.openModal ? this.props.openModal(str) : null)}
         />
       </span>
     );
@@ -67,7 +59,7 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
   static shortenString(str: string): ShortParts {
     // Print something like:
     // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
-    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW + 17);
+    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW - 17);
     const prefix = str.substr(0, str.length - (omit + 10));
     const suffix = str.substr(str.length - 10);
     return {
@@ -89,9 +81,9 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
           </span>
         );
       } else if (Array.isArray(value)) {
-        return TableCell.possiblyTruncate(`[${value.join(', ')}]`);
+        return this.possiblyTruncate(`[${value.join(', ')}]`);
       } else {
-        return TableCell.possiblyTruncate(String(value));
+        return this.possiblyTruncate(String(value));
       }
     } else {
       if (timestamp) {

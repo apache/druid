@@ -160,6 +160,15 @@ public class FunctionTest
   }
 
   @Test
+  public void testArrayConstructor()
+  {
+    assertExpr("array(1, 2, 3, 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertExpr("array(1.0)", new Double[]{1.0});
+    assertExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
+  }
+
+  @Test
   public void testArrayLength()
   {
     assertExpr("array_length([1,2,3])", 3L);
@@ -201,18 +210,18 @@ public class FunctionTest
   @Test
   public void testArrayContains()
   {
-    assertExpr("array_contains([1, 2, 3], 2)", "true");
-    assertExpr("array_contains([1, 2, 3], 4)", "false");
-    assertExpr("array_contains([1, 2, 3], [2, 3])", "true");
-    assertExpr("array_contains([1, 2, 3], [3, 4])", "false");
-    assertExpr("array_contains(b, [3, 4])", "true");
+    assertExpr("array_contains([1, 2, 3], 2)", 1L);
+    assertExpr("array_contains([1, 2, 3], 4)", 0L);
+    assertExpr("array_contains([1, 2, 3], [2, 3])", 1L);
+    assertExpr("array_contains([1, 2, 3], [3, 4])", 0L);
+    assertExpr("array_contains(b, [3, 4])", 1L);
   }
 
   @Test
   public void testArrayOverlap()
   {
-    assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", "true");
-    assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", "false");
+    assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);
+    assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", 0L);
   }
 
   @Test

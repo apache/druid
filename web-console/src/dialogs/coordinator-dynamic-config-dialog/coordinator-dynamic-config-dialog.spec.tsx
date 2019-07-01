@@ -19,25 +19,12 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
+import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
 
-describe('overload dynamic config', () => {
+describe('coordinator dynamic config', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = (
-      <LookupEditDialog
-        isOpen
-        onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
-        lookupName={'test'}
-        lookupTier={'test'}
-        lookupVersion={'test'}
-        lookupSpec={'test'}
-        isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />
-    );
-    const { container } = render(lookupEditDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    const coordinatorDynamicConfig = <CoordinatorDynamicConfigDialog onClose={() => null} />;
+    render(coordinatorDynamicConfig);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

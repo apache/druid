@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import { render } from 'react-testing-library';
+.show-value-dialog {
+  &.bp3-dialog {
+    padding-bottom: 10px;
+  }
 
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config';
+  .bp3-input {
+    margin: 10px;
+    height: 400px;
+  }
 
-describe('coordinator dynamic config', () => {
-  it('matches snapshot', () => {
-    const coordinatorDynamicConfig = <CoordinatorDynamicConfigDialog onClose={() => null} />;
-    const { container } = render(coordinatorDynamicConfig, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .bp3-dialog-footer-actions {
+    padding-right: 10px;
+  }
+}

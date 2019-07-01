@@ -26,13 +26,13 @@ describe('compaction dialog', () => {
     const compactionDialog = (
       <CompactionDialog
         onClose={() => null}
-        onSave={(config: any) => null}
+        onSave={() => null}
         onDelete={() => null}
         datasource={'test'}
         configData={'test'}
       />
     );
-    const { container } = render(compactionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

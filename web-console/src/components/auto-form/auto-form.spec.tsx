@@ -35,7 +35,7 @@ describe('auto-form snapshot', () => {
           { name: 'testSeven', type: 'json' },
         ]}
         model={String}
-        onChange={(newModel: Record<string, any>) => {}}
+        onChange={() => {}}
       />
     );
     const { container } = render(autoForm);

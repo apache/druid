@@ -33,7 +33,7 @@ describe('task table action dialog', () => {
         isOpen
       />
     );
-    const { container } = render(taskTableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(taskTableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

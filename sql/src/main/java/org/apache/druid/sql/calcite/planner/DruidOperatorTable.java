@@ -46,6 +46,9 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayLengthOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOfOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOperatorConversion;
@@ -214,7 +217,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           // value coercion operators
           .add(new CastOperatorConversion())
           .add(new ReinterpretOperatorConversion())
-          // array/multi-value string operators
+          // array and multi-value string operators
+          .add(new ArrayConstructorOperatorConversion())
+          .add(new ArrayContainsOperatorConversion())
+          .add(new ArrayOverlapOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayContainsOperatorConversion(), "MV_CONTAINS"))
+          .add(new AliasedOperatorConversion(new ArrayOverlapOperatorConversion(), "MV_OVERLAP"))
           .add(new ArrayLengthOperatorConversion())
           .add(new AliasedOperatorConversion(new ArrayLengthOperatorConversion(), "MV_LENGTH"))
           .add(new ArrayOffsetOperatorConversion())
