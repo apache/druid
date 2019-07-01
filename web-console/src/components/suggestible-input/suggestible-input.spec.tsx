@@ -19,12 +19,15 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config';
+import { SuggestibleInput } from './suggestible-input';
 
-describe('coordinator dynamic config', () => {
+describe('suggestible input', () => {
   it('matches snapshot', () => {
-    const coordinatorDynamicConfig = <CoordinatorDynamicConfigDialog onClose={() => null} />;
-    const { container } = render(coordinatorDynamicConfig, { container: document.body });
+    const suggestibleInput = (
+      <SuggestibleInput onValueChange={() => {}} suggestions={['a', 'b', 'c']} />
+    );
+
+    const { container } = render(suggestibleInput);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

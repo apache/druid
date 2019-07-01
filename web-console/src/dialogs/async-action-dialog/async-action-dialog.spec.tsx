@@ -28,13 +28,13 @@ describe('async action dialog', () => {
         action={() => {
           return Promise.resolve();
         }}
-        onClose={(success: boolean) => null}
+        onClose={() => null}
         confirmButtonText={'test'}
         successText={'test'}
         failText={'test'}
       />
     );
-    const { container } = render(asyncActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(asyncActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

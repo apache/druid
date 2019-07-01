@@ -13,7 +13,7 @@ exports[`segments-view matches snapshot 1`] = `
         onRefresh={[Function]}
       />
       <Blueprint3.Button
-        hidden={false}
+        disabled={true}
         icon="application"
         onClick={[Function]}
         text="Go to SQL"

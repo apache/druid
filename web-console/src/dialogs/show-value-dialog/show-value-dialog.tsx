@@ -15,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Button, Classes, Dialog, IconName, Intent, TextArea } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import copy = require('copy-to-clipboard');
+import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
 import './show-value-dialog.scss';
 
-export interface ShowValueDialogProps extends React.Props<any> {
+export interface ShowValueDialogProps {
   onClose: () => void;
   str: string;
 }
@@ -39,23 +39,22 @@ export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
     const { onClose, str } = this.props;
 
     return (
-      <Dialog className="show-value-dialog" isOpen onClose={onClose} title={'Show value'}>
+      <Dialog className="show-value-dialog" isOpen onClose={onClose} title="Full value">
         <TextArea value={str} />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            icon={IconNames.DUPLICATE}
-            text={'Copy'}
-            onClick={() => {
-              copy(str, { format: 'text/plain' });
-              AppToaster.show({
-                message: 'Value copied to clipboard',
-                intent: Intent.SUCCESS,
-              });
-            }}
-          />
-          <Button text={'Close'} intent={'primary'} onClick={onClose} />
+          <Button icon={IconNames.DUPLICATE} text={'Copy'} onClick={this.handleCopy} />
+          <Button text={'Close'} intent={Intent.PRIMARY} onClick={onClose} />
         </div>
       </Dialog>
     );
   }
+
+  private handleCopy = () => {
+    const { str } = this.props;
+    copy(str, { format: 'text/plain' });
+    AppToaster.show({
+      message: 'Value copied to clipboard',
+      intent: Intent.SUCCESS,
+    });
+  };
 }

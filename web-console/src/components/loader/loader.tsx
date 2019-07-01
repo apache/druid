@@ -20,7 +20,7 @@ import React from 'react';
 
 import './loader.scss';
 
-export interface LoaderProps extends React.Props<any> {
+export interface LoaderProps {
   loadingText?: string;
   loading?: boolean; // This is needed so that this component can be used as a LoadingComponent in react table
 }

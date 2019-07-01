@@ -25,8 +25,6 @@ import {
   Card,
   Classes,
   Code,
-  Dialog,
-  Elevation,
   FormGroup,
   H5,
   HTMLSelect,
@@ -221,10 +219,10 @@ const VIEW_TITLE: Record<Step, string> = {
   loading: 'Loading',
 };
 
-export interface LoadDataViewProps extends React.Props<any> {
+export interface LoadDataViewProps {
   initSupervisorId?: string | null;
   initTaskId?: string | null;
-  goToTask: (taskId: string | null, supervisor?: string) => void;
+  goToTask: (taskId: string | undefined, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
@@ -524,7 +522,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <>
-        <div className="main">
+        <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index:static-s3')}
@@ -679,7 +677,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Submit task"
               rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(null, 'task')}
+              onClick={() => goToTask(undefined, 'task')}
               intent={Intent.PRIMARY}
             />
           </FormGroup>
@@ -695,7 +693,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'supervisor')}
+                onClick={() => goToTask(undefined, 'supervisor')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -703,7 +701,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'task')}
+                onClick={() => goToTask(undefined, 'task')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -1602,15 +1600,44 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
+    if (sampleResponse.data.length) {
+      this.setState({
+        cacheKey: sampleResponse.cacheKey,
+        filterQueryState: new QueryState({
+          data: headerAndRowsFromSampleResponse(
+            sampleResponse,
+            undefined,
+            ['__time'].concat(parserColumns),
+            true,
+          ),
+        }),
+      });
+      return;
+    }
+
+    // The filters matched no data
+    let sampleResponseNoFilter: SampleResponse;
+    try {
+      const specNoFilter = deepSet(spec, 'dataSchema.transformSpec.filter', null);
+      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheKey);
+    } catch (e) {
+      this.setState({
+        filterQueryState: new QueryState({ error: e.message }),
+      });
+      return;
+    }
+
+    const headerAndRowsNoFilter = headerAndRowsFromSampleResponse(
+      sampleResponseNoFilter,
+      undefined,
+      ['__time'].concat(parserColumns),
+      true,
+    );
+
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheKey: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(
-          sampleResponse,
-          undefined,
-          ['__time'].concat(parserColumns),
-          true,
-        ),
+        data: deepSet(headerAndRowsNoFilter, 'rows', []),
       }),
     });
   }
@@ -2684,7 +2711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 });
 
                 setTimeout(() => {
-                  goToTask(null);
+                  goToTask(undefined); // Can we get the supervisor ID here?
                 }, 1000);
               }
             }}

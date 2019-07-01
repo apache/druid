@@ -21,7 +21,7 @@ import AceEditor from 'react-ace';
 
 import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';
 
-interface JSONInputProps extends React.Props<any> {
+interface JSONInputProps {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity?: (valueValid: boolean) => void;
