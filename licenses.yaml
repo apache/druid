@@ -330,7 +330,7 @@ name: Apache Commons CLI
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2
+version: 1.3.1
 libraries:
   - commons-cli: commons-cli
 
@@ -340,7 +340,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7
+version: 1.12
 libraries:
   - commons-codec: commons-codec
 
@@ -410,7 +410,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.16
+version: 1.18
 libraries:
   - org.apache.commons: commons-compress
 
@@ -562,7 +562,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.9
+version: 2.10.2
 libraries:
   - joda-time: joda-time
 
@@ -643,7 +643,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.10.0
+version: 1.12.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -880,7 +880,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.5.0
+version: 1.6.0
 libraries:
   - org.lz4: lz4-java
 
@@ -910,7 +910,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.8.0
+version: 0.8.6
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -1244,15 +1244,38 @@ libraries:
 
 ---
 
+name: Apache Velocity Engine
+version: 2.0
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.velocity: velocity-engine-core
+
+---
+
 name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.8.2
+version: 1.9.0
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
   - org.apache.avro: avro-ipc
+  - org.apache.avro: avro-ipc-jetty
+
+---
+
+name: Javax Annotation API
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: CDDL 1.1
+version: 1.3.2
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.annotation-api.CDDL11
+libraries:
+  - javax.annotation: javax.annotation-api
 
 ---
 
@@ -1343,7 +1366,7 @@ name: DataSketches
 license_category: binary
 module: extensions/druid-datasketches
 license_name: Apache License version 2.0
-version: 0.13.3
+version: 0.13.4
 libraries:
   - com.yahoo.datasketches: sketches-core
 
@@ -1574,7 +1597,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.10.0
+version: 1.10.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -2738,7 +2761,7 @@ name: JAXB
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 2.3.0
+version: 2.3.1
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
 libraries:
@@ -2977,3 +3000,15 @@ license_name: Apache License version 2.0
 version: 1.22.0
 libraries:
   - com.google.oauth-client: google-oauth-client
+
+---
+
+name: JavaBeans Activation Framework API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.2.0
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.activation-api.CDDL11
+libraries:
+  - javax.activation: javax.activation-api

@@ -207,6 +207,8 @@ class DependencyReportParser(HTMLParser):
                 self.license = self.compatible_license_names[data]
 
 
+outfile = None
+
 def get_dep_key(group_id, artifact_id, version):
     return (group_id, artifact_id, version)
 
@@ -280,8 +282,12 @@ def module_to_upper(module):
         raise Exception("Expected extensions at 0, but {}".format(extensions_offset))
 
 
-def print_error(str):
-    print(str, file=sys.stderr)
+def print_outfile(string):
+    print(string, file=outfile)
+
+
+def print_error(string):
+    print(string, file=sys.stderr)
 
 
 def get_version_string(version):
@@ -301,10 +307,10 @@ def print_license_phrase(license_phrase):
             phrase_len = chars_of_200.rfind(" ")
             if phrase_len < 0:
                 raise Exception("Can't find whitespace in {}".format(chars_of_200))
-            print("    {}".format(remaining[0:phrase_len]))
+            print_outfile("    {}".format(remaining[0:phrase_len]))
             remaining = remaining[phrase_len:]
         else:
-            print("    {}".format(remaining))
+            print_outfile("    {}".format(remaining))
             remaining = ""
 
 
@@ -361,10 +367,10 @@ def print_license(license):
         for source_path in license['source_paths']:
             if type(source_path) is dict:
                 for class_name, path in source_path.items():
-                    print("      {}:".format(class_name))
-                    print("      * {}".format(path))
+                    print_outfile("      {}:".format(class_name))
+                    print_outfile("      * {}".format(path))
             else:
-                print("      * {}".format(source_path))
+                print_outfile("      * {}".format(source_path))
 
     if 'libraries' in license:
         for library in license['libraries']:
@@ -373,7 +379,7 @@ def print_license(license):
             if len(library) > 1:
                 raise Exception("Expected 1 groupId and artifactId, but got [{}]".format(library))
             for group_id, artifact_id in library.items():
-                print("      * {}:{}".format(group_id, artifact_id))
+                print_outfile("      * {}:{}".format(group_id, artifact_id))
 
 
 def find_druid_module_name(dirpath):
@@ -489,18 +495,20 @@ def check_licenses(license_yaml, dependency_reports_root):
     if len(mismatched_licenses) > 0 or len(missing_licenses) > 0:
         sys.exit(1)
 
+
 def print_license_name_underbar(license_name):
     underbar = ""
     for _ in range(len(license_name)):
         underbar += "="
-    print("{}\n".format(underbar))
+    print_outfile("{}\n".format(underbar))
+
 
 def generate_license(apache_license_v2, license_yaml):
     # Generate LICENSE.BINARY file
     print_error("=== Generating the contents of LICENSE.BINARY file ===\n")
     
     # Print Apache license first.
-    print(apache_license_v2)
+    print_outfile(apache_license_v2)
     with open(license_yaml) as registry_file:
         licenses_list = list(yaml.load_all(registry_file))
 
@@ -519,20 +527,20 @@ def generate_license(apache_license_v2, license_yaml):
         licenses_of_module.append(license)
 
     for license_name, licenses_of_name in sorted(licenses_map.items()):
-        print(license_name)
+        print_outfile(license_name)
         print_license_name_underbar(license_name)
         for license_category, licenses_of_category in licenses_of_name.items():
             for module, licenses in licenses_of_category.items():
-                print("{}/{}".format(license_category.upper(), module_to_upper(module)))
+                print_outfile("{}/{}".format(license_category.upper(), module_to_upper(module)))
                 for license in licenses:
                     print_license(license)
-                    print("")
-                print("")
+                    print_outfile("")
+                print_outfile("")
 
 
 # TODO: add options: debug mode
-if len(sys.argv) != 4:
-    sys.stderr.write("usage: {} <path to apache license file> <path to license.yaml> <root to maven dependency reports>".format(sys.argv[0]))
+if len(sys.argv) != 5:
+    sys.stderr.write("usage: {} <path to apache license file> <path to license.yaml> <root to maven dependency reports> <path to output file>".format(sys.argv[0]))
     sys.exit(1)
 
 with open(sys.argv[1]) as apache_license_file:
@@ -540,5 +548,7 @@ with open(sys.argv[1]) as apache_license_file:
 license_yaml = sys.argv[2]
 dependency_reports_root = sys.argv[3]
 
+outfile = open(sys.argv[4], "w")
 check_licenses(license_yaml, dependency_reports_root)
 generate_license(apache_license_v2, license_yaml)
+outfile.close()
