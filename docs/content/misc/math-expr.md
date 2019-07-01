@@ -168,11 +168,12 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 | function | description |
 | --- | --- |
+| `array(expr1,expr ...)` | constructs an array from the expression arguments, using the type of the first argument as the output array type |
 | `array_length(arr)` | returns length of array expression |
 | `array_offset(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `array_ordinal(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
-| `array_contains(arr,expr)` | returns true if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array |
-| `array_overlap(arr1,arr2)` | returns true if arr1 and arr2 have any elements in common |
+| `array_contains(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
+| `array_overlap(arr1,arr2)` | returns 1 if arr1 and arr2 have any elements in common, else 0 |
 | `array_offset_of(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
 | `array_ordinal_of(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
 | `array_append(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
@@ -192,5 +193,5 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | `filter(lambda,arr)` | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
 | `fold(lambda,arr)` | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
 | `cartesian_fold(lambda,arr1,arr2,...)` | folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
-| `any(lambda,arr)` | returns true if any element in the array matches the lambda expression |
-| `all(lambda,arr)` | returns true if all elements in the array matches the lambda expression |
+| `any(lambda,arr)` | returns 1 if any element in the array matches the lambda expression, else 0 |
+| `all(lambda,arr)` | returns 1 if all elements in the array matches the lambda expression, else 0 |
