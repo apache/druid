@@ -325,6 +325,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         }
       }
       catch (Exception ignored) {
+        LOG.warn("Exception closing LDAP context");
         // ignored
       }
     }
