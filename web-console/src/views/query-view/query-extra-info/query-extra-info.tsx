@@ -44,7 +44,7 @@ export interface QueryExtraInfoData {
   wrappedLimit?: number;
 }
 
-export interface QueryExtraInfoProps extends React.Props<any> {
+export interface QueryExtraInfoProps {
   queryExtraInfo: QueryExtraInfoData;
   onDownload: (filename: string, format: string) => void;
 }

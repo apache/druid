@@ -32,7 +32,7 @@ import { validJson } from '../../utils';
 
 import './lookup-edit-dialog.scss';
 
-export interface LookupEditDialogProps extends React.Props<any> {
+export interface LookupEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
@@ -105,7 +105,6 @@ export class LookupEditDialog extends React.PureComponent<
       lookupVersion,
       onChange,
       isEdit,
-      allLookupTiers,
     } = this.props;
 
     const disableSubmit =
@@ -155,8 +154,6 @@ export class LookupEditDialog extends React.PureComponent<
           value={lookupSpec}
           editorProps={{ $blockScrolling: Infinity }}
           setOptions={{
-            enableBasicAutocompletion: false,
-            enableLiveAutocompletion: false,
             tabSize: 2,
           }}
           style={{}}

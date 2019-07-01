@@ -85,7 +85,7 @@ import React from 'react';
 
 import './${name}.scss';
 
-export interface ${camelName}Props extends React.Props<any> {
+export interface ${camelName}Props {
 }
 
 export interface ${camelName}State {
@@ -100,7 +100,7 @@ export class ${camelName} extends React.PureComponent<${camelName}Props, ${camel
 
   render() {
     return <div className="${name}">
-    
+      Stuff...
     </div>;
   }
 }

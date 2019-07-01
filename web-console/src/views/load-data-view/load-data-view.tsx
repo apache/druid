@@ -25,7 +25,6 @@ import {
   Card,
   Classes,
   Code,
-  Elevation,
   FormGroup,
   H5,
   HTMLSelect,
@@ -50,6 +49,7 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -219,10 +219,10 @@ const VIEW_TITLE: Record<Step, string> = {
   loading: 'Loading',
 };
 
-export interface LoadDataViewProps extends React.Props<any> {
+export interface LoadDataViewProps {
   initSupervisorId?: string | null;
   initTaskId?: string | null;
-  goToTask: (taskId: string | null, supervisor?: string) => void;
+  goToTask: (taskId: string | undefined, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
@@ -233,6 +233,8 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup: boolean | null;
   newDimensionMode: DimensionMode | null;
+  showViewValueModal: boolean;
+  str: string;
 
   // welcome
   overlordModules: string[] | null;
@@ -296,8 +298,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
+      showViewValueModal: false,
       newRollup: null,
       newDimensionMode: null,
+      str: '',
 
       // welcome
       overlordModules: null,
@@ -426,6 +430,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
+        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -517,7 +522,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <>
-        <div className="main">
+        <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index:static-s3')}
@@ -536,6 +541,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
         </div>
       </>
+    );
+  }
+
+  renderViewValueModal() {
+    const { showViewValueModal, str } = this.state;
+    if (!showViewValueModal) return null;
+    return (
+      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
   }
 
@@ -664,7 +677,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Submit task"
               rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(null, 'task')}
+              onClick={() => goToTask(undefined, 'task')}
               intent={Intent.PRIMARY}
             />
           </FormGroup>
@@ -680,7 +693,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'supervisor')}
+                onClick={() => goToTask(undefined, 'supervisor')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -688,7 +701,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(null, 'task')}
+                onClick={() => goToTask(undefined, 'task')}
                 intent={Intent.PRIMARY}
               />
             </FormGroup>
@@ -970,6 +983,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
+            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}
@@ -1586,15 +1600,44 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
+    if (sampleResponse.data.length) {
+      this.setState({
+        cacheKey: sampleResponse.cacheKey,
+        filterQueryState: new QueryState({
+          data: headerAndRowsFromSampleResponse(
+            sampleResponse,
+            undefined,
+            ['__time'].concat(parserColumns),
+            true,
+          ),
+        }),
+      });
+      return;
+    }
+
+    // The filters matched no data
+    let sampleResponseNoFilter: SampleResponse;
+    try {
+      const specNoFilter = deepSet(spec, 'dataSchema.transformSpec.filter', null);
+      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheKey);
+    } catch (e) {
+      this.setState({
+        filterQueryState: new QueryState({ error: e.message }),
+      });
+      return;
+    }
+
+    const headerAndRowsNoFilter = headerAndRowsFromSampleResponse(
+      sampleResponseNoFilter,
+      undefined,
+      ['__time'].concat(parserColumns),
+      true,
+    );
+
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheKey: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(
-          sampleResponse,
-          undefined,
-          ['__time'].concat(parserColumns),
-          true,
-        ),
+        data: deepSet(headerAndRowsNoFilter, 'rows', []),
       }),
     });
   }
@@ -2668,7 +2711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 });
 
                 setTimeout(() => {
-                  goToTask(null);
+                  goToTask(undefined); // Can we get the supervisor ID here?
                 }, 1000);
               }
             }}

@@ -26,6 +26,7 @@ exports[`data source view matches snapshot 1`] = `
         Array [
           "Datasource",
           "Availability",
+          "Segment load/drop",
           "Retention",
           "Compaction",
           "Size",
@@ -109,6 +110,14 @@ exports[`data source view matches snapshot 1`] = `
           "id": "availability",
           "show": true,
           "sortMethod": [Function],
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Segment load/drop",
+          "accessor": "num_segments_to_load",
+          "filterable": false,
+          "id": "load-drop",
+          "show": true,
         },
         Object {
           "Cell": [Function],

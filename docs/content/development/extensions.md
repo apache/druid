@@ -74,7 +74,7 @@ Community extensions are not maintained by Druid committers, although we accept 
 A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.
 If you'd like to take on maintenance for a community extension, please post on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org) to let us know!
 
-All of these community extensions can be downloaded using *pull-deps* with the coordinate org.apache.druid.extensions.contrib:EXTENSION_NAME:LATEST_DRUID_STABLE_VERSION.
+All of these community extensions can be downloaded using [pull-deps](../operations/pull-deps.html) while specifying a `-c` coordinate option to pull `org.apache.druid.extensions.contrib:{EXTENSION_NAME}:{DRUID_VERSION}`.
 
 |Name|Description|Docs|
 |----|-----------|----|

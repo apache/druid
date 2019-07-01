@@ -16,32 +16,22 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
-  &.bp3-dialog {
-    margin-top: 5vh;
-    top: 5%;
-  }
+import React from 'react';
+import { render } from 'react-testing-library';
 
-  .bp3-dialog-body {
-    max-height: 70vh;
+import { ShowValueDialog } from './show-value-dialog';
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
-    }
-
-    .html-select {
-      width: 195px;
-    }
-
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
-
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
-  }
-}
+describe('clipboard dialog', () => {
+  it('matches snapshot', () => {
+    const compactionDialog = (
+      <ShowValueDialog
+        onClose={() => null}
+        str={
+          'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
+        }
+      />
+    );
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});

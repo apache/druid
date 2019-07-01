@@ -24,11 +24,7 @@ import { DatasourcesView } from './datasource-view';
 describe('data source view', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
-      <DatasourcesView
-        goToQuery={(initSql: string) => {}}
-        goToSegments={(datasource: string, onlyUnavailable?: boolean) => {}}
-        noSqlMode={false}
-      />,
+      <DatasourcesView goToQuery={() => {}} goToSegments={() => {}} noSqlMode={false} />,
     );
     expect(dataSourceView).toMatchSnapshot();
   });

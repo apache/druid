@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { Button, HTMLSelect, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
@@ -232,11 +232,6 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
   return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
 }
 
-export function getHeadProp(results: Record<string, any>[], prop: string): any {
-  if (!results || !results.length) return null;
-  return results[0][prop] || null;
-}
-
 // ----------------------------
 
 export function parseJson(json: string): any {
@@ -272,10 +267,6 @@ export function parseStringToJSON(s: string): JSON | null {
   } else {
     return JSON.parse(s);
   }
-}
-
-export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
-  return xs.filter(Boolean) as any;
 }
 
 export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {

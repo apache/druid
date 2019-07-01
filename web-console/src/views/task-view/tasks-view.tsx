@@ -45,7 +45,6 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   booleanCustomTableFilter,
-  countBy,
   formatDuration,
   getDruidErrorMessage,
   localStorageGet,
@@ -77,9 +76,9 @@ const taskTableColumns: string[] = [
   ActionCell.COLUMN_LABEL,
 ];
 
-export interface TasksViewProps extends React.Props<any> {
-  taskId: string | null;
-  openDialog: string | null;
+export interface TasksViewProps {
+  taskId: string | undefined;
+  openDialog: string | undefined;
   goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
@@ -172,8 +171,8 @@ function stateToColor(status: string): string {
 }
 
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
+  private supervisorQueryManager: QueryManager<null, SupervisorQueryResultRow[]>;
+  private taskQueryManager: QueryManager<boolean, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -181,6 +180,18 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
     SUCCESS: 1,
     FAILED: 1,
   };
+
+  static TASK_SQL = `SELECT
+  "task_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
+  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
+  (
+    CASE WHEN "status" = 'RUNNING' THEN
+     (CASE "runner_status" WHEN 'RUNNING' THEN 4 WHEN 'PENDING' THEN 3 ELSE 2 END)
+    ELSE 1
+    END
+  ) AS "rank"
+FROM sys.tasks
+ORDER BY "rank" DESC, "created_time" DESC`;
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -220,6 +231,51 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
         LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
       ),
     };
+
+    this.supervisorQueryManager = new QueryManager({
+      processQuery: async () => {
+        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+        return resp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          supervisors: result,
+          supervisorsLoading: loading,
+          supervisorsError: error,
+        });
+      },
+    });
+
+    this.taskQueryManager = new QueryManager({
+      processQuery: async noSqlMode => {
+        if (!noSqlMode) {
+          return await queryDruidSql({
+            query: TasksView.TASK_SQL,
+          });
+        } else {
+          const taskEndpoints: string[] = [
+            'completeTasks',
+            'runningTasks',
+            'waitingTasks',
+            'pendingTasks',
+          ];
+          const result: TaskQueryResultRow[][] = await Promise.all(
+            taskEndpoints.map(async (endpoint: string) => {
+              const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
+              return TasksView.parseTasks(resp.data);
+            }),
+          );
+          return ([] as TaskQueryResultRow[]).concat.apply([], result);
+        }
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          tasks: result,
+          tasksLoading: loading,
+          tasksError: error,
+        });
+      },
+    });
   }
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
@@ -246,69 +302,8 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
   componentDidMount(): void {
     const { noSqlMode } = this.props;
 
-    this.supervisorQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
-        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-        return resp.data;
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          supervisors: result,
-          supervisorsLoading: loading,
-          supervisorsError: error,
-        });
-      },
-    });
-
-    this.supervisorQueryManager.runQuery('dummy');
-
-    this.taskQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
-        if (!noSqlMode) {
-          return await queryDruidSql({ query });
-        } else {
-          const taskEndpoints: string[] = [
-            'completeTasks',
-            'runningTasks',
-            'waitingTasks',
-            'pendingTasks',
-          ];
-          const result: TaskQueryResultRow[][] = await Promise.all(
-            taskEndpoints.map(async (endpoint: string) => {
-              const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
-              return TasksView.parseTasks(resp.data);
-            }),
-          );
-          return [].concat.apply([], result);
-        }
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          tasks: result,
-          tasksLoading: loading,
-          tasksError: error,
-        });
-      },
-    });
-
-    // Ranking
-    //   RUNNING => 4
-    //   PENDING => 3
-    //   WAITING => 2
-    //   SUCCESS => 1
-    //   FAILED => 1
-
-    this.taskQueryManager.runQuery(`SELECT
-  "task_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
-  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
-  (
-    CASE WHEN "status" = 'RUNNING' THEN
-     (CASE "runner_status" WHEN 'RUNNING' THEN 4 WHEN 'PENDING' THEN 3 ELSE 2 END)
-    ELSE 1
-    END
-  ) AS "rank"
-FROM sys.tasks
-ORDER BY "rank" DESC, "created_time" DESC`);
+    this.supervisorQueryManager.runQuery(null);
+    this.taskQueryManager.runQuery(noSqlMode);
   }
 
   componentWillUnmount(): void {
@@ -687,7 +682,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : tasksError || ''}
           filterable
           filtered={taskFilter}
-          onFilteredChange={(filtered, column) => {
+          onFilteredChange={filtered => {
             this.setState({ taskFilter: filtered });
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
@@ -697,7 +692,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               Header: 'Task ID',
               accessor: 'task_id',
               width: 300,
-              Aggregated: row => '',
+              Aggregated: () => '',
               show: hiddenTaskColumns.exists('Task ID'),
             },
             {
@@ -738,7 +733,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             {
               Header: 'Location',
               accessor: 'location',
-              Aggregated: row => '',
+              Aggregated: () => '',
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.location);
               },
@@ -748,7 +743,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               Header: 'Created time',
               accessor: 'created_time',
               width: 120,
-              Aggregated: row => '',
+              Aggregated: () => '',
               show: hiddenTaskColumns.exists('Created time'),
             },
             {
@@ -844,7 +839,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                   />
                 );
               },
-              Aggregated: row => '',
+              Aggregated: () => '',
               show: hiddenTaskColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
@@ -969,7 +964,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <Button
                   icon={IconNames.APPLICATION}
                   text="Go to SQL"
-                  onClick={() => goToQuery(this.taskQueryManager.getLastQuery())}
+                  onClick={() => goToQuery(TasksView.TASK_SQL)}
                 />
               )}
               <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>

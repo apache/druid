@@ -22,12 +22,12 @@ title: "SQL"
   ~ under the License.
   -->
 
-  <!-- 
-    The format of the tables that describe the functions and operators 
-    should not be changed without updating the script create-sql-function-doc 
-    in web-console/script/create-sql-function-doc, because the script detects
-    patterns in this markdown file and parse it to TypeScript file for web console
-   -->
+<!--
+  The format of the tables that describe the functions and operators
+  should not be changed without updating the script create-sql-function-doc
+  in web-console/script/create-sql-function-doc, because the script detects
+  patterns in this markdown file and parse it to TypeScript file for web console
+-->
 
 # SQL
 
@@ -278,7 +278,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.
+|`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
+|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
 ### Unsupported features
 
 Druid does not support all SQL features, including:
@@ -676,22 +677,22 @@ SERVER_SEGMENTS is used to join servers with segments table
 |server|STRING|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
 |segment_id|STRING|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
-JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
+JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource,
 grouped by server, example query:
 
 ```sql
-SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
-INNER JOIN sys.server_segments as server_segments 
-ON segments.segment_id  = server_segments.segment_id 
-INNER JOIN sys.servers as servers 
+SELECT count(segments.segment_id) as num_segments from sys.segments as segments
+INNER JOIN sys.server_segments as server_segments
+ON segments.segment_id  = server_segments.segment_id
+INNER JOIN sys.servers as servers
 ON servers.server = server_segments.server
-WHERE segments.datasource = 'wikipedia' 
+WHERE segments.datasource = 'wikipedia'
 GROUP BY servers.server;
 ```
 
 ### TASKS table
 
-The tasks table provides information about active and recently-completed indexing tasks. For more information 
+The tasks table provides information about active and recently-completed indexing tasks. For more information
 check out [ingestion tasks](#../ingestion/tasks.html)
 
 |Column|Type|Notes|
