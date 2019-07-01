@@ -413,11 +413,10 @@ def check_licenses(license_yaml, dependency_reports_root):
 
     # Build registered license dictionary.
     registered_dep_to_licenses = {}
+    skipping_licenses = {}
     with open(license_yaml) as registry_file:
         licenses_list = list(yaml.load_all(registry_file))
     for license in licenses_list:
-        if 'skip_dependency_report_check' in license and license['skip_dependency_report_check']:
-            continue
         if 'libraries' in license:
             for library in license['libraries']:
                 if type(library) is not dict:
@@ -429,7 +428,14 @@ def check_licenses(license_yaml, dependency_reports_root):
                         raise Exception("version is missing in {}".format(license))
                     if 'license_name' not in license:
                         raise Exception("name is missing in {}".format(license))
-                    registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
+                    if 'skip_dependency_report_check' in license and license['skip_dependency_report_check']:
+                        if 'version' not in license:
+                            version = "-"
+                        else:
+                            version = get_version_string(license['version'])
+                        skipping_licenses[get_dep_key(group_id, artifact_id, version)] = license
+                    else:
+                        registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
 
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
@@ -456,8 +462,7 @@ def check_licenses(license_yaml, dependency_reports_root):
     
     # Let's find missing licenses, which are reported but missing in the registry.
     for key, reported_license_druid_module in reported_dep_to_licenses.items():
-        if key not in registered_dep_to_licenses:
-            print_error("reported key: {}".format(key))
+        if reported_license_druid_module[0] != "-" and key not in registered_dep_to_licenses and key not in skipping_licenses:
             missing_licenses.append((reported_license_druid_module[1], key[0], key[1], key[2], reported_license_druid_module[0]))
 
     if len(missing_licenses) > 0:
@@ -470,10 +475,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     # These licenses should be checked manually.
     for key, registered_license in registered_dep_to_licenses.items():
         if key not in reported_dep_to_licenses:
-            print_error("registered key: {}".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
         elif reported_dep_to_licenses[key][0] == "-":
-            print_error("registered key: {} with - license".format(key))
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
     
     if len(unchecked_licenses) > 0:

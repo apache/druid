@@ -544,7 +544,7 @@ module: java-core
 license_name: Apache License version 2.0
 version: 1
 libraries:
-  - javax.inject.javax: inject
+  - javax.inject: javax.inject
 
 ---
 
@@ -645,9 +645,9 @@ module: java-core
 license_name: Apache License version 2.0
 version: 1.10.0
 libraries:
-  - org.apache.calcite: avatica.avatica-core
-  - org.apache.calcite: avatica.avatica-metrics
-  - org.apache.calcite: avatica.avatica-server
+  - org.apache.calcite.avatica: avatica-core
+  - org.apache.calcite.avatica: avatica-metrics
+  - org.apache.calcite.avatica: avatica-server
 
 ---
 
@@ -830,7 +830,7 @@ name: JVM Attach API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2
+version: 1.5
 libraries:
   - org.gridkit.lab: jvm-attach-api
 
@@ -910,7 +910,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7.36
+version: 0.8.0
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -1313,7 +1313,7 @@ name: Objenesis
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.4
 libraries:
   - org.objenesis: objenesis
 
@@ -1345,7 +1345,16 @@ module: extensions/druid-datasketches
 license_name: Apache License version 2.0
 version: 0.13.3
 libraries:
-  - com.yahoo.datasketches: datasketches-core
+  - com.yahoo.datasketches: sketches-core
+
+---
+
+name: DataSketches
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 0.12.2
+libraries:
   - com.yahoo.datasketches: memory
 
 ---
@@ -1444,7 +1453,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 0.10.2.2
+version: 2.1.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -1490,6 +1499,63 @@ license_name: Apache License version 2.0
 version: 0.9.0
 libraries:
   - net.java.dev.jets3t: jets3t
+
+---
+
+name: Jackson
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 1.9.2
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+
+---
+
+name: Objenesis
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 3.0.1
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: xmlenc
+license_category: binary
+module: extensions/druid-kerberos
+license_name: BSD-3-Clause License
+version: 0.52
+copyright: Ernst de Haan
+license_file_path: licenses/bin/xmlenc.BSD3
+libraries:
+  - xmlenc: xmlenc
+
+---
+
+name: Jersey JSON
+license_category: binary
+module: extensions/druid-kerberos
+license_name: CDDL 1.1
+version: 1.19.3
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey-json.CDDL11
+libraries:
+  - com.sun.jersey: jersey-json
+
+---
+
+name: Old JAXB Runtime
+license_category: binary
+module: extensions/druid-kerberos
+license_name: CDDL 1.1
+version: 2.2.3-1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/old-jaxb.CDDL11
+libraries:
+  - com.sun.xml.bind: jaxb-impl
 
 ---
 
@@ -1651,7 +1717,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.6.4
+version: 1.7.25
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -2335,13 +2401,14 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 5.2
+version: 7.1
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
   - org.ow2.asm: asm
   - org.ow2.asm: asm-commons
   - org.ow2.asm: asm-tree
+  - org.ow2.asm: asm-analysis
 
 ---
 
@@ -2394,18 +2461,6 @@ libraries:
 
 ---
 
-name: xmlenc
-license_category: binary
-module: hadoop-client
-license_name: BSD-3-Clause License
-version: 0.5.2
-copyright: Ernst de Haan
-license_file_path: licenses/bin/xmlenc.BSD3
-libraries:
-  - xmlenc: xmlenc
-
----
-
 name: Paranamer
 license_category: binary
 module: extensions/druid-avro-extensions
@@ -2422,7 +2477,7 @@ name: JSch - Java Secure Channel
 license_category: binary
 module: extensions/druid-kerberos
 license_name: BSD-3-Clause License
-version: 0.1.52
+version: 0.1.54
 copyright: Atsuhiko Yamanaka, JCraft,Inc.
 license_file_path: licenses/bin/jsch.BSD3
 libraries:
@@ -2482,10 +2537,11 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.1.0
+version: 3.2.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
+  - com.google.protobuf: protobuf-java
   - com.google.protobuf: protobuf-java-util
 
 ---
@@ -2577,6 +2633,7 @@ libraries:
   - com.sun.jersey: jersey-server
   - com.sun.jersey: jersey-servlet
   - com.sun.jersey: contribs
+  - com.sun.jersey.contribs: jersey-guice
 
 ---
 
@@ -2677,6 +2734,18 @@ libraries:
 
 ---
 
+name: JAXB
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.bind: jaxb-api
+
+---
+
 name: stax-api
 license_category: binary
 module: hadoop-client
@@ -2769,11 +2838,11 @@ name: \"Java Concurrency In Practice\" Book Annotations
 license_category: binary
 module: hadoop-client
 license_name: Creative Commons Attribution 2.5
+version: 1.0
 copyright: Brian Goetz and Tim Peierls
 license_file_path: licenses/bin/creative-commons-2.5.LICENSE
 libraries:
   - net.jcip: jcip-annotations
-skip_dependency_report_check: true
 
 ---
 
@@ -2825,3 +2894,86 @@ license_name: Public Domain
 version: 1.0
 libraries:
   - org.tukaani: xz
+
+---
+
+name: Apache ORC libraries
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 1.5.5
+libraries:
+  - org.apache.orc: orc-mapreduce
+  - org.apache.orc: orc-core
+  - org.apache.orc: orc-shims
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: "0.10"
+libraries:
+  - io.airlift: aircompressor
+
+---
+
+name: Hive storage API
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 2.6.0
+libraries:
+  - org.apache.hive: hive-storage-api
+
+---
+
+name: Google Cloud Storage JSON API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: v1-rev79-1.22.0
+libraries:
+  - com.google.apis: google-api-services-storage
+
+---
+
+name: "Jackson Module: Guice"
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6.7
+libraries:
+  - com.fasterxml.jackson.module: jackson-module-guice
+
+---
+
+name: Google APIs Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.api-client: google-api-client
+
+---
+
+name: Google HTTP Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.http-client: google-http-client
+  - com.google.http-client: google-http-client-jackson2
+
+---
+
+name: Google OAuth Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.oauth-client: google-oauth-client
