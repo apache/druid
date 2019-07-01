@@ -294,7 +294,7 @@ public abstract class ExprEval<T>
     public Expr toExpr()
     {
       if (isNumericNull()) {
-        return new StringExpr(null);
+        return new NullDoubleExpr();
       }
       return new DoubleExpr(value.doubleValue());
     }
@@ -361,11 +361,10 @@ public abstract class ExprEval<T>
     public Expr toExpr()
     {
       if (isNumericNull()) {
-        return new StringExpr(null);
+        return new NullLongExpr();
       }
       return new LongExpr(value.longValue());
     }
-
   }
 
   private static class StringExprEval extends ExprEval<String>
