@@ -29,8 +29,6 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
 
-import './suggestible-input.scss';
-
 export interface SuggestionGroup {
   group: string;
   suggestions: string[];
