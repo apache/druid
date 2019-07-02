@@ -325,7 +325,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`NOT x`|Boolean NOT.|
 
 ### Multi-value string functions
-All 'array' references in the multi-value string documntation can refer to multi-value string columns or `ARRAY` literals.
+All 'array' references in the multi-value string function documentation can refer to multi-value string columns or
+`ARRAY` literals.
 
 |Function|Notes|
 |--------|-----|
