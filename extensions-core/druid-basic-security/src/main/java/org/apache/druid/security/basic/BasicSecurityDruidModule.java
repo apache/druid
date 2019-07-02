@@ -62,17 +62,6 @@ import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerRes
 import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerResourceHandler;
 import org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
 import org.apache.druid.security.basic.authorization.endpoint.DefaultBasicAuthorizerResourceHandler;
-import org.apache.druid.security.basic.escalator.db.cache.BasicEscalatorCacheManager;
-import org.apache.druid.security.basic.escalator.db.cache.BasicEscalatorCacheNotifier;
-import org.apache.druid.security.basic.escalator.db.cache.CoordinatorBasicEscalatorCacheNotifier;
-import org.apache.druid.security.basic.escalator.db.cache.CoordinatorPollingBasicEscalatorCacheManager;
-import org.apache.druid.security.basic.escalator.db.cache.MetadataStoragePollingBasicEscalatorCacheManager;
-import org.apache.druid.security.basic.escalator.db.updater.BasicEscalatorMetadataStorageUpdater;
-import org.apache.druid.security.basic.escalator.db.updater.CoordinatorBasicEscalatorMetadataStorageUpdater;
-import org.apache.druid.security.basic.escalator.endpoint.BasicEscalatorResource;
-import org.apache.druid.security.basic.escalator.endpoint.BasicEscalatorResourceHandler;
-import org.apache.druid.security.basic.escalator.endpoint.CoordinatorBasicEscalatorResourceHandler;
-import org.apache.druid.security.basic.escalator.endpoint.DefaultBasicEscalatorResourceHandler;
 
 import java.util.List;
 
@@ -87,15 +76,11 @@ public class BasicSecurityDruidModule implements DruidModule
 
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthorizerMetadataStorageUpdater.class);
-    LifecycleModule.register(binder, BasicEscalatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
     LifecycleModule.register(binder, BasicAuthorizerCacheManager.class);
-    LifecycleModule.register(binder, BasicEscalatorCacheManager.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheNotifier.class);
     LifecycleModule.register(binder, BasicAuthorizerCacheNotifier.class);
-    LifecycleModule.register(binder, BasicEscalatorCacheNotifier.class);
 
-    Jerseys.addResource(binder, BasicEscalatorResource.class);
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
     Jerseys.addResource(binder, BasicAuthorizerResource.class);
   }
@@ -219,47 +204,7 @@ public class BasicSecurityDruidModule implements DruidModule
         NoopBasicAuthorizerCacheNotifier.class
     );
   }
-
-  @Provides @LazySingleton
-  public static BasicEscalatorMetadataStorageUpdater createEscalatorStorageUpdater(final Injector injector)
-  {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicEscalatorMetadataStorageUpdater.class);
-    } else {
-      return null;
-    }
-  }
-
-  @Provides @LazySingleton
-  public static BasicEscalatorCacheManager createEscalatorCacheManager(final Injector injector)
-  {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(MetadataStoragePollingBasicEscalatorCacheManager.class);
-    } else {
-      return injector.getInstance(CoordinatorPollingBasicEscalatorCacheManager.class);
-    }
-  }
-
-  @Provides @LazySingleton
-  public static BasicEscalatorResourceHandler createEscalatorResourceHandler(final Injector injector)
-  {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicEscalatorResourceHandler.class);
-    } else {
-      return injector.getInstance(DefaultBasicEscalatorResourceHandler.class);
-    }
-  }
-
-  @Provides @LazySingleton
-  public static BasicEscalatorCacheNotifier createEscalatorCacheNotifier(final Injector injector)
-  {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicEscalatorCacheNotifier.class);
-    } else {
-      return null;
-    }
-  }
-
+  
   @Override
   public List<? extends Module> getJacksonModules()
   {

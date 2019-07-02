@@ -25,14 +25,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
-import org.apache.druid.security.basic.escalator.entity.BasicEscalatorCredential;
 
 import javax.annotation.Nullable;
 import javax.crypto.SecretKey;
@@ -277,68 +275,6 @@ public class BasicAuthUtils
     }
     catch (IOException ioe) {
       throw new ISE(ioe, "Couldn't serialize authorizer roleMap!");
-    }
-  }
-
-  @Nullable
-  public static BasicAuthConfig deserializeAuthenticatorConfig(
-      ObjectMapper objectMapper,
-      byte[] configBytes
-  )
-  {
-    BasicAuthConfig config = null;
-    if (configBytes != null) {
-      try {
-        config = objectMapper.readValue(configBytes, BasicAuthConfig.class);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException("Couldn't deserialize authenticator config!", ioe);
-      }
-    }
-    return config;
-  }
-
-  public static byte[] serializeAuthenticatorConfig(
-      ObjectMapper objectMapper,
-      BasicAuthConfig config
-  )
-  {
-    try {
-      return objectMapper.writeValueAsBytes(config);
-    }
-    catch (IOException ioe) {
-      throw new ISE(ioe, "Couldn't serialize authenticator config!");
-    }
-  }
-
-  @Nullable
-  public static BasicEscalatorCredential deserializeEscalatorCredential(
-      ObjectMapper objectMapper,
-      byte[] escalatorCredentialBytes
-  )
-  {
-    BasicEscalatorCredential escalatorCredential = null;
-    if (escalatorCredentialBytes != null) {
-      try {
-        escalatorCredential = objectMapper.readValue(escalatorCredentialBytes, BasicEscalatorCredential.class);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException("Couldn't deserialize escalator credential!", ioe);
-      }
-    }
-    return escalatorCredential;
-  }
-
-  public static byte[] serializeEscalatorCredential(
-      ObjectMapper objectMapper,
-      BasicEscalatorCredential escalatorCredential
-  )
-  {
-    try {
-      return objectMapper.writeValueAsBytes(escalatorCredential);
-    }
-    catch (IOException ioe) {
-      throw new ISE(ioe, "Couldn't serialize escalator credential!");
     }
   }
 }
