@@ -76,7 +76,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   public IndexedInts getRow()
   {
     final IndexedInts row = selector.getRow();
-    assert row.size() == 1; // multi-val dimensions should never make it here
+    assert row.size() <= 1; // multi-val dimensions should never make it here
     return row;
   }
 
