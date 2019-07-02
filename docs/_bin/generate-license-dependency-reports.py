@@ -38,9 +38,9 @@ def generate_report(module_path, report_orig_path, report_out_path):
     try:
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
         command = "mvn -Ddependency.locations.enabled=false project-info-reports:dependencies"
-        subprocess.run(command, cwd=module_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True)
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
-        subprocess.run(command, cwd=module_path, check=True, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True)
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
