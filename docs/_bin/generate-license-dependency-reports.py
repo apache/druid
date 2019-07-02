@@ -50,7 +50,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     license_report_root = os.path.join(tmp_path, "license-reports")
     license_core_path =  os.path.join(license_report_root, "core")
     license_ext_path = os.path.join(license_report_root, "ext")
-    shutil.rmtree(license_report_root)
+    shutil.rmtree(license_report_root, ignore_errors=True)
     os.makedirs(license_core_path)
     os.makedirs(license_ext_path)
     druid_path = os.path.abspath(druid_path)
