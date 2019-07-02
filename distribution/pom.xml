@@ -141,6 +141,8 @@
                                     <arguments>
                                         <argument>${project.basedir}/../</argument>
                                         <argument>${project.basedir}/target</argument>
+                                        <argument>--parallel</argument>
+                                        <argument>4</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

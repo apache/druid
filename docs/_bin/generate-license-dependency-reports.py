@@ -21,25 +21,32 @@ import subprocess
 import sys
 import argparse
 import concurrent.futures
+import time
+import threading
 
 
-def generate_report(module_path, report_path):
+
+
+
+def generate_report(module_path, report_orig_path, report_out_path):
     if not os.path.isdir(module_path):
         print("{} is not a directory".format(module_path))
         return
 
-    os.makedirs(report_path)
+    os.makedirs(report_out_path, exist_ok=True)
 
     try:
-        command = "mvn -Pdist -Ddependency.locations.enabled=false project-info-reports:dependencies"
-        subprocess.run(command, cwd=module_path, shell=True)
-        command = "cp -r target/site {}/site".format(report_path)
-        subprocess.run(command, cwd=module_path, shell=True)
+        # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
+        command = "mvn -Ddependency.locations.enabled=false project-info-reports:dependencies"
+        subprocess.run(command, cwd=module_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, shell=True)
+        command = "cp -r {} {}".format(report_orig_path, report_out_path)
+        subprocess.run(command, cwd=module_path, check=True, shell=True)
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
 
 def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
+    tmp_path = os.path.abspath(tmp_path)
     license_report_root = os.path.join(tmp_path, "license-reports")
     license_core_path =  os.path.join(license_report_root, "core")
     license_ext_path = os.path.join(license_report_root, "ext")
@@ -48,59 +55,37 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     os.makedirs(license_ext_path)
     druid_path = os.path.abspath(druid_path)
 
-    script_args = [(druid_path, license_core_path)]
+    script_args = [(druid_path, os.path.join(druid_path, "distribution", "target", "site"), license_core_path)]
 
-    extensions_core_path = os.path.join(druid_path, "extensions-core")
-    extension_dirs = os.listdir(extensions_core_path)
-    print("Found {} extensions".format(len(extension_dirs)))
-    for extension_dir in extension_dirs:
-        extension_path = os.path.join(extensions_core_path, extension_dir)
-        if not os.path.isdir(extension_path):
-            print("{} is not a directory".format(extension_path))
-            continue
+    if not exclude_ext:
+        extensions_core_path = os.path.join(druid_path, "extensions-core")
+        extension_dirs = os.listdir(extensions_core_path)
+        print("Found {} extensions".format(len(extension_dirs)))
+        for extension_dir in extension_dirs:
+            extension_path = os.path.join(extensions_core_path, extension_dir)
+            if not os.path.isdir(extension_path):
+                print("{} is not a directory".format(extension_path))
+                continue
 
-        extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
-        script_args.append((extension_path, extension_report_dir))
+            extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
+            script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
+    
+    print("Generating dependency reports", end="")
+    running = True
+    def print_dots():
+        while running:
+            print(".", end="", flush=True)
+            time.sleep(10)
+    dot_thread = threading.Thread(target=print_dots)
+    dot_thread.start()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        for module_path, report_path in script_args:
-            executor.submit(generate_report, module_path, report_path)
+        for module_path, report_orig_path, report_out_path in script_args:
+            executor.submit(generate_report, module_path, report_orig_path, report_out_path)
 
-    # print("********** Generating main LICENSE report.... **********")
-    # os.chdir(druid_path)
-    # command = "mvn -Pdist -Ddependency.locations.enabled=false project-info-reports:dependencies"
-    # outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-    # command = "cp -r distribution/target/site {}/site".format(license_main_path)
-    # outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+    running = False
+    dot_thread.join()
 
-    # if exclude_ext:
-    #     sys.exit()
-
-    # print("********** Generating extension LICENSE reports.... **********")
-    # extension_dirs = os.listdir("extensions-core")
-    # print("Found {}".format(extension_dirs))
-    # for extension_dir in extension_dirs:
-    #     full_extension_dir = druid_path + "/extensions-core/" + extension_dir
-    #     if not os.path.isdir(full_extension_dir):
-    #         print("{} is not a directory".format(full_extension_dir))
-    #         continue
-
-    #     print("--- Generating report for {}... ---".format(extension_dir))
-
-    #     extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
-    #     os.mkdir(extension_report_dir)
-    #     prev_work_dir = os.getcwd()
-    #     os.chdir(full_extension_dir)
-
-    #     try:
-    #         command = "mvn -Ddependency.locations.enabled=false project-info-reports:dependencies"
-    #         outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-    #         command = "cp -r target/site {}/site".format(extension_report_dir)
-    #         outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-    #     except:
-    #         print("Encountered error when generating report for: " + extension_dir)
-
-    #     os.chdir(prev_work_dir)
 
 if __name__ == "__main__":
     try:
