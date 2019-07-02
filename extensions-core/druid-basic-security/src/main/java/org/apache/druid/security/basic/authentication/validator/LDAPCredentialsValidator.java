@@ -19,23 +19,18 @@
 
 package org.apache.druid.security.basic.authentication.validator;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.inject.Provider;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
 import org.apache.druid.security.basic.authentication.BasicAuthenticatorUserPrincipal;
-import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.server.security.AuthenticationResult;
 
@@ -68,13 +63,11 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private static final ReentrantLock LOCK = new ReentrantLock();
 
   private final LruBlockCache cache;
-  private final BasicAuthenticatorCacheManager cacheManager;
 
   private AtomicReference<BasicAuthDBConfig> dbConfig = new AtomicReference<>();
 
   @JsonCreator
   public LDAPCredentialsValidator(
-      @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
       @JsonProperty("url") String url,
       @JsonProperty("bindUser") String bindUser,
       @JsonProperty("bindPassword") PasswordProvider bindPassword,
@@ -88,7 +81,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("credentialCacheSize") Integer credentialCacheSize
   )
   {
-    this.cacheManager = cacheManager.get();
     this.dbConfig.set(new BasicAuthDBConfig(
         null,
         null,
@@ -153,7 +145,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    updateConfig(authenticatorName);
     BasicAuthDBConfig currentDBConfig = this.dbConfig.get();
     Set<LdapName> groups;
     LdapName userDn;
@@ -328,35 +319,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         LOG.warn("Exception closing LDAP context");
         // ignored
       }
-    }
-  }
-
-  private void updateConfig(String authenticatorName)
-  {
-    BasicAuthDBConfig cuurentDBConfig = this.dbConfig.get();
-    BasicAuthConfig config = this.cacheManager.getConfig(authenticatorName);
-
-    if (config != null) {
-      this.dbConfig.set(new BasicAuthDBConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          cuurentDBConfig.isEnableCacheNotifications(),
-          cuurentDBConfig.getCacheNotificationTimeout(),
-          cuurentDBConfig.getIterations(),
-          config.getUrl(),
-          config.getBindUser(),
-          DefaultPasswordProvider.fromString(config.getBindPassword()),
-          config.getBaseDn(),
-          config.getUserSearch(),
-          config.getUserAttribute(),
-          config.getGroupFilters(),
-          cuurentDBConfig.getCredentialVerifyDuration(),
-          cuurentDBConfig.getCredentialMaxDuration(),
-          cuurentDBConfig.getCredentialCacheSize()
-      ));
     }
   }
 

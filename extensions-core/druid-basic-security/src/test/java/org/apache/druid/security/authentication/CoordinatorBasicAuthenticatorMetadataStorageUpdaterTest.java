@@ -29,7 +29,6 @@ import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -191,53 +190,4 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     Assert.assertEquals(expectedUserMap, updater.getCachedUserMap(AUTHENTICATOR_NAME));
     Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCachedSerializedUserMap(AUTHENTICATOR_NAME));
   }
-
-  @Test
-  public void updateConfig()
-  {
-    BasicAuthConfig config = new BasicAuthConfig(
-        "https://testUrl",
-        "testUser",
-        "testPassword",
-        "testDn",
-        "testUserSearch",
-        "testUserAttribute",
-        new String[]{"testGroupFilter"}
-    );
-    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
-
-    updater.updateConfig(AUTHENTICATOR_NAME, config);
-
-    Assert.assertArrayEquals(serializedConfig, updater.getCurrentConfigBytes(AUTHENTICATOR_NAME));
-
-    BasicAuthConfig actualConfig = BasicAuthUtils.deserializeAuthenticatorConfig(
-        objectMapper,
-        updater.getCurrentConfigBytes(AUTHENTICATOR_NAME)
-    );
-    Assert.assertNotNull(actualConfig);
-    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
-    Assert.assertEquals(config.getBindPassword(), actualConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
-
-    // Validate cache config methods
-    BasicAuthConfig cachedConfig = updater.getCachedConfig(AUTHENTICATOR_NAME);
-    Assert.assertNotNull(actualConfig);
-    Assert.assertEquals(config.getUrl(), cachedConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), cachedConfig.getBindUser());
-    Assert.assertEquals(config.getBindPassword(), cachedConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), cachedConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), cachedConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), cachedConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), cachedConfig.getGroupFilters());
-
-    Assert.assertArrayEquals(serializedConfig, updater.getCachedSerializedConfig(AUTHENTICATOR_NAME));
-
-    // update duplicate should not fail
-    updater.updateConfig(AUTHENTICATOR_NAME, config);
-  }
-
 }

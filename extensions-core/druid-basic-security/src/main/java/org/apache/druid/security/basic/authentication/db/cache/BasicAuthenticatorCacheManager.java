@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.basic.authentication.db.cache;
 
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
@@ -44,20 +43,4 @@ public interface BasicAuthenticatorCacheManager
    * @return User map
    */
   Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
-
-  /**
-   * Update this cache manager's config local state with fresh information pushed by the coordinator.
-   *
-   * @param authenticatorPrefix The name of the authenticator this update applies to.
-   * @param serializedConfig The updated, serialized config
-   */
-  void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig);
-
-  /**
-   * Return the cache manager's local view of config for the authenticator named `authenticatorPrefix`.
-   *
-   * @param authenticatorPrefix The name of the authenticator
-   * @return Config map
-   */
-  BasicAuthConfig getConfig(String authenticatorPrefix);
 }

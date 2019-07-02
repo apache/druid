@@ -27,7 +27,6 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -66,18 +65,6 @@ public class BasicHTTPAuthenticatorTest
           return ImmutableMap.of(
               "userA", new BasicAuthenticatorUser("userA", USER_A_CREDENTIALS)
           );
-        }
-
-        @Override
-        public void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig)
-        {
-
-        }
-
-        @Override
-        public BasicAuthConfig getConfig(String authenticatorPrefix)
-        {
-          return null;
         }
       }
   );

@@ -22,7 +22,6 @@ package org.apache.druid.security.basic.authentication.db.cache;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
@@ -56,16 +55,5 @@ public class MetadataStoragePollingBasicAuthenticatorCacheManager implements Bas
   public Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix)
   {
     return storageUpdater.getCachedUserMap(authenticatorPrefix);
-  }
-
-  @Override
-  public void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig)
-  {
-  }
-
-  @Override
-  public BasicAuthConfig getConfig(String authenticatorPrefix)
-  {
-    return storageUpdater.getCachedConfig(authenticatorPrefix);
   }
 }

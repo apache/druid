@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.basic.authentication.db.updater;
 
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
@@ -70,29 +69,5 @@ public class NoopBasicAuthenticatorMetadataStorageUpdater implements BasicAuthen
   @Override
   public void refreshAllNotification()
   {
-  }
-
-  @Override
-  public void updateConfig(String prefix, BasicAuthConfig config)
-  {
-
-  }
-
-  @Override
-  public BasicAuthConfig getCachedConfig(String prefix)
-  {
-    return null;
-  }
-
-  @Override
-  public byte[] getCachedSerializedConfig(String prefix)
-  {
-    return new byte[0];
-  }
-
-  @Override
-  public byte[] getCurrentConfigBytes(String prefix)
-  {
-    return new byte[0];
   }
 }

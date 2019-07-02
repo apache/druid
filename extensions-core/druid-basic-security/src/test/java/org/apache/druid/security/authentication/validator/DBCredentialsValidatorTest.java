@@ -25,7 +25,6 @@ import com.google.inject.util.Providers;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -68,18 +67,6 @@ public class DBCredentialsValidatorTest
               "userA", new BasicAuthenticatorUser("userA", USER_A_CREDENTIALS),
               "userB", new BasicAuthenticatorUser("userB", null)
           );
-        }
-
-        @Override
-        public void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig)
-        {
-
-        }
-
-        @Override
-        public BasicAuthConfig getConfig(String authenticatorPrefix)
-        {
-          return null;
         }
       }
   );

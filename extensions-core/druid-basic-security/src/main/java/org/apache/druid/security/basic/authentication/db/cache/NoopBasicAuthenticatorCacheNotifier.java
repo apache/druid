@@ -37,16 +37,4 @@ public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCa
   {
     // Do nothing as this is a noop implementation
   }
-
-  /**
-   * Send the config state contained in updatedConfig to all non-coordinator Druid services
-   *
-   * @param updatedAuthenticatorPrefix Name of authenticator being updated
-   * @param updatedConfig              Config state
-   */
-  @Override
-  public void addConfigUpdate(String updatedAuthenticatorPrefix, byte[] updatedConfig)
-  {
-    // Do nothing as this is a noop implementation
-  }
 }

@@ -32,7 +32,6 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -391,129 +390,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
     );
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
-  }
-
-  @Test
-  public void testGetConfig()
-  {
-    BasicAuthConfig config = new BasicAuthConfig(
-        "https://testUrl",
-        "testUser",
-        "testPassword",
-        "testDn",
-        "testUserSearch",
-        "testUserAttribute",
-        new String[]{"testGroupFilter"}
-    );
-    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
-
-    Response response = resource.getConfig(req, AUTHENTICATOR_NAME_LDAP);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
-
-    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
-    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
-    Assert.assertEquals("...", actualConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
-
-    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME_LDAP);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
-    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
-  }
-
-  @Test
-  public void testGetConfigSeparateDatabaseTables()
-  {
-    BasicAuthConfig config = new BasicAuthConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
-
-    Response response = resource.getConfig(req, AUTHENTICATOR_NAME2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
-
-    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
-    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
-    Assert.assertEquals(config.getBindPassword(), actualConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
-
-    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
-    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
-  }
-
-  @Test
-  public void testUpdateConfig()
-  {
-    BasicAuthConfig config = new BasicAuthConfig(
-        "https://testUrlUpdate",
-        "testUserUpdate",
-        "testPasswordUpdate",
-        "testDnUpdate",
-        "testUserSearchUpdate",
-        "testUserAttributeUpdate",
-        new String[]{"testGroupFilterUpdate"}
-    );
-    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
-
-    Response response = resource.updateConfig(req, AUTHENTICATOR_NAME_LDAP, config);
-    Assert.assertEquals(200, response.getStatus());
-
-    response = resource.getConfig(req, AUTHENTICATOR_NAME_LDAP);
-    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
-
-    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
-    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
-    Assert.assertEquals("...", actualConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
-
-    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME_LDAP);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
-    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
-
-    // Verify other authenticator config is not getting updated
-    config = new BasicAuthConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    response = resource.getConfig(req, AUTHENTICATOR_NAME2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
-    actualConfig = (BasicAuthConfig) response.getEntity();
-    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
-    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
-    Assert.assertEquals(config.getBindPassword(), actualConfig.getBindPassword());
-    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
-    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
-    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
-    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
   }
 
   private static Map<String, String> errorMapWithMsg(String errorMsg)

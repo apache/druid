@@ -210,33 +210,6 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     return cachedUserMaps.get(authenticatorPrefix);
   }
 
-  @Override
-  public void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig)
-  {
-    LOG.debug("Received config cache update for authenticator [%s].", authenticatorPrefix);
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    try {
-      cachedConfigs.put(
-          authenticatorPrefix,
-          objectMapper.readValue(
-              serializedConfig,
-              BasicAuthConfig.class
-          )
-      );
-    }
-    catch (Exception e) {
-      LOG.makeAlert(e, "Could not deserialize config received from coordinator.").emit();
-    }
-  }
-
-  @Override
-  public BasicAuthConfig getConfig(String authenticatorPrefix)
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-
-    return cachedConfigs.get(authenticatorPrefix);
-  }
-
   @Nullable
   private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix, boolean isInit)
   {

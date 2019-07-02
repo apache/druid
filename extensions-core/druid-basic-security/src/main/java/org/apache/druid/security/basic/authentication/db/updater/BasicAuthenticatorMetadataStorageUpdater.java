@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.basic.authentication.db.updater;
 
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
@@ -46,12 +45,4 @@ public interface BasicAuthenticatorMetadataStorageUpdater
   byte[] getCurrentUserMapBytes(String prefix);
 
   void refreshAllNotification();
-
-  void updateConfig(String prefix, BasicAuthConfig config);
-
-  BasicAuthConfig getCachedConfig(String prefix);
-
-  byte[] getCachedSerializedConfig(String prefix);
-
-  byte[] getCurrentConfigBytes(String prefix);
 }

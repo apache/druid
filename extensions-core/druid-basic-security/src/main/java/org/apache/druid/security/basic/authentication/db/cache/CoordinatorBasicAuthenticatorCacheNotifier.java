@@ -108,13 +108,6 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     userCacheNotifier.addUpdate(updatedAuthenticatorPrefix, updatedUserMap);
   }
 
-  @Override
-  public void addConfigUpdate(String updatedAuthenticatorPrefix, byte[] updatedConfig)
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    configCacheNotifier.addUpdate(updatedAuthenticatorPrefix, updatedConfig);
-  }
-
   private Map<String, BasicAuthDBConfig> initAuthenticatorConfigMap(AuthenticatorMapper mapper)
   {
     Preconditions.checkNotNull(mapper);

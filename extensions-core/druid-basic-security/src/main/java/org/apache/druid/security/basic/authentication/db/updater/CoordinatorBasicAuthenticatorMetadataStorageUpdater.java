@@ -42,8 +42,6 @@ import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorConfigBundle;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -80,7 +78,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final int numRetries = 5;
 
   private final Map<String, BasicAuthenticatorUserMapBundle> cachedUserMaps;
-  private final Map<String, BasicAuthenticatorConfigBundle> cachedConfigMaps;
   private final Set<String> authenticatorPrefixes;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -107,7 +104,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new ConcurrentHashMap<>();
-    this.cachedConfigMaps = new ConcurrentHashMap<>();
     this.authenticatorPrefixes = new HashSet<>();
   }
 
@@ -162,9 +158,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 )
             );
           }
-
-          BasicAuthConfig config = new BasicAuthConfig(dbConfig);
-          updateConfigInternal(authenticatorName, config);
         }
       }
 
@@ -203,43 +196,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           }
       );
 
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(commonCacheConfig.getPollingPeriod()),
-          new Duration(commonCacheConfig.getPollingPeriod()),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              if (stopped) {
-                return ScheduledExecutors.Signal.STOP;
-              }
-              try {
-                LOG.debug("Scheduled db config poll is running");
-                for (String authenticatorPrefix : authenticatorPrefixes) {
-
-                  byte[] configBytes = getCurrentConfigBytes(authenticatorPrefix);
-
-                  if (configBytes != null) {
-                    BasicAuthConfig config = BasicAuthUtils.deserializeAuthenticatorConfig(
-                        objectMapper,
-                        configBytes
-                    );
-                    if (config != null) {
-                      cachedConfigMaps.put(authenticatorPrefix, new BasicAuthenticatorConfigBundle(config, configBytes));
-                    }
-                  }
-                }
-                LOG.debug("Scheduled db config poll is done");
-              }
-              catch (Throwable t) {
-                LOG.makeAlert(t, "Error occured while polling for cachedConfigMaps.").emit();
-              }
-              return ScheduledExecutors.Signal.REPEAT;
-            }
-          }
-      );
       lifecycleLock.started();
     }
     finally {
@@ -325,56 +281,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           cacheNotifier.addUserUpdate(authenticatorName, userMapBundle.getSerializedUserMap());
         }
     );
-    cachedConfigMaps.forEach(
-        (authenticatorName, configBundle) -> {
-          cacheNotifier.addConfigUpdate(authenticatorName, configBundle.getSerializedConfig());
-        }
-    );
-  }
-
-  @Override
-  public void updateConfig(String prefix, BasicAuthConfig config)
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-
-    updateConfigInternal(prefix, config);
-  }
-
-  @Override
-  public BasicAuthConfig getCachedConfig(String prefix)
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-
-    BasicAuthenticatorConfigBundle bundle = cachedConfigMaps.get(prefix);
-    if (bundle == null) {
-      return null;
-    } else {
-      return bundle.getConfig();
-    }
-  }
-
-  @Override
-  public byte[] getCachedSerializedConfig(String prefix)
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-
-    BasicAuthenticatorConfigBundle bundle = cachedConfigMaps.get(prefix);
-    if (bundle == null) {
-      return null;
-    } else {
-      return bundle.getSerializedConfig();
-    }
-  }
-
-  @Override
-  public byte[] getCurrentConfigBytes(String prefix)
-  {
-    return connector.lookup(
-        connectorConfig.getConfigTable(),
-        MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
-        MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-        getPrefixedKeyColumn(prefix, CONFIG)
-    );
   }
 
   private static String getPrefixedKeyColumn(String keyPrefix, String keyName)
@@ -456,25 +362,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     throw new ISE("Could not set credentials for user[%s] due to concurrent update contention.", userName);
   }
 
-  private void updateConfigInternal(String prefix, BasicAuthConfig config)
-  {
-    int attempts = 0;
-    while (attempts < numRetries) {
-      if (updateConfigOnce(prefix, config)) {
-        return;
-      } else {
-        attempts++;
-      }
-      try {
-        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
-      }
-      catch (InterruptedException ie) {
-        throw new RuntimeException(ie);
-      }
-    }
-    throw new ISE("Could not update config due to concurrent update contention.");
-  }
-
   private boolean createUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
@@ -523,13 +410,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
-  private boolean updateConfigOnce(String prefix, BasicAuthConfig config)
-  {
-    byte[] oldValue = getCurrentConfigBytes(prefix);
-    byte[] newValue = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
-    return tryUpdateConfig(prefix, config, oldValue, newValue);
-  }
-
   private boolean tryUpdateUserMap(
       String prefix,
       Map<String, BasicAuthenticatorUser> userMap,
@@ -554,40 +434,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       if (succeeded) {
         cachedUserMaps.put(prefix, new BasicAuthenticatorUserMapBundle(userMap, newValue));
         cacheNotifier.addUserUpdate(prefix, newValue);
-        return true;
-      } else {
-        return false;
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private boolean tryUpdateConfig(
-      String prefix,
-      BasicAuthConfig config,
-      byte[] oldValue,
-      byte[] newValue
-  )
-  {
-    try {
-      MetadataCASUpdate update = new MetadataCASUpdate(
-          connectorConfig.getConfigTable(),
-          MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
-          MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-          getPrefixedKeyColumn(prefix, CONFIG),
-          oldValue,
-          newValue
-      );
-
-      boolean succeeded = connector.compareAndSwap(
-          Collections.singletonList(update)
-      );
-
-      if (succeeded) {
-        cachedConfigMaps.put(prefix, new BasicAuthenticatorConfigBundle(config, newValue));
-        cacheNotifier.addConfigUpdate(prefix, newValue);
         return true;
       } else {
         return false;

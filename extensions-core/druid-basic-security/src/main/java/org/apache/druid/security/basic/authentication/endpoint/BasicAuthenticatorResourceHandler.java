@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.basic.authentication.endpoint;
 
-import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 
 import javax.ws.rs.core.Response;
@@ -44,18 +43,10 @@ public interface BasicAuthenticatorResourceHandler
 
   Response getCachedSerializedUserMap(String authenticatorName);
 
-  Response getConfig(String authenticatorName);
-
-  Response updateConfig(String authenticatorName, BasicAuthConfig config);
-
-  Response getCachedSerializedConfig(String authenticatorName);
-
   Response refreshAll();
 
   // non-coordinator methods
   Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap);
-
-  Response authenticatorConfigUpdateListener(String authenticatorName, byte[] serializedConfig);
 
   // common methods
   Response getLoadStatus();
