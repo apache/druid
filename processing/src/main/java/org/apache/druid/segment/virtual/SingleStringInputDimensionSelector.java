@@ -33,7 +33,8 @@ import org.apache.druid.segment.data.IndexedInts;
 import javax.annotation.Nullable;
 
 /**
- * A DimensionSelector decorator that computes an expression on top of it.
+ * A DimensionSelector decorator that computes an expression on top of it. See {@link ExpressionSelectors} for details
+ * on how expression selectors are constructed.
  */
 public class SingleStringInputDimensionSelector implements DimensionSelector
 {
