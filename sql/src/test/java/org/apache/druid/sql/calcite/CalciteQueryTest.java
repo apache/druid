@@ -8443,6 +8443,59 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueStringPrependAppend() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 3L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 2L},
+          new Object[]{"foo,", ",foo", 1L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_TO_STRING(MV_PREPEND('foo', dim3), ','), MV_TO_STRING(MV_APPEND(dim3, 'foo'), ','), SUM(cnt) FROM druid.numfoo GROUP BY 1,2 ORDER BY 3 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_to_string(array_prepend('foo',\"dim3\"),',')", ValueType.STRING),
+                            expressionVirtualColumn("v1", "array_to_string(array_append(\"dim3\",'foo'),',')", ValueType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
   public void testMultiValueStringConcat() throws Exception
   {
     ImmutableList<Object[]> results;

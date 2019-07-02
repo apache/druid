@@ -281,7 +281,7 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   @Override
   public String toString()
   {
-    return String.valueOf(null);
+    return "null";
   }
 }
 
