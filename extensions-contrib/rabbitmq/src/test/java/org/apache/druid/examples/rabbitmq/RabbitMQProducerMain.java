@@ -52,67 +52,67 @@ public class RabbitMQProducerMain
     // We use a List to keep track of option insertion order. See below.
     final List<Option> optionList = new ArrayList<Option>();
 
-    optionList.add(OptionBuilder.withLongOpt("help")
-        .withDescription("display this help message")
-        .create("h"));
-    optionList.add(OptionBuilder.withLongOpt("hostname")
+    optionList.add(Option.builder("h").longOpt("help")
+        .desc("display this help message")
+        .build());
+    optionList.add(Option.builder("b").longOpt("hostname")
         .hasArg()
-        .withDescription("the hostname of the AMQP broker [defaults to AMQP library default]")
-        .create("b"));
-    optionList.add(OptionBuilder.withLongOpt("port")
+        .desc("the hostname of the AMQP broker [defaults to AMQP library default]")
+        .build());
+    optionList.add(Option.builder("n").longOpt("port")
         .hasArg()
-        .withDescription("the port of the AMQP broker [defaults to AMQP library default]")
-        .create("n"));
-    optionList.add(OptionBuilder.withLongOpt("username")
+        .desc("the port of the AMQP broker [defaults to AMQP library default]")
+        .build());
+    optionList.add(Option.builder("u").longOpt("username")
         .hasArg()
-        .withDescription("username to connect to the AMQP broker [defaults to AMQP library default]")
-        .create("u"));
-    optionList.add(OptionBuilder.withLongOpt("password")
+        .desc("username to connect to the AMQP broker [defaults to AMQP library default]")
+        .build());
+    optionList.add(Option.builder("p").longOpt("password")
         .hasArg()
-        .withDescription("password to connect to the AMQP broker [defaults to AMQP library default]")
-        .create("p"));
-    optionList.add(OptionBuilder.withLongOpt("vhost")
+        .desc("password to connect to the AMQP broker [defaults to AMQP library default]")
+        .build());
+    optionList.add(Option.builder("v").longOpt("vhost")
         .hasArg()
-        .withDescription("name of virtual host on the AMQP broker [defaults to AMQP library default]")
-        .create("v"));
-    optionList.add(OptionBuilder.withLongOpt("exchange")
-        .isRequired()
+        .desc("name of virtual host on the AMQP broker [defaults to AMQP library default]")
+        .build());
+    optionList.add(Option.builder("e").longOpt("exchange")
+        .required()
         .hasArg()
-        .withDescription("name of the AMQP exchange [required - no default]")
-        .create("e"));
-    optionList.add(OptionBuilder.withLongOpt("key")
+        .desc("name of the AMQP exchange [required - no default]")
+        .build());
+    optionList.add(Option.builder("k").longOpt("key")
         .hasArg()
-        .withDescription("the routing key to use when sending messages [default: 'default.routing.key']")
-        .create("k"));
-    optionList.add(OptionBuilder.withLongOpt("type")
+        .desc("the routing key to use when sending messages [default: 'default.routing.key']")
+        .build());
+    optionList.add(Option.builder("t").longOpt("type")
         .hasArg()
-        .withDescription("the type of exchange to create [default: 'topic']")
-        .create("t"));
-    optionList.add(OptionBuilder.withLongOpt("durable")
-        .withDescription("if set, a durable exchange will be declared [default: not set]")
-        .create("d"));
-    optionList.add(OptionBuilder.withLongOpt("autodelete")
-        .withDescription("if set, an auto-delete exchange will be declared [default: not set]")
-        .create("a"));
-    optionList.add(OptionBuilder.withLongOpt("single")
-        .withDescription("if set, only a single message will be sent [default: not set]")
-        .create("s"));
-    optionList.add(OptionBuilder.withLongOpt("start")
+        .desc("the type of exchange to build [default: 'topic']")
+        .build());
+    optionList.add(Option.builder("d").longOpt("durable")
+        .desc("if set, a durable exchange will be declared [default: not set]")
+        .build());
+    optionList.add(Option.builder("a").longOpt("autodelete")
+        .desc("if set, an auto-delete exchange will be declared [default: not set]")
+        .build());
+    optionList.add(Option.builder("s").longOpt("single")
+        .desc("if set, only a single message will be sent [default: not set]")
+        .build());
+    optionList.add(Option.builder().longOpt("start")
         .hasArg()
-        .withDescription("time to use to start sending messages from [default: 2010-01-01T00:00:00]")
-        .create());
-    optionList.add(OptionBuilder.withLongOpt("stop")
+        .desc("time to use to start sending messages from [default: 2010-01-01T00:00:00]")
+        .build());
+    optionList.add(Option.builder().longOpt("stop")
         .hasArg()
-        .withDescription("time to use to send messages until (format: '2013-07-18T23:45:59') [default: current time]")
-        .create());
-    optionList.add(OptionBuilder.withLongOpt("interval")
+        .desc("time to use to send messages until (format: '2013-07-18T23:45:59') [default: current time]")
+        .build());
+    optionList.add(Option.builder().longOpt("interval")
         .hasArg()
-        .withDescription("the interval to add to the timestamp between messages in seconds [default: 10]")
-        .create());
-    optionList.add(OptionBuilder.withLongOpt("delay")
+        .desc("the interval to add to the timestamp between messages in seconds [default: 10]")
+        .build());
+    optionList.add(Option.builder().longOpt("delay")
         .hasArg()
-        .withDescription("the delay between sending messages in milliseconds [default: 100]")
-        .create());
+        .desc("the delay between sending messages in milliseconds [default: 100]")
+        .build());
 
     // An extremely silly hack to maintain the above order in the help formatting.
     HelpFormatter formatter = new HelpFormatter();
