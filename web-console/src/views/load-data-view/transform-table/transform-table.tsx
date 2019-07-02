@@ -24,11 +24,11 @@ import { TableCell } from '../../../components';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
 import { Transform } from '../../../utils/ingestion-spec';
-import { HeaderAndRows } from '../../../utils/sampler';
+import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
-export interface TransformTableProps extends React.Props<any> {
+export interface TransformTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;
@@ -91,7 +91,7 @@ export class TransformTable extends React.PureComponent<TransformTableProps> {
             headerClassName: columnClassName,
             className: columnClassName,
             id: String(i),
-            accessor: row => (row.parsed ? row.parsed[columnName] : null),
+            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
             Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
           };
         })}

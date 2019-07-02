@@ -117,16 +117,6 @@ exports[`retention dialog matches snapshot 1`] = `
             class="bp3-dialog-footer-actions"
           >
             <button
-              class="bp3-button bp3-minimal left-align-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                History
-              </span>
-            </button>
-            <button
               class="bp3-button"
               type="button"
             >

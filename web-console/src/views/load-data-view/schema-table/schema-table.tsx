@@ -21,12 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import {
-  alphanumericCompare,
-  caseInsensitiveContains,
-  filterMap,
-  sortWithPrefixSuffix,
-} from '../../../utils';
+import { caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
 import {
   DimensionSpec,
   DimensionsSpec,
@@ -35,13 +30,12 @@ import {
   getMetricSpecName,
   inflateDimensionSpec,
   MetricSpec,
-  TimestampSpec,
 } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './schema-table.scss';
 
-export interface SchemaTableProps extends React.Props<any> {
+export interface SchemaTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
     dimensionsSpec: DimensionsSpec;
@@ -103,7 +97,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
               headerClassName: columnClassName,
               className: columnClassName,
               id: String(i),
-              accessor: row => (row.parsed ? row.parsed[columnName] : null),
+              accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
               Cell: row => <TableCell value={row.value} />,
             };
           } else {

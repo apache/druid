@@ -19,12 +19,12 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config';
+import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
 
 describe('coordinator dynamic config', () => {
   it('matches snapshot', () => {
     const coordinatorDynamicConfig = <CoordinatorDynamicConfigDialog onClose={() => null} />;
-    const { container } = render(coordinatorDynamicConfig, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(coordinatorDynamicConfig);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

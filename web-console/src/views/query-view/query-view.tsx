@@ -56,8 +56,8 @@ interface QueryWithContext {
   wrapQuery?: boolean;
 }
 
-export interface QueryViewProps extends React.Props<any> {
-  initQuery: string | null;
+export interface QueryViewProps {
+  initQuery: string | undefined;
 }
 
 export interface QueryViewState {
@@ -119,7 +119,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   }
 
-  private metadataQueryManager: QueryManager<string, ColumnMetadata[]>;
+  private metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
   private explainQueryManager: QueryManager<
     QueryWithContext,
@@ -146,11 +146,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       explainResult: null,
       explainError: null,
     };
-  }
 
-  componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async () => {
         return await queryDruidSql<ColumnMetadata>({
           query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
         });
@@ -170,10 +168,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    this.metadataQueryManager.runQuery('dummy');
-
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (queryWithContext: QueryWithContext) => {
+      processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
         let queryId: string | null = null;
         let sqlQueryId: string | null = null;
@@ -272,6 +268,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         });
       },
     });
+  }
+
+  componentDidMount(): void {
+    this.metadataQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {

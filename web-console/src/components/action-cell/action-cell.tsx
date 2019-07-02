@@ -25,7 +25,7 @@ import { ActionIcon } from '../action-icon/action-icon';
 
 import './action-cell.scss';
 
-export interface ActionCellProps extends React.Props<any> {
+export interface ActionCellProps {
   onDetail?: () => void;
   actions?: BasicAction[];
 }

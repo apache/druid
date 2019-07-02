@@ -16,7 +16,7 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog snitch-dialog coordinator-dynamic-config"
+        class="bp3-dialog snitch-dialog coordinator-dynamic-config-dialog"
       >
         <div
           class="bp3-dialog-header"
@@ -76,16 +76,6 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
           <div
             class="bp3-dialog-footer-actions"
           >
-            <button
-              class="bp3-button bp3-minimal left-align-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                History
-              </span>
-            </button>
             <button
               class="bp3-button bp3-intent-primary"
               type="button"

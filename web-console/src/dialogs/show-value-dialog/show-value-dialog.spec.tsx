@@ -19,25 +19,19 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
+import { ShowValueDialog } from './show-value-dialog';
 
-describe('overload dynamic config', () => {
+describe('clipboard dialog', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = (
-      <LookupEditDialog
-        isOpen
+    const compactionDialog = (
+      <ShowValueDialog
         onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
-        lookupName={'test'}
-        lookupTier={'test'}
-        lookupVersion={'test'}
-        lookupSpec={'test'}
-        isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
+        str={
+          'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
+        }
       />
     );
-    const { container } = render(lookupEditDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -16,37 +16,23 @@
  * limitations under the License.
  */
 
-.overlord-dynamic-config {
-  &.bp3-dialog {
-    margin-top: 5vh;
-    top: 5%;
-    width: 600px;
-  }
+import React from 'react';
+import { render } from 'react-testing-library';
 
-  .bp3-dialog-body {
-    max-height: 70vh;
+import { SegmentTableActionDialog } from './segment-table-action-dialog';
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
-
-      .ace_editor {
-        height: 25vh !important;
-      }
-    }
-
-    .html-select {
-      width: 195px;
-    }
-
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
-
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
-  }
-}
+describe('task table action dialog', () => {
+  it('matches snapshot', () => {
+    const taskTableActionDialog = (
+      <SegmentTableActionDialog
+        dataSourceId="test"
+        segmentId="test"
+        actions={[{ title: 'test', onAction: () => null }]}
+        onClose={() => null}
+        isOpen
+      />
+    );
+    render(taskTableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});
