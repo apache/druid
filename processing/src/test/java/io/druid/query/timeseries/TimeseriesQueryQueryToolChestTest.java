@@ -158,4 +158,42 @@ public class TimeseriesQueryQueryToolChestTest
                 )
         );
     }
+
+    @Test
+    public void testComputeCacheKeyWithDifferentIntervals()
+    {
+        final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                .dataSource("dummy")
+                .intervals("2015-01-01/2015-01-02")
+                .descending(descending)
+                .granularity(Granularities.ALL)
+                .aggregators(
+                        ImmutableList.of(
+                                new CountAggregatorFactory("metric1"),
+                                new LongSumAggregatorFactory("metric0", "metric0")
+                        )
+                )
+                .build();
+
+        final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                .dataSource("dummy")
+                .intervals("2015-01-03/2015-01-04")
+                .descending(descending)
+                .granularity(Granularities.ALL)
+                .aggregators(
+                        ImmutableList.of(
+                                new CountAggregatorFactory("metric1"),
+                                new LongSumAggregatorFactory("metric0", "metric0")
+                        )
+                )
+                .build();
+
+        // Test for https://github.com/druid-io/druid/issues/4093.
+        Assert.assertFalse(
+                Arrays.equals(
+                        TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
+                        TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
+                )
+        );
+    }
 }
