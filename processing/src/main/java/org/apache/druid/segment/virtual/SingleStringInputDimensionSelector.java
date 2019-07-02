@@ -29,6 +29,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.SingleIndexedInt;
 
 import javax.annotation.Nullable;
 
@@ -41,6 +42,12 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   private final DimensionSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
+  private final SingleIndexedInt nullAdjustedRow = new SingleIndexedInt();
+
+  /**
+   * 0 if selector has null as a value; 1 if it doesn't.
+   */
+  private final int nullAdjustment;
 
   public SingleStringInputDimensionSelector(
       final DimensionSelector selector,
@@ -60,6 +67,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
+    this.nullAdjustment = selector.getValueCardinality() == 0 || selector.lookupName(0) != null ? 1 : 0;
   }
 
   @Override
@@ -70,14 +78,20 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   }
 
   /**
-   * Get the underlying selector {@link IndexedInts} row.
+   * Get the underlying selector {@link IndexedInts} row, or the null adjusted row.
    */
   @Override
   public IndexedInts getRow()
   {
     final IndexedInts row = selector.getRow();
-    assert row.size() <= 1; // multi-val dimensions should never make it here
-    return row;
+
+    assert row.size() <= 1;
+    if (nullAdjustment == 0) {
+      return row;
+    } else {
+      nullAdjustedRow.setValue(row.get(0) + nullAdjustment);
+      return nullAdjustedRow;
+    }
   }
 
   @Override
@@ -95,7 +109,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public int getValueCardinality()
   {
-    return selector.getValueCardinality();
+    return selector.getValueCardinality() + nullAdjustment;
   }
 
   @Override
@@ -107,7 +121,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
       // id 0 is always null for this selector impl.
       value = null;
     } else {
-      value = selector.lookupName(id);
+      value = selector.lookupName(id - nullAdjustment);
     }
 
     bindings.set(value);
