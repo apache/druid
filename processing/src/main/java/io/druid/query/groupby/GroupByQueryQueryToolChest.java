@@ -399,6 +399,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheables(query.getDimensions())
             .appendCacheable(query.getVirtualColumns())
+                .appendString(query.getIntervals().toString())
             .build();
       }
 

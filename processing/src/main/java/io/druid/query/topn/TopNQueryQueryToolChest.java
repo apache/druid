@@ -321,7 +321,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheables(query.getAggregatorSpecs())
-            .appendCacheable(query.getVirtualColumns());
+            .appendCacheable(query.getVirtualColumns())
+                .appendString(query.getIntervals().toString());
 
         final List<PostAggregator> postAggregators = prunePostAggregators(query);
         if (!postAggregators.isEmpty()) {
