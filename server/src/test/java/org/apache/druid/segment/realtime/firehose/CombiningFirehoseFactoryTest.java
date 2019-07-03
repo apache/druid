@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.realtime.firehose;
+package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -26,7 +26,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.utils.Runnables;
 import org.joda.time.DateTime;
 import org.junit.Assert;
