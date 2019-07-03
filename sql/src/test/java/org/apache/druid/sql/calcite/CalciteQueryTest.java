@@ -8042,8 +8042,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
-
   @Test
   public void testMultiValueStringWorksLikeStringGroupByWithFilter() throws Exception
   {
@@ -8323,7 +8321,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
   @Test
   public void testMultiValueStringLength() throws Exception
