@@ -1609,6 +1609,7 @@
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
+                                <exclude>examples/conf/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
