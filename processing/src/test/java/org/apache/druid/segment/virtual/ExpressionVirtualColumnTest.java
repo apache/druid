@@ -588,7 +588,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(ImmutableList.of("x", "y"), X_PLUS_Y.requiredColumns());
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("z", "x"), Z_CONCAT_X.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("x", "z"), Z_CONCAT_X.requiredColumns());
   }
 
   @Test

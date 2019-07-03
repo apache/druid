@@ -55,7 +55,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   )
   {
     // Verify expression has just one binding.
-    if (expression.analyzeInputs().getFreeVariables().size() != 1) {
+    if (expression.analyzeInputs().getRequiredColumns().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 

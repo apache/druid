@@ -47,6 +47,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
@@ -572,6 +574,52 @@ public class MultiValuedDimensionTest
   }
 
   @Test
+  public void testGroupByExpressionMultiMultiAutoAutoDupeIdentifier()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "concat(tags, tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("count", OrderByColumnSpec.Direction.DESCENDING)), 5))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3t3", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t5t5", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t7t7", "count", 2L)
+    );
+
+    System.out.println(result.toList());
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto-self");
+  }
+
+  @Test
   public void testGroupByExpressionMultiMultiAutoAutoWithFilter()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
@@ -890,7 +938,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); [tags] used as both scalar and array variables"
+        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags_0]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()
@@ -925,7 +973,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); [tags] used as both scalar and array variables"
+        "Invalid expression: (array_concat [tags, (array_append [othertags, tags_0])]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()

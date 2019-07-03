@@ -111,7 +111,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public List<String> requiredColumns()
   {
-    return parsedExpression.get().analyzeInputs().getRequiredColumns();
+    return parsedExpression.get().analyzeInputs().getRequiredColumnsList();
   }
 
   @Override

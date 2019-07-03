@@ -142,7 +142,7 @@ public class ExpressionSelectors
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumns();
+    final List<String> columns = exprDetails.getRequiredColumnsList();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -219,7 +219,7 @@ public class ExpressionSelectors
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumns();
+    final List<String> columns = exprDetails.getRequiredColumnsList();
 
 
     if (columns.size() == 1) {
@@ -355,7 +355,7 @@ public class ExpressionSelectors
   )
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = bindingDetails.getRequiredColumns();
+    final List<String> columns = bindingDetails.getRequiredColumnsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);

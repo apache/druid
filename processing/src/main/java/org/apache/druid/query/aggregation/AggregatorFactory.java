@@ -149,7 +149,7 @@ public abstract class AggregatorFactory implements Cacheable
    * "transfer" values from this aggreagtor to an incremental index that the outer query will run on. This method
    * only exists due to the design of GroupByStrategyV1, and should probably not be used for anything else. If you are
    * here because you are looking for a way to get the input fields required by this aggregator, and thought
-   * "getRequiredColumns" sounded right, please use {@link #requiredFields()} instead.
+   * "getRequiredColumnsList" sounded right, please use {@link #requiredFields()} instead.
    *
    * @return AggregatorFactories that can be used to "transfer" values from this aggregator into an incremental index
    *

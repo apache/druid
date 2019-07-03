@@ -19,15 +19,14 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -239,16 +238,9 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public BindingDetails analyzeInputs()
     {
-      final String stringIdentifier = stringExpr.getIdentifierIfIdentifier();
-      final Set<String> scalars = new HashSet<>();
-      if (stringIdentifier != null) {
-        scalars.add(stringIdentifier);
-      }
-      final String charsIdentifier = charsExpr.getIdentifierIfIdentifier();
-      if (charsIdentifier != null) {
-        scalars.add(charsIdentifier);
-      }
-      return stringExpr.analyzeInputs().merge(charsExpr.analyzeInputs()).mergeWithScalars(scalars);
+      return stringExpr.analyzeInputs()
+                       .with(charsExpr)
+                       .withScalarArguments(ImmutableSet.of(stringExpr, charsExpr));
     }
   }
 
