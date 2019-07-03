@@ -23,7 +23,7 @@ import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
 
 import './query-plan-dialog.scss';
 
-export interface QueryPlanDialogProps extends React.Props<any> {
+export interface QueryPlanDialogProps {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   explainError: Error | null;
   onClose: () => void;

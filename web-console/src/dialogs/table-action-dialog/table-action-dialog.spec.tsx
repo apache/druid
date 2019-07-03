@@ -30,7 +30,7 @@ describe('table action dialog', () => {
         isOpen
       />
     );
-    const { container } = render(tableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(tableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });
