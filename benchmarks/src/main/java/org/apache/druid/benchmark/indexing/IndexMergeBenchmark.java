@@ -112,7 +112,7 @@ public class IndexMergeBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     indexesToMerge = new ArrayList<>();
 

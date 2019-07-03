@@ -93,7 +93,7 @@ public class SchemalessIndexTest
   private static QueryableIndex mergedIndex = null;
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
   private final IndexMerger indexMerger;

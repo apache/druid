@@ -313,7 +313,7 @@ public class SearchBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
 

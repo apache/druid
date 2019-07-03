@@ -44,24 +44,12 @@ public class OldApiSketchModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ComplexMetrics.registerSerde(SKETCH_BUILD, SketchBuildComplexMetricSerde.class, SketchBuildComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SET_SKETCH, SketchMergeComplexMetricSerde.class, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SKETCH_MERGE, SketchMergeComplexMetricSerde.class, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(
-        SketchModule.THETA_SKETCH,
-        SketchMergeComplexMetricSerde.class,
-        SketchMergeComplexMetricSerde::new
-    );
-    ComplexMetrics.registerSerde(
-        SketchModule.THETA_SKETCH_MERGE_AGG,
-        SketchMergeComplexMetricSerde.class,
-        SketchMergeComplexMetricSerde::new
-    );
-    ComplexMetrics.registerSerde(
-        SketchModule.THETA_SKETCH_BUILD_AGG,
-        SketchBuildComplexMetricSerde.class,
-        SketchBuildComplexMetricSerde::new
-    );
+    ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
+    ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 
   @Override

@@ -38,19 +38,19 @@ public class ComplexMetrics
     return complexSerializers.get(type);
   }
 
-  public static <T extends ComplexMetricSerde> void registerSerde(String type, Class<T> clazz, Supplier<T> serdeSupplier)
+  public static void registerSerde(String type, ComplexMetricSerde serde)
   {
     if (complexSerializers.containsKey(type)) {
-      if (!complexSerializers.get(type).getClass().getCanonicalName().equals(clazz.getCanonicalName())) {
+      if (!complexSerializers.get(type).getClass().getCanonicalName().equals(serde.getClass().getCanonicalName())) {
         throw new ISE(
             "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
             type,
-            clazz.getCanonicalName(),
+            serde.getClass().getCanonicalName(),
             complexSerializers.get(type).getClass().getCanonicalName()
         );
       }
     } else {
-      complexSerializers.put(type, serdeSupplier.get());
+      complexSerializers.put(type, serde);
     }
   }
 }

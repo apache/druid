@@ -92,7 +92,7 @@ public class IncrementalIndexReadBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 

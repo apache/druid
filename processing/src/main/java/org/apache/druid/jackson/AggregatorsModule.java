@@ -73,17 +73,9 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    ComplexMetrics.registerSerde("hyperUnique", HyperUniquesSerde.class, HyperUniquesSerde::new);
-    ComplexMetrics.registerSerde(
-        "preComputedHyperUnique",
-        PreComputedHyperUniquesSerde.class,
-        PreComputedHyperUniquesSerde::new
-    );
-    ComplexMetrics.registerSerde(
-        "serializablePairLongString",
-        SerializablePairLongStringSerde.class,
-        SerializablePairLongStringSerde::new
-    );
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde());
+    ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
