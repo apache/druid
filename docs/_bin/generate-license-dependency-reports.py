@@ -25,9 +25,6 @@ import time
 import threading
 
 
-
-
-
 def generate_report(module_path, report_orig_path, report_out_path):
     if not os.path.isdir(module_path):
         print("{} is not a directory".format(module_path))
@@ -79,6 +76,8 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     dot_thread = threading.Thread(target=print_dots)
     dot_thread.start()
 
+    # Travis kills a job if it prints nothing for 10 mins.
+    # This dot printing is to prevent from being killed by Travis.
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         for module_path, report_orig_path, report_out_path in script_args:
             executor.submit(generate_report, module_path, report_orig_path, report_out_path)

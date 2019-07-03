@@ -548,7 +548,6 @@ with open(sys.argv[1]) as apache_license_file:
 license_yaml = sys.argv[2]
 dependency_reports_root = sys.argv[3]
 
-outfile = open(sys.argv[4], "w")
-check_licenses(license_yaml, dependency_reports_root)
-generate_license(apache_license_v2, license_yaml)
-outfile.close()
+with open(sys.argv[4], "w") as outfile:
+    check_licenses(license_yaml, dependency_reports_root)
+    generate_license(apache_license_v2, license_yaml)
