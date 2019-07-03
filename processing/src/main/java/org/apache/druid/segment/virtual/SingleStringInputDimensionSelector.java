@@ -42,12 +42,6 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   private final DimensionSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
-  private final SingleIndexedInt nullAdjustedRow = new SingleIndexedInt();
-
-  /**
-   * 0 if selector has null as a value; 1 if it doesn't.
-   */
-  private final int nullAdjustment;
 
   public SingleStringInputDimensionSelector(
       final DimensionSelector selector,
@@ -67,7 +61,6 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.nullAdjustment = selector.getValueCardinality() == 0 || selector.lookupName(0) != null ? 1 : 0;
   }
 
   @Override
@@ -86,12 +79,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
     final IndexedInts row = selector.getRow();
 
     assert row.size() <= 1;
-    if (nullAdjustment == 0) {
-      return row;
-    } else {
-      nullAdjustedRow.setValue(row.get(0) + nullAdjustment);
-      return nullAdjustedRow;
-    }
+    return row;
   }
 
   @Override
@@ -109,7 +97,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public int getValueCardinality()
   {
-    return selector.getValueCardinality() + nullAdjustment;
+    return selector.getValueCardinality();
   }
 
   @Override
@@ -117,12 +105,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   {
     final String value;
 
-    if (id == 0) {
-      // id 0 is always null for this selector impl.
-      value = null;
-    } else {
-      value = selector.lookupName(id - nullAdjustment);
-    }
+    value = selector.lookupName(id);
 
     bindings.set(value);
     return expression.eval(bindings).asString();
