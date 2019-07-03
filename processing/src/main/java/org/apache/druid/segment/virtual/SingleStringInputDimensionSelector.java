@@ -29,7 +29,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.SingleIndexedInt;
 
 import javax.annotation.Nullable;
 
