@@ -270,6 +270,21 @@ abstract class ConstantExpr implements Expr
   }
 }
 
+abstract class NullNumericConstantExpr extends ConstantExpr
+{
+  @Override
+  public Object getLiteralValue()
+  {
+    return null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "null";
+  }
+}
+
 class LongExpr extends ConstantExpr
 {
   private final Long value;
@@ -297,6 +312,16 @@ class LongExpr extends ConstantExpr
     return ExprEval.ofLong(value);
   }
 }
+
+class NullLongExpr extends NullNumericConstantExpr
+{
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofLong(null);
+  }
+}
+
 
 class LongArrayExpr extends ConstantExpr
 {
@@ -409,6 +434,15 @@ class DoubleExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDouble(value);
+  }
+}
+
+class NullDoubleExpr extends NullNumericConstantExpr
+{
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofDouble(null);
   }
 }
 

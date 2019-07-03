@@ -7446,7 +7446,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testConcat() throws Exception
   {
     testQuery(
-        "SELECT CONCAt(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
+        "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -7889,8 +7889,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v3", "div((\"__time\" - 946684683000),60000)", ValueType.LONG),
                     expressionVirtualColumn("v4", "div((\"__time\" - 946684743000),1000)", ValueType.LONG),
                     expressionVirtualColumn("v5", "subtract_months(\"__time\",941414400000,'UTC')", ValueType.LONG),
-                    expressionVirtualColumn("v6", "div(subtract_months(\"__time\",846806400000,'UTC'),12)", ValueType.LONG),
-                    expressionVirtualColumn("v7", "div(subtract_months(\"__time\",844128000000,'UTC'),3)", ValueType.LONG),
+                    expressionVirtualColumn(
+                        "v6",
+                        "div(subtract_months(\"__time\",846806400000,'UTC'),12)",
+                        ValueType.LONG
+                    ),
+                    expressionVirtualColumn(
+                        "v7",
+                        "div(subtract_months(\"__time\",844128000000,'UTC'),3)",
+                        ValueType.LONG
+                    ),
                     expressionVirtualColumn("v8", "div(div((\"__time\" - 907200000000),1000),604800)", ValueType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8")
@@ -8256,6 +8264,537 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"}
         )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringSlice() throws Exception
+  {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
+    testQuery(
+        "SELECT MV_SLICE(dim3, 1) FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array_slice(\"dim3\",1)", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"b\"]"},
+            new Object[]{"[\"c\"]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"}
+        )
+    );
+  }
+
+
+  @Test
+  public void testMultiValueStringLength() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, MV_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim1", "_d0", ValueType.STRING),
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "v0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 2, 1L},
+            new Object[]{"10.1", 2, 1L},
+            new Object[]{"1", 1, 1L},
+            new Object[]{"2", 1, 1L},
+            new Object[]{"abc", 1, 1L},
+            new Object[]{"def", 1, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringAppend() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_APPEND(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_append(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrepend() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_PREPEND('foo', dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_prepend('foo',\"dim3\")", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrependAppend() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 3L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 2L},
+          new Object[]{"foo,", ",foo", 1L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_TO_STRING(MV_PREPEND('foo', dim3), ','), MV_TO_STRING(MV_APPEND(dim3, 'foo'), ','), SUM(cnt) FROM druid.numfoo GROUP BY 1,2 ORDER BY 3 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_to_string(array_prepend('foo',\"dim3\"),',')", ValueType.STRING),
+                            expressionVirtualColumn("v1", "array_to_string(array_append(\"dim3\",'foo'),',')", ValueType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringConcat() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"", 6L},
+          new Object[]{"b", 4L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null, 4L},
+          new Object[]{"b", 4L},
+          new Object[]{"", 2L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    }
+    testQuery(
+        "SELECT MV_CONCAT(dim3, dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_concat(\"dim3\",\"dim3\")", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOffset() throws Exception
+  {
+    testQuery(
+        "SELECT MV_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset(\"dim3\",1)", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{"b", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOrdinal() throws Exception
+  {
+    testQuery(
+        "SELECT MV_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{"b", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOffsetOf() throws Exception
+  {
+    testQuery(
+        "SELECT MV_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset_of(\"dim3\",'b')", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? -1 : null, 4L},
+            new Object[]{0, 1L},
+            new Object[]{1, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOrdinalOf() throws Exception
+  {
+    testQuery(
+        "SELECT MV_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal_of(\"dim3\",'b')", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? -1 : null, 4L},
+            new Object[]{1, 1L},
+            new Object[]{2, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringToString() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"", 3L},
+          new Object[]{"a,b", 1L},
+          new Object[]{"b,c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a,b", 1L},
+          new Object[]{"b,c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_TO_STRING(dim3, ','), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_to_string(\"dim3\",',')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringToStringToMultiValueString() throws Exception
+  {
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"d", 7L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"d", 5L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L}
+      );
+    }
+    testQuery(
+        "SELECT STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','), SUM(cnt) FROM druid.numfoo WHERE MV_LENGTH(dim3) > 0 GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG),
+                            expressionVirtualColumn(
+                                "v1",
+                                "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimFilter(bound("v0", "0", null, true, false, null, StringComparators.NUMERIC))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "v1", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
     );
   }
 }

@@ -174,14 +174,14 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
-| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
-| array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
-| array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 
 
 ## Apply Functions

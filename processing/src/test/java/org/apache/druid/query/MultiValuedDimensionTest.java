@@ -665,6 +665,47 @@ public class MultiValuedDimensionTest
   }
 
   @Test
+  public void testGroupByExpressionArrayExpressionFilter()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tt", "tt", ValueType.LONG))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "tt",
+                "array_offset_of(tags, 't2')",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
+        .build();
+
+    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", NullHandling.replaceWithDefault() ? -1L : null, "count", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", 1L, "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-auto");
+  }
+
+  @Test
   public void testGroupByExpressionArrayFnArg()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
