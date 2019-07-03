@@ -1915,8 +1915,12 @@ interface Function
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final String join = scalarExpr.asString();
+      final Object[] raw = arrayExpr.asArray();
+      if (raw == null || raw.length == 1 && raw[0] == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(
-          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+          Arrays.stream(raw).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
       );
     }
   }
@@ -1987,7 +1991,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -2017,7 +2021,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
