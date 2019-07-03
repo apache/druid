@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.ISE;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  */
