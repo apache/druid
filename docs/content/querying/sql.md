@@ -69,8 +69,8 @@ Druid [multi-value string dimensions](multi-value-dimensions.html) will appear i
 and may be interacted with in expressions as such. Additionally, they can be treated as `ARRAY` 'like', via a handful of
 special multi-value operators. Expressions against multi-value string dimensions will apply the expression to all values
 of the row, however the caveat is that aggregations on these multi-value string columns will observe the native Druid
-multi-value aggregation behavior. Refer to the documentation on
-[multi-value string dimensions](multi-value-dimensions.html) and
+multi-value aggregation behavior, which is equivalent to the `UNNEST` function available in many dialects.
+Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.html) and
 [Druid expressions documentation](../misc/math-expr.html) for additional details. 
 
 The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
