@@ -166,9 +166,13 @@
   {"source": "development/community-extensions/rabbitmq.html", "target": "../extensions-contrib/rabbitmq.html"},
   {"source": "development/extensions-core/namespaced-lookup.html", "target": "lookups-cached-global.html"},
   {"source": "operations/performance-faq.html", "target": "../operations/basic-cluster-tuning.html"},
-  {"source": "development/extensions-contrib/orc.html", "target": "../extensions-core/orc.html"}
+  {"source": "development/extensions-contrib/orc.html", "target": "../extensions-core/orc.html"},
   {"source": "operations/performance-faq.html", "target": "../operations/basic-cluster-tuning.html"},
   {"source": "configuration/realtime.md", "target": "../ingestion/standalone-realtime.html"},
   {"source": "design/realtime.md", "target": "../ingestion/standalone-realtime.html"},
-  {"source": "ingestion/stream-pull.md", "target": "../ingestion/standalone-realtime.html"}
+  {"source": "ingestion/stream-pull.md", "target": "../ingestion/standalone-realtime.html"},
+  {"source": "development/extensions-core/kafka-eight-firehose.md", "target": "../../ingestion/standalone-realtime.html"},
+  {"source": "development/extensions-contrib/kafka-simple.md", "target": "../../ingestion/standalone-realtime.html"},
+  {"source": "development/extensions-contrib/rabbitmq.md", "target": "../../ingestion/standalone-realtime.html"},
+  {"source": "development/extensions-contrib/rocketmq.md", "target": "../../ingestion/standalone-realtime.html"},
 ]

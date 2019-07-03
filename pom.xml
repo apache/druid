@@ -113,7 +113,6 @@
 
     <modules>
         <module>core</module>
-        <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>processing</module>
@@ -136,7 +135,6 @@
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
-        <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
@@ -156,11 +154,8 @@
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
-        <module>extensions-contrib/druid-rocketmq</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
-        <module>extensions-contrib/kafka-eight-simpleConsumer</module>
-        <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
