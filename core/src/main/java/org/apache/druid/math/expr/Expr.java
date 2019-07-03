@@ -226,7 +226,6 @@ public interface Expr
 
     /**
      * Total set of 'free' identifiers of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
-     * @return
      */
     public Set<IdentifierExpr> getFreeVariables()
     {
@@ -570,13 +569,13 @@ class IdentifierExpr implements Expr
   private final String identifier;
   private final String bindingIdentifier;
 
-  public IdentifierExpr(String value)
+  IdentifierExpr(String value)
   {
     this.identifier = value;
     this.bindingIdentifier = value;
   }
 
-  public IdentifierExpr(String identifier, String bindingIdentifier)
+  IdentifierExpr(String identifier, String bindingIdentifier)
   {
     this.identifier = identifier;
     this.bindingIdentifier = bindingIdentifier;

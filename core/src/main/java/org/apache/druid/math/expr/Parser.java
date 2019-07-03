@@ -214,10 +214,13 @@ public class Parser
     return applyUnapplied(newExpr, remainingUnappliedArgs);
   }
 
+  /**
+   * translate an {@link Expr} into an {@link ApplyFunctionExpr} for {@link ApplyFunction.MapFunction} or
+   * {@link ApplyFunction.CartesianMapFunction} if there are multiple unbound arguments to be applied
+   */
   private static Expr applyUnapplied(Expr expr, List<String> unapplied)
   {
     // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
-
     final Map<IdentifierExpr, IdentifierExpr> toReplace = new HashMap<>();
     final List<IdentifierExpr> args = expr.analyzeInputs()
                                           .getFreeVariables()
@@ -226,12 +229,16 @@ public class Parser
                                           .collect(Collectors.toList());
 
     final List<IdentifierExpr> lambdaArgs = new ArrayList<>();
+
+    // construct lambda args from list of args to apply
     for (IdentifierExpr applyFnArg : args) {
-      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier(), applyFnArg.getIdentifier());
+      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier());
       lambdaArgs.add(lambdaRewrite);
       toReplace.put(applyFnArg, lambdaRewrite);
     }
 
+    // rewrite identifiers in the expression which will become the lambda body, so they match the lambda identifiers we
+    // are constructing
     Expr newExpr = expr.visit(childExpr -> {
       if (childExpr instanceof IdentifierExpr) {
         if (toReplace.containsKey(childExpr)) {
@@ -264,7 +271,6 @@ public class Parser
    */
   private static ApplyFunctionExpr liftApplyLambda(ApplyFunctionExpr expr, List<String> unappliedArgs)
   {
-
     // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
     Set<String> unappliedInThisApply =
         unappliedArgs.stream()
@@ -347,11 +353,12 @@ public class Parser
         // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) =>
         //  cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
 
-        final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
+        final List<Expr> newFoldArgs =
+            new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> newFoldLambdaIdentifiers =
             new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> existingFoldLambdaIdentifiers = expr.lambdaExpr.getIdentifierExprs();
-        // accumulator argument is last argument, slice it off when constructing new arg list and lambda args identifiers
+        // accumulator argument is last argument, slice it off when constructing new arg list and lambda args
         for (int i = 0; i < expr.argsExpr.size() - 1; i++) {
           newFoldArgs.add(expr.argsExpr.get(i));
           newFoldLambdaIdentifiers.add(existingFoldLambdaIdentifiers.get(i));

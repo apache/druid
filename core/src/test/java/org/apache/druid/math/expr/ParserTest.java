@@ -433,6 +433,14 @@ public class ParserTest
         "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x_0, x_1])",
         ImmutableList.of("x")
     );
+
+    // heh
+    validateApplyUnapplied(
+        "x + x + x + y + y + y + y + z + z + z",
+        "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)",
+        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6])",
+        ImmutableList.of("x", "y", "z")
+    );
   }
 
 
