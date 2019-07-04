@@ -53,6 +53,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
@@ -166,6 +167,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private final AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
+  private final LockGranularity lockGranularity;
+
+  @JsonIgnore
   private IngestionState ingestionState;
 
   @JsonIgnore
@@ -200,6 +204,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     this.ingestionState = IngestionState.NOT_STARTED;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.lockGranularity = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
+                           ? LockGranularity.TIME_CHUNK
+                           : LockGranularity.SEGMENT;
   }
 
   @Override
@@ -282,15 +289,25 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       driver.startJob(
           segmentId -> {
             try {
-              return toolbox.getTaskActionClient().submit(
-                  new SegmentLockAcquireAction(
-                      TaskLockType.EXCLUSIVE,
-                      segmentId.getInterval(),
-                      segmentId.getVersion(),
-                      segmentId.getShardSpec().getPartitionNum(),
-                      1000L
-                  )
-              ).isOk();
+              if (lockGranularity == LockGranularity.SEGMENT) {
+                return toolbox.getTaskActionClient().submit(
+                    new SegmentLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        segmentId.getVersion(),
+                        segmentId.getShardSpec().getPartitionNum(),
+                        1000L
+                    )
+                ).isOk();
+              } else {
+                return toolbox.getTaskActionClient().submit(
+                    new TimeChunkLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        1000L
+                    )
+                ) != null;
+              }
             }
             catch (IOException e) {
               throw new RuntimeException(e);

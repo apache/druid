@@ -499,6 +499,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
+      setToolbox(toolbox);
       setRunner(
           new TestRunner(
               toolbox,

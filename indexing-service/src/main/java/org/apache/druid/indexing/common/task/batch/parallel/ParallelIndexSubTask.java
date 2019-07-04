@@ -291,25 +291,9 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
               final Interval interval = granularitySpec
                   .bucketInterval(row.getTimestamp())
                   .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
-              final Granularity granularityFromInterval = GranularityType.fromPeriod(interval.toPeriod())
-                                                                         .getDefaultGranularity();
+
               final ShardSpecFactory shardSpecFactory;
               if (segmentLockHelper.hasOverwritingRootGenerationPartition(interval)) {
-                if (segmentLockHelper.getKnownSegmentGranularity() != null
-                    && !segmentLockHelper.getKnownSegmentGranularity().equals(granularityFromInterval)) {
-                  throw new ISE(
-                      "Different segment granularity is detected. knownGranularity[%s], granularityFromInterval[%s]",
-                      segmentLockHelper.getKnownSegmentGranularity(),
-                      granularityFromInterval
-                  );
-                }
-                final boolean lockedExistingSegments = segmentLockHelper.tryLockExistingSegments(
-                    toolbox.getTaskActionClient(),
-                    Collections.singletonList(interval)
-                );
-                if (!lockedExistingSegments) {
-                  throw new ISE("Failed to lock segments in interval[%s]", interval);
-                }
                 final OverwritingRootGenerationPartitions overwritingSegmentMeta = segmentLockHelper
                     .getOverwritingRootGenerationPartition(interval);
                 if (overwritingSegmentMeta == null) {

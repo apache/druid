@@ -24,21 +24,21 @@ public final class PartitionIds
   /**
    * Start partitionId available for root generation segments.
    */
-  public static int ROOT_GEN_START_PARTITION_ID = 0;
+  public final static int ROOT_GEN_START_PARTITION_ID = 0;
   /**
    * End partitionId available for root generation segments.
    */
-  public static int ROOT_GEN_END_PARTITION_ID = 32768; // exclusive
+  public final static int ROOT_GEN_END_PARTITION_ID = 32768; // exclusive
   /**
    * Start partitionId available for non-root generation segments.
    */
-  public static int NON_ROOT_GEN_START_PARTITION_ID = 32768;
+  public final static int NON_ROOT_GEN_START_PARTITION_ID = 32768;
   /**
    * End partitionId available for non-root generation segments.
    */
-  public static int NON_ROOT_GEN_END_PARTITION_ID = 65536; // exclusive
+  public final static int NON_ROOT_GEN_END_PARTITION_ID = 65536; // exclusive
 
-  public static short UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE = -1;
+  public final static short UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE = -1;
 
   private PartitionIds()
   {
