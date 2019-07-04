@@ -135,7 +135,13 @@ public class HllSketchSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HllSketchMergeAggregatorFactory(aggregatorName, columnArg.getDirectColumn(), logK, tgtHllType);
+      aggregatorFactory = new HllSketchMergeAggregatorFactory(
+          aggregatorName,
+          columnArg.getDirectColumn(),
+          logK,
+          tgtHllType,
+          false
+      );
     } else {
       final SqlTypeName sqlTypeName = columnRexNode.getType().getSqlTypeName();
       final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
@@ -161,7 +167,8 @@ public class HllSketchSqlAggregator implements SqlAggregator
           aggregatorName,
           dimensionSpec.getDimension(),
           logK,
-          tgtHllType
+          tgtHllType,
+          false
       );
     }
 

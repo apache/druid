@@ -88,6 +88,7 @@ import java.util.Map;
 public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
+  private static boolean ROUND = true;
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -140,7 +141,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                              "hllsketch_dim1",
                                                              "dim1",
                                                              null,
-                                                             null
+                                                             null,
+                                                             !ROUND
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -265,14 +267,16 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "a1",
                           "dim2",
                           null,
-                          null
+                          null,
+                          !ROUND
                       ),
                       new FilteredAggregatorFactory(
                           new HllSketchBuildAggregatorFactory(
                               "a2",
                               "dim2",
                               null,
-                              null
+                              null,
+                              !ROUND
                           ),
                           BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
                       ),
@@ -280,16 +284,18 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "a3",
                           "v0",
                           null,
-                          null
+                          null,
+                          !ROUND
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a4",
                           "v1",
                           null,
-                          null
+                          null,
+                          !ROUND
                       ),
-                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8"),
-                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null)
+                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", !ROUND),
+                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, !ROUND)
                   )
               )
               .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
@@ -351,7 +357,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                                  "a0:a",
                                                                  "cnt",
                                                                  null,
-                                                                 null
+                                                                 null,
+                                                                 !ROUND
                                                              )
                                                          )
                                                      )
