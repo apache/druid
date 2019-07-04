@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -201,7 +202,7 @@ public interface Expr
     }
 
     /**
-     * Get the set of required column inputs to evaluate an expression
+     * Get the set of required column inputs to evaluate an expression, {@link IdentifierExpr#bindingIdentifier}
      */
     public Set<String> getRequiredColumns()
     {
@@ -209,7 +210,7 @@ public interface Expr
     }
 
     /**
-     * Set of identifiers which are used with scalar operators and functions
+     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with scalar operators and functions
      */
     public Set<String> getScalarColumns()
     {
@@ -217,7 +218,7 @@ public interface Expr
     }
 
     /**
-     * Set of identifiers which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with array typed functions and apply functions.
      */
     public Set<String> getArrayColumns()
     {
@@ -233,7 +234,7 @@ public interface Expr
     }
 
     /**
-     * Set of identifiers which are used with scalar operators and functions
+     * Set of {@link IdentifierExpr#identifier} which are used with scalar operators and functions.
      */
     public Set<String> getScalarVariables()
     {
@@ -241,7 +242,7 @@ public interface Expr
     }
 
     /**
-     * Set of identifiers which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#identifier} which are used with array typed functions and apply functions.
      */
     public Set<String> getArrayVariables()
     {

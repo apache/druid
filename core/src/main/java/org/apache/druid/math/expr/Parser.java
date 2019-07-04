@@ -171,7 +171,7 @@ public class Parser
       return expr;
     }
     List<String> unapplied = toApply.stream()
-                                     .filter(x -> bindingDetails.getRequiredColumnsList().contains(x))
+                                     .filter(x -> bindingDetails.getRequiredColumns().contains(x))
                                      .collect(Collectors.toList());
 
     // any unapplied identifiers that are inside a lambda expression need that lambda expression to be rewritten

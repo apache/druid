@@ -47,7 +47,7 @@ public class ExprListenerImpl extends ExprBaseListener
   private final ExprMacroTable macroTable;
   private final ParseTree rootNodeKey;
 
-  private final Set<String> lambadIdentifiers;
+  private final Set<String> lambdaIdentifiers;
   private final Set<String> uniqueIdentifiers;
   private int uniqueCounter = 0;
 
@@ -56,7 +56,7 @@ public class ExprListenerImpl extends ExprBaseListener
     this.rootNodeKey = rootNodeKey;
     this.macroTable = macroTable;
     this.nodes = new HashMap<>();
-    this.lambadIdentifiers = new HashSet<>();
+    this.lambdaIdentifiers = new HashSet<>();
     this.uniqueIdentifiers = new HashSet<>();
   }
 
@@ -367,7 +367,7 @@ public class ExprListenerImpl extends ExprBaseListener
     for (int i = 0; i < ctx.IDENTIFIER().size(); i++) {
       String text = ctx.IDENTIFIER(i).getText();
       text = sanitizeIdentifierString(text);
-      this.lambadIdentifiers.add(text);
+      this.lambdaIdentifiers.add(text);
     }
   }
 
@@ -380,7 +380,7 @@ public class ExprListenerImpl extends ExprBaseListener
       text = sanitizeIdentifierString(text);
       identifiers.add(i, createIdentifierExpr(text));
       // clean up lambda identifier references on exit
-      lambadIdentifiers.remove(text);
+      lambdaIdentifiers.remove(text);
     }
 
     nodes.put(ctx, new LambdaExpr(identifiers, (Expr) nodes.get(ctx.expr())));
@@ -430,7 +430,7 @@ public class ExprListenerImpl extends ExprBaseListener
    */
   private IdentifierExpr createIdentifierExpr(String binding)
   {
-    if (!lambadIdentifiers.contains(binding)) {
+    if (!lambdaIdentifiers.contains(binding)) {
       String uniqueIdentifier = binding;
       while (uniqueIdentifiers.contains(uniqueIdentifier)) {
         uniqueIdentifier = StringUtils.format("%s_%s", binding, uniqueCounter++);
