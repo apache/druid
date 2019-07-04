@@ -240,11 +240,11 @@ public class HllSketchAggregatorFactoryTest
   // Helper for testing abstract base class
   private static class TestHllSketchAggregatorFactory extends HllSketchAggregatorFactory
   {
-    static private final byte DUMMY_CACHE_TYPE_ID = 0;
-    static private final Aggregator DUMMY_AGGREGATOR = null;
-    static private final BufferAggregator DUMMY_BUFFER_AGGREGATOR = null;
-    static private final String DUMMY_TYPE_NAME = null;
-    static private final int DUMMY_SIZE = 0;
+    private static final byte DUMMY_CACHE_TYPE_ID = 0;
+    private static final Aggregator DUMMY_AGGREGATOR = null;
+    private static final BufferAggregator DUMMY_BUFFER_AGGREGATOR = null;
+    private static final String DUMMY_TYPE_NAME = null;
+    private static final int DUMMY_SIZE = 0;
 
     TestHllSketchAggregatorFactory(
         String name,

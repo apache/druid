@@ -40,7 +40,8 @@ public class HllSketchMergeAggregatorFactoryTest
   private HllSketchMergeAggregatorFactory targetNoRound;
 
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     targetRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, ROUND);
     targetNoRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, !ROUND);
   }
