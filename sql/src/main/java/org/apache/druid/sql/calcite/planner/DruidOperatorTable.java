@@ -87,6 +87,7 @@ import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TextcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeArithmeticOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
@@ -186,6 +187,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
           .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
           .add(new TimeExtractOperatorConversion())
+          .add(new TimeCeilOperatorConversion())
           .add(new TimeFloorOperatorConversion())
           .add(new TimeFormatOperatorConversion())
           .add(new TimeParseOperatorConversion())
