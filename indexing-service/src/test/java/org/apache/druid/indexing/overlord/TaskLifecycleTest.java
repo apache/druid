@@ -1275,9 +1275,8 @@ public class TaskLifecycleTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new MockFirehoseFactory(true),
-        null,
-        // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
         null
+        // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,

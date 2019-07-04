@@ -119,8 +119,7 @@ public class FireDepartmentTest
                 new CachePopulatorStats(),
                 TestHelper.makeJsonMapper()
 
-            ),
-            null
+            )
         ),
         RealtimeTuningConfig.makeDefaultTuningConfig(new File("/tmp/nonexistent"))
     );

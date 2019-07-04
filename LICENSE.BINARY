@@ -654,40 +654,6 @@ BINARY/EXTENSIONS/druid-datasketches
       * com.yahoo.datasketches:memory
 
 
-BINARY/EXTENSIONS/druid-examples
-
-    This product bundles IRC API version 1.0-0014.
-      * com.ircclouds.irc:irc-api
-
-    This product bundles MaxMind GeoIP2 API version 0.4.0.
-      * com.maxmind.geoip2:geoip2
-
-    This product bundles the following Apache Commons libraries:
-      * commons-beanutils 1.8.3
-      * commons-validator 1.4.0
-
-    This product bundles Twitter4J version 3.0.3.
-      * org.twitter4j:twitter4j-async
-      * org.twitter4j:twitter4j-core
-      * org.twitter4j:twitter4j-stream
-
-
-BINARY/EXTENSIONS/druid-kafka-eight
-
-    This product bundles Apache Kafka version 0.8.2.1.
-      * org.apache.kafka:kafka_2.10
-      * org.apache.kafka:kafka-clients
-
-    This product bundles ZkClient version 0.3.
-      * com.101tec:zkclient
-
-    This product bundles Yammer Metrics version 2.2.0.
-      * com.yammer.metrics:metrics-core
-
-    This product bundles snappy-java version 1.1.1.6.
-      * org.xerial.snappy:snappy-java
-
-
 BINARY/EXTENSIONS/druid-kafka-indexing-service
     This product bundles Apache Kafka version 0.10.2.2.
       * org.apache.kafka:kafka-clients
@@ -783,12 +749,6 @@ BINARY/HADOOP-CLIENT
      which is available under an MIT license. For details, see licenses/bin/slf4j.MIT.
       * org.slf4j:slf4j-api
       * org.slf4j:slf4j-log4j12
-
-
-BINARY/EXTENSIONS/druid-kafka-eight
-    This product bundles JOpt Simple version 3.2., copyright Paul R. Holser, Jr.,
-     which is available under an MIT license. For details, see licenses/bin/jopt-simple.MIT.
-     * net.sf.jopt-simple:jopt-simple
 
 
 BINARY/WEB-CONSOLE
@@ -1051,13 +1011,6 @@ BINARY/EXTENSIONS/druid-kerberos
     This product bundles JSch - Java Secure Channel version 0.1.54, copyright Atsuhiko Yamanaka, JCraft,Inc.,
      which is available under a BSD-3-Clause License. For details, see licenses/bin/jsch.BSD3.
       * com.jcraft:jsch
-
-
-BINARY/EXTENSIONS/druid-kafka-eight
-    This product bundles Scala Library version 2.10.4, copyright EPFL, Lightbend Inc.,
-     which is available under a BSD-3-Clause License. For details, see licenses/bin/scala-lang.BSD3.
-      * org.scala-lang:scala-library
-
 
 BINARY/EXTENSIONS/druid-lookups-cached-single
     This product bundles StringTemplate version 3.2, copyright Terrence Parr,
