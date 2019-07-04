@@ -218,6 +218,7 @@ public class SegmentManager
         (dataSourceName, dataSourceState) -> {
           if (dataSourceState == null) {
             log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
+            return null;
           } else {
             final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
                 dataSourceState.getTimeline();
@@ -253,10 +254,10 @@ public class SegmentManager
                   segment.getMajorVersion()
               );
             }
-          }
 
-          // Returning null removes the entry of dataSource from the map
-          return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
+            // Returning null removes the entry of dataSource from the map
+            return dataSourceState.isEmpty() ? null : dataSourceState;
+          }
         }
     );
 
