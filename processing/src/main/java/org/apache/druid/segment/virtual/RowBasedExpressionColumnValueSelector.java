@@ -53,7 +53,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     super(expression, bindings);
     this.unknownColumns = unknownColumnsSet.stream()
-                                           .filter(x -> !baseExprBindingDetails.getArrayVariables().contains(x))
+                                           .filter(x -> !baseExprBindingDetails.getArrayColumns().contains(x))
                                            .collect(Collectors.toList());
     this.baseExprBindingDetails = baseExprBindingDetails;
     this.ignoredColumns = new HashSet<>();

@@ -7954,6 +7954,44 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNvlColumns() throws Exception
+  {
+    testQuery(
+        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
   {
     List<Object[]> expected;
@@ -8049,20 +8087,48 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT concat(dim3, 'foo') FROM druid.numfoo",
         ImmutableList.of(
             new Druids.ScanQueryBuilder()
-                        .dataSource(CalciteTests.DATASOURCE3)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
-                        .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
-                        .columns(ImmutableList.of("v0"))
-                        .context(QUERY_CONTEXT_DEFAULT)
-                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                        .legacy(false)
-                        .build()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{"[\"afoo\",\"bfoo\"]"},
             new Object[]{"[\"bfoo\",\"cfoo\"]"},
             new Object[]{"[\"dfoo\"]"},
             new Object[]{"[\"foo\"]"},
+            new Object[]{nullVal},
+            new Object[]{nullVal}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringSelfConcatScan() throws Exception
+  {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"-lol-\"]" : "[null]";
+    testQuery(
+        "SELECT concat(dim3, '-lol-', dim3) FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'-lol-',\"dim3\")", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a-lol-a\",\"a-lol-b\",\"b-lol-a\",\"b-lol-b\"]"},
+            new Object[]{"[\"b-lol-b\",\"b-lol-c\",\"c-lol-b\",\"c-lol-c\"]"},
+            new Object[]{"[\"d-lol-d\"]"},
+            new Object[]{"[\"-lol-\"]"},
             new Object[]{nullVal},
             new Object[]{nullVal}
         )
@@ -8089,44 +8155,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"[\"afoo\",\"bfoo\"]"},
             new Object[]{"[\"bfoo\",\"cfoo\"]"}
-        )
-    );
-  }
-
-  @Test
-  public void testNvlColumns() throws Exception
-  {
-    testQuery(
-        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            expressionVirtualColumn(
-                                "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
-                                ValueType.STRING
-                            )
-                        )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
-                        .build()
-        ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"10.1", 1L},
-            new Object[]{"2", 1L},
-            new Object[]{"a", 2L},
-            new Object[]{"abc", 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{"", 1L},
-            new Object[]{"10.1", 1L},
-            new Object[]{"a", 2L},
-            new Object[]{"abc", 2L}
         )
     );
   }
@@ -8270,7 +8298,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringSlice() throws Exception
   {
-    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
     testQuery(
         "SELECT MV_SLICE(dim3, 1) FROM druid.numfoo",
         ImmutableList.of(
@@ -8294,7 +8321,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
   @Test
   public void testMultiValueStringLength() throws Exception

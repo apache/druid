@@ -111,7 +111,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   {
     return fieldName != null
            ? Collections.singletonList(fieldName)
-           : fieldExpression.get().analyzeInputs().getRequiredColumns();
+           : fieldExpression.get().analyzeInputs().getRequiredColumnsList();
   }
 
   @Override
