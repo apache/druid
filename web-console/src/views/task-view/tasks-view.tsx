@@ -95,6 +95,10 @@ export interface TasksViewState {
   resetSupervisorId: string | null;
   terminateSupervisorId: string | null;
 
+  showResumeAllSupervisors: boolean;
+  showSuspendAllSupervisors: boolean;
+  showTerminateAllSupervisors: boolean;
+
   tasksLoading: boolean;
   tasks: any[] | null;
   tasksError: string | null;
@@ -205,6 +209,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       resetSupervisorId: null,
       supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
+
+      showResumeAllSupervisors: false,
+      showSuspendAllSupervisors: false,
+      showTerminateAllSupervisors: false,
 
       tasksLoading: true,
       tasks: null,
@@ -849,6 +857,112 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
+  renderBulkSupervisorActions() {
+    const bulkSupervisorActionsMenu = (
+      <Menu>
+        <MenuItem
+          icon={IconNames.PLAY}
+          text="Resume all supervisors"
+          onClick={() => this.setState({ showResumeAllSupervisors: true })}
+        />
+        <MenuItem
+          icon={IconNames.PAUSE}
+          text="Suspend all supervisors"
+          onClick={() => this.setState({ showSuspendAllSupervisors: true })}
+        />
+        <MenuItem
+          icon={IconNames.CROSS}
+          text="Terminate all supervisors"
+          intent={Intent.DANGER}
+          onClick={() => this.setState({ showTerminateAllSupervisors: true })}
+        />
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSupervisorActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+        {this.renderResumeAllSupervisorAction()}
+        {this.renderSuspendAllSupervisorAction()}
+        {this.renderTerminateAllSupervisorAction()}
+      </>
+    );
+  }
+
+  renderResumeAllSupervisorAction() {
+    const { showResumeAllSupervisors } = this.state;
+    if (!showResumeAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Resume all supervisors"
+        successText="All supervisors have been resumed"
+        failText="Could not resume all supervisors"
+        intent={Intent.PRIMARY}
+        onClose={success => {
+          this.setState({ showResumeAllSupervisors: false });
+          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to resume all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
+  renderSuspendAllSupervisorAction() {
+    const { showSuspendAllSupervisors } = this.state;
+    if (!showSuspendAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Suspend all supervisors"
+        successText="All supervisors have been suspended"
+        failText="Could not suspend all supervisors"
+        intent={Intent.DANGER}
+        onClose={success => {
+          this.setState({ showSuspendAllSupervisors: false });
+          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to suspend all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
+  renderTerminateAllSupervisorAction() {
+    const { showTerminateAllSupervisors } = this.state;
+    if (!showTerminateAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Terminate all supervisors"
+        successText="All supervisors have been terminated"
+        failText="Could not terminate all supervisors"
+        intent={Intent.DANGER}
+        onClose={success => {
+          this.setState({ showTerminateAllSupervisors: false });
+          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to terminate all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
   render() {
     const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const {
@@ -917,6 +1031,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
                 <Button icon={IconNames.PLUS} text="Submit supervisor" />
               </Popover>
+              {this.renderBulkSupervisorActions()}
               <TableColumnSelector
                 columns={supervisorTableColumns}
                 onChange={column =>
