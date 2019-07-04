@@ -16,32 +16,15 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
-  &.bp3-dialog {
-    margin-top: 5vh;
-    top: 5%;
-  }
+import React from 'react';
+import { render } from 'react-testing-library';
 
-  .bp3-dialog-body {
-    max-height: 70vh;
+import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
-    }
-
-    .html-select {
-      width: 195px;
-    }
-
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
-
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
-  }
-}
+describe('coordinator dynamic config', () => {
+  it('matches snapshot', () => {
+    const coordinatorDynamicConfig = <CoordinatorDynamicConfigDialog onClose={() => null} />;
+    render(coordinatorDynamicConfig);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});

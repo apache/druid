@@ -8,7 +8,6 @@
     "no-string-literal": false,
     "object-literal-shorthand": false,
     "arrow-return-shorthand": false,
-    "no-var-requires": false,
     "no-unused-variable": false
   },
   "linterOptions": {

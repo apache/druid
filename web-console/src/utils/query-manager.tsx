@@ -36,8 +36,8 @@ export class QueryManager<Q, R> {
   private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
 
   private terminated = false;
-  private nextQuery: Q;
-  private lastQuery: Q;
+  private nextQuery: Q | undefined;
+  private lastQuery: Q | undefined;
   private actuallyLoading = false;
   private state: QueryStateInt<R> = {
     result: null,
@@ -73,6 +73,7 @@ export class QueryManager<Q, R> {
 
   private run() {
     this.lastQuery = this.nextQuery;
+    if (typeof this.lastQuery === 'undefined') return;
     this.currentQueryId++;
     const myQueryId = this.currentQueryId;
 
@@ -134,7 +135,7 @@ export class QueryManager<Q, R> {
     }
   }
 
-  public getLastQuery(): Q {
+  public getLastQuery(): Q | undefined {
     return this.lastQuery;
   }
 

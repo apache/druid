@@ -25,24 +25,21 @@ export class LocalStorageBackedArray<T> {
   constructor(key: LocalStorageKeys, array?: T[]) {
     this.key = key;
     if (!Array.isArray(array)) {
-      this.getDataFromStorage();
+      this.storedArray = this.getDataFromStorage();
     } else {
       this.storedArray = array;
       this.setDataInStorage();
     }
   }
 
-  private getDataFromStorage(): void {
-    let possibleArray: any;
+  private getDataFromStorage(): T[] {
     try {
-      possibleArray = JSON.parse(String(localStorageGet(this.key)));
+      const possibleArray: any = JSON.parse(String(localStorageGet(this.key)));
+      if (!Array.isArray(possibleArray)) return [];
+      return possibleArray;
     } catch {
-      // show all columns by default
-      possibleArray = [];
+      return [];
     }
-    if (!Array.isArray(possibleArray)) possibleArray = [];
-
-    this.storedArray = possibleArray;
   }
 
   private setDataInStorage(): void {

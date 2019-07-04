@@ -59,7 +59,6 @@ public class Main
         CliCoordinator.class,
         CliHistorical.class,
         CliBroker.class,
-        CliRealtime.class,
         CliOverlord.class,
         CliMiddleManager.class,
         CliRouter.class
@@ -68,11 +67,6 @@ public class Main
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
            .withCommands(serverCommands);
-
-    builder.withGroup("example")
-           .withDescription("Run an example")
-           .withDefaultCommand(Help.class)
-           .withCommands(CliRealtimeExample.class);
 
     List<Class<? extends Runnable>> toolCommands = Arrays.asList(
         DruidJsonValidator.class,

@@ -19,25 +19,13 @@
 import React from 'react';
 import { render } from 'react-testing-library';
 
-import { LookupEditDialog } from '../lookup-edit-dialog/lookup-edit-dialog';
+import { OverlordDynamicConfigDialog } from './overlord-dynamic-config-dialog';
 
 describe('overload dynamic config', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = (
-      <LookupEditDialog
-        isOpen
-        onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
-        lookupName={'test'}
-        lookupTier={'test'}
-        lookupVersion={'test'}
-        lookupSpec={'test'}
-        isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />
-    );
-    const { container } = render(lookupEditDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    const lookupEditDialog = <OverlordDynamicConfigDialog onClose={() => null} />;
+
+    render(lookupEditDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -16,17 +16,14 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { AppToaster } from '../../singletons/toaster';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
-export interface NullTableCellProps extends React.Props<any> {
+export interface NullTableCellProps {
   value?: any;
   timestamp?: boolean;
   unparseable?: boolean;

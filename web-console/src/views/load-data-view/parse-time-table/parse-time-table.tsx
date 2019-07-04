@@ -32,7 +32,7 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
-export interface ParseTimeTableProps extends React.Props<any> {
+export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
     timestampSpec: TimestampSpec;

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -24,7 +24,7 @@ import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
 import './table-column-selector.scss';
 
-interface TableColumnSelectorProps extends React.Props<any> {
+interface TableColumnSelectorProps {
   columns: string[];
   onChange: (column: string) => void;
   tableColumnsHidden: string[];
