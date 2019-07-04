@@ -231,7 +231,8 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           numBuckets,
           lowerLimit,
           upperLimit,
-          outlierHandlingMode
+          outlierHandlingMode,
+          false
       );
     } else {
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -246,7 +247,8 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           numBuckets,
           lowerLimit,
           upperLimit,
-          outlierHandlingMode
+          outlierHandlingMode,
+          false
       );
     }
 

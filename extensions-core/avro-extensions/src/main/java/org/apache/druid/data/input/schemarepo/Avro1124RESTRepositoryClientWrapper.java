@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.schemarepo.client.Avro1124RESTRepositoryClient;
 
+import java.util.Objects;
+
 public class Avro1124RESTRepositoryClientWrapper extends Avro1124RESTRepositoryClient
 {
   private final String url;
@@ -60,7 +62,7 @@ public class Avro1124RESTRepositoryClientWrapper extends Avro1124RESTRepositoryC
 
     Avro1124RESTRepositoryClientWrapper that = (Avro1124RESTRepositoryClientWrapper) o;
 
-    return !(url != null ? !url.equals(that.url) : that.url != null);
+    return Objects.equals(url, that.url);
   }
 
   @Override

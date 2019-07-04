@@ -54,8 +54,7 @@ Most of the coordination logic for (real-time) ingestion is in the Druid indexin
 ## Real-time Ingestion
 
 Druid loads data through `FirehoseFactory.java` classes. Firehoses often wrap other firehoses, where, similar to the design of the  
-query runners, each firehose adds a layer of logic. Much of the core management logic is in `RealtimeManager.java` and the 
-persist and hand-off logic is in `RealtimePlumber.java`.
+query runners, each firehose adds a layer of logic, and the persist and hand-off logic is in `RealtimePlumber.java`.
 
 ## Hadoop-based Batch Ingestion
 

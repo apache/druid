@@ -45,13 +45,13 @@ matrix:
         - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B --fail-at-end
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile spotbugs:check -B --fail-at-end
 
     # packaging check
     - env:
         - NAME="packaging check"
       install: true
-      script: MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist
+      script: MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist -Pbundle-contrib-exts
 
       # processing module test
     - env:
@@ -97,7 +97,6 @@ matrix:
       # other modules test
     - env:
         - NAME="other modules test"
-        - AWS_REGION=us-east-1 # set a aws region for unit tests
       install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
       before_script: unset _JAVA_OPTIONS
       script:
@@ -109,7 +108,6 @@ matrix:
       # other modules test with SQL Compatibility enabled
     - env:
         - NAME="other modules test with SQL Compatibility"
-        - AWS_REGION=us-east-1 # set a aws region for unit tests
       install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
       before_script: unset _JAVA_OPTIONS
       script:

@@ -16,19 +16,18 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 
 import './center-message.scss';
 
-export interface CenterMessageProps extends React.Props<any> {
-}
+export interface CenterMessageProps {}
 
-export class CenterMessage extends React.Component<CenterMessageProps, {}> {
+export class CenterMessage extends React.PureComponent<CenterMessageProps> {
   render() {
-    return <div className="center-message bp3-input">
-      <div className="center-message-inner">
-        {this.props.children}
+    return (
+      <div className="center-message bp3-input">
+        <div className="center-message-inner">{this.props.children}</div>
       </div>
-    </div>;
+    );
   }
 }

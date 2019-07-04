@@ -182,7 +182,8 @@ public class QuantileSqlAggregator implements SqlAggregator
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            false
         );
       } else {
         aggregatorFactory = new ApproximateHistogramAggregatorFactory(
@@ -191,7 +192,8 @@ public class QuantileSqlAggregator implements SqlAggregator
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            false
         );
       }
     } else {
@@ -204,7 +206,8 @@ public class QuantileSqlAggregator implements SqlAggregator
           resolution,
           numBuckets,
           lowerLimit,
-          upperLimit
+          upperLimit,
+          false
       );
     }
 

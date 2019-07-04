@@ -595,7 +595,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getIdentifierIfIdentifier())) {
       return granularity;
     } else {
       return null;

@@ -17,16 +17,13 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { LoadDataView } from './load-data-view';
 
 describe('load data view', () => {
   it('matches snapshot', () => {
-    const loadDataView = shallow(
-      <LoadDataView
-        goToTask={(taskId: string | null) => {}}
-      />);
+    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
   });
 });

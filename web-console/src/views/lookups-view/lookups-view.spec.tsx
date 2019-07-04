@@ -17,14 +17,13 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { LookupsView } from './lookups-view';
 
 describe('lookups view', () => {
   it('matches snapshot', () => {
-    const lookupsView = shallow(
-      <LookupsView/>);
+    const lookupsView = shallow(<LookupsView />);
     expect(lookupsView).toMatchSnapshot();
   });
 });

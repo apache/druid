@@ -103,7 +103,7 @@ public class HyperLogLogCollectorTest
    * 
    * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
    * with 100 values, requiring  a floating max as described in
-   * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
+   * https://druid.apache.org/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
    */
   @Ignore
   @Test

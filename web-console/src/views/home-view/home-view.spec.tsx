@@ -17,16 +17,13 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { HomeView } from './home-view';
 
 describe('home view', () => {
   it('matches snapshot', () => {
-    const homeView = shallow(
-      <HomeView
-        noSqlMode={false}
-      />);
+    const homeView = shallow(<HomeView noSqlMode={false} />);
     expect(homeView).toMatchSnapshot();
   });
 });

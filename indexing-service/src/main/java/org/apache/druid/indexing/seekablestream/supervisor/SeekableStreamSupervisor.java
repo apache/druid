@@ -807,6 +807,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return generateReport(true);
   }
 
+
+  @Override
+  public SupervisorStateManager.State getState()
+  {
+    return stateManager.getSupervisorState();
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
+  }
+
   private SupervisorReport<? extends SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>> generateReport(
       boolean includeOffsets
   )

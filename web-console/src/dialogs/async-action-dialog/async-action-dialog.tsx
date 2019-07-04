@@ -16,21 +16,14 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  Classes,
-  Dialog,
-  FormGroup,
-  Icon, Intent, NumericInput, ProgressBar, TagInput
-} from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, Intent, ProgressBar } from '@blueprintjs/core';
 import { IconName } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
-export interface AsyncAlertDialogProps extends React.Props<any> {
+export interface AsyncAlertDialogProps {
   action: null | (() => Promise<void>);
   onClose: (success: boolean) => void;
   confirmButtonText: string;
@@ -47,11 +40,14 @@ export interface AsyncAlertDialogState {
   working: boolean;
 }
 
-export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, AsyncAlertDialogState> {
+export class AsyncActionDialog extends React.PureComponent<
+  AsyncAlertDialogProps,
+  AsyncAlertDialogState
+> {
   constructor(props: AsyncAlertDialogProps) {
     super(props);
     this.state = {
-      working: false
+      working: false,
     };
   }
 
@@ -65,7 +61,7 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
     } catch (e) {
       AppToaster.show({
         message: `${failText}: ${e.message}`,
-        intent: Intent.DANGER
+        intent: Intent.DANGER,
       });
       this.setState({ working: false });
       onClose(false);
@@ -73,37 +69,54 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
     }
     AppToaster.show({
       message: successText,
-      intent: Intent.SUCCESS
+      intent: Intent.SUCCESS,
     });
     this.setState({ working: false });
     onClose(true);
-  }
+  };
 
   render() {
-    const { action, onClose, className, icon, intent, confirmButtonText, cancelButtonText, confirmButtonDisabled, children } = this.props;
+    const {
+      action,
+      onClose,
+      className,
+      icon,
+      intent,
+      confirmButtonText,
+      cancelButtonText,
+      confirmButtonDisabled,
+      children,
+    } = this.props;
     const { working } = this.state;
     if (!action) return null;
 
     const handleClose = () => onClose(false);
 
-    return <Dialog
-      isOpen
-      className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
-      canEscapeKeyClose={!working}
-      onClose={handleClose}
-    >
-      <div className={Classes.ALERT_BODY}>
-        {icon && <Icon icon={icon} />}
-        {!working && <div className={Classes.ALERT_CONTENTS}>{children}</div>}
-      </div>
-      {
-        working ?
-          <ProgressBar/> :
+    return (
+      <Dialog
+        isOpen
+        className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
+        canEscapeKeyClose={!working}
+        onClose={handleClose}
+      >
+        <div className={Classes.ALERT_BODY}>
+          {icon && <Icon icon={icon} />}
+          {!working && <div className={Classes.ALERT_CONTENTS}>{children}</div>}
+        </div>
+        {working ? (
+          <ProgressBar />
+        ) : (
           <div className={Classes.ALERT_FOOTER}>
-            <Button intent={intent} text={confirmButtonText} onClick={this.handleConfirm} disabled={confirmButtonDisabled}/>
-            <Button text={cancelButtonText || 'Cancel'} onClick={handleClose}/>
+            <Button
+              intent={intent}
+              text={confirmButtonText}
+              onClick={this.handleConfirm}
+              disabled={confirmButtonDisabled}
+            />
+            <Button text={cancelButtonText || 'Cancel'} onClick={handleClose} />
           </div>
-      }
-    </Dialog>;
+        )}
+      </Dialog>
+    );
   }
 }
