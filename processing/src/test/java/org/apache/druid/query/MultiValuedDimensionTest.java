@@ -938,7 +938,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags_0]); [tags] used as both scalar and array variables"
+        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()
@@ -973,7 +973,7 @@ public class MultiValuedDimensionTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (array_concat [tags, (array_append [othertags, tags_0])]); [tags] used as both scalar and array variables"
+        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()

@@ -93,7 +93,7 @@ public class ParserTest
     validateParser("x-y+z", "(+ (- x y) z)", ImmutableList.of("x", "y", "z"));
     validateParser("x-y-z", "(- (- x y) z)", ImmutableList.of("x", "y", "z"));
 
-    validateParser("x-y-x", "(- (- x y) x_0)", ImmutableList.of("x", "y"), ImmutableSet.of("x", "x_0", "y"));
+    validateParser("x-y-x", "(- (- x y) x)", ImmutableList.of("x", "y"), ImmutableSet.of("x", "x_0", "y"));
   }
 
   @Test
@@ -273,7 +273,7 @@ public class ParserTest
     );
     validateParser(
         "x + map((x) -> x + 1, x)",
-        "(+ x (map ([x] -> (+ x 1)), [x_0]))",
+        "(+ x (map ([x] -> (+ x 1)), [x]))",
         ImmutableList.of("x"),
         ImmutableSet.of("x"),
         ImmutableSet.of("x_0")
@@ -404,10 +404,10 @@ public class ParserTest
   @Test
   public void testUniquify()
   {
-    validateParser("x-x", "(- x x_0)", ImmutableList.of("x"), ImmutableSet.of("x", "x_0"));
+    validateParser("x-x", "(- x x)", ImmutableList.of("x"), ImmutableSet.of("x", "x_0"));
     validateParser(
         "x - x + x",
-        "(+ (- x x_0) x_1)",
+        "(+ (- x x) x)",
         ImmutableList.of("x"),
         ImmutableSet.of("x", "x_0", "x_1")
     );
@@ -422,23 +422,23 @@ public class ParserTest
 
     validateApplyUnapplied(
         "x + x",
-        "(+ x x_0)",
-        "(cartesian_map ([x, x_0] -> (+ x x_0)), [x, x_0])",
+        "(+ x x)",
+        "(cartesian_map ([x, x_0] -> (+ x x_0)), [x, x])",
         ImmutableList.of("x")
     );
 
     validateApplyUnapplied(
         "x + x + x",
-        "(+ (+ x x_0) x_1)",
-        "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x_0, x_1])",
+        "(+ (+ x x) x)",
+        "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x, x])",
         ImmutableList.of("x")
     );
 
     // heh
     validateApplyUnapplied(
         "x + x + x + y + y + y + y + z + z + z",
-        "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)",
-        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6])",
+        "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)",
+        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x, x, y, y, y, y, z, z, z])",
         ImmutableList.of("x", "y", "z")
     );
   }

@@ -584,7 +584,7 @@ class IdentifierExpr implements Expr
   @Override
   public String toString()
   {
-    return identifier;
+    return bindingIdentifier;
   }
 
   /**
