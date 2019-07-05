@@ -2895,3 +2895,58 @@ copyright: Oracle and/or its affiliates
 license_file_path: licenses/bin/javax.activation-api.CDDL11
 libraries:
   - javax.activation: javax.activation-api
+
+---
+
+name: Apache Kafka
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 0.8.2.1
+libraries:
+  - org.apache.kafka: kafka_2.10
+  - org.apache.kafka: kafka-clients
+
+---
+
+name: ZooKeeper Client
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 0.3
+libraries:
+  - com.101tec: zkclient
+
+---
+
+name: Metrics Core Library
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.2.0
+libraries:
+  - com.yammer.metrics: metrics-core
+
+---
+
+name: JOpt Simple
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: MIT License
+copyright: Paul R. Holser, Jr.
+version: 3.2
+license_file_path: licenses/bin/jopt-simple.MIT
+libraries:
+  - net.sf.jopt-simple: jopt-simple
+
+---
+
+name: Scala Library
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: BSD-3-Clause License
+copyright: EPFL, Lightbend Inc.
+version: 2.10.4
+license_file_path: licenses/bin/scala-lang.BSD3
+libraries:
+  - org.scala-lang: scala-library
