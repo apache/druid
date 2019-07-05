@@ -59,6 +59,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
         extension_dirs = os.listdir(extensions_core_path)
         print("Found {} extensions".format(len(extension_dirs)))
         for extension_dir in extension_dirs:
+            print("extension_dir: {}".format(extension_dir))
             extension_path = os.path.join(extensions_core_path, extension_dir)
             if not os.path.isdir(extension_path):
                 print("{} is not a directory".format(extension_path))
