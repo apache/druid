@@ -28,7 +28,7 @@ import {
   DRUID_WEBSITE,
 } from '../../variables';
 
-export interface AboutDialogProps extends React.Props<any> {
+export interface AboutDialogProps {
   onClose: () => void;
 }
 

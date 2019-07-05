@@ -112,11 +112,7 @@ public class ExprMacroTable
     @Override
     public BindingDetails analyzeInputs()
     {
-      final String identifier = arg.getIdentifierIfIdentifier();
-      if (identifier == null) {
-        return arg.analyzeInputs();
-      }
-      return arg.analyzeInputs().mergeWithScalars(ImmutableSet.of(identifier));
+      return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
     }
   }
 
@@ -145,16 +141,13 @@ public class ExprMacroTable
     @Override
     public BindingDetails analyzeInputs()
     {
-      Set<String> scalars = new HashSet<>();
+      final Set<Expr> argSet = new HashSet<>(args.size());
       BindingDetails accumulator = new BindingDetails();
       for (Expr arg : args) {
-        final String identifier = arg.getIdentifierIfIdentifier();
-        if (identifier != null) {
-          scalars.add(identifier);
-        }
-        accumulator = accumulator.merge(arg.analyzeInputs());
+        accumulator = accumulator.with(arg);
+        argSet.add(arg);
       }
-      return accumulator.mergeWithScalars(scalars);
+      return accumulator.withScalarArguments(argSet);
     }
   }
 }

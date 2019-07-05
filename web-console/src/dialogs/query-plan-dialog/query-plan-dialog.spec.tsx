@@ -30,7 +30,7 @@ describe('query plan dialog', () => {
         onClose={() => null}
       />
     );
-    const { container } = render(queryPlanDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(queryPlanDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

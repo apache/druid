@@ -32,7 +32,7 @@ describe('history dialog', () => {
         isOpen
       />
     );
-    const { container } = render(historyDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(historyDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -27,7 +27,7 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
-export interface ParseDataTableProps extends React.Props<any> {
+export interface ParseDataTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   canFlatten: boolean;

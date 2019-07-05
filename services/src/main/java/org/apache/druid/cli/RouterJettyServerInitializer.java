@@ -65,6 +65,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   protected static final List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
       "/",
       "/coordinator-console/*",
+      "/assets/*",
       "/public/*",
       "/old-console/*",
       "/pages/*",

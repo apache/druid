@@ -32,7 +32,7 @@ describe('supervisor table action dialog', () => {
         isOpen
       />
     );
-    const { container } = render(supervisorTableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(supervisorTableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

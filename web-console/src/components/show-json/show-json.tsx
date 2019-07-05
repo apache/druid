@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, InputGroup, Intent, TextArea } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
 import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
@@ -27,7 +27,7 @@ import { downloadFile } from '../../utils';
 
 import './show-json.scss';
 
-export interface ShowJsonProps extends React.Props<any> {
+export interface ShowJsonProps {
   endpoint: string;
   transform?: (x: any) => any;
   downloadFilename?: string;

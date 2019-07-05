@@ -38,7 +38,7 @@ class NoData extends React.PureComponent {
 
 Object.assign(ReactTableDefaults, {
   className: '-striped -highlight',
-  defaultFilterMethod: (filter: Filter, row: any, column: any) => {
+  defaultFilterMethod: (filter: Filter, row: any) => {
     const id = filter.pivotId || filter.id;
     return booleanCustomTableFilter(filter, row[id]);
   },

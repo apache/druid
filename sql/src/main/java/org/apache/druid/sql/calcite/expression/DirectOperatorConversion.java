@@ -55,4 +55,9 @@ public class DirectOperatorConversion implements SqlOperatorConversion
         operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands))
     );
   }
+
+  public String getDruidFunctionName()
+  {
+    return druidFunctionName;
+  }
 }

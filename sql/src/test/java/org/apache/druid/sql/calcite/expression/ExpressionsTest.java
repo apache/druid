@@ -53,6 +53,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
@@ -520,7 +521,8 @@ public class ExpressionsTest extends CalciteTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("The first argument to the function[round] should be integer or double type but get the STRING type");
+    expectedException.expectMessage(
+        "The first argument to the function[round] should be integer or double type but get the STRING type");
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("s")),
         DruidExpression.fromExpression("round(\"s\")"),
@@ -534,7 +536,8 @@ public class ExpressionsTest extends CalciteTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("The second argument to the function[round] should be integer type but get the STRING type");
+    expectedException.expectMessage(
+        "The second argument to the function[round] should be integer type but get the STRING type");
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
         DruidExpression.fromExpression("round(\"x\",'foo')"),
@@ -669,6 +672,32 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y',null,'UTC')"),
         DateTimes.of("2000").getMillis()
+    );
+  }
+
+  @Test
+  public void testTimeCeil()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new TimeCeilOperatorConversion().calciteOperator(),
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
+            rexBuilder.makeLiteral("PT1H")
+        ),
+        DruidExpression.fromExpression("timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
+        DateTimes.of("2000-02-03T05:00:00").getMillis()
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new TimeCeilOperatorConversion().calciteOperator(),
+            inputRef("t"),
+            rexBuilder.makeLiteral("P1D"),
+            rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.TIMESTAMP)),
+            rexBuilder.makeLiteral("America/Los_Angeles")
+        ),
+        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
+        DateTimes.of("2000-02-03T08:00:00").getMillis()
     );
   }
 

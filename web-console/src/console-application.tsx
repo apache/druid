@@ -41,7 +41,9 @@ import {
 
 import './console-application.scss';
 
-export interface ConsoleApplicationProps extends React.Props<any> {
+type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
+
+export interface ConsoleApplicationProps {
   hideLegacy: boolean;
   baseURL?: string;
   customHeaderName?: string;
@@ -60,11 +62,9 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
-  private capabilitiesQueryManager: QueryManager<string, string>;
+  private capabilitiesQueryManager: QueryManager<string, Capabilities>;
 
-  static async discoverCapabilities(): Promise<
-    'working-with-sql' | 'working-without-sql' | 'broken'
-  > {
+  static async discoverCapabilities(): Promise<Capabilities> {
     try {
       await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
@@ -109,13 +109,13 @@ export class ConsoleApplication extends React.PureComponent<
     });
   }
 
-  private supervisorId: string | null;
-  private taskId: string | null;
-  private openDialog: string | null;
-  private datasource: string | null;
-  private onlyUnavailable: boolean | null;
-  private initQuery: string | null;
-  private middleManager: string | null;
+  private supervisorId: string | undefined;
+  private taskId: string | undefined;
+  private openDialog: string | undefined;
+  private datasource: string | undefined;
+  private onlyUnavailable: boolean | undefined;
+  private initQuery: string | undefined;
+  private middleManager: string | undefined;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -134,16 +134,16 @@ export class ConsoleApplication extends React.PureComponent<
     }
 
     this.capabilitiesQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async () => {
         const capabilities = await ConsoleApplication.discoverCapabilities();
         if (capabilities !== 'working-with-sql') {
           ConsoleApplication.shownNotifications(capabilities);
         }
         return capabilities;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result, loading }) => {
         this.setState({
-          noSqlMode: result === 'working-with-sql' ? false : true,
+          noSqlMode: result !== 'working-with-sql',
           capabilitiesLoading: loading,
         });
       },
@@ -160,13 +160,13 @@ export class ConsoleApplication extends React.PureComponent<
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.taskId = null;
-      this.supervisorId = null;
-      this.openDialog = null;
-      this.datasource = null;
-      this.onlyUnavailable = null;
-      this.initQuery = null;
-      this.middleManager = null;
+      this.taskId = undefined;
+      this.supervisorId = undefined;
+      this.openDialog = undefined;
+      this.datasource = undefined;
+      this.onlyUnavailable = undefined;
+      this.initQuery = undefined;
+      this.middleManager = undefined;
     }, 50);
   }
 
@@ -177,7 +177,7 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToTask = (taskId: string | null, openDialog?: string) => {
+  private goToTask = (taskId: string | undefined, openDialog?: string) => {
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';

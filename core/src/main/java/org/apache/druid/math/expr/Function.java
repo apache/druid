@@ -1724,6 +1724,104 @@ interface Function
     }
   }
 
+  class ArrayConstructorFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
+      // or.. something...
+      final int length = args.size();
+      String[] stringsOut = null;
+      Long[] longsOut = null;
+      Double[] doublesOut = null;
+
+      ExprType elementType = null;
+      for (int i = 0; i < length; i++) {
+
+        ExprEval evaluated = args.get(i).eval(bindings);
+        if (elementType == null) {
+          elementType = evaluated.type();
+          switch (elementType) {
+            case STRING:
+              stringsOut = new String[length];
+              break;
+            case LONG:
+              longsOut = new Long[length];
+              break;
+            case DOUBLE:
+              doublesOut = new Double[length];
+              break;
+            default:
+              throw new RE("Unhandled array constructor element type [%s]", elementType);
+          }
+        }
+
+        setArrayOutputElement(stringsOut, longsOut, doublesOut, elementType, i, evaluated);
+      }
+
+      switch (elementType) {
+        case STRING:
+          return ExprEval.ofStringArray(stringsOut);
+        case LONG:
+          return ExprEval.ofLongArray(longsOut);
+        case DOUBLE:
+          return ExprEval.ofDoubleArray(doublesOut);
+        default:
+          throw new RE("Unhandled array constructor element type [%s]", elementType);
+      }
+    }
+
+    static void setArrayOutputElement(
+        String[] stringsOut,
+        Long[] longsOut,
+        Double[] doublesOut,
+        ExprType elementType,
+        int i,
+        ExprEval evaluated
+    )
+    {
+      switch (elementType) {
+        case STRING:
+          stringsOut[i] = evaluated.asString();
+          break;
+        case LONG:
+          longsOut[i] = evaluated.isNumericNull() ? null : evaluated.asLong();
+          break;
+        case DOUBLE:
+          doublesOut[i] = evaluated.isNumericNull() ? null : evaluated.asDouble();
+          break;
+      }
+    }
+
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (!(args.size() > 0)) {
+        throw new IAE("Function[%s] needs at least 1 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
   class ArrayLengthFunction implements Function
   {
     @Override
@@ -1817,8 +1915,12 @@ interface Function
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final String join = scalarExpr.asString();
+      final Object[] raw = arrayExpr.asArray();
+      if (raw == null || raw.length == 1 && raw[0] == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(
-          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+          Arrays.stream(raw).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
       );
     }
   }
@@ -1889,7 +1991,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -1919,7 +2021,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -2038,7 +2140,7 @@ interface Function
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
     }
   }
 
@@ -2059,7 +2161,7 @@ interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.bestEffortOf(any);
+      return ExprEval.of(any, ExprType.LONG);
     }
   }
 
