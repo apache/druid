@@ -416,7 +416,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-    Assert.assertEquals(1, results.size());
+    final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
+    Assert.assertEquals(expected, results.size());
   }
 }
-
