@@ -258,12 +258,20 @@ public class GroupByQueryEngineV2
       columnCapabilities = null;
       cardinality = 1;
     } else if (dimensions.size() == 1) {
+      // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
+      // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
+      // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
+      // real columns).
+      if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
+        return -1;
+      }
+
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
       columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
       cardinality = storageAdapter.getDimensionCardinality(columnName);
     } else {
-      columnCapabilities = null;
-      cardinality = -1; // ArrayAggregateIterator is not available
+      // Cannot use array-based aggregation with more than one dimension.
+      return -1;
     }
 
     // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
@@ -274,11 +282,11 @@ public class GroupByQueryEngineV2
           aggregatorFactories
       );
 
-      // Check that all keys and aggregated values can be contained the buffer
+      // Check that all keys and aggregated values can be contained in the buffer
       return requiredBufferCapacity <= buffer.capacity() ? cardinality : -1;
+    } else {
+      return -1;
     }
-
-    return -1;
   }
 
   /**
