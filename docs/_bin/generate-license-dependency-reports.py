@@ -34,10 +34,10 @@ def generate_report(module_path, report_orig_path, report_out_path):
 
     try:
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
-        command = "rm -rf ~/.m2/repository/org/apache/maven/shared/maven-artifact-transfer; mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
-        subprocess.call(command, cwd=module_path, shell=True)
+        command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
+        subprocess.check_output(command, cwd=module_path, shell=True)
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
-        subprocess.call(command, cwd=module_path, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True)
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
@@ -92,8 +92,15 @@ if __name__ == "__main__":
         parser.add_argument('druid_path', metavar='<Druid source path>', type=str)
         parser.add_argument('tmp_path', metavar='<Full tmp path>', type=str)
         parser.add_argument('--exclude-extension', dest='exclude_ext', action='store_const', const=True, default=False, help="Exclude extension report")
+        parser.add_argument('--clean-maven-artifact-transfer', dest='clean_mvn_artifact_transfer', action='store_const', const=True, default=False, help="Clean maven-artifact-transfer before generating dependency reports")
         parser.add_argument('--parallel', dest='num_threads', type=int, default=1, help='Number of threads for generating reports')
         args = parser.parse_args()
+
+        # The default maven-artifact-transfer in Travis is currently corrupted. Set the below argument properly to remove the corrupted one.
+        if args.clean_mvn_artifact_transfer:
+            command = "rm -rf ~/.m2/repository/org/apache/maven/shared/maven-artifact-transfer"
+            subprocess.call(command, shell=True)
+        
         generate_reports(args.druid_path, args.tmp_path, args.exclude_ext, args.num_threads)
     except KeyboardInterrupt:
         print('Interrupted, closing.')
