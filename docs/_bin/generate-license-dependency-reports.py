@@ -32,14 +32,12 @@ def generate_report(module_path, report_orig_path, report_out_path):
 
     os.makedirs(report_out_path, exist_ok=True)
 
-    print("module_path: {}, report_orig_path: {}, report_out_path: {}".format(module_path, report_orig_path, report_out_path))
-
     try:
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
-        command = "pwd; mvn -Ddependency.locations.enabled=false project-info-reports:dependencies"
-        subprocess.call(command, cwd=module_path, shell=True)
+        command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
+        subprocess.check_output(command, cwd=module_path, shell=True)
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
-        subprocess.call(command, cwd=module_path, shell=True)
+        subprocess.check_output(command, cwd=module_path, shell=True)
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
