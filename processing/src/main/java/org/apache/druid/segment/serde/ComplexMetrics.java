@@ -44,8 +44,8 @@ public class ComplexMetrics
         throw new ISE(
             "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
             type,
-            serde.getClass().getCanonicalName(),
-            complexSerializers.get(type).getClass().getCanonicalName()
+            serde.getClass().getName(),
+            complexSerializers.get(type).getClass().getName()
         );
       }
     } else {
