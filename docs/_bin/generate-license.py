@@ -414,7 +414,10 @@ def check_licenses(license_yaml, dependency_reports_root):
                 with open(full_path) as report_file:
                     parser = DependencyReportParser(druid_module_name, compatible_license_names)
                     reported_dep_to_licenses.update(parser.parse(report_file))
-    
+
+    if len(reported_dep_to_licenses) == 0:
+        raise Exception("Dependency reports are not found")
+
     print_error("Found {} reported licenses\n".format(len(reported_dep_to_licenses)))
 
     # Build registered license dictionary.
@@ -443,6 +446,9 @@ def check_licenses(license_yaml, dependency_reports_root):
                     else:
                         registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
 
+    if len(registered_dep_to_licenses) == 0:
+        raise Exception("Registered licenses are not found")
+    
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
     missing_licenses = []
