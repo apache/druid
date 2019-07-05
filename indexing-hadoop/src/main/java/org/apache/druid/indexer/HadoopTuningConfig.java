@@ -56,7 +56,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
-        AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS,
+        DEFAULT_INDEX_SPEC,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         0L,
         false,
@@ -137,7 +137,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                            AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS : indexSpecForIntermediatePersists;
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;

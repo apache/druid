@@ -109,7 +109,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                            AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS : indexSpecForIntermediatePersists;
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaultReportParseExceptions
                                  : reportParseExceptions;

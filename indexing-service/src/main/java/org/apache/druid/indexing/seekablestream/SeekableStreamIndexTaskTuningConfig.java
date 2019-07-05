@@ -99,7 +99,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                            AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS : indexSpecForIntermediatePersists;
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
                                  : reportParseExceptions;

@@ -29,12 +29,6 @@ import java.io.File;
 
 public interface AppenderatorConfig
 {
-  IndexSpec DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS = new IndexSpec(
-      null,
-      CompressionStrategy.UNCOMPRESSED,
-      CompressionStrategy.NONE,
-      null);
-
   boolean isReportParseExceptions();
 
   /**

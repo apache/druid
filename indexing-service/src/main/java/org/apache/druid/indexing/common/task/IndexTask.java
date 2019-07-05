@@ -1389,7 +1389,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                              AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS : indexSpecForIntermediatePersists;
+                                              this.indexSpec : indexSpecForIntermediatePersists;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
       this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
       this.reportParseExceptions = reportParseExceptions == null

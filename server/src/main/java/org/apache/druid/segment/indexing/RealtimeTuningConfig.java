@@ -82,7 +82,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         defaultMaxPendingPersists,
         defaultShardSpec,
         defaultIndexSpec,
-        AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS,
+        defaultIndexSpec,
         true,
         0,
         0,
@@ -156,7 +156,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                            AppenderatorConfig.DEFAULT_INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS : indexSpecForIntermediatePersists;
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.mergeThreadPriority = mergeThreadPriority;
     this.persistThreadPriority = persistThreadPriority;
     this.reportParseExceptions = reportParseExceptions == null
