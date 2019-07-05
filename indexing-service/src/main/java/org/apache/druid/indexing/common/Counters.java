@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class Counters
 {
-  public static <K> int incrementAndGetInt(ConcurrentHashMap<K, AtomicInteger> counters, K key)
+  public static <K> int getAndIncrementInt(ConcurrentHashMap<K, AtomicInteger> counters, K key)
   {
     // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
     // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
@@ -33,7 +33,7 @@ public final class Counters
     if (counter == null) {
       counter = counters.computeIfAbsent(key, k -> new AtomicInteger());
     }
-    return counter.incrementAndGet();
+    return counter.getAndIncrement();
   }
 
   public static <K> long incrementAndGetLong(ConcurrentHashMap<K, AtomicLong> counters, K key)
@@ -47,5 +47,7 @@ public final class Counters
     return counter.incrementAndGet();
   }
 
-  private Counters() {}
+  private Counters()
+  {
+  }
 }

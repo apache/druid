@@ -9,8 +9,11 @@ target
 .classpath
 .idea
 .project
+.PVS-Studio
 .settings/
 *.log
 *.DS_Store
 _site
 dependency-reduced-pom.xml
+README.BINARY
+README

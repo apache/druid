@@ -25,8 +25,11 @@ import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import sun.misc.Unsafe;
+import org.apache.druid.java.util.common.UnsafeUtils;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -50,7 +53,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   boolean alignSource;
   boolean alignTarget;
 
-  int CACHE_LINE = 64;
+  int cacheLine = 64;
 
   ByteBuffer chunk;
   final int count = 100_000;
@@ -80,8 +83,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
     int val = 0;
     chunk = ByteBuffers.allocateAlignedByteBuffer(
-        (HyperLogLogCollector.getLatestNumBytesForDenseStorage() + CACHE_LINE
-         + CACHE_LINE) * count, CACHE_LINE
+        (HyperLogLogCollector.getLatestNumBytesForDenseStorage() + cacheLine
+         + cacheLine) * count, cacheLine
     );
 
     int pos = 0;
@@ -97,8 +100,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
       final int offset = random ? (int) (rand.nextDouble() * 64) : defaultOffset;
 
-      if (alignSource && (pos % CACHE_LINE) != offset) {
-        pos += (pos % CACHE_LINE) < offset ? offset - (pos % CACHE_LINE) : (CACHE_LINE + offset - pos % CACHE_LINE);
+      if (alignSource && (pos % cacheLine) != offset) {
+        pos += (pos % cacheLine) < offset ? offset - (pos % cacheLine) : (cacheLine + offset - pos % cacheLine);
       }
 
       positions[i] = pos;
@@ -120,11 +123,11 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   private ByteBuffer allocateEmptyHLLBuffer(boolean direct, boolean aligned, int offset)
   {
     final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
-    final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
+    final byte[] emptyBytes = HyperLogLogCollector.makeEmptyVersionedByteArray();
     final ByteBuffer buf;
     if (direct) {
       if (aligned) {
-        buf = ByteBuffers.allocateAlignedByteBuffer(size + offset, CACHE_LINE);
+        buf = ByteBuffers.allocateAlignedByteBuffer(size + offset, cacheLine);
         buf.position(offset);
         buf.mark();
         buf.limit(size + offset);
@@ -134,12 +137,12 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
         buf.limit(size);
       }
 
-      buf.put(EMPTY_BYTES);
+      buf.put(emptyBytes);
       buf.reset();
     } else {
       buf = ByteBuffer.allocate(size);
       buf.limit(size);
-      buf.put(EMPTY_BYTES);
+      buf.put(emptyBytes);
       buf.rewind();
     }
     return buf;
@@ -151,7 +154,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
     for (int k = 0; k < reps; ++k) {
-      for (int i = 0; i < count; ++i) {
+      for (int i = 0; i < count; ++i) { //-V6017: The 'k' counter is not used the nested loop because it's just reps.
         final int pos = positions[i];
         final int size = sizes[i];
 
@@ -177,24 +180,44 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
 class ByteBuffers
 {
-  private static final Unsafe UNSAFE;
   private static final long ADDRESS_OFFSET;
+  private static final MethodHandle GET_LONG;
 
   static {
     try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
-      ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer.class.getDeclaredField("address"));
+      MethodHandles.Lookup lookup = MethodHandles.lookup();
+      ADDRESS_OFFSET = lookupAddressOffset(lookup);
+      GET_LONG = lookupGetLong(lookup);
     }
-    catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
+    catch (Throwable t) {
+      throw new RuntimeException("Unable to lookup Unsafe methods", t);
     }
+  }
+
+  private static long lookupAddressOffset(MethodHandles.Lookup lookup) throws Throwable
+  {
+    MethodHandle objectFieldOffset = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "objectFieldOffset",
+                                                        MethodType.methodType(long.class, Field.class)
+    );
+    return (long) objectFieldOffset.bindTo(UnsafeUtils.theUnsafe()).invoke(Buffer.class.getDeclaredField("address"));
+  }
+
+  private static MethodHandle lookupGetLong(MethodHandles.Lookup lookup) throws Throwable
+  {
+    MethodHandle getLong = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "getLong",
+                                              MethodType.methodType(long.class, Object.class, long.class)
+    );
+    return getLong.bindTo(UnsafeUtils.theUnsafe());
   }
 
   public static long getAddress(ByteBuffer buf)
   {
-    return UNSAFE.getLong(buf, ADDRESS_OFFSET);
+    try {
+      return (long) GET_LONG.invoke(buf, ADDRESS_OFFSET);
+    }
+    catch (Throwable t) {
+      throw new UnsupportedOperationException("Unsafe.getLong is unsupported", t);
+    }
   }
 
   public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align)

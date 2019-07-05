@@ -30,6 +30,7 @@ import java.util.Map;
 
 /**
  */
+@Deprecated
 public class NoneShardSpec implements ShardSpec
 {
   private static final NoneShardSpec INSTANCE = new NoneShardSpec();
@@ -40,11 +41,7 @@ public class NoneShardSpec implements ShardSpec
     return INSTANCE;
   }
 
-  /**
-   * @deprecated use {@link #instance()} instead
-   */
-  @Deprecated
-  public NoneShardSpec()
+  private NoneShardSpec()
   {
     // empty
   }

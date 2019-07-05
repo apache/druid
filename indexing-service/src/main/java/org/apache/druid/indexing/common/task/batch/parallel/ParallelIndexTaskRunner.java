@@ -42,6 +42,12 @@ public interface ParallelIndexTaskRunner<T extends Task>
   TaskState run() throws Exception;
 
   /**
+   * Stop this runner gracefully. This method is called when the task is killed.
+   * See {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
+   */
+  void stopGracefully();
+
+  /**
    * {@link PushedSegmentsReport} is the report sent by {@link ParallelIndexSubTask}s. The subTasks call this method to
    * send their reports after pushing generated segments to deep storage.
    */

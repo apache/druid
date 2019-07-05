@@ -1,0 +1,16 @@
+{
+  "extends": "awesome-code-style",
+  "rules": {
+    "file-header": [true, "Licensed to the Apache Software Foundation \\(ASF\\).+"],
+    "no-shadowed-variable": false,
+    "variable-name": false,
+    "no-conditional-assignment": true,
+    "no-string-literal": false,
+    "object-literal-shorthand": false,
+    "arrow-return-shorthand": false,
+    "no-unused-variable": false
+  },
+  "linterOptions": {
+    "format": "useful"
+  }
+}

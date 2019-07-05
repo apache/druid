@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
@@ -364,9 +363,8 @@ public class GroupByBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+
     executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
     setupQueries();
@@ -545,7 +543,7 @@ public class GroupByBenchmark
     }
     catch (IOException e) {
       log.warn(e, "Failed to tear down, temp dir was: %s", tmpDir);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -615,10 +613,7 @@ public class GroupByBenchmark
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -639,10 +634,7 @@ public class GroupByBenchmark
     );
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -666,10 +658,7 @@ public class GroupByBenchmark
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   private List<QueryRunner<Row>> makeMultiRunners()

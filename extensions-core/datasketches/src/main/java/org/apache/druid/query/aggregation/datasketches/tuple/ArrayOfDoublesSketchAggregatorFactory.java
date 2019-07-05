@@ -93,7 +93,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector = metricFactory
           .makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
+        return new NoopArrayOfDoublesSketchAggregator(numberOfValues);
       }
       return new ArrayOfDoublesSketchMergeAggregator(selector, nominalEntries, numberOfValues);
     }
@@ -101,7 +101,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
     if (DimensionSelector.isNilSelector(keySelector)) {
-      return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
+      return new NoopArrayOfDoublesSketchAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
     for (final String column : metricColumns) {
@@ -118,7 +118,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector = metricFactory
           .makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
+        return new NoopArrayOfDoublesSketchBufferAggregator(numberOfValues);
       }
       return new ArrayOfDoublesSketchMergeBufferAggregator(
           selector,
@@ -131,7 +131,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
     if (DimensionSelector.isNilSelector(keySelector)) {
-      return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
+      return new NoopArrayOfDoublesSketchBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
     for (final String column : metricColumns) {
@@ -285,10 +285,11 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return new ArrayOfDoublesSketchAggregatorFactory(name, name, nominalEntries, null, numberOfValues);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((ArrayOfDoublesSketch) object).getEstimate();
+    return object == null ? null : ((ArrayOfDoublesSketch) object).getEstimate();
   }
 
   @Override

@@ -21,7 +21,8 @@ package org.apache.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -30,8 +31,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -41,6 +45,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CoordinatorResourceTestClient
 {
@@ -80,6 +86,11 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
+  private String getFullSegmentsURL(String dataSource)
+  {
+    return StringUtils.format("%sdatasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
   private String getLoadStatusURL()
   {
     return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
@@ -99,7 +110,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return segments;
   }
@@ -118,9 +129,28 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return segments;
+  }
+
+  // return a set of the segment versions for the specified datasource
+  public Set<String> getSegmentVersions(final String dataSource)
+  {
+    ArrayList<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return segments.stream().map(s -> s.getVersion()).collect(Collectors.toSet());
   }
 
   private Map<String, Integer> getLoadStatus()
@@ -136,7 +166,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return status;
   }
@@ -153,7 +183,7 @@ public class CoordinatorResourceTestClient
       makeRequest(HttpMethod.DELETE, StringUtils.format("%sdatasources/%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource)));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -171,7 +201,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -192,6 +222,85 @@ public class CoordinatorResourceTestClient
     }
   }
 
+  public Map<String, Object> initializeLookups(String filePath) throws Exception
+  {
+    String url = StringUtils.format("%slookups/config", getCoordinatorURL());
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(ImmutableMap.of())
+        ), responseHandler
+    ).get();
+
+    if (!response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+      throw new ISE(
+          "Error while querying[%s] status[%s] content[%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+
+    StatusResponseHolder response2 = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(jsonMapper.readValue(CoordinatorResourceTestClient.class.getResourceAsStream(filePath), new TypeReference<Map<Object, Object>>(){}))
+        ), responseHandler
+    ).get();
+
+    if (!response2.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+      throw new ISE(
+          "Error while querying[%s] status[%s] content[%s]",
+          url,
+          response2.getStatus(),
+          response2.getContent()
+      );
+    }
+
+    Map<String, Object> results2 = jsonMapper.readValue(
+        response.getContent(),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    );
+
+    return results2;
+  }
+
+  private Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> getLookupLoadStatus()
+  {
+    String url = StringUtils.format("%slookups/nodeStatus", getCoordinatorURL());
+
+    Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+
+      status = jsonMapper.readValue(
+          response.getContent(), new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return status;
+  }
+
+  public boolean areLookupsLoaded(String lookup)
+  {
+    final Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status = getLookupLoadStatus();
+
+    final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> defaultTier = status.get("__default");
+
+    boolean isLoaded = true;
+    for (Map.Entry<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> host : defaultTier.entrySet()) {
+      isLoaded &= host.getValue().getCurrent().containsKey(lookup);
+    }
+
+    return isLoaded;
+  }
+
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
@@ -210,7 +319,7 @@ public class CoordinatorResourceTestClient
       return response;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

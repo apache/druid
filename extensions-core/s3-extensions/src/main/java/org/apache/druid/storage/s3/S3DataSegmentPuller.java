@@ -25,11 +25,9 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -40,6 +38,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
 import java.io.File;
@@ -100,7 +99,7 @@ public class S3DataSegmentPuller implements URIDataPuller
                 throw new IOException("Recoverable exception", e);
               }
             }
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
       };
@@ -315,7 +314,7 @@ public class S3DataSegmentPuller implements URIDataPuller
       throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

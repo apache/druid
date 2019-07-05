@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 /**
  * This aggregator builds sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
- * @author Alexander Saydakov
  */
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
@@ -108,7 +107,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
-      return sketchCache.get(buf).get(position);
+      return sketchCache.get(buf).get(position).copy();
     }
     finally {
       lock.unlock();

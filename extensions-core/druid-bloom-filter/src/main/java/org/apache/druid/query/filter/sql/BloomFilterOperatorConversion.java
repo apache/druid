@@ -33,11 +33,13 @@ import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -67,7 +69,8 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
   @Override
   public DimFilter toDruidFilter(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       final RexNode rexNode
   )
   {
@@ -77,7 +80,7 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
         rowSignature,
         operands.get(0)
     );
-    if (druidExpression == null || !druidExpression.isSimpleExtraction()) {
+    if (druidExpression == null) {
       return null;
     }
 
@@ -99,8 +102,21 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
           holder,
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
+    } else if (virtualColumnRegistry != null) {
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          druidExpression,
+          operands.get(0).getType().getSqlTypeName()
+      );
+      if (virtualColumn == null) {
+        return null;
+      }
+      return new BloomDimFilter(
+          virtualColumn.getOutputName(),
+          holder,
+          null
+      );
     } else {
-      // expression virtual columns not currently supported
       return null;
     }
   }

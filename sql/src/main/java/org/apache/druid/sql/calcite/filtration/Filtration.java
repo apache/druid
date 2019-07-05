@@ -108,15 +108,15 @@ public class Filtration
    *
    * @return equivalent Filtration
    */
-  public Filtration optimize(final RowSignature sourceRowSignature)
+  public Filtration optimize(final RowSignature rowSignature)
   {
     return transform(
         this,
         ImmutableList.of(
             CombineAndSimplifyBounds.instance(),
             MoveTimeFiltersToIntervals.instance(),
-            ConvertBoundsToSelectors.create(sourceRowSignature),
-            ConvertSelectorsToIns.create(sourceRowSignature),
+            ConvertBoundsToSelectors.create(rowSignature),
+            ConvertSelectorsToIns.create(rowSignature),
             MoveMarkerFiltersToIntervals.instance(),
             ValidateNoMarkerFiltersRemain.instance()
         )
@@ -128,7 +128,7 @@ public class Filtration
    *
    * @return equivalent Filtration
    */
-  public Filtration optimizeFilterOnly(final RowSignature sourceRowSignature)
+  public Filtration optimizeFilterOnly(final RowSignature rowSignature)
   {
     if (!intervals.equals(ImmutableList.of(eternity()))) {
       throw new ISE("Cannot optimizeFilterOnly when intervals are set");
@@ -138,8 +138,8 @@ public class Filtration
         this,
         ImmutableList.of(
             CombineAndSimplifyBounds.instance(),
-            ConvertBoundsToSelectors.create(sourceRowSignature),
-            ConvertSelectorsToIns.create(sourceRowSignature)
+            ConvertBoundsToSelectors.create(rowSignature),
+            ConvertSelectorsToIns.create(rowSignature)
         )
     );
 

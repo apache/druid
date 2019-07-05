@@ -31,28 +31,25 @@ Apache Druid (incubating) is a high performance analytics data store for event-d
 
 ### More Information
 
-More information about Druid can be found on <http://www.druid.io>.
+More information about Druid can be found on <https://druid.apache.org>.
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](http://druid.io/docs/latest/) on
-the [project website](http://druid.io/docs/latest/).
+You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
+the [project website](https://druid.apache.org/docs/latest/).
 
 If you would like to contribute documentation, please do so under
 `/docs/content` in this repository and submit a pull request.
 
 ### Getting Started
 
-You can get started with Druid with our [quickstart](http://druid.io/docs/latest/tutorials/quickstart.html).
+You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
 
 ### Reporting Issues
 
 If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
 
 ### Community
-
-The Druid community is in the process of migrating to Apache by way of the Apache Incubator. Eventually, as we proceed
-along this path, our site will move from http://druid.io/ to https://druid.apache.org/.
 
 Community support is available on the
 [druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
@@ -66,8 +63,11 @@ We also have a couple people hanging out on IRC in `#druid-dev` on
 
 ### Building From Source
 
-For instructions on building Druid from source, see [docs/content/development/build.md](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md)
+Please note that JDK 8 is required to build Druid.
+
+For instructions on building Druid from source, see [docs/content/development/build.md](docs/content/development/build.md)
 
 ### Contributing
 
-Please follow the guidelines listed [here](http://druid.io/community/).
+Please follow the guidelines listed [here](https://druid.apache.org/community/).
+

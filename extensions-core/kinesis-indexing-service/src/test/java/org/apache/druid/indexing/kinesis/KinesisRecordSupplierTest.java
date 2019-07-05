@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis;
 
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
@@ -29,7 +30,6 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -66,30 +66,32 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static String shard1Iterator = "1";
   private static String shard0Iterator = "0";
   private static AmazonKinesis kinesis;
-  private static DescribeStreamResult describeStreamResult;
+  private static DescribeStreamResult describeStreamResult0;
+  private static DescribeStreamResult describeStreamResult1;
   private static GetShardIteratorResult getShardIteratorResult0;
   private static GetShardIteratorResult getShardIteratorResult1;
   private static GetRecordsResult getRecordsResult0;
   private static GetRecordsResult getRecordsResult1;
-  private static StreamDescription streamDescription;
+  private static StreamDescription streamDescription0;
+  private static StreamDescription streamDescription1;
   private static Shard shard0;
   private static Shard shard1;
   private static KinesisRecordSupplier recordSupplier;
   private static List<Record> shard1Records = ImmutableList.of(
-      new Record().withData(JB("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(JB("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
-      new Record().withData(JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
+      new Record().withData(jb("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(jb("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
+      new Record().withData(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable"))).withSequenceNumber("3"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2"))).withSequenceNumber("4"),
       new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))).withSequenceNumber("5"),
-      new Record().withData(JB("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
-      new Record().withData(JB("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
-      new Record().withData(JB("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
-      new Record().withData(JB("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
+      new Record().withData(jb("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
+      new Record().withData(jb("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
+      new Record().withData(jb("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
+      new Record().withData(jb("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
   );
   private static List<Record> shard0Records = ImmutableList.of(
-      new Record().withData(JB("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(JB("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
+      new Record().withData(jb("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(jb("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
   );
   private static List<Object> allRecords = ImmutableList.builder()
                                                         .addAll(shard0Records.stream()
@@ -120,7 +122,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                      .toList()))
                                                         .build();
 
-  private static ByteBuffer JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
+  private static ByteBuffer jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
       return ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
@@ -135,7 +137,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       ));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -143,12 +145,14 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void setupTest()
   {
     kinesis = createMock(AmazonKinesisClient.class);
-    describeStreamResult = createMock(DescribeStreamResult.class);
+    describeStreamResult0 = createMock(DescribeStreamResult.class);
+    describeStreamResult1 = createMock(DescribeStreamResult.class);
     getShardIteratorResult0 = createMock(GetShardIteratorResult.class);
     getShardIteratorResult1 = createMock(GetShardIteratorResult.class);
     getRecordsResult0 = createMock(GetRecordsResult.class);
     getRecordsResult1 = createMock(GetRecordsResult.class);
-    streamDescription = createMock(StreamDescription.class);
+    streamDescription0 = createMock(StreamDescription.class);
+    streamDescription1 = createMock(StreamDescription.class);
     shard0 = createMock(Shard.class);
     shard1 = createMock(Shard.class);
     recordsPerFetch = 1;
@@ -164,11 +168,17 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testSupplierSetup()
   {
-    Capture<String> captured = Capture.newInstance();
-    expect(kinesis.describeStream(capture(captured))).andReturn(describeStreamResult).once();
-    expect(describeStreamResult.getStreamDescription()).andReturn(streamDescription).once();
-    expect(streamDescription.getShards()).andReturn(ImmutableList.of(shard0, shard1)).once();
-    expect(shard0.getShardId()).andReturn(shardId0).once();
+    final Capture<DescribeStreamRequest> capturedRequest = Capture.newInstance();
+
+    expect(kinesis.describeStream(capture(capturedRequest))).andReturn(describeStreamResult0).once();
+    expect(describeStreamResult0.getStreamDescription()).andReturn(streamDescription0).once();
+    expect(streamDescription0.getShards()).andReturn(ImmutableList.of(shard0)).once();
+    expect(streamDescription0.isHasMoreShards()).andReturn(true).once();
+    expect(shard0.getShardId()).andReturn(shardId0).times(2);
+    expect(kinesis.describeStream(anyObject(DescribeStreamRequest.class))).andReturn(describeStreamResult1).once();
+    expect(describeStreamResult1.getStreamDescription()).andReturn(streamDescription1).once();
+    expect(streamDescription1.getShards()).andReturn(ImmutableList.of(shard1)).once();
+    expect(streamDescription1.isHasMoreShards()).andReturn(false).once();
     expect(shard1.getShardId()).andReturn(shardId1).once();
 
     replayAll();
@@ -200,7 +210,11 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     verifyAll();
-    Assert.assertEquals(stream, captured.getValue());
+
+    final DescribeStreamRequest expectedRequest = new DescribeStreamRequest();
+    expectedRequest.setStreamName(stream);
+    expectedRequest.setExclusiveStartShardId("0");
+    Assert.assertEquals(expectedRequest, capturedRequest.getValue());
   }
 
   private static GetRecordsRequest generateGetRecordsReq(String shardIterator, int limit)

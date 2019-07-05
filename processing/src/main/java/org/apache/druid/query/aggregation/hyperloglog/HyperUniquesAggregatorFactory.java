@@ -44,6 +44,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -54,7 +55,7 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
-  public static Object estimateCardinality(Object object, boolean round)
+  public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
     if (object == null) {
       return 0;
@@ -214,8 +215,9 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     return HyperLogLogCollector.makeCollector(buffer);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return estimateCardinality(object, round);
   }

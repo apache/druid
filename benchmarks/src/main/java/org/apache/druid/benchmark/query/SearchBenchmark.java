@@ -314,9 +314,8 @@ public class SearchBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+
     executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
 
     setupQueries();
@@ -418,10 +417,7 @@ public class SearchBenchmark
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -436,10 +432,7 @@ public class SearchBenchmark
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
 
@@ -472,12 +465,6 @@ public class SearchBenchmark
         new HashMap<>()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
-
-    for (Result<SearchResultValue> result : results) {
-      List<SearchHit> hits = result.getValue().getValue();
-      for (SearchHit hit : hits) {
-        blackhole.consume(hit);
-      }
-    }
+    blackhole.consume(results);
   }
 }

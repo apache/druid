@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -106,8 +107,9 @@ public class CountAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

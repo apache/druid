@@ -24,7 +24,7 @@ title: "Transform Specs"
 
 # Transform Specs
 
-Transform specs allow Druid to filter and transform input data during ingestion. 
+Transform specs allow Apache Druid (incubating) to filter and transform input data during ingestion. 
 
 ## Syntax
 

@@ -23,11 +23,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
@@ -52,6 +56,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -96,12 +101,24 @@ public class CompactionTaskRunTest extends IngestionTestBase
   );
 
   private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private CoordinatorClient coordinatorClient;
+  private SegmentLoaderFactory segmentLoaderFactory;
   private ExecutorService exec;
+  private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
   public CompactionTaskRunTest()
   {
     TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
+    coordinatorClient = new CoordinatorClient(null, null)
+    {
+      @Override
+      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      {
+        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+      }
+    };
+    segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
   }
 
   @Before
@@ -126,7 +143,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -147,7 +167,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Test
-  public void testRunCompactionTwiceWithoutKeepSegmentGranularity() throws Exception
+  public void testRunCompactionTwice() throws Exception
   {
     runIndexTask();
 
@@ -156,56 +176,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(false)
-        .build();
-
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
-    Assert.assertTrue(resultPair.lhs.isSuccess());
-
-    List<DataSegment> segments = resultPair.rhs;
-    Assert.assertEquals(1, segments.size());
-
-    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
-    Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
-
-    final CompactionTask compactionTask2 = builder
-        .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(false)
-        .build();
-
-    resultPair = runTask(compactionTask2);
-
-    Assert.assertTrue(resultPair.lhs.isSuccess());
-
-    segments = resultPair.rhs;
-    Assert.assertEquals(1, segments.size());
-
-    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
-    Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
-  }
-
-  @Test
-  public void testRunCompactionTwiceWithKeepSegmentGranularity() throws Exception
-  {
-    runIndexTask();
-
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory
-    );
-
-    final CompactionTask compactionTask1 = builder
-        .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(true)
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -222,7 +200,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask2 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(true)
         .build();
 
     resultPair = runTask(compactionTask2);
@@ -248,7 +225,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
     );
 
     // day segmentGranularity
@@ -315,7 +295,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
             false
         ),
         null,
@@ -349,8 +329,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           {
             return deepStorageDir;
           }
-        },
-        objectMapper
+        }
     )
     {
       @Override

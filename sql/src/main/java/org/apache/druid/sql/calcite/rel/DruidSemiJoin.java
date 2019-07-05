@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -154,21 +153,6 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   public DruidQuery toDruidQueryForExplaining()
   {
     return left.toDruidQueryForExplaining();
-  }
-
-  @Override
-  public DruidSemiJoin asBindable()
-  {
-    return new DruidSemiJoin(
-        getCluster(),
-        getTraitSet().replace(BindableConvention.INSTANCE),
-        left,
-        RelOptRule.convert(right, BindableConvention.INSTANCE),
-        leftExpressions,
-        rightKeys,
-        maxSemiJoinRowsInMemory,
-        getQueryMaker()
-    );
   }
 
   @Override
@@ -360,8 +344,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
       PartialDruidQuery newPartialQuery = PartialDruidQuery.create(leftPartialQuery.getScan())
                                                            .withWhereFilter(newWhereFilter)
-                                                           .withSelectProject(leftPartialQuery.getSelectProject())
-                                                           .withSelectSort(leftPartialQuery.getSelectSort());
+                                                           .withSelectProject(leftPartialQuery.getSelectProject());
 
       if (leftPartialQuery.getAggregate() != null) {
         newPartialQuery = newPartialQuery.withAggregate(leftPartialQuery.getAggregate());

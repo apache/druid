@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "API Reference"
+title: "Apache Druid (incubating) API Reference"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "API Reference"
   ~ under the License.
   -->
 
-# API Reference
+# Apache Druid (incubating) API Reference
 
 This page documents all of the API endpoints for each Druid service type.
 
@@ -40,15 +40,15 @@ This page documents all of the API endpoints for each Druid service type.
 
 ## Common
 
-The following endpoints are supported by all nodes.
+The following endpoints are supported by all processes.
 
-### Node information
+### Process information
 
 #### GET
 
 * `/status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.
 
 * `/status/health`
 
@@ -56,7 +56,7 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 * `/status/properties`
 
-Returns the current configuration properties of the node.
+Returns the current configuration properties of the process.
 
 ## Master Server
 
@@ -97,15 +97,15 @@ Returns the number of segments left to load in each tier until segments that sho
 
 * `/druid/coordinator/v1/loadqueue`
 
-Returns the ids of segments to load and drop for each Historical node.
+Returns the ids of segments to load and drop for each Historical process.
 
 * `/druid/coordinator/v1/loadqueue?simple`
 
-Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each Historical node.
+Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each Historical process.
 
 * `/druid/coordinator/v1/loadqueue?full`
 
-Returns the serialized JSON of segments to load and drop for each Historical node.
+Returns the serialized JSON of segments to load and drop for each Historical process.
 
 #### Metadata store information
 
@@ -143,13 +143,16 @@ Returns full segment metadata for a specific segment as stored in the metadata s
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
-Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 
-Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string ISO 8601 intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
 #### Datasources
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
 
 ##### GET
 
@@ -187,7 +190,7 @@ Returns a map of an interval to a map of segment metadata to a set of server nam
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 
-Returns a set of segment ids for an ISO8601 interval. Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
+Returns a set of segment ids for an interval.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?simple`
 
@@ -217,6 +220,11 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+#### Note for coordinator's POST and DELETE API's
+The segments would be enabled when these API's are called, but then can be disabled again by the coordinator if any dropRule matches. Segments enabled by these API's might not be loaded by historical processes if no loadRule matches.  If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed. 
+
+Caution : Avoid using indexing or kill tasks and these API's at the same time for the same datasource and time chunk. (It's fine if the time chunks or datasource don't overlap)
+
 ##### POST
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
@@ -227,6 +235,26 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment of a datasource.
 
+* `/druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
+
+Marks segments (un)used for a datasource by interval or set of segment Ids. 
+
+When marking used only segments that are not overshadowed will be updated.
+
+The request payload contains the interval or set of segment Ids to be marked unused.
+Either interval or segment ids should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
+
+Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
+
+JSON Request Payload:
+
+ |Key|Description|Example|
+|----------|-------------|---------|
+|`interval`|The interval for which to mark segments unused|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
+|`segmentIds`|Set of segment Ids to be marked unused|["segmentId1", "segmentId2"]|
+
 ##### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
@@ -234,17 +262,18 @@ Enables a segment of a datasource.
 Disables a datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
-* `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}`
+* `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myInterval}`
 
 Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
-
-Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
 Disables a segment.
 
 #### Retention Rules
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
 
 ##### GET
 
@@ -292,9 +321,10 @@ Optional Header Parameters for auditing the config change can also be specified.
 
 #### Intervals
 
-##### GET
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
 
-Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
+##### GET
 
 * `/druid/coordinator/v1/intervals`
 
@@ -336,7 +366,9 @@ will be set for them.
 
 * `/druid/coordinator/v1/config/compaction`
 
-Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+Creates or updates the compaction config for a dataSource.
+See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
+
 
 ##### DELETE
 
@@ -351,18 +383,18 @@ Removes the compaction config for a dataSource.
 * `/druid/coordinator/v1/servers`
 
 Returns a list of servers URLs using the format `{hostname}:{port}`. Note that
-nodes that run with different types will appear multiple times with different
+processes that run with different types will appear multiple times with different
 ports.
 
 * `/druid/coordinator/v1/servers?simple`
 
 Returns a list of server data objects in which each object has the following keys:
-- `host`: host URL include (`{hostname}:{port}`)
-- `type`: node type (`indexer-executor`, `historical`)
-- `currSize`: storage size currently used
-- `maxSize`: maximum storage size
-- `priority`
-- `tier`
+* `host`: host URL include (`{hostname}:{port}`)
+* `type`: process type (`indexer-executor`, `historical`)
+* `currSize`: storage size currently used
+* `maxSize`: maximum storage size
+* `priority`
+* `tier`
 
 ### Overlord
 
@@ -382,7 +414,43 @@ only want the active leader to be considered in-service at the load balancer.
 
 #### Tasks<a name="overlord-tasks"></a> 
 
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
 ##### GET
+
+* `/druid/indexer/v1/tasks`
+
+Retrieve list of tasks. Accepts query string parameters `state`, `datasource`, `createdTimeInterval`, `max`, and `type`.
+
+|Query Parameter |Description |
+|---|---|
+|`state`|filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
+| `datasource`| return tasks filtered by Druid datasource.|
+| `createdTimeInterval`| return tasks created within the specified interval. |
+| `max`| maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `type`| filter tasks by task type. See [task documentation](../ingestion/tasks.html) for more details.|
+
+
+* `/druid/indexer/v1/completeTasks`
+
+Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=complete`.
+
+* `/druid/indexer/v1/runningTasks`
+
+Retrieve list of running tasks. Equivalent to `/druid/indexer/v1/tasks?state=running`.
+
+* `/druid/indexer/v1/waitingTasks`
+
+Retrieve list of waiting tasks. Equivalent to `/druid/indexer/v1/tasks?state=waiting`.
+
+* `/druid/indexer/v1/pendingTasks`
+
+Retrieve list of pending tasks. Equivalent to `/druid/indexer/v1/tasks?state=pending`.
+
+* `/druid/indexer/v1/task/{taskId}`
+
+Retrieve the 'payload' of a task.
 
 * `/druid/indexer/v1/task/{taskId}/status`
 
@@ -406,13 +474,26 @@ Retrieve a [task completion report](../ingestion/reports.html) for a task. Only 
 
 Endpoint for submitting tasks and supervisor specs to the Overlord. Returns the taskId of the submitted task.
 
-* `druid/indexer/v1/task/{taskId}/shutdown`
+* `/druid/indexer/v1/task/{taskId}/shutdown`
 
 Shuts down a task.
 
-* `druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
+* `/druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
 
 Shuts down all tasks for a dataSource.
+
+* `/druid/indexer/v1/taskStatus`
+
+Retrieve list of task status objects for list of task id strings in request body.
+
+##### DELETE
+
+* `/druid/indexer/v1/pendingSegments/{dataSource}`
+
+Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with
+`numDeleted` and count of rows deleted from the pending segments table. This API is used by the
+`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.html#coordinator-operation)
+which automates this operation to perform periodically.
 
 #### Supervisors
 
@@ -429,7 +510,21 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor?state=true`
+
+Returns a list of objects of the currently active supervisors and their current state.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 
 * `/druid/indexer/v1/supervisor/<supervisorId>`
 
@@ -490,13 +585,94 @@ This API is deprecated and will be removed in future releases.
 Please use the equivalent 'terminate' instead.
 </div>
 
+#### Dynamic Configuration
+See [Overlord Dynamic Configuration](../configuration/index.html#overlord-dynamic-configuration) for details.
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
+##### GET
+
+* `/druid/indexer/v1/worker`
+
+Retreives current overlord dynamic configuration.
+
+* `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
+
+Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
+to filter by interval and limit the number of results respectively.
+
+* `/druid/indexer/v1/scaling`
+
+Retrieves overlord scaling events if auto-scaling runners are in use.
+
+##### POST
+
+* /druid/indexer/v1/worker
+
+Update overlord dynamic worker configuration.
+
 ## Data Server
 
-This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
+in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### MiddleManager
 
-The MiddleManager does not have any API endpoints beyond the [common endpoints](#common).
+##### GET
+
+* `/druid/worker/v1/enabled`
+
+Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the combined `druid.host`
+and `druid.port` with the boolean state as the value.
+
+```json
+{"localhost:8091":true}
+```
+
+* `/druid/worker/v1/tasks`
+
+Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings.  Normal usage should
+prefer to use the `/druid/indexer/v1/tasks` [Overlord API](#overlord) or one of it's task state specific variants instead.
+
+```json
+["index_wikiticker_2019-02-11T02:20:15.316Z"]
+```
+
+* `/druid/worker/v1/task/{taskid}/log`
+
+Retrieve task log output stream by task id. Normal usage should prefer to use the `/druid/indexer/v1/task/{taskId}/log`
+[Overlord API](#overlord) instead.
+
+##### POST
+
+* `/druid/worker/v1/disable`
+
+'Disable' a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns JSON  object
+keyed by the combined `druid.host` and `druid.port`:
+
+```json
+{"localhost:8091":"disabled"}
+```
+
+* `/druid/worker/v1/enable`
+
+'Enable' a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns JSON  object
+keyed by the combined `druid.host` and `druid.port`:
+
+```json
+{"localhost:8091":"enabled"}
+```
+
+* `/druid/worker/v1/task/{taskid}/shutdown`
+
+Shutdown a running task by `taskid`. Normal usage should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
+[Overlord API](#overlord) instead. Returns JSON:
+
+```json
+{"task":"index_kafka_wikiticker_f7011f8ffba384b_fpeclode"}
+```
+
 
 ### Peon
 
@@ -519,7 +695,7 @@ Retrieve an unparseable events report from a Peon. See [task reports](../ingesti
 * `/druid/historical/v1/loadstatus`
 
 Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
-segments in the local cache have been loaded. This can be used to know when a Historical node is ready
+segments in the local cache have been loaded. This can be used to know when a Historical process is ready
 to be queried after a restart.
 
 * `/druid/historical/v1/readiness`
@@ -536,6 +712,9 @@ This section documents the API endpoints for the processes that reside on Query 
 
 #### Datasource Information
 
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
 ##### GET
 
 * `/druid/v2/datasources`
@@ -546,7 +725,7 @@ Returns a list of queryable datasources.
 
 Returns the dimensions and metrics of the datasource. Optionally, you can provide request parameter "full" to get list of served intervals with dimensions and metrics being served for those intervals. You can also provide request param "interval" explicitly to refer to a particular interval.
 
-If no interval is specified, a default interval spanning a configurable period before the current time will be used. The duration of this interval is specified in ISO8601 format via:
+If no interval is specified, a default interval spanning a configurable period before the current time will be used. The default duration of this interval is specified in ISO 8601 duration format via:
 
 druid.query.segmentMetadata.defaultHistory
 
@@ -555,8 +734,8 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 <div class="note caution">
-This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 
@@ -565,12 +744,12 @@ if you're using SQL.
 Returns the metrics of the datasource.
 
 <div class="note caution">
-This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 
-* `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
+* `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`
 
 Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
 

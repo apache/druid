@@ -111,7 +111,7 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
       }
       if (exception != null) {
         Throwables.propagateIfInstanceOf(exception, IOException.class);
-        throw Throwables.propagate(exception);
+        throw new RuntimeException(exception);
       }
     }
 

@@ -19,21 +19,18 @@
 
 package org.apache.druid.segment.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,16 +39,13 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   private static final Logger log = new Logger(LocalDataSegmentPusher.class);
 
   private static final String INDEX_FILENAME = "index.zip";
-  private static final String DESCRIPTOR_FILENAME = "descriptor.json";
 
   private final LocalDataSegmentPusherConfig config;
-  private final ObjectMapper jsonMapper;
 
   @Inject
-  public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config, ObjectMapper jsonMapper)
+  public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config)
   {
     this.config = config;
-    this.jsonMapper = jsonMapper;
 
     log.info("Configured local filesystem as deep storage");
   }
@@ -84,12 +78,9 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
         size += file.length();
       }
 
-      return createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
-                 .withSize(size)
-                 .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
-          outDir
-      );
+      return segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
+                    .withSize(size)
+                    .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
     }
 
     final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
@@ -100,24 +91,15 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       final File tmpIndexFile = new File(tmpOutDir, INDEX_FILENAME);
       final long size = compressSegment(dataSegmentFile, tmpIndexFile);
 
-      final File tmpDescriptorFile = new File(tmpOutDir, DESCRIPTOR_FILENAME);
-      DataSegment dataSegment = createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
-                 .withSize(size)
-                 .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
-          tmpDescriptorFile
-      );
+      final DataSegment dataSegment = segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
+                                       .withSize(size)
+                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
       FileUtils.forceMkdir(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
-      final File descriptorFileTarget = new File(outDir, tmpDescriptorFile.getName());
 
       if (!tmpIndexFile.renameTo(indexFileTarget)) {
         throw new IOE("Failed to rename [%s] to [%s]", tmpIndexFile, indexFileTarget);
-      }
-
-      if (!tmpDescriptorFile.renameTo(descriptorFileTarget)) {
-        throw new IOE("Failed to rename [%s] to [%s]", tmpDescriptorFile, descriptorFileTarget);
       }
 
       return dataSegment;
@@ -142,17 +124,5 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, dest);
     return CompressionUtils.zip(dataSegmentFile, dest, true);
-  }
-
-  private DataSegment createDescriptorFile(DataSegment segment, File dest) throws IOException
-  {
-    log.info("Creating descriptor file at[%s]", dest);
-    // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-    // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-    Files.write(
-        dest.toPath(), jsonMapper.writeValueAsBytes(segment), StandardOpenOption.CREATE, StandardOpenOption.SYNC
-    );
-
-    return segment;
   }
 }

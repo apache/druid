@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.utils;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -31,9 +30,9 @@ public class RetryUtil
 
   private static final Logger LOG = new Logger(RetryUtil.class);
 
-  public static int DEFAULT_RETRY_COUNT = 30;
+  public static final int DEFAULT_RETRY_COUNT = 30;
 
-  public static long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(10);
+  public static final long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(10);
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
@@ -69,7 +68,7 @@ public class RetryUtil
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

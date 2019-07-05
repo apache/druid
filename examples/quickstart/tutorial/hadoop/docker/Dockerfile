@@ -41,9 +41,8 @@ RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # zulu java 8
-RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems
-RUN rpm --rebuilddb
-RUN sudo curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo
+COPY setup-zulu-repo.sh /root/setup-zulu-repo.sh
+RUN /root/setup-zulu-repo.sh
 RUN yum install -y zulu-8
 
 ENV JAVA_HOME /usr/lib/jvm/zulu-8

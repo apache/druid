@@ -19,11 +19,29 @@
 const process = require('process');
 const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const { version } = require('./package.json');
 
+function friendlyErrorFormatter(e, colors) {
+  //const messageColor = error.severity === "warning" ? colors.bold.yellow : colors.bold.red;
+  // return (
+  //   "Does not compute.... " +
+  //   messageColor(Object.keys(error).map(key => `${key}: ${error[key]}`))
+  // );
+  return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
+}
+
 module.exports = (env) => {
-  const druidUrl = 'http://' + ((env || {}).druid_host || process.env.druid_host || 'localhost:8888');
+  let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
+  if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
+  if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
+
+  const proxyTarget = {
+    target: druidUrl,
+    secure: false
+  };
+
   return {
     mode: process.env.NODE_ENV || 'development',
     entry: {
@@ -42,18 +60,41 @@ module.exports = (env) => {
     devServer: {
       publicPath: '/public',
       index: './index.html',
+      openPage: 'unified-console.html',
       port: 18081,
       proxy: {
-        '/status': druidUrl,
-        '/druid': druidUrl
+        '/status': proxyTarget,
+        '/druid': proxyTarget,
+        '/proxy': proxyTarget
       }
     },
     module: {
       rules: [
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
+          enforce: 'pre',
+          use: [
+            {
+              loader: 'tslint-loader',
+              options: {
+                configFile: 'tslint.json',
+                emitErrors: true,
+                fix: false // Set this to true to auto fix errors
+              }
+            }
+          ]
+        },
+        {
+          test: /\.tsx?$/,
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: 'ts-loader',
+              options: {
+                errorFormatter: friendlyErrorFormatter
+              }
+            }
+          ]
         },
         {
           test: /\.s?css$/,
@@ -75,6 +116,9 @@ module.exports = (env) => {
           ]
         }
       ]
-    }
+    },
+    plugins: [
+      // new BundleAnalyzerPlugin()
+    ]
   };
 };

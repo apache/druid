@@ -32,6 +32,15 @@
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
+  <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
+  <module name="RegexpSingleline">
+    <property name="format" value="^\s*\*\s*@author" />
+    <property name="minimum" value="0" />
+    <property name="maximum" value="0" />
+    <property name="message" value="Prohibit @author tags in Javadoc" />
+    <property name="fileExtensions" value="java" />
+  </module>
+
   <module name="TreeWalker">
     <module name="SuppressionCommentFilter">
       <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
@@ -204,6 +213,12 @@
       <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead"/>
     </module>
 
+    <module name="Regexp">
+      <property name="format" value='^Throwables.propagate\('/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Throwables.propagate() shouldn't be used in new code"/>
+    </module>
+
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
@@ -290,6 +305,19 @@ codestyle/checkstyle.xml.&#10;"/>
       <property name="format" value="^(.*;)(\r?\n\1)+$"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Duplicate line"/>
+    </module>
+    
+     <!-- Added as per the issue #6936 - Prohibit method names starting with capital letters -->
+	 <module name="MethodName">
+	   <property name = "format" value = "^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+	 </module>
+
+    <!-- Added as per the issue #7609 - Local variable names shouldn't start with capital -->
+    <module name="LocalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+    </module>
+    <module name="LocalFinalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
     </module>
   </module>
 </module>

@@ -50,12 +50,14 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
-      String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
+      String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
 
       if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
         log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
         s3Client.deleteObject(s3Bucket, s3Path);
       }
+      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+      // anymore, but we still delete them if exists.
       if (s3Client.doesObjectExist(s3Bucket, s3DescriptorPath)) {
         log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
         s3Client.deleteObject(s3Bucket, s3DescriptorPath);

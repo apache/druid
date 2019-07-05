@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Kafka Indexing Service"
+title: "Apache Kafka Indexing Service"
 ---
 
 <!--
@@ -31,7 +31,7 @@ able to read non-recent events from Kafka and are not subject to the window peri
 ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-This service is provided in the `druid-kafka-indexing-service` core extension (see
+This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../operations/including-extensions.html)).
 
 <div class="note info">
@@ -140,7 +140,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`indexSpec`|Object|Tune how data is indexed, see 'IndexSpec' below for more details.|no|
-|`reportParseExceptions`|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
+|`reportParseExceptions`|Boolean|*DEPRECATED*. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|no (default == false)|
 |`handoffConditionTimeout`|Long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
 |`resetOffsetAutomatically`|Boolean|Whether to reset the consumer offset if the next offset that it is trying to fetch is less than the earliest available offset for that particular partition. The consumer offset will be reset to either the earliest or latest offset depending on `useEarliestOffset` property of `KafkaSupervisorIOConfig` (see below). This situation typically occurs when messages in Kafka are no longer available for consumption and therefore won't be ingested into Druid. If set to false then ingestion for that particular partition will halt and manual intervention is required to correct the situation, please see `Reset Supervisor` API below.|no (default == false)|
 |`workerThreads`|Integer|The number of threads that will be used by the supervisor for asynchronous operations.|no (default == min(10, taskCount))|
@@ -192,7 +192,7 @@ For Roaring bitmaps:
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.html) or String password.|yes|
 |`pollTimeout`|Long|The length of time to wait for the kafka consumer to poll records, in milliseconds|no (default == 100)|
-|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
+|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
@@ -214,11 +214,60 @@ offsets as reported by Kafka, the consumer lag per partition, as well as the agg
 consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
 response from Kafka. The aggregate lag value will always be >= 0.
 
+The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
+`recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
+There are two fields related to the supervisor's state - `state` and `detailedState`. The `state` field will always be
+one of a small number of generic states that are applicable to any type of supervisor, while the `detailedState` field
+will contain a more descriptive, implementation-specific state that may provide more insight into the supervisor's
+activities than the generic `state` field.
+
+The list of possible `state` values are: [`PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`]
+
+The list of `detailedState` values and their corresponding `state` mapping is as follows:
+
+|Detailed State|Corresponding State|Description|
+|--------------|-------------------|-----------|
+|UNHEALTHY_SUPERVISOR|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
+|UNABLE_TO_CONNECT_TO_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kafka and has not successfully connected in the past|
+|LOST_CONTACT_WITH_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kafka but has successfully connected in the past|
+|PENDING (first iteration only)|PENDING|The supervisor has been initialized and hasn't started connecting to the stream|
+|CONNECTING_TO_STREAM (first iteration only)|RUNNING|The supervisor is trying to connect to the stream and update partition data|
+|DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
+|CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
+|RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
+|SUSPENDED|SUSPENDED|The supervisor has been suspended|
+|STOPPING|STOPPING|The supervisor is stopping|
+
+On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
+  1) Fetch the list of partitions from Kafka and determine the starting offset for each partition (either based on the
+  last processed offset if continuing, or starting from the beginning or ending of the stream if this is a new topic).
+  2) Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match
+  the supervisor's configuration, else signal them to stop.
+  3) Send a status request to each supervised task to update our view of the state of the tasks under our supervision.
+  4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
+  5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
+  6) Handle tasks that have failed and clean up the supervisor's internal state.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
+
+The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
+supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
+initialization-type issues, where the supervisor is unable to reach a stable state (perhaps because it can't connect to
+Kafka, it can't read from the Kafka topic, or it can't communicate with existing tasks). Once the supervisor is stable -
+that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
+state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
+
 ### Getting Supervisor Ingestion Stats Report
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
 See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+
+### Supervisor Health Check
+
+`GET /druid/indexer/v1/supervisor/<supervisorId>/health` returns `200 OK` if the supervisor is healthy and
+`503 Service Unavailable` if it is unhealthy. Healthiness is determined by the supervisor's `state` (as returned by the
+`/status` endpoint) and the `druid.supervisor.*` Overlord configuration thresholds.
 
 ### Updating Existing Supervisors
 
@@ -278,7 +327,7 @@ in data loss (assuming the tasks run before Kafka purges those offsets).
 
 A running task will normally be in one of two states: *reading* or *publishing*. A task will remain in reading state for
 `taskDuration`, at which point it will transition to publishing state. A task will remain in publishing state for as long
-as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical node
+as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical process
 (or until `completionTimeout` elapses).
 
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
@@ -335,7 +384,7 @@ for this segment granularity is created for further events. Kafka Indexing Task 
 means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
 maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
 and new set of segments will be created for further events. This means that the task can run for longer durations of time
-without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
+without accumulating old segments locally on Middle Manager processes and it is encouraged to do so.
 
 Kafka Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
 is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and

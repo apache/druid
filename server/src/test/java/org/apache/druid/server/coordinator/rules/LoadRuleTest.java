@@ -182,7 +182,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -253,7 +253,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -303,7 +303,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -393,7 +393,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -482,7 +482,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -541,7 +541,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -614,7 +614,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -671,7 +671,7 @@ public class LoadRuleTest
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withAvailableSegments(dataSegment1, dataSegment2, dataSegment3)
+            .withAvailableSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
@@ -687,11 +687,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers in different tiers, the first is in maitenance mode.
-   * Should not load a segment to the server in maintenance mode.
+   * 2 servers in different tiers, the first is decommissioning.
+   * Should not load a segment to the server that is decommissioning
    */
   @Test
-  public void testLoadDuringMaitenance()
+  public void testLoadDecommissioning()
   {
     final LoadQueuePeon mockPeon1 = createEmptyPeon();
     final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
@@ -728,7 +728,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -737,11 +737,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 tiers, 2 servers each, 1 server of the second tier is in maintenance.
-   * Should not load a segment to the server in maintenance mode.
+   * 2 tiers, 2 servers each, 1 server of the second tier is decommissioning.
+   * Should not load a segment to the server that is decommssioning.
    */
   @Test
-  public void testLoadReplicaDuringMaitenance()
+  public void testLoadReplicaDuringDecommissioning()
   {
     EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
 
@@ -785,7 +785,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(segment).build(),
+                                     .withAvailableSegmentsInTest(segment).build(),
         segment
     );
 
@@ -796,11 +796,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers with a segment, one server in maintenance mode.
+   * 2 servers with a segment, one server decommissioning.
    * Should drop a segment from both.
    */
   @Test
-  public void testDropDuringMaintenance()
+  public void testDropDuringDecommissioning()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -838,7 +838,7 @@ public class LoadRuleTest
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withAvailableSegments(segment1, segment2)
+        .withAvailableSegmentsInTest(segment1, segment2)
         .build();
     CoordinatorStats stats = rule.run(
         null,
@@ -859,12 +859,12 @@ public class LoadRuleTest
 
   /**
    * 3 servers hosting 3 replicas of the segment.
-   * 1 servers is in maitenance.
+   * 1 servers is decommissioning.
    * 1 replica is redundant.
-   * Should drop from the server in maintenance.
+   * Should drop from the decommissioning server.
    */
   @Test
-  public void testRedundantReplicaDropDuringMaintenance()
+  public void testRedundantReplicaDropDuringDecommissioning()
   {
     final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();
@@ -904,7 +904,7 @@ public class LoadRuleTest
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withAvailableSegments(segment1)
+        .withAvailableSegmentsInTest(segment1)
         .build();
     CoordinatorStats stats = rule.run(
         null,
@@ -1019,12 +1019,12 @@ public class LoadRuleTest
     return mockPeon2;
   }
 
-  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean maintenance)
+  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean isDecommissioning)
   {
     return new ServerHolder(
         createServer(tier).toImmutableDruidServer(),
         mockPeon1,
-        maintenance
+        isDecommissioning
     );
   }
 }

@@ -24,6 +24,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,7 +44,7 @@ public class FiltrationTest extends CalciteTestBase
             )
         ),
         null
-    ).optimize(null);
+    ).optimize(RowSignature.builder().add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG).build());
 
     Assert.assertEquals(
         ImmutableList.of(Filtration.eternity()),

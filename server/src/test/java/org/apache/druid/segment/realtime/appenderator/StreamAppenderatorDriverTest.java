@@ -100,7 +100,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private DataSegmentKiller dataSegmentKiller;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
@@ -428,9 +428,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       synchronized (counters) {
         DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());
         final long timestampTruncated = dateTimeTruncated.getMillis();
-        if (!counters.containsKey(timestampTruncated)) {
-          counters.put(timestampTruncated, new AtomicInteger());
-        }
+        counters.putIfAbsent(timestampTruncated, new AtomicInteger());
         final int partitionNum = counters.get(timestampTruncated).getAndIncrement();
         return new SegmentIdWithShardSpec(
             dataSource,

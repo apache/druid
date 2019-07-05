@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import debounce = require('lodash.debounce');
+import debounce from 'lodash.debounce';
 
-export interface QueryState<R> {
+export interface QueryStateInt<R> {
   result: R | null;
   loading: boolean;
   error: string | null;
@@ -26,23 +26,23 @@ export interface QueryState<R> {
 
 export interface QueryManagerOptions<Q, R> {
   processQuery: (query: Q) => Promise<R>;
-  onStateChange?: (queryResolve: QueryState<R>) => void;
+  onStateChange?: (queryResolve: QueryStateInt<R>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
 }
 
 export class QueryManager<Q, R> {
   private processQuery: (query: Q) => Promise<R>;
-  private onStateChange?: (queryResolve: QueryState<R>) => void;
+  private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
 
   private terminated = false;
-  private nextQuery: Q;
-  private lastQuery: Q;
+  private nextQuery: Q | undefined;
+  private lastQuery: Q | undefined;
   private actuallyLoading = false;
-  private state: QueryState<R> = {
+  private state: QueryStateInt<R> = {
     result: null,
     loading: false,
-    error: null
+    error: null,
   };
   private currentQueryId = 0;
 
@@ -64,7 +64,7 @@ export class QueryManager<Q, R> {
     }
   }
 
-  private setState(queryState: QueryState<R>) {
+  private setState(queryState: QueryStateInt<R>) {
     this.state = queryState;
     if (this.onStateChange && !this.terminated) {
       this.onStateChange(queryState);
@@ -73,31 +73,31 @@ export class QueryManager<Q, R> {
 
   private run() {
     this.lastQuery = this.nextQuery;
+    if (typeof this.lastQuery === 'undefined') return;
     this.currentQueryId++;
-    let myQueryId = this.currentQueryId;
+    const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
-    this.processQuery(this.lastQuery)
-      .then(
-        (result) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result,
-            loading: false,
-            error: null
-          });
-        },
-        (e: Error) => {
-          if (this.currentQueryId !== myQueryId) return;
-          this.actuallyLoading = false;
-          this.setState({
-            result: null,
-            loading: false,
-            error: e.message
-          })
-        }
-      )
+    this.processQuery(this.lastQuery).then(
+      result => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result,
+          loading: false,
+          error: null,
+        });
+      },
+      (e: Error) => {
+        if (this.currentQueryId !== myQueryId) return;
+        this.actuallyLoading = false;
+        this.setState({
+          result: null,
+          loading: false,
+          error: e.message,
+        });
+      },
+    );
   }
 
   private trigger() {
@@ -106,7 +106,7 @@ export class QueryManager<Q, R> {
     this.setState({
       result: null,
       loading: true,
-      error: null
+      error: null,
     });
 
     if (currentActuallyLoading) {
@@ -126,11 +126,20 @@ export class QueryManager<Q, R> {
     this.trigger();
   }
 
-  public getLastQuery(): Q {
+  public rerunLastQueryInBackground(auto: boolean): void {
+    this.nextQuery = this.lastQuery;
+    if (auto) {
+      this.runWhenIdle();
+    } else {
+      this.trigger();
+    }
+  }
+
+  public getLastQuery(): Q | undefined {
     return this.lastQuery;
   }
 
-  public getState(): QueryState<R> {
+  public getState(): QueryStateInt<R> {
     return this.state;
   }
 

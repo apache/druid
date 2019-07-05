@@ -23,13 +23,16 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Virtual columns are "views" created over a ColumnSelectorFactory. They can potentially draw from multiple
+ * Virtual columns are "views" created over a ColumnSelectorFactory or ColumnSelector. They can potentially draw from multiple
  * underlying columns, although they always present themselves as if they were a single column.
  *
  * A virtual column object will be shared amongst threads and must be thread safe. The selectors returned
@@ -62,6 +65,25 @@ public interface VirtualColumn extends Cacheable
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
 
   /**
+   * Returns similar DimensionSelector object as returned by {@link #makeDimensionSelector(DimensionSpec, ColumnSelectorFactory)}
+   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
+   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
+   *
+   * @param dimensionSpec
+   * @param columnSelector
+   * @param offset
+   * @return the selector
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    return null;
+  }
+
+  /**
    * Build a selector corresponding to this virtual column. Also provides the name that the
    * virtual column was referenced with, which is useful if this column uses dot notation.
    *
@@ -72,6 +94,24 @@ public interface VirtualColumn extends Cacheable
    */
   ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory);
 
+  /**
+   * Returns similar ColumnValueSelector object as returned by {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}
+   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
+   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
+   *
+   * @param columnName
+   * @param columnSelector
+   * @param offset
+   * @return the selector
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    return null;
+  }
 
   /**
    * Returns the capabilities of this virtual column, which includes a type that corresponds to the best
@@ -107,4 +147,17 @@ public interface VirtualColumn extends Cacheable
    * @return whether to use dot notation
    */
   boolean usesDotNotation();
+
+  /**
+   * Returns the BitmapIndex for efficient filtering on columns that support it. This method is only used if
+   * {@link ColumnCapabilities} returned from {@link #capabilities(String)} has flag for BitmapIndex support.
+   * @param columnName
+   * @param selector
+   * @return BitmapIndex
+   */
+  @SuppressWarnings("unused")
+  default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
 }

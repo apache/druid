@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Amazon Kinesis Indexing Service"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Kinesis Indexing Service
 
 Similar to the [Kafka indexing service](./kafka-ingestion.html), the Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
@@ -30,7 +31,7 @@ able to read non-recent events from Kinesis and are not subject to the window pe
 ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core extension (see
+The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../operations/including-extensions.html)). Please note that this is
 currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).
@@ -112,7 +113,7 @@ A sample supervisor spec is shown below:
 }
 ```
 
-## Supervisor Configuration
+## Supervisor Spec
 
 |Field|Description|Required|
 |--------|-----------|---------|
@@ -192,7 +193,7 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`stream`|String|The Kinesis stream to read.|yes|
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
-|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
+|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisshards}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
@@ -217,12 +218,58 @@ To authenticate with AWS, you must provide your AWS access key and AWS secret ke
 ```
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
-The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will
+look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance
+profile provider (in this order).
 
 ### Getting Supervisor Status Report
 
-`GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
-sequence numbers as reported by Kinesis. Unlike the Kafka Indexing Service, stats about lag is not yet supported.
+`GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks 
+managed by the given supervisor. This includes the latest sequence numbers as reported by Kinesis. Unlike the Kafka
+Indexing Service, stats about lag are not yet supported.
+
+The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
+`recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
+There are two fields related to the supervisor's state - `state` and `detailedState`. The `state` field will always be
+one of a small number of generic states that are applicable to any type of supervisor, while the `detailedState` field
+will contain a more descriptive, implementation-specific state that may provide more insight into the supervisor's
+activities than the generic `state` field.
+
+The list of possible `state` values are: [`PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`]
+
+The list of `detailedState` values and their corresponding `state` mapping is as follows:
+
+|Detailed State|Corresponding State|Description|
+|--------------|-------------------|-----------|
+|UNHEALTHY_SUPERVISOR|UNHEALTHY_SUPERVISOR|The supervisor has encountered errors on the past `druid.supervisor.unhealthinessThreshold` iterations|
+|UNHEALTHY_TASKS|UNHEALTHY_TASKS|The last `druid.supervisor.taskUnhealthinessThreshold` tasks have all failed|
+|UNABLE_TO_CONNECT_TO_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past|
+|LOST_CONTACT_WITH_STREAM|UNHEALTHY_SUPERVISOR|The supervisor is encountering connectivity issues with Kinesis but has successfully connected in the past|
+|PENDING (first iteration only)|PENDING|The supervisor has been initialized and hasn't started connecting to the stream|
+|CONNECTING_TO_STREAM (first iteration only)|RUNNING|The supervisor is trying to connect to the stream and update partition data|
+|DISCOVERING_INITIAL_TASKS (first iteration only)|RUNNING|The supervisor is discovering already-running tasks|
+|CREATING_TASKS (first iteration only)|RUNNING|The supervisor is creating tasks and discovering state|
+|RUNNING|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|
+|SUSPENDED|SUSPENDED|The supervisor has been suspended|
+|STOPPING|STOPPING|The supervisor is stopping|
+
+On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
+  1) Fetch the list of shards from Kinesis and determine the starting sequence number for each shard (either based on the
+  last processed sequence number if continuing, or starting from the beginning or ending of the stream if this is a new stream).
+  2) Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match
+  the supervisor's configuration, else signal them to stop.
+  3) Send a status request to each supervised task to update our view of the state of the tasks under our supervision.
+  4) Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
+  5) Handle tasks that have finished publishing and signal redundant replica tasks to stop.
+  6) Handle tasks that have failed and clean up the supervisor's internal state.
+  7) Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
+
+The `detailedState` field will show additional values (those marked with "first iteration only") the first time the
+supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
+initialization-type issues, where the supervisor is unable to reach a stable state (perhaps because it can't connect to
+Kinesis, it can't read from the stream, or it can't communicate with existing tasks). Once the supervisor is stable -
+that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
+state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
 ### Updating Existing Supervisors
 
@@ -282,7 +329,7 @@ in data loss (assuming the tasks run before Kinesis purges those sequence number
 
 A running task will normally be in one of two states: *reading* or *publishing*. A task will remain in reading state for
 `taskDuration`, at which point it will transition to publishing state. A task will remain in publishing state for as long
-as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical node
+as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical process
 (or until `completionTimeout` elapses).
 
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
@@ -339,7 +386,7 @@ for this segment granularity is created for further events. Kinesis Indexing Tas
 means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
 maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
 and new set of segments will be created for further events. This means that the task can run for longer durations of time
-without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
+without accumulating old segments locally on Middle Manager processes and it is encouraged to do so.
 
 Kinesis Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
 is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and

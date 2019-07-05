@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
@@ -85,7 +84,7 @@ public class FileUtils
       return new FileCopyResult(outFile);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -177,6 +176,15 @@ public class FileUtils
 
   /**
    * Write to a file atomically, by first writing to a temporary file in the same directory and then moving it to
+   * the target location. More docs at {@link FileUtils#writeAtomically(File, File, OutputStreamConsumer)} .
+   */
+  public static <T> T writeAtomically(final File file, OutputStreamConsumer<T> f) throws IOException
+  {
+    return writeAtomically(file, file.getParentFile(), f);
+  }
+
+  /**
+   * Write to a file atomically, by first writing to a temporary file in given tmpDir directory and then moving it to
    * the target location. This function attempts to clean up its temporary files when possible, but they may stick
    * around (for example, if the JVM crashes partway through executing the function). In any case, the target file
    * should be unharmed.
@@ -187,12 +195,7 @@ public class FileUtils
    *
    * This method is not just thread-safe, but is also safe to use from multiple processes on the same machine.
    */
-  public static <T> T writeAtomically(final File file, OutputStreamConsumer<T> f) throws IOException
-  {
-    return writeAtomically(file, file.getParentFile(), f);
-  }
-
-  private static <T> T writeAtomically(final File file, final File tmpDir, OutputStreamConsumer<T> f) throws IOException
+  public static <T> T writeAtomically(final File file, final File tmpDir, OutputStreamConsumer<T> f) throws IOException
   {
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
@@ -239,6 +242,14 @@ public class FileUtils
   {
     return new FilterOutputStream(out)
     {
+      // Default implementation of this method in FilterOutputStream converts single write operation to
+      // multiple write operations of 1 byte each, which is terribly inefficient.
+      @Override
+      public void write(byte b[], int off, int len) throws IOException
+      {
+        out.write(b, off, len);
+      }
+
       @Override
       public void close()
       {

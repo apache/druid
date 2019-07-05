@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.16.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -113,7 +113,7 @@
         </dependency>
         <dependency>
             <groupId>org.checkerframework</groupId>
-            <artifactId>checker</artifactId>
+            <artifactId>checker-qual</artifactId>
             <version>${checkerframework.version}</version>
         </dependency>
         <dependency>

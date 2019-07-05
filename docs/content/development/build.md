@@ -24,15 +24,18 @@ title: "Build from Source"
 
 # Build from Source
 
-You can build Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.
+You can build Apache Druid (incubating) directly from source. Please note that these instructions are for building the latest stable version of Druid.
 For building the latest code in master, follow the instructions [here](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md).
 
 
 #### Prerequisites
 
 ##### Installing Java and Maven:
-- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+- JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
+  like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
+
+
 
 ##### Downloading the source:
 

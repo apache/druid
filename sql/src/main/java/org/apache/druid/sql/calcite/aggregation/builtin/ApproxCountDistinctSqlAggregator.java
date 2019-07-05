@@ -41,13 +41,13 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -71,6 +71,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -92,7 +93,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
+    final List<VirtualColumn> myvirtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
@@ -110,13 +111,10 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       if (arg.isSimpleExtraction()) {
         dimensionSpec = arg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        final ExpressionVirtualColumn virtualColumn = arg.toVirtualColumn(
-            Calcites.makePrefixedName(name, "v"),
-            inputType,
-            plannerContext.getExprMacroTable()
-        );
+        VirtualColumn virtualColumn =
+            virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, sqlTypeName);
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-        virtualColumns.add(virtualColumn);
+        myvirtualColumns.add(virtualColumn);
       }
 
       aggregatorFactory = new CardinalityAggregatorFactory(
@@ -129,7 +127,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
+        myvirtualColumns,
         Collections.singletonList(aggregatorFactory),
         finalizeAggregations ? new HyperUniqueFinalizingPostAggregator(name, aggregatorFactory.getName()) : null
     );

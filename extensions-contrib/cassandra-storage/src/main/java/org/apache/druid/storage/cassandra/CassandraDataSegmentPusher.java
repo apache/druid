@@ -27,11 +27,11 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ChunkedStorageProvider;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,8 +41,6 @@ import java.util.Map;
 
 /**
  * Cassandra Segment Pusher
- *
- * @author boneill42
  */
 public class CassandraDataSegmentPusher extends CassandraStorage implements DataSegmentPusher
 {

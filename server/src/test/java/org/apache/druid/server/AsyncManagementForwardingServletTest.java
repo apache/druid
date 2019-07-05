@@ -36,6 +36,7 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.BaseJettyTest;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.client.HttpClient;
@@ -61,6 +62,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.zip.Deflater;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
 {
@@ -438,7 +440,12 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
+      handlerList.setHandlers(
+          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
+              Deflater.DEFAULT_COMPRESSION)}
+      );
       server.setHandler(handlerList);
     }
   }
@@ -465,9 +472,13 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     }
 
     @Override
-    public void registerListener(Listener listener) {}
+    public void registerListener(Listener listener)
+    {
+    }
 
     @Override
-    public void unregisterListener() {}
+    public void unregisterListener()
+    {
+    }
   }
 }

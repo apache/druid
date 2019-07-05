@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 
@@ -44,7 +45,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class),
     @JsonSubTypes.Type(name = "filter", value = DimFilterHavingSpec.class)
 })
-public interface HavingSpec
+public interface HavingSpec extends Cacheable
 {
   // Atoms for easy combination, but for now they are mostly useful
   // for testing.

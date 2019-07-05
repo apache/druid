@@ -39,7 +39,7 @@ Supported granularity strings are: `all`, `none`, `second`, `minute`, `fifteen_m
 
 #### Example:
 
-Suppose you have data below stored in Druid with millisecond ingestion granularity,
+Suppose you have data below stored in Apache Druid (incubating) with millisecond ingestion granularity,
 
 ``` json
 {"timestamp": "2013-08-31T01:02:33Z", "page": "AAA", "language" : "en"}
@@ -176,11 +176,10 @@ If you change the granularity to `none`, you will get the same results as settin
 } ]
 ```
 
-Having a query granularity smaller than the ingestion granularity doesn't make sense,
-because information about that smaller granularity is not present in the indexed data.
-So, if the query granularity is smaller than the ingestion granularity, druid produces
-results that are equivalent to having set the query granularity to the ingestion granularity.
-See `queryGranularity` in [Ingestion Spec](../ingestion/ingestion-spec.html#granularityspec).
+Having a query time `granularity` that is smaller than the `queryGranularity` parameter set at
+[ingestion time]((../ingestion/ingestion-spec.html#granularityspec)) is unreasonable because information about that
+smaller granularity is not present in the indexed data. So, if the query time granularity is smaller than the ingestion
+time query granularity, Druid produces results that are equivalent to having set `granularity` to `queryGranularity`.
 
 
 If you change the granularity to `all`, you will get everything aggregated in 1 bucket,

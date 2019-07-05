@@ -27,6 +27,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -156,12 +157,12 @@ public class WorkerTaskMonitor extends WorkerTaskManager
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent)
+          public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent event)
               throws Exception
           {
-            if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+            if (CuratorUtils.isChildAdded(event)) {
               final Task task = jsonMapper.readValue(
-                  cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
+                  cf.getData().forPath(event.getData().getPath()),
                   Task.class
               );
 

@@ -52,6 +52,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -66,7 +67,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DruidSchemaTest extends CalciteTestBase
 {
@@ -247,15 +248,18 @@ public class DruidSchemaTest extends CalciteTestBase
   }
 
   /**
-   * This tests that {@link SegmentMetadataHolder#getNumRows()} is correct in case
+   * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
    * of multiple replicas i.e. when {@link DruidSchema#addSegment(DruidServerMetadata, DataSegment)}
    * is called more than once for same segment
    */
   @Test
   public void testSegmentMetadataHolderNumRows()
   {
-    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
-    final Set<DataSegment> segments = segmentsMetadata.keySet();
+    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentsMetadata.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
     Assert.assertEquals(3, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
@@ -263,50 +267,47 @@ public class DruidSchemaTest extends CalciteTestBase
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(existingSegment);
-    final SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
-    // update SegmentMetadataHolder of existingSegment with numRows=5
-    SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
-    schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
+    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
+    // update AvailableSegmentMetadata of existingSegment with numRows=5
+    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
+    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
     // find a druidServer holding existingSegment
-    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers.stream()
-                                                                     .flatMap(druidServer -> druidServer.getSegments()
-                                                                                                        .stream()
-                                                                                                        .filter(segment -> segment
-                                                                                                            .equals(
-                                                                                                                existingSegment))
-                                                                                                        .map(segment -> Pair
-                                                                                                            .of(
-                                                                                                                druidServer,
-                                                                                                                segment
-                                                                                                            )))
-                                                                     .findAny()
-                                                                     .orElse(null);
+    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers
+        .stream()
+        .flatMap(druidServer -> druidServer
+            .getLazyAllSegments().stream()
+            .filter(segment -> segment.getId().equals(existingSegment.getId()))
+            .map(segment -> Pair.of(druidServer, segment))
+        )
+        .findAny()
+        .orElse(null);
     Assert.assertNotNull(pair);
     final ImmutableDruidServer server = pair.lhs;
     Assert.assertNotNull(server);
     final DruidServerMetadata druidServerMetadata = server.getMetadata();
     // invoke DruidSchema#addSegment on existingSegment
     schema.addSegment(druidServerMetadata, existingSegment);
-    segmentsMetadata = schema.getSegmentMetadata();
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
     // get the only segment with datasource "foo2"
     final DataSegment currentSegment = segments.stream()
                                                .filter(segment -> segment.getDataSource().equals("foo2"))
                                                .findFirst()
                                                .orElse(null);
-    final SegmentMetadataHolder currentHolder = segmentsMetadata.get(currentSegment);
-    Assert.assertEquals(updatedHolder.getSegmentId(), currentHolder.getSegmentId());
-    Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
+    final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
+    Assert.assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
+    Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
     // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
-    Assert.assertEquals(updatedHolder.getNumReplicas(), currentHolder.getNumReplicas());
-    Assert.assertEquals(updatedHolder.isAvailable(), currentHolder.isAvailable());
-    Assert.assertEquals(updatedHolder.isPublished(), currentHolder.isPublished());
+    Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
   @Test
   public void testNullDatasource() throws IOException
   {
-    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
-    Set<DataSegment> segments = segmentMetadatas.keySet();
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
     Assert.assertEquals(segments.size(), 3);
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
@@ -314,31 +315,34 @@ public class DruidSchemaTest extends CalciteTestBase
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertFalse(segmentToRemove == null);
+    Assert.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
-    schema.refreshSegments(segments); // can cause NPE without dataSourceSegments null check in DruidSchema#refreshSegmentsForDataSource
-    segmentMetadatas = schema.getSegmentMetadata();
-    segments = segmentMetadatas.keySet();
-    Assert.assertEquals(segments.size(), 2);
+
+    // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
+    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
+    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 2);
   }
 
   @Test
-  public void testNullSegmentMetadataHolder() throws IOException
+  public void testNullAvailableSegmentMetadata() throws IOException
   {
-    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
-    Set<DataSegment> segments = segmentMetadatas.keySet();
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
     Assert.assertEquals(segments.size(), 3);
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertFalse(segmentToRemove == null);
+    Assert.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
-    schema.refreshSegments(segments); // can cause NPE without holder null check in SegmentMetadataHolder#from
-    segmentMetadatas = schema.getSegmentMetadata();
-    segments = segmentMetadatas.keySet();
-    Assert.assertEquals(segments.size(), 2);
+
+    // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
+    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
+    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 2);
   }
 
 }

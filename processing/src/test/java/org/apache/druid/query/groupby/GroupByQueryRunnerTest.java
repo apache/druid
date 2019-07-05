@@ -5350,6 +5350,12 @@ public class GroupByQueryRunnerTest
             new BaseHavingSpec()
             {
               @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
+              @Override
               public boolean eval(Row row)
               {
                 return (row.getMetric("idx_subpostagg").floatValue() < 3800);
@@ -5611,6 +5617,12 @@ public class GroupByQueryRunnerTest
         .setHavingSpec(
             new BaseHavingSpec()
             {
+              @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
+
               @Override
               public boolean eval(Row row)
               {
@@ -6265,9 +6277,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("market", "market")
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("alias", "alias")
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -6727,6 +6741,96 @@ public class GroupByQueryRunnerTest
             13L,
             "idx",
             5827L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
+  }
+
+  // https://github.com/apache/incubator-druid/issues/7820
+  @Test
+  public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
+  {
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setDimensions(Lists.newArrayList(
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("alias", "alias_renamed")
+        ))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index"),
+                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+                new DoubleSumAggregatorFactory("idxDouble", "index")
+            )
+        )
+        .setDimFilter(new SelectorDimFilter("alias", "automotive", null))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setSubtotalsSpec(ImmutableList.of(
+            ImmutableList.of("alias_renamed"),
+            ImmutableList.of()
+        ))
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias_renamed",
+            "automotive",
+            "rows",
+            1L,
+            "idx",
+            135L,
+            "idxFloat",
+            135.88510131835938f,
+            "idxDouble",
+            135.88510131835938d
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias_renamed",
+            "automotive",
+            "rows",
+            1L,
+            "idx",
+            147L,
+            "idxFloat",
+            147.42593f,
+            "idxDouble",
+            147.42593d
+        ),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01T00:00:00.000Z",
+            "rows",
+            1L,
+            "idx",
+            135L,
+            "idxFloat",
+            135.88510131835938f,
+            "idxDouble",
+            135.88510131835938d
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02T00:00:00.000Z",
+            "rows",
+            1L,
+            "idx",
+            147L,
+            "idxFloat",
+            147.42593f,
+            "idxDouble",
+            147.42593d
         )
     );
 

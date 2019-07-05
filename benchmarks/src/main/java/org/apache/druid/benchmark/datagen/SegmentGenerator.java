@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.datagen;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
@@ -111,9 +110,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()
@@ -225,7 +222,7 @@ public class SegmentGenerator implements Closeable
         }
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

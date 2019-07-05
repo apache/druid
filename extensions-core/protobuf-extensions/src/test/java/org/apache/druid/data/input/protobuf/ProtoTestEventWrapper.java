@@ -25,7 +25,9 @@ package org.apache.druid.data.input.protobuf;
 @SuppressWarnings("ALL")
 public final class ProtoTestEventWrapper
 {
-  private ProtoTestEventWrapper() {}
+  private ProtoTestEventWrapper()
+  {
+  }
 
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry
@@ -708,8 +710,7 @@ public final class ProtoTestEventWrapper
         }
         org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo other = (org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo) obj;
 
-        boolean result = true;
-        result = result && (hasBar() == other.hasBar());
+        boolean result = hasBar() == other.hasBar();
         if (hasBar()) {
           result = result && getBar()
               .equals(other.getBar());

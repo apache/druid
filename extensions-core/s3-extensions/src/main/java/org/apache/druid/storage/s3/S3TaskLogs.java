@@ -135,18 +135,18 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.retryS3Operation(
           () -> {
-            service.putObject(config.getS3Bucket(), taskKey, logFile);
+            S3Utils.uploadFileIfPossible(service, config.getDisableAcl(), config.getS3Bucket(), taskKey, logFile);
             return null;
           }
       );
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
-  private String getTaskLogKey(String taskid, String filename)
+  String getTaskLogKey(String taskid, String filename)
   {
     return StringUtils.format("%s/%s/%s", config.getS3Prefix(), taskid, filename);
   }

@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,15 +44,8 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void mergeSegments(List<DataSegment> segments)
-  {
-    
-  }
-
-  @Override
   public String compactSegments(
       List<DataSegment> segments,
-      boolean keepSegmentGranularity,
       @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
@@ -80,21 +74,9 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public List<TaskStatusPlus> getRunningTasks()
+  public List<TaskStatusPlus> getActiveTasks()
   {
-    return null;
-  }
-
-  @Override
-  public List<TaskStatusPlus> getPendingTasks()
-  {
-    return null;
-  }
-
-  @Override
-  public List<TaskStatusPlus> getWaitingTasks()
-  {
-    return null;
+    return Collections.emptyList();
   }
 
   @Override

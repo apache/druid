@@ -19,10 +19,9 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.base.Throwables;
+import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import sun.misc.Cleaner;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -50,13 +49,13 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
    * to be used directly.
    */
   @SuppressWarnings("unused")
-  private final Cleaner cleaner;
+  private final Object cleanable;
 
   public ReferenceCountingResourceHolder(final T object, final Closeable closer)
   {
     this.object = object;
     this.closer = closer;
-    this.cleaner = Cleaner.create(this, new CloserRunnable(object, closer, refCount));
+    this.cleanable = Cleaners.register(this, new CloserRunnable(object, closer, refCount));
   }
 
   public static <T extends Closeable> ReferenceCountingResourceHolder<T> fromCloseable(final T object)
@@ -137,7 +136,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
         closer.close();
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

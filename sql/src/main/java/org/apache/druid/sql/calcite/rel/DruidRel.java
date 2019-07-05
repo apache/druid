@@ -19,13 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.common.base.Throwables;
-import org.apache.calcite.DataContext;
-import org.apache.calcite.interpreter.BindableRel;
-import org.apache.calcite.interpreter.Node;
-import org.apache.calcite.interpreter.Row;
-import org.apache.calcite.interpreter.Sink;
-import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
@@ -35,7 +28,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode implements BindableRel
+public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
 {
   private final QueryMaker queryMaker;
 
@@ -104,8 +97,6 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
    */
   public abstract DruidQuery toDruidQueryForExplaining();
 
-  public abstract T asBindable();
-
   public QueryMaker getQueryMaker()
   {
     return queryMaker;
@@ -122,34 +113,4 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
    * Get a list of names of datasources read by this DruidRel
    */
   public abstract List<String> getDataSourceNames();
-
-  @Override
-  public Class<Object[]> getElementType()
-  {
-    return Object[].class;
-  }
-
-  @Override
-  public Node implement(InterpreterImplementor implementor)
-  {
-    final Sink sink = implementor.compiler.sink(this);
-    return () -> runQuery().accumulate(
-        sink,
-        (Sink theSink, Object[] in) -> {
-          try {
-            theSink.send(Row.of(in));
-          }
-          catch (InterruptedException e) {
-            throw Throwables.propagate(e);
-          }
-          return theSink;
-        }
-    );
-  }
-
-  @Override
-  public Enumerable<Object[]> bind(final DataContext dataContext)
-  {
-    throw new UnsupportedOperationException();
-  }
 }

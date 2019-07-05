@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -45,8 +44,10 @@ public class ReferenceCountingSegment extends AbstractSegment
     @Override
     protected boolean onAdvance(int phase, int registeredParties)
     {
-      Preconditions.checkState(registeredParties == 0);
       // Ensure that onAdvance() doesn't throw exception, otherwise termination won't happen
+      if (registeredParties != 0) {
+        log.error("registeredParties[%s] is not 0", registeredParties);
+      }
       try {
         baseSegment.close();
       }

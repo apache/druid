@@ -421,7 +421,7 @@ public class GroupByQueryEngineV2
             delegate.close();
           }
           delegate = initNewDelegate();
-          return true;
+          return delegate.hasNext();
         } else {
           return false;
         }
@@ -742,7 +742,7 @@ public class GroupByQueryEngineV2
               ((DimensionSelector) dim.getSelector()).lookupName(key)
           );
         } else {
-          map.put(dim.getOutputName(), "");
+          map.put(dim.getOutputName(), NullHandling.defaultStringValue());
         }
       }
     }
