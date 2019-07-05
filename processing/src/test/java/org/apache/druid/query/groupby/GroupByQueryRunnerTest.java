@@ -6270,6 +6270,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSubtotalsSpec()
   {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
@@ -10613,7 +10616,7 @@ public class GroupByQueryRunnerTest
   private void cannotVectorize()
   {
     if (vectorize && config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(IllegalStateException.class);
+      expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }
   }

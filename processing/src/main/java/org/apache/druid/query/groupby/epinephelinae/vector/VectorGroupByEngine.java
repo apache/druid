@@ -74,10 +74,19 @@ public class VectorGroupByEngine
       @Nullable final Filter filter
   )
   {
-    // Not yet supported:
-    // 1) Granularities other than ALL.
-    // 2) Multi-value dimensions.
-    return GroupByQueryEngineV2.isAllSingleValueDims(adapter, query.getDimensions())
+    // Multi-value dimensions are not yet supported.
+    //
+    // Two notes here about how we're handling this check:
+    //   1) After multi-value dimensions are supported, we could alter "GroupByQueryEngineV2.isAllSingleValueDims"
+    //      to accept a ColumnSelectorFactory, which makes more sense than using a StorageAdapter (see #8013).
+    //   2) Technically using StorageAdapter here is bad since it only looks at real columns, but they might
+    //      be shadowed by virtual columns (again, see #8013). But it's fine for now since adapter.canVectorize
+    //      always returns false if there are any virtual columns.
+    //
+    // This situation should sort itself out pretty well once this engine supports multi-valued columns. Then we
+    // won't have to worry about having this all-single-value-dims check here.
+
+    return GroupByQueryEngineV2.isAllSingleValueDims(adapter::getColumnCapabilities, query.getDimensions())
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);

@@ -2596,7 +2596,7 @@ public class TimeseriesQueryRunnerTest
   private void cannotVectorize()
   {
     if (vectorize) {
-      expectedException.expect(IllegalStateException.class);
+      expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }
   }

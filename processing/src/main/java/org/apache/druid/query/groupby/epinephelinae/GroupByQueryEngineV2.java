@@ -53,6 +53,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByC
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -72,6 +73,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 public class GroupByQueryEngineV2
 {
@@ -181,13 +183,15 @@ public class GroupByQueryEngineV2
               @Override
               public GroupByEngineIterator make()
               {
-                ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
+                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                final ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
                     .createColumnSelectorPluses(
                         STRATEGY_FACTORY,
                         query.getDimensions(),
-                        cursor.getColumnSelectorFactory()
+                        columnSelectorFactory
                     );
-                GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
+
+                final GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
                 final int cardinalityForArrayAggregation = getCardinalityForArrayAggregation(
                     querySpecificConfig,
@@ -204,7 +208,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(storageAdapter, query.getDimensions()),
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -215,7 +219,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(storageAdapter, query.getDimensions())
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions())
                   );
                 }
               }
@@ -278,10 +282,11 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued or nonexistent.
+   * Checks whether all "dimensions" are either single-valued or nonexistent (which is just as good as single-valued,
+   * since their selectors will show up as full of nulls).
    */
   public static boolean isAllSingleValueDims(
-      final StorageAdapter adapter,
+      final Function<String, ColumnCapabilities> capabilitiesFunction,
       final List<DimensionSpec> dimensions
   )
   {
@@ -289,7 +294,14 @@ public class GroupByQueryEngineV2
         .stream()
         .allMatch(
             dimension -> {
-              final ColumnCapabilities columnCapabilities = adapter.getColumnCapabilities(dimension.getDimension());
+              if (dimension.mustDecorate()) {
+                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+                // To be safe, we must return false here.
+                return false;
+              }
+
+              // Now check column capabilities.
+              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
               return columnCapabilities == null || !columnCapabilities.hasMultipleValues();
             });
   }
