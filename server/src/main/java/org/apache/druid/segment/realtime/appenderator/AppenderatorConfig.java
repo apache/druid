@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 

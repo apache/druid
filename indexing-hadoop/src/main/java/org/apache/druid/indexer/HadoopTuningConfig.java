@@ -30,7 +30,6 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;
