@@ -416,7 +416,7 @@ def check_licenses(license_yaml, dependency_reports_root):
                     reported_dep_to_licenses.update(parser.parse(report_file))
 
     if len(reported_dep_to_licenses) == 0:
-        raise Exception("Dependency reports are not found")
+        raise Exception("No dependency reports are found")
 
     print_error("Found {} reported licenses\n".format(len(reported_dep_to_licenses)))
 
@@ -447,7 +447,7 @@ def check_licenses(license_yaml, dependency_reports_root):
                         registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
 
     if len(registered_dep_to_licenses) == 0:
-        raise Exception("Registered licenses are not found")
+        raise Exception("No registered licenses are found")
     
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
