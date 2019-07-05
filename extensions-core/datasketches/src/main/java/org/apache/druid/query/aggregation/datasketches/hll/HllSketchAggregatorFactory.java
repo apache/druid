@@ -40,7 +40,6 @@ import java.util.Objects;
  */
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
-
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
@@ -201,7 +200,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(getCacheTypeId()).appendString(name).appendString(fieldName)
-        .appendInt(lgK).appendInt(tgtHllType.ordinal()).build();
+                                                .appendInt(lgK).appendInt(tgtHllType.ordinal()).build();
   }
 
   @Override
@@ -242,12 +241,12 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return getClass().getSimpleName() + " {"
-        + " name=" + name
-        + ", fieldName=" + fieldName
-        + ", lgK=" + lgK
-        + ", tgtHllType=" + tgtHllType
-        + ", round=" + round
-        + " }";
+           + " name=" + name
+           + ", fieldName=" + fieldName
+           + ", lgK=" + lgK
+           + ", tgtHllType=" + tgtHllType
+           + ", round=" + round
+           + " }";
   }
 
   protected abstract byte getCacheTypeId();

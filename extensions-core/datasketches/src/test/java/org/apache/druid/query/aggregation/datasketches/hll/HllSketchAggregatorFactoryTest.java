@@ -25,6 +25,8 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,14 +36,6 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static junit.framework.TestCase.assertNull;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.mock;
-import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 public class HllSketchAggregatorFactoryTest
 {
@@ -63,46 +57,46 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testIsRound()
   {
-    assertEquals(ROUND, target.isRound());
+    Assert.assertEquals(ROUND, target.isRound());
   }
 
   @Test
   public void testGetRequiredColumns()
   {
     List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
-    assertEquals(1, aggregatorFactories.size());
+    Assert.assertEquals(1, aggregatorFactories.size());
     HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
-    assertEquals(FIELD_NAME, aggregatorFactory.getName());
-    assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
-    assertEquals(LG_K, aggregatorFactory.getLgK());
-    assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
-    assertEquals(ROUND, aggregatorFactory.isRound());
+    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getName());
+    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
+    Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
+    Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
+    Assert.assertEquals(ROUND, aggregatorFactory.isRound());
   }
 
   @Test
-  public void testFinalizeComputation_null()
+  public void testFinalizeComputationNull()
   {
-    assertNull(target.finalizeComputation(null));
+    Assert.assertNull(target.finalizeComputation(null));
   }
 
   @Test
-  public void testFinalizeComputation_round()
+  public void testFinalizeComputationRound()
   {
     Object actual = target.finalizeComputation(getMockSketch());
-    assertTrue(actual instanceof Long);
-    assertEquals(3L, actual);
+    Assert.assertTrue(actual instanceof Long);
+    Assert.assertEquals(3L, actual);
   }
 
   private static HllSketch getMockSketch()
   {
-    HllSketch sketch = mock(HllSketch.class);
-    expect(sketch.getEstimate()).andReturn(ESTIMATE);
-    replay(sketch);
+    HllSketch sketch = EasyMock.mock(HllSketch.class);
+    EasyMock.expect(sketch.getEstimate()).andReturn(ESTIMATE);
+    EasyMock.replay(sketch);
     return sketch;
   }
 
   @Test
-  public void testFinalizeComputation_noRound()
+  public void testFinalizeComputatioNoRound()
   {
     TestHllSketchAggregatorFactory t = new TestHllSketchAggregatorFactory(
         NAME,
@@ -112,30 +106,30 @@ public class HllSketchAggregatorFactoryTest
         !ROUND
     );
     Object actual = t.finalizeComputation(getMockSketch());
-    assertTrue(actual instanceof Double);
-    assertEquals(ESTIMATE, actual);
+    Assert.assertTrue(actual instanceof Double);
+    Assert.assertEquals(ESTIMATE, actual);
   }
 
   @Test
-  public void testEquals_sameObject()
+  public void testEqualsSameObject()
   {
-    assertEquals(target, target);
+    Assert.assertEquals(target, target);
   }
 
   @Test
-  public void testEquals_otherNull()
+  public void testEqualsOtherNull()
   {
-    assertNotEquals(target, null);
+    Assert.assertNotEquals(target, null);
   }
 
   @Test
-  public void testEquals_otherDiffClass()
+  public void testEqualsOtherDiffClass()
   {
-    assertNotEquals(target, NAME);
+    Assert.assertNotEquals(target, NAME);
   }
 
   @Test
-  public void testEquals_otherDiffName()
+  public void testEqualsOtherDiffName()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME + "-diff",
@@ -144,11 +138,11 @@ public class HllSketchAggregatorFactoryTest
         TGT_HLL_TYPE,
         ROUND
     );
-    assertNotEquals(target, other);
+    Assert.assertNotEquals(target, other);
   }
 
   @Test
-  public void testEquals_otherDiffFieldName()
+  public void testEqualsOtherDiffFieldName()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME,
@@ -157,11 +151,11 @@ public class HllSketchAggregatorFactoryTest
         TGT_HLL_TYPE,
         ROUND
     );
-    assertNotEquals(target, other);
+    Assert.assertNotEquals(target, other);
   }
 
   @Test
-  public void testEquals_otherDiffLgK()
+  public void testEqualsOtherDiffLgK()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME,
@@ -170,11 +164,11 @@ public class HllSketchAggregatorFactoryTest
         TGT_HLL_TYPE,
         ROUND
     );
-    assertNotEquals(target, other);
+    Assert.assertNotEquals(target, other);
   }
 
   @Test
-  public void testEquals_otherDiffTgtHllType()
+  public void testEqualsOtherDiffTgtHllType()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME,
@@ -183,11 +177,11 @@ public class HllSketchAggregatorFactoryTest
         TgtHllType.HLL_8.name(),
         ROUND
     );
-    assertNotEquals(target, other);
+    Assert.assertNotEquals(target, other);
   }
 
   @Test
-  public void testEquals_otherDiffRound()
+  public void testEqualsOtherDiffRound()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME,
@@ -196,11 +190,11 @@ public class HllSketchAggregatorFactoryTest
         TGT_HLL_TYPE,
         !ROUND
     );
-    assertNotEquals(target, other);
+    Assert.assertNotEquals(target, other);
   }
 
   @Test
-  public void testEquals_otherMatches()
+  public void testEqualsOtherMatches()
   {
     TestHllSketchAggregatorFactory other = new TestHllSketchAggregatorFactory(
         NAME,
@@ -209,7 +203,7 @@ public class HllSketchAggregatorFactoryTest
         TGT_HLL_TYPE,
         ROUND
     );
-    assertEquals(target, other);
+    Assert.assertEquals(target, other);
   }
 
   @Test
@@ -222,7 +216,7 @@ public class HllSketchAggregatorFactoryTest
 
     for (Field field : toStringFields) {
       String expectedToken = formatFieldForToString(field);
-      assertTrue("Missing \"" + expectedToken + "\"", string.contains(expectedToken));
+      Assert.assertTrue("Missing \"" + expectedToken + "\"", string.contains(expectedToken));
     }
   }
 

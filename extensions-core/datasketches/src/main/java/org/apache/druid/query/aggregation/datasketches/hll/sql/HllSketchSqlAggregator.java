@@ -60,6 +60,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
   private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
+  private static final boolean ROUND = true;
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -134,13 +135,14 @@ public class HllSketchSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+    if (columnArg.isDirectColumnAccess()
+        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
           logK,
           tgtHllType,
-          false
+          ROUND
       );
     } else {
       final SqlTypeName sqlTypeName = columnRexNode.getType().getSqlTypeName();
@@ -168,7 +170,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
           dimensionSpec.getDimension(),
           logK,
           tgtHllType,
-          false
+          ROUND
       );
     }
 
