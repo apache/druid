@@ -87,7 +87,7 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   druid.metadata.storage.type=mysql
   druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid
   druid.metadata.storage.connector.user=druid
-  druid.metadata.storage.connector.password=druid
+  druid.metadata.storage.connector.password=diurd
   ```
 
 ## Encrypting MySQL connections
