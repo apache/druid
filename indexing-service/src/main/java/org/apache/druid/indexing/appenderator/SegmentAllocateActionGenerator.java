@@ -24,8 +24,6 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
-import java.io.IOException;
-
 /**
  * This class is used in {@link ActionBasedSegmentAllocator} and expected to generate a
  * {@link TaskAction<  SegmentIdWithShardSpec  >} which is submitted to overlords to allocate a new segment.
@@ -42,5 +40,5 @@ public interface SegmentAllocateActionGenerator
       String sequenceName,
       String previousSegmentId,
       boolean skipSegmentLineageCheck
-  ) throws IOException;
+  );
 }
