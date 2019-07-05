@@ -59,7 +59,6 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
         extension_dirs = os.listdir(extensions_core_path)
         print("Found {} extensions".format(len(extension_dirs)))
         for extension_dir in extension_dirs:
-            print("extension_dir: {}".format(extension_dir))
             extension_path = os.path.join(extensions_core_path, extension_dir)
             if not os.path.isdir(extension_path):
                 print("{} is not a directory".format(extension_path))
@@ -68,7 +67,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
             extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
             script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
     
-    print("Generating dependency reports", end="")
+    print("Generating dependency reports", flush=True, end="")
     running = True
     def print_dots():
         while running:
@@ -100,7 +99,7 @@ if __name__ == "__main__":
         # The default maven-artifact-transfer in Travis is currently corrupted. Set the below argument properly to remove the corrupted one.
         if args.clean_mvn_artifact_transfer:
             command = "rm -rf ~/.m2/repository/org/apache/maven/shared/maven-artifact-transfer"
-            subprocess.call(command, shell=True)
+            subprocess.check_call(command, shell=True)
         
         generate_reports(args.druid_path, args.tmp_path, args.exclude_ext, args.num_threads)
     except KeyboardInterrupt:
