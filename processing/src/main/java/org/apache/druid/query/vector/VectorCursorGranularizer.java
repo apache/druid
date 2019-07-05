@@ -73,22 +73,24 @@ public class VectorCursorGranularizer
       final StorageAdapter storageAdapter,
       final VectorCursor cursor,
       final Granularity granularity,
-      final Interval cursorInterval
+      final Interval queryInterval
   )
   {
     final DateTime minTime = storageAdapter.getMinTime();
     final DateTime maxTime = storageAdapter.getMaxTime();
-    final Interval actualInterval = cursorInterval.overlap(new Interval(minTime, granularity.bucketEnd(maxTime)));
 
-    if (actualInterval == null) {
+    final Interval storageAdapterInterval = new Interval(minTime, granularity.bucketEnd(maxTime));
+    final Interval clippedQueryInterval = queryInterval.overlap(storageAdapterInterval);
+
+    if (clippedQueryInterval == null) {
       return null;
     }
 
-    final Iterable<Interval> bucketIterable = granularity.getIterable(actualInterval);
-    final Interval firstBucket = granularity.bucket(actualInterval.getStart());
+    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
+    final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
 
     final VectorValueSelector timeSelector;
-    if (firstBucket.contains(actualInterval)) {
+    if (firstBucket.contains(clippedQueryInterval)) {
       // Only one bucket, no need to read the time column.
       assert Iterables.size(bucketIterable) == 1;
       timeSelector = null;

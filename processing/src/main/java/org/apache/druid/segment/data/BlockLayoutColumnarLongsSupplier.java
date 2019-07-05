@@ -30,7 +30,11 @@ import java.nio.LongBuffer;
 public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
+
+  // The number of rows in this column.
   private final int totalSize;
+
+  // The number of longs per buffer.
   private final int sizePer;
   private final CompressionFactory.LongEncodingReader baseReader;
 

@@ -225,7 +225,7 @@ public class VectorGroupByEngine
         final GroupByQueryConfig config,
         final StorageAdapter storageAdapter,
         final VectorCursor cursor,
-        final Interval cursorInterval,
+        final Interval queryInterval,
         final List<GroupByVectorColumnSelector> selectors,
         final ByteBuffer processingBuffer,
         @Nullable final DateTime fudgeTimestamp
@@ -242,7 +242,7 @@ public class VectorGroupByEngine
       this.keySpace = new int[keySize * cursor.getMaxVectorSize()];
       this.keySerde = new ByteBufferKeySerde(keySize * Integer.BYTES);
       this.vectorGrouper = makeGrouper();
-      this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), cursorInterval);
+      this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), queryInterval);
 
       if (granulizer != null) {
         this.bucketIterator = granulizer.getBucketIterable().iterator();

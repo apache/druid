@@ -38,8 +38,8 @@ import java.util.Iterator;
  * Format -
  * byte 1 - version
  * offsets - {@link ColumnarInts} of length num of rows + 1 representing offsets of starting index of first element of
- * each row in values index and last element equal to length of values column, the last element in the offsets
- * represents the total length of values column.
+ *           each row in values index and last element equal to length of values column, the last element in the offsets
+ *           represents the total length of values column.
  * values - {@link ColumnarInts} representing concatenated values of all rows
  */
 public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>

@@ -30,7 +30,11 @@ import java.nio.DoubleBuffer;
 public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseDoubleBuffers;
+
+  // The number of rows in this column.
   private final int totalSize;
+
+  // The number of doubles per buffer.
   private final int sizePer;
 
   public BlockLayoutColumnarDoublesSupplier(

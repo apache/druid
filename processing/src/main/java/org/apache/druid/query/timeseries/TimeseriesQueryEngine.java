@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
+ *
  */
 public class TimeseriesQueryEngine
 {
@@ -71,6 +72,10 @@ public class TimeseriesQueryEngine
     this.bufferPool = bufferPool;
   }
 
+  /**
+   * Run a single-segment, single-interval timeseries query on a particular adapter. The query must have been
+   * scoped down to a single interval before calling this method.
+   */
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
     if (adapter == null) {
@@ -109,7 +114,7 @@ public class TimeseriesQueryEngine
       final TimeseriesQuery query,
       final StorageAdapter adapter,
       @Nullable final Filter filter,
-      final Interval interval,
+      final Interval queryInterval,
       final Granularity gran,
       final boolean descending
   )
@@ -119,7 +124,7 @@ public class TimeseriesQueryEngine
 
     final VectorCursor cursor = adapter.makeVectorCursor(
         filter,
-        interval,
+        queryInterval,
         query.getVirtualColumns(),
         descending,
         QueryContexts.getVectorSize(query),
@@ -138,7 +143,7 @@ public class TimeseriesQueryEngine
           adapter,
           cursor,
           gran,
-          interval
+          queryInterval
       );
 
       if (granularizer == null) {
@@ -235,7 +240,7 @@ public class TimeseriesQueryEngine
       final TimeseriesQuery query,
       final StorageAdapter adapter,
       @Nullable final Filter filter,
-      final Interval interval,
+      final Interval queryInterval,
       final Granularity gran,
       final boolean descending
   )
@@ -245,7 +250,7 @@ public class TimeseriesQueryEngine
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
-        Collections.singletonList(interval),
+        Collections.singletonList(queryInterval),
         filter,
         query.getVirtualColumns(),
         descending,

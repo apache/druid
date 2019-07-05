@@ -30,7 +30,11 @@ import java.nio.FloatBuffer;
 public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloats>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseFloatBuffers;
+
+  // The number of rows in this column.
   private final int totalSize;
+
+  // The number of floats per buffer.
   private final int sizePer;
 
   public BlockLayoutColumnarFloatsSupplier(
