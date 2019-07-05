@@ -60,7 +60,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -pl processing
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl processing
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
@@ -71,7 +71,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl processing
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl processing
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
@@ -82,7 +82,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -pl server
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl server
 
       # server module test with SQL Compatibility enabled
     - env:
@@ -91,7 +91,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -pl server -Ddruid.generic.useDefaultValueForNull=false
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl server -Ddruid.generic.useDefaultValueForNull=false
 
 
       # other modules test
@@ -101,7 +101,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -pl '!processing,!server'
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl '!processing,!server'
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
@@ -112,7 +112,7 @@ matrix:
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl '!processing,!server'
+        - MAVEN_OPTS='-Xmx800m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl '!processing,!server'
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
