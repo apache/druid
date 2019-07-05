@@ -16,6 +16,4 @@
 
 mkdir -p distribution/target
 
-docs/_bin/generate-license-dependency-reports.py . distribution/target --parallel 4 --exclude-extension
-
-MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist -Pbundle-contrib-exts
+mvn clean install -DskipTests && docs/_bin/generate-license-dependency-reports.py . distribution/target --parallel 4 --exclude-extension && MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist -Pbundle-contrib-exts
