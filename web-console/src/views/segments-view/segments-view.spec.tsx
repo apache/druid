@@ -27,9 +27,10 @@ describe('segments-view', () => {
       <SegmentsView
         datasource={'test'}
         onlyUnavailable={false}
-        goToQuery={(initSql: string) => {}}
+        goToQuery={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(segmentsView).toMatchSnapshot();
   });
 });

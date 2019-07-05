@@ -286,9 +286,7 @@ public class TimeCompareBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
 

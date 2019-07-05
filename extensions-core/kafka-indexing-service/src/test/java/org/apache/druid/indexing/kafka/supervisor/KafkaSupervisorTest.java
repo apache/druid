@@ -673,7 +673,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         new FireDepartment(
             dataSchema,
-            new RealtimeIOConfig(null, null, null),
+            new RealtimeIOConfig(null, null),
             null
         ),
         null

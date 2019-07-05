@@ -54,7 +54,7 @@ import java.util.List;
 
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+  private static final List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/status/health",
       // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
@@ -62,9 +62,10 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       DruidAvaticaHandler.AVATICA_PATH
   );
 
-  protected static List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
       "/",
       "/coordinator-console/*",
+      "/assets/*",
       "/public/*",
       "/old-console/*",
       "/pages/*",

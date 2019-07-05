@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea } from '@blueprintjs/core';
+import { Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
@@ -35,7 +35,7 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
-export interface ShowLogProps extends React.Props<any> {
+export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
@@ -54,7 +54,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     super(props, context);
     this.state = {
       logValue: '',
-      tail: true
+      tail: true,
     };
     this.getLogInfo();
   }
@@ -71,15 +71,15 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
       const resp = await axios.get(endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''));
       const data = resp.data;
 
-      let logValue = typeof (data) === 'string' ? data : JSON.stringify(data, undefined, 2);
+      let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
       if (tailOffset) logValue = removeFirstPartialLine(logValue);
       this.setState({ logValue });
     } catch (e) {
       this.setState({
-        logValue: `Error: ` + e.response.data
+        logValue: `Error: ` + e.response.data,
       });
     }
-  }
+  };
 
   async tail() {
     await this.getLogInfo();
@@ -95,63 +95,57 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
 
   private handleCheckboxChange = () => {
     this.setState({
-      tail: !this.state.tail
+      tail: !this.state.tail,
     });
     if (!this.state.tail) {
       this.tail();
     }
-  }
-
+  };
 
   render() {
     const { endpoint, downloadFilename, status } = this.props;
     const { logValue } = this.state;
 
-    return <div className="show-log">
-      <div className="top-actions">
-      {
-        status === 'RUNNING' &&
-        <Checkbox
-          label="Tail log"
-          checked={this.state.tail}
-          onChange={this.handleCheckboxChange}
-        />
-      }
-        <ButtonGroup className="right-buttons">
-          {
-            downloadFilename &&
-            <Button
-              text="Save"
-              minimal
-              onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
+    return (
+      <div className="show-log">
+        <div className="top-actions">
+          {status === 'RUNNING' && (
+            <Checkbox
+              label="Tail log"
+              checked={this.state.tail}
+              onChange={this.handleCheckboxChange}
             />
-          }
-          <Button
-            text="Copy"
-            minimal
-            onClick={() => {
-              copy(logValue, { format: 'text/plain' });
-              AppToaster.show({
-                message: 'Log copied to clipboard',
-                intent: Intent.SUCCESS
-              });
-            }}
-          />
-          <Button
-            text="View full log"
-            minimal
-            onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
-          />
-        </ButtonGroup>
+          )}
+          <ButtonGroup className="right-buttons">
+            {downloadFilename && (
+              <Button
+                text="Save"
+                minimal
+                onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
+              />
+            )}
+            <Button
+              text="Copy"
+              minimal
+              onClick={() => {
+                copy(logValue, { format: 'text/plain' });
+                AppToaster.show({
+                  message: 'Log copied to clipboard',
+                  intent: Intent.SUCCESS,
+                });
+              }}
+            />
+            <Button
+              text="View full log"
+              minimal
+              onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
+            />
+          </ButtonGroup>
+        </div>
+        <div className="main-area">
+          <textarea className="bp3-input" readOnly value={logValue} ref={this.log} />
+        </div>
       </div>
-      <div className="main-area">
-        <textarea
-          className="bp3-input"
-          readOnly
-          value={logValue}
-          ref={this.log}
-        />
-      </div>
-    </div>;
+    );
   }
 }

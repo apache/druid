@@ -126,13 +126,13 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/latest/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see https://druid.apache.org/docs/latest/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/favicon.png",
       "/console.html",

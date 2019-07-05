@@ -32,7 +32,7 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
   constructor(props: ArrayInputProps) {
     super(props);
     this.state = {
-      stringValue: Array.isArray(props.values) ? props.values.join(', ') : ''
+      stringValue: Array.isArray(props.values) ? props.values.join(', ') : '',
     };
   }
 
@@ -42,22 +42,25 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
     const newValues = stringValue.split(',').map((v: string) => v.trim());
     const newValuesFiltered = newValues.filter(Boolean);
     this.setState({
-      stringValue: newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue
+      stringValue:
+        newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue,
     });
     if (onChange) onChange(stringValue === '' ? undefined : newValuesFiltered);
-  }
+  };
 
   render() {
     const { className, placeholder, large, disabled } = this.props;
     const { stringValue } = this.state;
-    return <TextArea
-      className={className}
-      value={stringValue}
-      onChange={this.handleChange}
-      placeholder={placeholder}
-      large={large}
-      disabled={disabled}
-      fill
-    />;
+    return (
+      <TextArea
+        className={className}
+        value={stringValue}
+        onChange={this.handleChange}
+        placeholder={placeholder}
+        large={large}
+        disabled={disabled}
+        fill
+      />
+    );
   }
 }

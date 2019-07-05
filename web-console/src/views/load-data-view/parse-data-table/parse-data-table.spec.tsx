@@ -28,19 +28,22 @@ describe('parse data table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' }
-        }
-      ]
+          parsed: { c1: 'hello' },
+        },
+      ],
     };
 
-    const parseDataTable = <ParseDataTable
-      sampleData={sampleData}
-      columnFilter=""
-      canFlatten={false}
-      flattenedColumnsOnly={false}
-      flattenFields={[]}
-      onFlattenFieldSelect={() => null}
-    />;
+    const parseDataTable = (
+      <ParseDataTable
+        openModal={() => null}
+        sampleData={sampleData}
+        columnFilter=""
+        canFlatten={false}
+        flattenedColumnsOnly={false}
+        flattenFields={[]}
+        onFlattenFieldSelect={() => null}
+      />
+    );
 
     const { container } = render(parseDataTable);
     expect(container.firstChild).toMatchSnapshot();

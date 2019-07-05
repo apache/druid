@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { Button, HTMLSelect, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import FileSaver from 'file-saver';
+import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -40,30 +41,36 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
 export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
-    return <InputGroup
-      key={key}
-      onChange={(e: any) => onChange(e.target.value)}
-      value={filterValue}
-      rightElement={filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />}
-      placeholder={placeholder}
-    />;
+    return (
+      <InputGroup
+        key={key}
+        onChange={(e: any) => onChange(e.target.value)}
+        value={filterValue}
+        rightElement={
+          filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />
+        }
+        placeholder={placeholder}
+      />
+    );
   };
 }
 
 export function makeBooleanFilter(): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
-    return <HTMLSelect
-      key={key}
-      style={{ width: '100%' }}
-      onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || 'all'}
-      fill
-    >
-      <option value="all">Show all</option>
-      <option value="true">true</option>
-      <option value="false">false</option>
-    </HTMLSelect>;
+    return (
+      <HTMLSelect
+        key={key}
+        style={{ width: '100%' }}
+        onChange={(event: any) => onChange(event.target.value)}
+        value={filterValue || 'all'}
+        fill
+      >
+        <option value="all">Show all</option>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </HTMLSelect>
+    );
   };
 }
 
@@ -78,17 +85,17 @@ function getNeedleAndMode(input: string): NeedleAndMode {
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
-      mode: 'exact'
+      mode: 'exact',
     };
   }
   return {
     needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'prefix'
+    mode: 'prefix',
   };
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined ) {
+  if (value === undefined) {
     return true;
   }
   if (value === null) return false;
@@ -120,7 +127,10 @@ export function caseInsensitiveContains(testString: string, searchString: string
 
 // ----------------------------
 
-export function countBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, number> {
+export function countBy<T>(
+  array: T[],
+  fn: (x: T, index: number) => string = String,
+): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
     const key = fn(array[i], i);
@@ -133,7 +143,11 @@ function identity(x: any): any {
   return x;
 }
 
-export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string = String, valueFn: (x: T, index: number) => Q = identity): Record<string, Q> {
+export function lookupBy<T, Q>(
+  array: T[],
+  keyFn: (x: T, index: number) => string = String,
+  valueFn: (x: T, index: number) => Q = identity,
+): Record<string, Q> {
   const lookup: Record<string, Q> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
@@ -143,7 +157,10 @@ export function lookupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => strin
   return lookup;
 }
 
-export function mapRecord<T, Q>(record: Record<string, T>, fn: (value: T, key: string) => Q): Record<string, Q> {
+export function mapRecord<T, Q>(
+  record: Record<string, T>,
+  fn: (value: T, key: string) => Q,
+): Record<string, Q> {
   const newRecord: Record<string, Q> = {};
   const keys = Object.keys(record);
   for (const key of keys) {
@@ -152,7 +169,11 @@ export function mapRecord<T, Q>(record: Record<string, T>, fn: (value: T, key: s
   return newRecord;
 }
 
-export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string, aggregateFn: (xs: T[], key: string) => Q): Q[] {
+export function groupBy<T, Q>(
+  array: T[],
+  keyFn: (x: T, index: number) => string,
+  aggregateFn: (xs: T[], key: string) => Q,
+): Q[] {
   const buckets: Record<string, T[]> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
@@ -165,7 +186,15 @@ export function groupBy<T, Q>(array: T[], keyFn: (x: T, index: number) => string
 }
 
 export function uniq(array: string[]): string[] {
-  return Object.keys(lookupBy(array));
+  const seen: Record<string, boolean> = {};
+  return array.filter(s => {
+    if (hasOwnProp(seen, s)) {
+      return false;
+    } else {
+      seen[s] = true;
+      return true;
+    }
+  });
 }
 
 export function parseList(list: string): string[] {
@@ -201,11 +230,6 @@ export function formatDuration(ms: number): string {
 export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
   return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
-}
-
-export function getHeadProp(results: Record<string, any>[], prop: string): any {
-  if (!results || !results.length) return null;
-  return results[0][prop] || null;
 }
 
 // ----------------------------
@@ -245,19 +269,24 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function selectDefined<T, Q>(xs: (Q | null | undefined)[]): Q[] {
-  return xs.filter(Boolean) as any;
-}
-
 export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
   return (xs.map(f) as any).filter(Boolean);
 }
 
-export function sortWithPrefixSuffix(things: string[], prefix: string[], suffix: string[]): string[] {
-  const pre = things.filter((x) => prefix.includes(x)).sort();
-  const mid = things.filter((x) => !prefix.includes(x) && !suffix.includes(x)).sort();
-  const post = things.filter((x) => suffix.includes(x)).sort();
-  return pre.concat(mid, post);
+export function alphanumericCompare(a: string, b: string): number {
+  return String(a).localeCompare(b, undefined, { numeric: true });
+}
+
+export function sortWithPrefixSuffix(
+  things: string[],
+  prefix: string[],
+  suffix: string[],
+  cmp: null | ((a: string, b: string) => number),
+): string[] {
+  const pre = uniq(prefix.filter(x => things.includes(x)));
+  const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
+  const post = uniq(suffix.filter(x => things.includes(x)));
+  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
 }
 
 // ----------------------------
@@ -271,11 +300,12 @@ export function downloadFile(text: string, type: string, filename: string): void
     case 'tsv':
       blobType = 'text/tab-separated-values';
       break;
-    default: // csv
+    default:
+      // csv
       blobType = `text/${type}`;
   }
   const blob = new Blob([text], {
-    type: blobType
+    type: blobType,
   });
   FileSaver.saveAs(blob, filename);
 }

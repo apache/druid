@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -60,7 +59,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   )
   {
     // Verify expression has just one binding.
-    if (Parser.findRequiredBindings(expression).size() != 1) {
+    if (expression.analyzeInputs().getRequiredColumns().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 

@@ -842,7 +842,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {

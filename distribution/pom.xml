@@ -168,8 +168,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-histogram</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-kafka-eight</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kafka-indexing-service</argument>
@@ -199,8 +197,6 @@
                                         <argument>org.apache.druid.extensions:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-stats</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-examples</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
                                         <argument>-c</argument>
@@ -318,15 +314,11 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-distinctcount</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-influx-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
                                         <argument>-c</argument>
@@ -335,8 +327,6 @@
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-redis-cache</argument>
                                         <argument>-c</argument>
@@ -351,6 +341,7 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                     </arguments>
                                 </configuration>

@@ -21,14 +21,18 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { ExternalLink } from '../../components';
-import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../../variables';
+import {
+  DRUID_COMMUNITY,
+  DRUID_DEVELOPER_GROUP,
+  DRUID_USER_GROUP,
+  DRUID_WEBSITE,
+} from '../../variables';
 
-export interface AboutDialogProps extends React.Props<any> {
+export interface AboutDialogProps {
   onClose: () => void;
 }
 
-export interface AboutDialogState {
-}
+export interface AboutDialogState {}
 
 export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDialogState> {
   constructor(props: AboutDialogProps) {
@@ -39,44 +43,40 @@ export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDial
   render() {
     const { onClose } = this.props;
 
-    /* tslint:disable:jsx-alignment */
-    return <Dialog
-      icon={IconNames.GRAPH}
-      onClose={onClose}
-      title="Apache Druid"
-      isOpen
-      canEscapeKeyClose
-    >
-      <div className={Classes.DIALOG_BODY}>
-        <p>
-          <strong>
-            Apache Druid (incubating) is a high performance real-time analytics database.
-          </strong>
-        </p>
-        <p>
-          For help and support with Druid, please refer to the <ExternalLink
-          href={DRUID_COMMUNITY}>community page</ExternalLink> and the <ExternalLink
-          href={DRUID_USER_GROUP}>user groups</ExternalLink>.
-        </p>
-        <p>
-          Druid is made with ❤️ by a community of passionate developers.
-          To contribute, join in the discussion on the <ExternalLink
-          href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
-        </p>
-      </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button onClick={onClose}>Close</Button>
-          <AnchorButton
-            intent={Intent.PRIMARY}
-            href={DRUID_WEBSITE}
-            target="_blank"
-          >
-            Visit Druid
-          </AnchorButton>
+    return (
+      <Dialog
+        icon={IconNames.GRAPH}
+        onClose={onClose}
+        title="Apache Druid"
+        isOpen
+        canEscapeKeyClose
+      >
+        <div className={Classes.DIALOG_BODY}>
+          <p>
+            <strong>
+              Apache Druid (incubating) is a high performance real-time analytics database.
+            </strong>
+          </p>
+          <p>
+            For help and support with Druid, please refer to the{' '}
+            <ExternalLink href={DRUID_COMMUNITY}>community page</ExternalLink> and the{' '}
+            <ExternalLink href={DRUID_USER_GROUP}>user groups</ExternalLink>.
+          </p>
+          <p>
+            Druid is made with ❤️ by a community of passionate developers. To contribute, join in
+            the discussion on the{' '}
+            <ExternalLink href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
+          </p>
         </div>
-      </div>
-    </Dialog>;
-    /* tslint:enable:jsx-alignment */
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button onClick={onClose}>Close</Button>
+            <AnchorButton intent={Intent.PRIMARY} href={DRUID_WEBSITE} target="_blank">
+              Visit Druid
+            </AnchorButton>
+          </div>
+        </div>
+      </Dialog>
+    );
   }
 }
