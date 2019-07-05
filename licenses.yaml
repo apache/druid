@@ -1382,99 +1382,6 @@ libraries:
 
 ---
 
-name: IRC API
-license_category: binary
-module: extensions/druid-examples
-license_name: Apache License version 2.0
-version: 1.0-0014
-libraries:
-  - com.ircclouds.irc: irc-api
-
----
-
-name: MaxMind GeoIP2
-license_category: binary
-module: extensions/druid-examples
-license_name: Apache License version 2.0
-version: 0.4.0
-libraries:
-  - com.maxmind.geoip2: geoip2
-
----
-
-name: Apache Commons BeanUtils
-license_category: binary
-module: extensions/druid-examples
-license_name: Apache License version 2.0
-version: 1.8.3
-libraries:
-  - commons-beanutils: commons-beanutils
-
----
-
-name: Apache Commons Validator
-license_category: binary
-module: extensions/druid-examples
-license_name: Apache License version 2.0
-version: 1.4.0
-libraries:
-  - commons-validator: commons-validator
-
----
-
-name: Twitter4J
-license_category: binary
-module: extensions/druid-examples
-license_name: Apache License version 2.0
-version: 3.0.3
-libraries:
-  - org.twitter4j: twitter4j-async
-  - org.twitter4j: twitter4j-core
-  - org.twitter4j: twitter4j-stream
-
----
-
-name: Apache Kafka
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: Apache License version 2.0
-version: 0.8.2.1
-libraries:
-  - org.apache.kafka: kafka_2.10
-  - org.apache.kafka: kafka-clients
-
----
-
-name: ZkClient
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: Apache License version 2.0
-version: 0.3
-libraries:
-  - com.101tec: zkclient
-
----
-
-name: Yammer Metrics
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: Apache License version 2.0
-version: 2.2.0
-libraries:
-  - com.yammer.metrics: metrics-core
-
----
-
-name: snappy-java
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: Apache License version 2.0
-version: 1.1.1.6
-libraries:
-  - org.xerial.snappy: snappy-java
-
----
-
 name: Apache Kafka
 version: 2.1.0
 license_category: binary
@@ -1758,18 +1665,6 @@ license_file_path: licenses/bin/slf4j.MIT
 libraries:
   - org.slf4j: slf4j-api
   - org.slf4j: slf4j-log4j12
-
----
-
-name: JOpt Simple
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: MIT License
-version: 3.2
-copyright: Paul R. Holser, Jr.
-license_file_path: licenses/bin/jopt-simple.MIT
-libraries:
-  - net.sf.jopt-simple: jopt-simple
 
 ---
 
@@ -2505,18 +2400,6 @@ copyright: Atsuhiko Yamanaka, JCraft,Inc.
 license_file_path: licenses/bin/jsch.BSD3
 libraries:
   - com.jcraft: jsch
-
----
-
-name: Scala Library
-license_category: binary
-module: extensions/druid-kafka-eight
-license_name: BSD-3-Clause License
-version: 2.10.4
-copyright: EPFL, Lightbend Inc.
-license_file_path: licenses/bin/scala-lang.BSD3
-libraries:
-  - org.scala-lang: scala-library
 
 ---
 
