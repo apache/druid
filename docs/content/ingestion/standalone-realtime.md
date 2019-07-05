@@ -39,5 +39,8 @@ removed completely in Druid 0.16.0. Operationally, realtime nodes were difficult
 each node required an unique configuration. The design of the stream pull ingestion system for realtime nodes also
 suffered from limitations which made it not possible to achieve exactly once ingestion.
 
+The extensions `druid-kafka-eight`, `druid-kafka-eight-simpleConsumer`, `druid-rabbitmq`, and `druid-rocketmq` were also
+removed at this time, since they were built to operate on the realtime nodes.
+
 Please consider using the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html) or
 [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md) for stream pull ingestion instead.

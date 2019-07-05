@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseV2;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -94,19 +93,9 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
   }
 
-  public boolean checkFirehoseV2()
-  {
-    return ioConfig.getFirehoseFactoryV2() != null;
-  }
-
   public Firehose connect() throws IOException
   {
     return ioConfig.getFirehoseFactory().connect(dataSchema.getParser(), null);
-  }
-
-  public FirehoseV2 connect(Object metaData) throws IOException
-  {
-    return ioConfig.getFirehoseFactoryV2().connect(dataSchema.getParser(), metaData);
   }
 
   public FireDepartmentMetrics getMetrics()
