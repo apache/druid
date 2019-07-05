@@ -141,7 +141,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum()
              == descriptor.getPartitionNumber()
-          && segmentLoadInfo.getSegment().getMajorVersion().compareTo(descriptor.getVersion()) >= 0
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
           && segmentLoadInfo.getServers().stream().anyMatch(DruidServerMetadata::segmentReplicatable)) {
         return true;
       }

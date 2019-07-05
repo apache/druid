@@ -126,10 +126,10 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   }
 
   @Override
-  public String getMajorVersion()
+  public String getVersion()
   {
     Preconditions.checkState(!isEmpty(), "Empty atomicUpdateGroup");
-    return chunks.get(0).getObject().getMajorVersion();
+    return chunks.get(0).getObject().getVersion();
   }
 
   @Override

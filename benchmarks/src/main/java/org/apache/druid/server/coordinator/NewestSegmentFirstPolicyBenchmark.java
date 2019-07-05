@@ -127,7 +127,7 @@ public class NewestSegmentFirstPolicyBenchmark
               0,
               segmentSizeBytes
           );
-          timeline.add(segment.getInterval(), segment.getMajorVersion(), shardSpec.createChunk(segment));
+          timeline.add(segment.getInterval(), segment.getVersion(), shardSpec.createChunk(segment));
         }
       }
 

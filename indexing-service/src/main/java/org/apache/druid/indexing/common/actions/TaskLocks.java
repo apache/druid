@@ -96,12 +96,12 @@ public class TaskLocks
                   final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
                   return timeChunkLock.getInterval().contains(segment.getInterval())
                          && timeChunkLock.getDataSource().equals(segment.getDataSource())
-                         && timeChunkLock.getVersion().compareTo(segment.getMajorVersion()) >= 0;
+                         && timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0;
                 } else {
                   final SegmentLock segmentLock = (SegmentLock) lock;
                   return segmentLock.getInterval().contains(segment.getInterval())
                          && segmentLock.getDataSource().equals(segment.getDataSource())
-                         && segmentLock.getVersion().compareTo(segment.getMajorVersion()) >= 0
+                         && segmentLock.getVersion().compareTo(segment.getVersion()) >= 0
                          && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum();
                 }
               }
@@ -134,14 +134,14 @@ public class TaskLocks
           final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
           if (timeChunkLock.getInterval().contains(segment.getInterval())
               && timeChunkLock.getDataSource().equals(segment.getDataSource())
-              && timeChunkLock.getVersion().compareTo(segment.getMajorVersion()) >= 0) {
+              && timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0) {
             found.add(lock);
           }
         } else {
           final SegmentLock segmentLock = (SegmentLock) lock;
           if (segmentLock.getInterval().contains(segment.getInterval())
               && segmentLock.getDataSource().equals(segment.getDataSource())
-              && segmentLock.getVersion().compareTo(segment.getMajorVersion()) >= 0
+              && segmentLock.getVersion().compareTo(segment.getVersion()) >= 0
               && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum()) {
             found.add(lock);
           }

@@ -89,7 +89,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
             dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
             dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
         ),
-        dataSegment.getMajorVersion().replace(':', '_'),
+        dataSegment.getVersion().replace(':', '_'),
         dataSegment.getShardSpec().getPartitionNum(),
         useUniquePath ? DataSegmentPusher.generateUniquePath() : null
     );

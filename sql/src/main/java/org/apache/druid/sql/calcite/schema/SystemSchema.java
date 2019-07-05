@@ -298,7 +298,7 @@ public class SystemSchema extends AbstractSchema
                   segment.getInterval().getStart().toString(),
                   segment.getInterval().getEnd().toString(),
                   segment.getSize(),
-                  segment.getMajorVersion(),
+                  segment.getVersion(),
                   Long.valueOf(segment.getShardSpec().getPartitionNum()),
                   numReplicas,
                   numRows,

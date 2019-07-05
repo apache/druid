@@ -96,7 +96,7 @@ public class DataSourcesSnapshot
     final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
     segments.forEach(segment -> timelines
         .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-        .add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(segment)));
+        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
 
     // It's fine to add all overshadowed segments to a single collection because only
     // a small fraction of the segments in the cluster are expected to be overshadowed,
@@ -105,7 +105,7 @@ public class DataSourcesSnapshot
     for (DataSegment dataSegment : segments) {
       final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
       if (timeline != null
-          && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getMajorVersion(), dataSegment)) {
+          && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion(), dataSegment)) {
         overshadowedSegments.add(dataSegment.getId());
       }
     }

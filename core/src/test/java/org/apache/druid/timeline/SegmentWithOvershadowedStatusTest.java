@@ -100,7 +100,7 @@ public class SegmentWithOvershadowedStatusTest
 
     Assert.assertEquals(segment.getDataSegment().getDataSource(), deserializedSegment.getDataSource());
     Assert.assertEquals(segment.getDataSegment().getInterval(), deserializedSegment.getInterval());
-    Assert.assertEquals(segment.getDataSegment().getMajorVersion(), deserializedSegment.getMajorVersion());
+    Assert.assertEquals(segment.getDataSegment().getVersion(), deserializedSegment.getVersion());
     Assert.assertEquals(segment.getDataSegment().getLoadSpec(), deserializedSegment.getLoadSpec());
     Assert.assertEquals(segment.getDataSegment().getDimensions(), deserializedSegment.getDimensions());
     Assert.assertEquals(segment.getDataSegment().getMetrics(), deserializedSegment.getMetrics());

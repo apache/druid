@@ -431,7 +431,7 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, List<DataSegment>> segments = new HashMap<>();
     for (DataSegment segment : snapshot) {
       Interval interval = segment.getInterval();
-      versions.put(interval, segment.getMajorVersion());
+      versions.put(interval, segment.getVersion());
       segments.putIfAbsent(interval, new ArrayList<>());
       segments.get(interval).add(segment);
     }

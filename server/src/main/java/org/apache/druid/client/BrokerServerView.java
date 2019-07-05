@@ -241,7 +241,7 @@ public class BrokerServerView implements TimelineServerView
           timelines.put(segment.getDataSource(), timeline);
         }
 
-        timeline.add(segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(selector));
+        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
         selectors.put(segmentId, selector);
       }
 
@@ -284,14 +284,14 @@ public class BrokerServerView implements TimelineServerView
         selectors.remove(segmentId);
 
         final PartitionChunk<ServerSelector> removedPartition = timeline.remove(
-            segment.getInterval(), segment.getMajorVersion(), segment.getShardSpec().createChunk(selector)
+            segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
         );
 
         if (removedPartition == null) {
           log.warn(
               "Asked to remove timeline entry[interval: %s, version: %s] that doesn't exist",
               segment.getInterval(),
-              segment.getMajorVersion()
+              segment.getVersion()
           );
         } else {
           runTimelineCallbacks(callback -> callback.segmentRemoved(segment));

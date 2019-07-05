@@ -231,7 +231,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   @JsonProperty("version")
   @Override
-  public String getMajorVersion()
+  public String getVersion()
   {
     return id.getVersion();
   }
@@ -452,7 +452,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     {
       this.dataSource = segment.getDataSource();
       this.interval = segment.getInterval();
-      this.version = segment.getMajorVersion();
+      this.version = segment.getVersion();
       this.loadSpec = segment.getLoadSpec();
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();

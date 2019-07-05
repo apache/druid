@@ -442,7 +442,7 @@ public class ExportMetadata extends GuiceRunnable
       segment = new DataSegment(
           segment.getDataSource(),
           segment.getInterval(),
-          segment.getMajorVersion(),
+          segment.getVersion(),
           newLoadSpec,
           segment.getDimensions(),
           segment.getMetrics(),

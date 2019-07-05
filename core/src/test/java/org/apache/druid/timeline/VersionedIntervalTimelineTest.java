@@ -2240,7 +2240,7 @@ public class VersionedIntervalTimelineTest
     }
 
     @Override
-    public String getMajorVersion()
+    public String getVersion()
     {
       return majorVersion;
     }

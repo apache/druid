@@ -114,7 +114,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     timeline.addAll(
         Iterators.transform(segments, segment -> segment.getShardSpec().createChunk(segment)),
         DataSegment::getInterval,
-        DataSegment::getMajorVersion
+        DataSegment::getVersion
     );
   }
 

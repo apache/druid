@@ -197,7 +197,7 @@ public class SegmentLockHelper
             new SegmentLockTryAcquireAction(
                 TaskLockType.EXCLUSIVE,
                 segment.getInterval(),
-                segment.getMajorVersion(), Collections.singleton(segment.getShardSpec().getPartitionNum())
+                segment.getVersion(), Collections.singleton(segment.getShardSpec().getPartitionNum())
             )
         );
         lockResults.stream()

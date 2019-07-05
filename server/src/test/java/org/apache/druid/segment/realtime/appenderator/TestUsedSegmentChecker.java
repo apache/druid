@@ -44,7 +44,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
     for (DataSegment dataSegment : appenderatorTester.getPushedSegments()) {
       timeline.add(
           dataSegment.getInterval(),
-          dataSegment.getMajorVersion(),
+          dataSegment.getVersion(),
           dataSegment.getShardSpec().createChunk(dataSegment)
       );
     }

@@ -792,7 +792,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("start", segment.getInterval().getStart().toString())
             .bind("end", segment.getInterval().getEnd().toString())
             .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-            .bind("version", segment.getMajorVersion())
+            .bind("version", segment.getVersion())
             .bind("used", used)
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();

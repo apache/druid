@@ -402,7 +402,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           .stream()
           .filter(segment -> !versionedIntervalTimeline.isOvershadowed(
               segment.getInterval(),
-              segment.getMajorVersion(),
+              segment.getVersion(),
               segment
           ))
           .forEach(segment -> batch.add(

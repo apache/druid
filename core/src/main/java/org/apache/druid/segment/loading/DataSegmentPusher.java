@@ -108,7 +108,7 @@ public interface DataSegmentPusher
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
-        segment.getMajorVersion(),
+        segment.getVersion(),
         segment.getShardSpec().getPartitionNum(),
         useUniquePath ? generateUniquePath() : null
     );
@@ -119,7 +119,7 @@ public interface DataSegmentPusher
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
-        segment.getMajorVersion(),
+        segment.getVersion(),
         segment.getShardSpec().getPartitionNum(),
         uniquePath
     );

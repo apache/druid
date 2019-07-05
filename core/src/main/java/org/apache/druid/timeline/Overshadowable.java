@@ -34,7 +34,7 @@ public interface Overshadowable<T extends Overshadowable>
    */
   default boolean isOvershadow(T other)
   {
-    final int majorVersionCompare = getMajorVersion().compareTo(other.getMajorVersion());
+    final int majorVersionCompare = getVersion().compareTo(other.getVersion());
     if (majorVersionCompare == 0) {
       return containsRootPartition(other) && getMinorVersion() > other.getMinorVersion();
     } else {
@@ -65,7 +65,7 @@ public interface Overshadowable<T extends Overshadowable>
    */
   int getEndRootPartitionId();
 
-  String getMajorVersion();
+  String getVersion();
 
   short getMinorVersion();
 

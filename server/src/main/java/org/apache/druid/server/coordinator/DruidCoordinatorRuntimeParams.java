@@ -362,7 +362,7 @@ public class DruidCoordinatorRuntimeParams
             dataSource.getSegments().forEach(
                 segment -> timeline.add(
                     segment.getInterval(),
-                    segment.getMajorVersion(),
+                    segment.getVersion(),
                     segment.getShardSpec().createChunk(segment)
                 )
             );

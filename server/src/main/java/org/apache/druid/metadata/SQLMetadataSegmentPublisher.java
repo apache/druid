@@ -71,7 +71,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
-        segment.getMajorVersion(),
+        segment.getVersion(),
         true,
         jsonMapper.writeValueAsBytes(segment)
     );

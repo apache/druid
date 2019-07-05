@@ -277,7 +277,7 @@ public class NumberedShardSpecTest
     }
 
     @Override
-    public String getMajorVersion()
+    public String getVersion()
     {
       return "v1";
     }

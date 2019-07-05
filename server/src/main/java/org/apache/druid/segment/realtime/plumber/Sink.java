@@ -426,7 +426,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   }
 
   @Override
-  public String getMajorVersion()
+  public String getVersion()
   {
     return version;
   }

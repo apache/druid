@@ -353,7 +353,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       for (Interval interval : windowedSegmentId.getIntervals()) {
         final TimelineObjectHolder<String, DataSegment> existingHolder = timeline.get(interval);
         if (existingHolder != null) {
-          if (!existingHolder.getVersion().equals(segment.getMajorVersion())) {
+          if (!existingHolder.getVersion().equals(segment.getVersion())) {
             throw new ISE("Timeline segments with the same interval should have the same version: " +
                           "existing version[%s] vs new segment[%s]", existingHolder.getVersion(), segment);
           }
@@ -362,7 +362,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
           timeline.put(interval, new TimelineObjectHolder<>(
               interval,
               segment.getInterval(),
-              segment.getMajorVersion(),
+              segment.getVersion(),
               new PartitionHolder<DataSegment>(segment.getShardSpec().createChunk(segment))
           ));
         }

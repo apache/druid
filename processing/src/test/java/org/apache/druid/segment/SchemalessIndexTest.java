@@ -602,7 +602,7 @@ public class SchemalessIndexTest
     }
 
     @Override
-    public String getMajorVersion()
+    public String getVersion()
     {
       return majorVersion;
     }

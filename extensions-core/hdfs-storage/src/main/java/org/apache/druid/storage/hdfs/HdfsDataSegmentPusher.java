@@ -203,7 +203,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
             segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
             segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
         ),
-        segment.getMajorVersion().replace(':', '_')
+        segment.getVersion().replace(':', '_')
     );
   }
 
