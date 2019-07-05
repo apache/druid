@@ -561,7 +561,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    * them.  If the perfect rollup must be guaranteed, {@link HashBasedNumberedShardSpec} is used for hash partitioning
    * of input data.  In the future we may want to also support single-dimension partitioning.
    *
-   * @return generated {@link ShardSpecs} representing a map of intervals and corresponding shard specs
+   * @return a map indicating how many shardSpecs need to be created per interval.
    */
   private Map<Interval, Pair<ShardSpecFactory, Integer>> determineShardSpecs(
       final TaskToolbox toolbox,
@@ -800,7 +800,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           toolbox,
           getId(),
           dataSchema,
-          getNonNullSegmentLockHelper(),
+          getSegmentLockHelper(),
           isUseSegmentLock() ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK,
           ingestionSchema.ioConfig.isAppendToExisting()
       );
@@ -831,7 +831,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    * <p>
    * At the end of this method, all the remaining segments are published.
    *
-   * @return true if generated segments are successfully published, otherwise false
+   * @return the last {@link TaskStatus}
    */
   private TaskStatus generateAndPublishSegments(
       final TaskToolbox toolbox,
@@ -940,7 +940,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       // Probably we can publish atomicUpdateGroup along with segments.
       final Set<DataSegment> inputSegments = isUseSegmentLock()
-                                             ? getNonNullSegmentLockHelper().getLockedExistingSegments()
+                                             ? getSegmentLockHelper().getLockedExistingSegments()
                                              : null;
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
 

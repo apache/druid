@@ -30,7 +30,7 @@ package org.apache.druid.timeline;
 public interface Overshadowable<T extends Overshadowable>
 {
   /**
-   * Returns true this overshadows the given other.
+   * Returns true if this segment overshadows the other segment.
    */
   default boolean isOvershadow(T other)
   {

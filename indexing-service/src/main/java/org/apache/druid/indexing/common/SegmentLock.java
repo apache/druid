@@ -171,24 +171,27 @@ public class SegmentLock implements TaskLock
   @Override
   public boolean conflict(LockRequest request)
   {
+    if (request instanceof LockRequestForNewSegment) {
+      // request for new segments doens't conflict with any locks because it allocates a new partitionId
+      return false;
+    }
+
+    if (!dataSource.equals(request.getDataSource())) {
+      return false;
+    }
+
     if (request instanceof TimeChunkLockRequest) {
       // For different interval, all overlapping intervals cause conflict.
-      return dataSource.equals(request.getDataSource())
-             && interval.overlaps(request.getInterval());
+      return interval.overlaps(request.getInterval());
     } else if (request instanceof SpecificSegmentLockRequest) {
-      if (dataSource.equals(request.getDataSource())
-          && interval.equals(request.getInterval())) {
+      if (interval.equals(request.getInterval())) {
         final SpecificSegmentLockRequest specificSegmentLockRequest = (SpecificSegmentLockRequest) request;
         // Lock conflicts only if the interval is same and the partitionIds intersect.
         return specificSegmentLockRequest.getPartitionId() == partitionId;
       } else {
         // For different interval, all overlapping intervals cause conflict.
-        return dataSource.equals(request.getDataSource())
-               && interval.overlaps(request.getInterval());
+        return interval.overlaps(request.getInterval());
       }
-    } else if (request instanceof LockRequestForNewSegment) {
-      // request for new segments doens't conflict with any locks because it allocates a new partitionId
-      return false;
     } else {
       throw new ISE("Unknown request type[%s]", request.getClass().getCanonicalName());
     }

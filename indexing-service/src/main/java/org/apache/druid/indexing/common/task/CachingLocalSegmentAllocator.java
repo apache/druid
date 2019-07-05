@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Allocates all necessary segments at the beginning and reuse them.
+ * Allocates all necessary segments locally at the beginning and reuse them.
  */
 class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {

@@ -22,16 +22,12 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.SegmentLockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -44,12 +40,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * This class provides some methods to use the segment lock easier and caches the information of locked segments.
+ */
 public class SegmentLockHelper
 {
-  private final String dataSource;
   private final Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions = new HashMap<>();
   private final Set<DataSegment> lockedExistingSegments = new HashSet<>();
   @Nullable
@@ -84,11 +83,6 @@ public class SegmentLockHelper
     }
   }
 
-  public SegmentLockHelper(String dataSource)
-  {
-    this.dataSource = dataSource;
-  }
-
   public boolean hasLockedExistingSegments()
   {
     return !lockedExistingSegments.isEmpty();
@@ -109,36 +103,7 @@ public class SegmentLockHelper
     return overwritingRootGenPartitions.get(interval);
   }
 
-  @Nullable
-  public Granularity getKnownSegmentGranularity()
-  {
-    return knownSegmentGranularity;
-  }
-
-  public boolean tryLockExistingSegments(
-      TaskActionClient actionClient,
-      List<Interval> intervalsToFind // intervals must be aligned with the segment granularity of existing segments
-  ) throws IOException
-  {
-    final List<DataSegment> segments = actionClient.submit(
-        new SegmentListUsedAction(
-            dataSource,
-            null,
-            intervalsToFind
-        )
-    );
-    return verifyAndLockExistingSegments(actionClient, segments);
-  }
-
-  public boolean tryLockExistingSegments(
-      TaskActionClient actionClient,
-      IngestSegmentFirehoseFactory firehoseFactory
-  ) throws IOException
-  {
-    return verifyAndLockExistingSegments(actionClient, findExistingSegments(actionClient, firehoseFactory));
-  }
-
-  public boolean verifyAndLockExistingSegments(TaskActionClient actionClient, List<DataSegment> segments)
+  boolean verifyAndLockExistingSegments(TaskActionClient actionClient, List<DataSegment> segments)
       throws IOException
   {
     final List<DataSegment> segmentsToLock = segments.stream()
@@ -149,9 +114,12 @@ public class SegmentLockHelper
     }
 
     verifySegmentGranularity(segmentsToLock);
-    return tryLockSegmentsIfNeeded(actionClient, segmentsToLock);
+    return tryLockSegments(actionClient, segmentsToLock);
   }
 
+  /**
+   * Check if segmentGranularity has changed.
+   */
   private void verifySegmentGranularity(List<DataSegment> segments)
   {
     final Granularity granularityFromSegments = AbstractBatchIndexTask.findGranularityFromSegments(segments);
@@ -187,31 +155,43 @@ public class SegmentLockHelper
     }
   }
 
-  private boolean tryLockSegmentsIfNeeded(TaskActionClient actionClient, List<DataSegment> segments) throws IOException
+  private boolean tryLockSegments(TaskActionClient actionClient, List<DataSegment> segments) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = groupSegmentsByInterval(segments);
     final Closer lockCloserOnError = Closer.create();
-    for (List<DataSegment> segmentsInInterval : intervalToSegments.values()) {
-      for (DataSegment segment : segmentsInInterval) {
-        final List<LockResult> lockResults = actionClient.submit(
-            new SegmentLockTryAcquireAction(
-                TaskLockType.EXCLUSIVE,
-                segment.getInterval(),
-                segment.getVersion(), Collections.singleton(segment.getShardSpec().getPartitionNum())
-            )
-        );
-        lockResults.stream()
-                   .filter(LockResult::isOk)
-                   .map(result -> (SegmentLock) result.getTaskLock())
-                   .forEach(segmentLock -> lockCloserOnError.register(() -> actionClient.submit(
-                       new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
-                   )));
-        if (lockResults.stream().anyMatch(result -> !result.isOk())) {
-          lockCloserOnError.close();
-          return false;
-        }
-        lockedExistingSegments.add(segment);
+    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+      final Interval interval = entry.getKey();
+      final List<DataSegment> segmentsInInterval = entry.getValue();
+      final boolean hasSameVersion = segmentsInInterval
+          .stream()
+          .allMatch(segment -> segment.getVersion().equals(segmentsInInterval.get(0).getVersion()));
+      Preconditions.checkState(
+          hasSameVersion,
+          "Segments[%s] should have same version",
+          segmentsInInterval.stream().map(DataSegment::getId).collect(Collectors.toList())
+      );
+      final List<LockResult> lockResults = actionClient.submit(
+          new SegmentLockTryAcquireAction(
+              TaskLockType.EXCLUSIVE,
+              interval,
+              segmentsInInterval.get(0).getVersion(),
+              segmentsInInterval.stream()
+                                .map(segment -> segment.getShardSpec().getPartitionNum())
+                                .collect(Collectors.toSet())
+          )
+      );
+
+      lockResults.stream()
+                 .filter(LockResult::isOk)
+                 .map(result -> (SegmentLock) result.getTaskLock())
+                 .forEach(segmentLock -> lockCloserOnError.register(() -> actionClient.submit(
+                     new SegmentLockReleaseAction(segmentLock.getInterval(), segmentLock.getPartitionId())
+                 )));
+      if (lockResults.stream().anyMatch(result -> !result.isOk())) {
+        lockCloserOnError.close();
+        return false;
       }
+      lockedExistingSegments.addAll(segmentsInInterval);
       verifyAndFindRootPartitionRangeAndMinorVersion(segmentsInInterval);
     }
     return true;
@@ -300,39 +280,6 @@ public class SegmentLockHelper
     }
   }
 
-  private List<DataSegment> findExistingSegments(
-      TaskActionClient actionClient,
-      IngestSegmentFirehoseFactory firehoseFactory
-  ) throws IOException
-  {
-    final List<WindowedSegmentId> inputSegments = firehoseFactory.getSegments();
-    if (inputSegments == null) {
-      final Interval inputInterval = Preconditions.checkNotNull(firehoseFactory.getInterval(), "input interval");
-
-      return actionClient.submit(
-          new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
-      );
-    } else {
-      final List<String> inputSegmentIds = inputSegments.stream()
-                                                        .map(WindowedSegmentId::getSegmentId)
-                                                        .collect(Collectors.toList());
-      final Set<DataSegment> dataSegmentsInIntervals = new HashSet<>(
-          actionClient.submit(
-              new SegmentListUsedAction(
-                  dataSource,
-                  null,
-                  inputSegments.stream()
-                               .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
-                               .collect(Collectors.toSet())
-              )
-          )
-      );
-      return dataSegmentsInIntervals.stream()
-                                    .filter(segment -> inputSegmentIds.contains(segment.getId().toString()))
-                                    .collect(Collectors.toList());
-    }
-  }
-
   private static Map<Interval, List<DataSegment>> groupSegmentsByInterval(List<DataSegment> segments)
   {
     final Map<Interval, List<DataSegment>> map = new HashMap<>();
@@ -340,10 +287,5 @@ public class SegmentLockHelper
       map.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
     }
     return map;
-  }
-
-  private static Granularity granularityOfInterval(Interval interval)
-  {
-    return GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
   }
 }
