@@ -23,8 +23,6 @@ import org.apache.druid.timeline.Overshadowable;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- */
 public class IntegerPartitionChunkTest
 {
   private static IntegerPartitionChunk<OvershadowableInteger> make(
@@ -70,14 +68,38 @@ public class IntegerPartitionChunkTest
   @Test
   public void testCompareTo()
   {
-    Assert.assertEquals(0, make(null, null, 0, 1).compareTo(make(null, null, 0, 1)));
-    Assert.assertEquals(0, make(10, null, 0, 1).compareTo(make(10, null, 0, 2)));
-    Assert.assertEquals(0, make(null, 10, 0, 1).compareTo(make(null, 10, 0, 2)));
-    Assert.assertEquals(0, make(10, 11, 0, 1).compareTo(make(10, 11, 0, 2)));
-    Assert.assertEquals(-1, make(null, 10, 0, 1).compareTo(make(10, null, 1, 2)));
-    Assert.assertEquals(-1, make(11, 20, 0, 1).compareTo(make(20, 33, 1, 1)));
-    Assert.assertEquals(1, make(20, 33, 1, 1).compareTo(make(11, 20, 0, 1)));
-    Assert.assertEquals(1, make(10, null, 1, 1).compareTo(make(null, 10, 0, 1)));
+    Assert.assertEquals(
+        0,
+        make(null, null, 0, 1).compareTo(make(null, null, 0, 1))
+    );
+    Assert.assertEquals(
+        0,
+        make(10, null, 0, 1).compareTo(make(10, null, 0, 2))
+    );
+    Assert.assertEquals(
+        0,
+        make(null, 10, 0, 1).compareTo(make(null, 10, 0, 2))
+    );
+    Assert.assertEquals(
+        0,
+        make(10, 11, 0, 1).compareTo(make(10, 11, 0, 2))
+    );
+    Assert.assertEquals(
+        -1,
+        make(null, 10, 0, 1).compareTo(make(10, null, 1, 2))
+    );
+    Assert.assertEquals(
+        -1,
+        make(11, 20, 0, 1).compareTo(make(20, 33, 1, 1))
+    );
+    Assert.assertEquals(
+        1,
+        make(20, 33, 1, 1).compareTo(make(11, 20, 0, 1))
+    );
+    Assert.assertEquals(
+        1,
+        make(10, null, 1, 1).compareTo(make(null, 10, 0, 1))
+    );
   }
 
   @Test

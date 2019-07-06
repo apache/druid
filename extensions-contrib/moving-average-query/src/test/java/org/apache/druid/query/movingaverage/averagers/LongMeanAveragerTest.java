@@ -19,39 +19,36 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 
-import static org.junit.Assert.assertEquals;
-
 public class LongMeanAveragerTest
 {
-
   @Test
   public void testComputeResult()
   {
     BaseAverager<Number, Double> avg = new LongMeanAverager(3, "test", "field", 1);
 
-    assertEquals(0.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(0.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3L), new HashMap<>());
-    assertEquals(1.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(1.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3L), new HashMap<>());
-    assertEquals(2.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3), new HashMap<>());
-    assertEquals(3.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(3.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 2L), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2L), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2L), new HashMap<>());
-    assertEquals(2.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.skip();
-    assertEquals(4.0 / 3, avg.computeResult(), 0.0);
+    Assert.assertEquals(4.0 / 3, avg.computeResult(), 0.0);
   }
-
 }

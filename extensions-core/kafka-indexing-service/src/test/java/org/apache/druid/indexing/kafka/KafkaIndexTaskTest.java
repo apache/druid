@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -108,11 +107,11 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -190,8 +189,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.query.QueryPlus.wrap;
 
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
@@ -688,7 +685,7 @@ public class KafkaIndexTaskTest
     final Map<Integer, Long> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
 
-    Assert.assertTrue(checkpoint2.getPartitionSequenceNumberMap().equals(nextOffsets));
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), nextOffsets);
     task.getRunner().setEndOffsets(nextOffsets, false);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -809,7 +806,7 @@ public class KafkaIndexTaskTest
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint.getPartitionSequenceNumberMap().equals(currentOffsets));
+    Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
     task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -1319,7 +1316,7 @@ public class KafkaIndexTaskTest
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(null, status.getErrorMsg());
+    Assert.assertNull(status.getErrorMsg());
 
     // Check metrics
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
@@ -2124,9 +2121,9 @@ public class KafkaIndexTaskTest
     }
 
     for (int i = 0; i < 5; i++) {
-      Assert.assertEquals(task.getRunner().getStatus(), Status.READING);
+      Assert.assertEquals(Status.READING, task.getRunner().getStatus());
       // Offset should not be reset
-      Assert.assertTrue(task.getRunner().getCurrentOffsets().get(0) == 200L);
+      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(0));
     }
   }
 
@@ -2409,9 +2406,7 @@ public class KafkaIndexTaskTest
   {
     ScanQuery query = new Druids.ScanQueryBuilder().dataSource(
         DATA_SCHEMA.getDataSource()).intervals(spec).build();
-    List<ScanResultValue> results =
-        task.getQueryRunner(query).run(wrap(query), new HashMap<>()).toList();
-    return results;
+    return task.getQueryRunner(query).run(QueryPlus.wrap(query), new HashMap<>()).toList();
   }
 
   private void insertData() throws ExecutionException, InterruptedException
@@ -2428,6 +2423,7 @@ public class KafkaIndexTaskTest
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
+    //noinspection CatchMayIgnoreException
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -2461,14 +2457,7 @@ public class KafkaIndexTaskTest
   {
     return Iterables.find(
         taskLockbox.findLocksForTask(task),
-        new Predicate<TaskLock>()
-        {
-          @Override
-          public boolean apply(TaskLock lock)
-          {
-            return lock.getInterval().contains(interval);
-          }
-        }
+        lock -> lock.getInterval().contains(interval)
     );
   }
 
@@ -2583,13 +2572,8 @@ public class KafkaIndexTaskTest
                 new TimeseriesQueryRunnerFactory(
                     new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                     new TimeseriesQueryEngine(),
-                    new QueryWatcher()
-                    {
-                      @Override
-                      public void registerQuery(Query query, ListenableFuture future)
-                      {
-                        // do nothing
-                      }
+                    (query, future) -> {
+                      // do nothing
                     }
                 )
             )
@@ -2819,7 +2803,7 @@ public class KafkaIndexTaskTest
     return values;
   }
 
-  public long countEvents(final Task task)
+  private long countEvents(final Task task)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -2833,7 +2817,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(wrap(query), ImmutableMap.of()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }

@@ -25,6 +25,7 @@ import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,9 +35,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
 
 public class AzureTaskLogsTest extends EasyMockSupport
 {
@@ -66,7 +64,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
       final File logFile = new File(tmpDir, "log");
 
       azureStorage.uploadBlob(logFile, container, prefix + "/" + taskid + "/log");
-      expectLastCall();
+      EasyMock.expectLastCall();
 
       replayAll();
 
@@ -85,9 +83,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
-    expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
-    expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
-    expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
+    EasyMock.expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
+    EasyMock.expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
+    EasyMock.expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
         new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
 
@@ -108,9 +106,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
-    expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
-    expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
-    expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
+    EasyMock.expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
+    EasyMock.expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
+    EasyMock.expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
         new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
 
@@ -131,9 +129,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
-    expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
-    expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
-    expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
+    EasyMock.expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
+    EasyMock.expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
+    EasyMock.expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
         new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
 

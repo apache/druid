@@ -34,6 +34,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,8 +49,6 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class CompressedColumnarIntsSerializerTest
@@ -135,7 +134,7 @@ public class CompressedColumnarIntsSerializerTest
     writer.writeTo(writeOutBytes, smoosher);
     smoosher.close();
 
-    assertEquals(writtenLength, supplierFromList.getSerializedSize());
+    Assert.assertEquals(writtenLength, supplierFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
     CompressedColumnarIntsSupplier supplierFromByteBuffer = CompressedColumnarIntsSupplier.fromByteBuffer(
@@ -143,9 +142,9 @@ public class CompressedColumnarIntsSerializerTest
         byteOrder
     );
     ColumnarInts columnarInts = supplierFromByteBuffer.get();
-    assertEquals(vals.length, columnarInts.size());
+    Assert.assertEquals(vals.length, columnarInts.size());
     for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], columnarInts.get(i));
+      Assert.assertEquals(vals[i], columnarInts.get(i));
     }
     CloseQuietly.close(columnarInts);
   }
@@ -221,9 +220,9 @@ public class CompressedColumnarIntsSerializerTest
         byteOrder
     );
     ColumnarInts columnarInts = supplierFromByteBuffer.get();
-    assertEquals(vals.length, columnarInts.size());
+    Assert.assertEquals(vals.length, columnarInts.size());
     for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], columnarInts.get(i));
+      Assert.assertEquals(vals[i], columnarInts.get(i));
     }
     CloseQuietly.close(columnarInts);
     mapper.close();

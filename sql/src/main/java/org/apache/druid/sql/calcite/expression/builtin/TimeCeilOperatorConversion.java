@@ -21,8 +21,11 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -30,13 +33,22 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
-public class FloorOperatorConversion implements SqlOperatorConversion
+public class TimeCeilOperatorConversion implements SqlOperatorConversion
 {
+  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+      .operatorBuilder("TIME_CEIL")
+      .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER)
+      .requiredOperands(2)
+      .returnType(SqlTypeName.TIMESTAMP)
+      .functionCategory(SqlFunctionCategory.TIMEDATE)
+      .build();
+
   @Override
   public SqlOperator calciteOperator()
   {
-    return SqlStdOperatorTable.FLOOR;
+    return SQL_FUNCTION;
   }
 
   @Override
@@ -48,19 +60,16 @@ public class FloorOperatorConversion implements SqlOperatorConversion
   )
   {
     final RexCall call = (RexCall) rexNode;
+    final List<DruidExpression> functionArgs = TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(
+        plannerContext,
+        rowSignature,
+        call.getOperands()
+    );
 
-    if (call.getOperands().size() == 1) {
-      // FLOOR(expr) -- numeric FLOOR
-      return OperatorConversions.convertCall(plannerContext, rowSignature, call, "floor");
-    } else if (call.getOperands().size() == 2) {
-      // FLOOR(expr TO timeUnit) -- time FLOOR
-      return DruidExpression.fromFunctionCall(
-          "timestamp_floor",
-          TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(plannerContext, rowSignature, call.getOperands())
-      );
-    } else {
-      // WTF? FLOOR with the wrong number of arguments?
+    if (functionArgs == null) {
       return null;
     }
+
+    return DruidExpression.fromFunctionCall("timestamp_ceil", functionArgs);
   }
 }
