@@ -412,8 +412,8 @@ public class SegmentLoaderLocalCacheManagerTest
   }
 
   @Test
-  public void testSegmentDistributionToMultipleLocations() throws Exception{
-
+  public void testSegmentDistributionToMultipleLocations() throws Exception
+  {
     final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = createStorageLocationConfig("local_storage_folder", 10000000000L, true);
     final StorageLocationConfig locationConfig2 = createStorageLocationConfig("local_storage_folder2", 1000000000L, true);
@@ -431,7 +431,7 @@ public class SegmentLoaderLocalCacheManagerTest
 
     // Segment 1 should be downloaded in local_storage_folder
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-      ImmutableMap.of(
+        ImmutableMap.of(
         "type",
         "local",
         "path",
@@ -455,7 +455,7 @@ public class SegmentLoaderLocalCacheManagerTest
 
     // Segment 2 should be downloaded in local_storage_folder2
     final DataSegment segmentToDownload2 = dataSegmentWithInterval("2014-11-20T00:00:00Z/P1D").withLoadSpec(
-      ImmutableMap.of(
+        ImmutableMap.of(
         "type",
         "local",
         "path",
@@ -479,7 +479,7 @@ public class SegmentLoaderLocalCacheManagerTest
 
     // Segment 3 should be downloaded in local_storage_folder3
     final DataSegment segmentToDownload3 = dataSegmentWithInterval("2014-12-20T00:00:00Z/P1D").withLoadSpec(
-      ImmutableMap.of(
+        ImmutableMap.of(
         "type",
         "local",
         "path",
