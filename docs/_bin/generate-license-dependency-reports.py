@@ -74,7 +74,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
             extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
             script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
     
-    print("Generating dependency reports", flush=True)
+    print("Generating dependency reports")
     print("num_threads: {}".format(num_threads))
 
     if num_threads > 1:
