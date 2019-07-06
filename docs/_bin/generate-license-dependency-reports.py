@@ -26,15 +26,12 @@ import threading
 
 
 def generate_report(module_path, report_orig_path, report_out_path):
-    print("generate_report start")
     is_dir = os.path.isdir(module_path)
-    print("is_dir: {}".format(is_dir))
     if not is_dir:
         print("{} is not a directory".format(module_path))
         return
 
     os.makedirs(report_out_path, exist_ok=True)
-    print("made dirs: {}".format(report_out_path))
 
     try:
         print("Generating report for {}".format(module_path))
@@ -75,7 +72,6 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
             script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
     
     print("Generating dependency reports")
-    print("num_threads: {}".format(num_threads))
 
     if num_threads > 1:
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -83,7 +79,6 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
                 executor.submit(generate_report, module_path, report_orig_path, report_out_path)
     else:
         for module_path, report_orig_path, report_out_path in script_args:
-            print("module_path: {}".format(module_path))
             generate_report(module_path, report_orig_path, report_out_path)
 
 
