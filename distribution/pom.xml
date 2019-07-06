@@ -142,8 +142,6 @@
                                         <argument>${project.basedir}/../</argument>
                                         <argument>${project.basedir}/target</argument>
                                         <argument>--clean-maven-artifact-transfer</argument>
-                                        <argument>--parallel</argument>
-                                        <argument>4</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
