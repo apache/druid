@@ -27,6 +27,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -35,28 +36,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-
 public class HavingSpecTest
 {
   private static final Row ROW = new MapBasedInputRow(
       0,
       new ArrayList<>(),
-      ImmutableMap.of("metric", Float.valueOf(10))
+      ImmutableMap.of("metric", 10f)
   );
 
   @Test
   public void testHavingClauseSerde()
   {
     List<HavingSpec> havings = Arrays.asList(
-        new GreaterThanHavingSpec("agg", Double.valueOf(1.3)),
+        new GreaterThanHavingSpec("agg", 1.3),
         new OrHavingSpec(
             Arrays.asList(
-                new LessThanHavingSpec("lessAgg", Long.valueOf(1L)),
-                new NotHavingSpec(new EqualToHavingSpec("equalAgg", Double.valueOf(2)))
+                new LessThanHavingSpec("lessAgg", 1L),
+                new NotHavingSpec(new EqualToHavingSpec("equalAgg", 2.0))
             )
         )
     );
@@ -91,7 +87,7 @@ public class HavingSpecTest
     );
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    assertEquals(andHavingSpec, mapper.convertValue(payloadMap, AndHavingSpec.class));
+    Assert.assertEquals(andHavingSpec, mapper.convertValue(payloadMap, AndHavingSpec.class));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -110,111 +106,111 @@ public class HavingSpecTest
   @Test
   public void testGreaterThanHavingSpec()
   {
-    GreaterThanHavingSpec spec = new GreaterThanHavingSpec("metric", Long.valueOf(Long.MAX_VALUE - 10));
-    assertFalse(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 10))));
-    assertFalse(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 15))));
-    assertTrue(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 5))));
-    assertTrue(spec.eval(getTestRow(String.valueOf(Long.MAX_VALUE - 5))));
-    assertFalse(spec.eval(getTestRow(100.05f)));
+    GreaterThanHavingSpec spec = new GreaterThanHavingSpec("metric", Long.MAX_VALUE - 10);
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE - 10)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE - 15)));
+    Assert.assertTrue(spec.eval(getTestRow(Long.MAX_VALUE - 5)));
+    Assert.assertTrue(spec.eval(getTestRow(String.valueOf(Long.MAX_VALUE - 5))));
+    Assert.assertFalse(spec.eval(getTestRow(100.05f)));
 
     spec = new GreaterThanHavingSpec("metric", 100.56f);
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow("90.53f")));
-    assertTrue(spec.eval(getTestRow(101.34f)));
-    assertTrue(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow("90.53f")));
+    Assert.assertTrue(spec.eval(getTestRow(101.34f)));
+    Assert.assertTrue(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
   @Test
   public void testLessThanHavingSpec()
   {
-    LessThanHavingSpec spec = new LessThanHavingSpec("metric", Long.valueOf(Long.MAX_VALUE - 10));
-    assertFalse(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 10))));
-    assertTrue(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 15))));
-    assertTrue(spec.eval(getTestRow(String.valueOf(Long.MAX_VALUE - 15))));
-    assertFalse(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 5))));
-    assertTrue(spec.eval(getTestRow(100.05f)));
+    LessThanHavingSpec spec = new LessThanHavingSpec("metric", Long.MAX_VALUE - 10);
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE - 10)));
+    Assert.assertTrue(spec.eval(getTestRow(Long.MAX_VALUE - 15)));
+    Assert.assertTrue(spec.eval(getTestRow(String.valueOf(Long.MAX_VALUE - 15))));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE - 5)));
+    Assert.assertTrue(spec.eval(getTestRow(100.05f)));
 
     spec = new LessThanHavingSpec("metric", 100.56f);
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertTrue(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(101.34f)));
-    assertFalse(spec.eval(getTestRow("101.34f")));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertTrue(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(101.34f)));
+    Assert.assertFalse(spec.eval(getTestRow("101.34f")));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
   private Row getTestRow(Object metricValue)
   {
-    return new MapBasedInputRow(0, new ArrayList<String>(), ImmutableMap.of("metric", metricValue));
+    return new MapBasedInputRow(0, new ArrayList<>(), ImmutableMap.of("metric", metricValue));
   }
 
   @Test
   public void testEqualHavingSpec()
   {
-    EqualToHavingSpec spec = new EqualToHavingSpec("metric", Long.valueOf(Long.MAX_VALUE - 10));
-    assertTrue(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 10))));
-    assertFalse(spec.eval(getTestRow(Long.valueOf(Long.MAX_VALUE - 5))));
-    assertFalse(spec.eval(getTestRow(100.05f)));
+    EqualToHavingSpec spec = new EqualToHavingSpec("metric", Long.MAX_VALUE - 10);
+    Assert.assertTrue(spec.eval(getTestRow(Long.MAX_VALUE - 10)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE - 5)));
+    Assert.assertFalse(spec.eval(getTestRow(100.05f)));
 
     spec = new EqualToHavingSpec("metric", 100.56f);
-    assertFalse(spec.eval(getTestRow(100L)));
-    assertFalse(spec.eval(getTestRow(100.0)));
-    assertFalse(spec.eval(getTestRow(100d)));
-    assertFalse(spec.eval(getTestRow(100.56d))); // False since 100.56d != (double) 100.56f
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertTrue(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertFalse(spec.eval(getTestRow(100L)));
+    Assert.assertFalse(spec.eval(getTestRow(100.0)));
+    Assert.assertFalse(spec.eval(getTestRow(100d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56d))); // False since 100.56d != (double) 100.56f
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertTrue(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
 
     spec = new EqualToHavingSpec("metric", 100.56d);
-    assertFalse(spec.eval(getTestRow(100L)));
-    assertFalse(spec.eval(getTestRow(100.0)));
-    assertFalse(spec.eval(getTestRow(100d)));
-    assertTrue(spec.eval(getTestRow(100.56d)));
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertFalse(spec.eval(getTestRow(100.56f))); // False since 100.56d != (double) 100.56f
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertFalse(spec.eval(getTestRow(100L)));
+    Assert.assertFalse(spec.eval(getTestRow(100.0)));
+    Assert.assertFalse(spec.eval(getTestRow(100d)));
+    Assert.assertTrue(spec.eval(getTestRow(100.56d)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f))); // False since 100.56d != (double) 100.56f
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
 
     spec = new EqualToHavingSpec("metric", 100.0f);
-    assertTrue(spec.eval(getTestRow(100L)));
-    assertTrue(spec.eval(getTestRow(100.0)));
-    assertTrue(spec.eval(getTestRow(100d)));
-    assertFalse(spec.eval(getTestRow(100.56d)));
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertTrue(spec.eval(getTestRow(100L)));
+    Assert.assertTrue(spec.eval(getTestRow(100.0)));
+    Assert.assertTrue(spec.eval(getTestRow(100d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56d)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
 
     spec = new EqualToHavingSpec("metric", 100.0d);
-    assertTrue(spec.eval(getTestRow(100L)));
-    assertTrue(spec.eval(getTestRow(100.0)));
-    assertTrue(spec.eval(getTestRow(100d)));
-    assertFalse(spec.eval(getTestRow(100.56d)));
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertTrue(spec.eval(getTestRow(100L)));
+    Assert.assertTrue(spec.eval(getTestRow(100.0)));
+    Assert.assertTrue(spec.eval(getTestRow(100d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56d)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
 
     spec = new EqualToHavingSpec("metric", 100);
-    assertTrue(spec.eval(getTestRow(100L)));
-    assertTrue(spec.eval(getTestRow(100.0)));
-    assertTrue(spec.eval(getTestRow(100d)));
-    assertFalse(spec.eval(getTestRow(100.56d)));
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertTrue(spec.eval(getTestRow(100L)));
+    Assert.assertTrue(spec.eval(getTestRow(100.0)));
+    Assert.assertTrue(spec.eval(getTestRow(100d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56d)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
 
     spec = new EqualToHavingSpec("metric", 100L);
-    assertTrue(spec.eval(getTestRow(100L)));
-    assertTrue(spec.eval(getTestRow(100.0)));
-    assertTrue(spec.eval(getTestRow(100d)));
-    assertFalse(spec.eval(getTestRow(100.56d)));
-    assertFalse(spec.eval(getTestRow(90.53d)));
-    assertFalse(spec.eval(getTestRow(100.56f)));
-    assertFalse(spec.eval(getTestRow(90.53f)));
-    assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+    Assert.assertTrue(spec.eval(getTestRow(100L)));
+    Assert.assertTrue(spec.eval(getTestRow(100.0)));
+    Assert.assertTrue(spec.eval(getTestRow(100d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56d)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53d)));
+    Assert.assertFalse(spec.eval(getTestRow(100.56f)));
+    Assert.assertFalse(spec.eval(getTestRow(90.53f)));
+    Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
   private static class CountingHavingSpec extends BaseHavingSpec
@@ -251,7 +247,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     AndHavingSpec spec = new AndHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, true),
+        new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, false)
@@ -259,7 +255,7 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(2, counter.get());
+    Assert.assertEquals(2, counter.get());
   }
 
   @Test
@@ -267,7 +263,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     AndHavingSpec spec = new AndHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, true),
+        new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true)
@@ -275,11 +271,11 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(4, counter.get());
+    Assert.assertEquals(4, counter.get());
 
     counter.set(0);
     spec = new AndHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, false),
+        new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true)
@@ -287,7 +283,7 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(1, counter.get());
+    Assert.assertEquals(1, counter.get());
   }
 
   @Test
@@ -295,7 +291,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     OrHavingSpec spec = new OrHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, true),
+        new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, true),
         new CountingHavingSpec(counter, false)
@@ -303,7 +299,7 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(1, counter.get());
+    Assert.assertEquals(1, counter.get());
   }
 
   @Test
@@ -311,7 +307,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     OrHavingSpec spec = new OrHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, false),
+        new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, false)
@@ -319,11 +315,11 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(4, counter.get());
+    Assert.assertEquals(4, counter.get());
 
     counter.set(0);
     spec = new OrHavingSpec(ImmutableList.of(
-        (HavingSpec) new CountingHavingSpec(counter, false),
+        new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, false),
         new CountingHavingSpec(counter, true)
@@ -331,17 +327,16 @@ public class HavingSpecTest
 
     spec.eval(ROW);
 
-    assertEquals(4, counter.get());
+    Assert.assertEquals(4, counter.get());
   }
 
   @Test
   public void testNotHavingSepc()
   {
     NotHavingSpec spec = new NotHavingSpec(HavingSpec.NEVER);
-    assertTrue(spec.eval(ROW));
+    Assert.assertTrue(spec.eval(ROW));
 
     spec = new NotHavingSpec(HavingSpec.ALWAYS);
-    assertFalse(spec.eval(ROW));
-
+    Assert.assertFalse(spec.eval(ROW));
   }
 }
