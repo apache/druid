@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -38,15 +39,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
-import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
-import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
-import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
-import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
-import static org.apache.druid.query.QueryRunnerTestHelper.rowsCount;
-
 public class TopNQueryTest
 {
   private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
@@ -55,16 +47,16 @@ public class TopNQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
-        .dimension(marketDimension)
-        .metric(indexMetric)
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    commonDoubleAggregators,
+                    QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -72,7 +64,7 @@ public class TopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
     String json = jsonMapper.writeValueAsString(query);
@@ -86,22 +78,28 @@ public class TopNQueryTest
   public void testQuerySerdeWithLookupExtractionFn() throws IOException
   {
     final TopNQuery expectedQuery = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                marketDimension,
-                marketDimension,
-                new LookupExtractionFn(new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false), true, null, false, false)
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new LookupExtractionFn(
+                    new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+                    true,
+                    null,
+                    false,
+                    false
+                )
             )
         )
-        .metric(new NumericTopNMetricSpec(indexMetric))
+        .metric(new NumericTopNMetricSpec(QueryRunnerTestHelper.indexMetric))
         .threshold(2)
-        .intervals(fullOnIntervalSpec.getIntervals())
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals())
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    commonDoubleAggregators,
+                    QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -118,13 +116,13 @@ public class TopNQueryTest
   public void testQuerySerdeWithAlphaNumericTopNMetricSpec() throws IOException
   {
     TopNQuery expectedQuery = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
-        .dimension(new LegacyDimensionSpec(marketDimension))
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new LegacyDimensionSpec(QueryRunnerTestHelper.marketDimension))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
-        .intervals(fullOnIntervalSpec.getIntervals())
-        .aggregators(Collections.singletonList(rowsCount))
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals())
+        .aggregators(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
         .build();
     String jsonQuery = "{\n"
                        + "  \"queryType\": \"topN\",\n"
@@ -156,5 +154,4 @@ public class TopNQueryTest
     );
     Assert.assertEquals(expectedQuery, actualQuery);
   }
-
 }
