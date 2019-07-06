@@ -21,11 +21,8 @@ package org.apache.druid.segment;
 
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntListIterator;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.apache.druid.segment.IntIteratorUtils.skip;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 public class IntIteratorUtilsTest
 {
@@ -33,20 +30,20 @@ public class IntIteratorUtilsTest
   @Test
   public void testSkip()
   {
-    assertEquals(0, skip(IntIterators.EMPTY_ITERATOR, 5));
-    assertEquals(0, skip(IntIterators.EMPTY_ITERATOR, 0));
+    Assert.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 5));
+    Assert.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 0));
 
     IntListIterator it = IntIterators.fromTo(0, 10);
-    assertEquals(3, skip(it, 3));
-    assertEquals(3, it.nextInt());
-    assertEquals(6, skip(it, 100));
-    assertEquals(0, skip(it, 100));
-    assertFalse(it.hasNext());
+    Assert.assertEquals(3, IntIteratorUtils.skip(it, 3));
+    Assert.assertEquals(3, it.nextInt());
+    Assert.assertEquals(6, IntIteratorUtils.skip(it, 100));
+    Assert.assertEquals(0, IntIteratorUtils.skip(it, 100));
+    Assert.assertFalse(it.hasNext());
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testNegativeSkipArgument()
   {
-    skip(IntIterators.fromTo(0, 10), -1);
+    IntIteratorUtils.skip(IntIterators.fromTo(0, 10), -1);
   }
 }

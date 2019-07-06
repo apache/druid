@@ -19,19 +19,16 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.core.IsInstanceOf;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.assertThat;
 
 public class DoubleMeanAveragerFactoryTest
 {
-
   @Test
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new DoubleMeanAveragerFactory("test", 5, 1, "field");
-    assertThat(fac.createAverager(), instanceOf(DoubleMeanAverager.class));
+    Assert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(DoubleMeanAverager.class));
   }
-
 }
