@@ -113,9 +113,10 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return `${columnName} = '${needle.toUpperCase()}' OR ${columnName} = '${needle.toLowerCase()}'`;
+    return `${columnName} = '${needle}'`;
+  } else {
+    return `LOWER(${columnName}) LIKE LOWER('${needle}%')`;
   }
-  return `${columnName} LIKE '${needle.toUpperCase()}%' OR ${columnName} LIKE '${needle.toLowerCase()}%'`;
 }
 
 // ----------------------------

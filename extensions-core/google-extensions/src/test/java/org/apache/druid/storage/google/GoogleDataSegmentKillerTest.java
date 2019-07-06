@@ -35,19 +35,17 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.easymock.EasyMock.expectLastCall;
-
 public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
-  private static final String bucket = "bucket";
-  private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final String descriptorPath = DataSegmentKiller.descriptorPath(indexPath);
+  private static final String BUCKET = "bucket";
+  private static final String INDEX_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final String DESCRIPTOR_PATH = DataSegmentKiller.descriptorPath(INDEX_PATH);
 
-  private static final DataSegment dataSegment = new DataSegment(
+  private static final DataSegment DATA_SEGMENT = new DataSegment(
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.of("bucket", bucket, "path", indexPath),
+      ImmutableMap.of("bucket", BUCKET, "path", INDEX_PATH),
       null,
       null,
       NoneShardSpec.instance(),
@@ -66,16 +64,16 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killTest() throws SegmentLoadingException, IOException
   {
-    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
-    expectLastCall();
-    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
-    expectLastCall();
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
+    EasyMock.expectLastCall();
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(DESCRIPTOR_PATH));
+    EasyMock.expectLastCall();
 
     replayAll();
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage);
 
-    killer.kill(dataSegment);
+    killer.kill(DATA_SEGMENT);
 
     verifyAll();
   }
@@ -88,14 +86,14 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
         300,
         "test"
     );
-    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
-    expectLastCall().andThrow(exception);
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
+    EasyMock.expectLastCall().andThrow(exception);
 
     replayAll();
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage);
 
-    killer.kill(dataSegment);
+    killer.kill(DATA_SEGMENT);
 
     verifyAll();
   }
@@ -108,16 +106,16 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
         500,
         "test"
     );
-    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
-    expectLastCall().andThrow(exception).once().andVoid().once();
-    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
-    expectLastCall().andThrow(exception).once().andVoid().once();
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
+    EasyMock.expectLastCall().andThrow(exception).once().andVoid().once();
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(DESCRIPTOR_PATH));
+    EasyMock.expectLastCall().andThrow(exception).once().andVoid().once();
 
     replayAll();
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage);
 
-    killer.kill(dataSegment);
+    killer.kill(DATA_SEGMENT);
 
     verifyAll();
   }
