@@ -27,6 +27,7 @@ import org.schemarepo.api.converter.IdentityConverter;
 import org.schemarepo.api.converter.IntegerConverter;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /**
  * This implementation using injected Kafka topic name as subject name, and an integer as schema id. Before sending avro
@@ -88,7 +89,7 @@ public class Avro1124SubjectAndIdConverter implements SubjectAndIdConverter<Stri
 
     Avro1124SubjectAndIdConverter converter = (Avro1124SubjectAndIdConverter) o;
 
-    return !(topic != null ? !topic.equals(converter.topic) : converter.topic != null);
+    return Objects.equals(topic, converter.topic);
 
   }
 

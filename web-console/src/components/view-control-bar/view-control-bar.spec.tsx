@@ -23,10 +23,11 @@ import { ViewControlBar } from './view-control-bar';
 
 describe('view control bar snapshot', () => {
   it('matches snapshot', () => {
-    const viewControlBar =
+    const viewControlBar = (
       <ViewControlBar label="A label">
         <div>Hello world</div>
-      </ViewControlBar>;
+      </ViewControlBar>
+    );
 
     const { container } = render(viewControlBar);
     expect(container.firstChild).toMatchSnapshot();

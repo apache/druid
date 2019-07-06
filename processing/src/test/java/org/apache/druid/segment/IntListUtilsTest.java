@@ -20,9 +20,8 @@
 package org.apache.druid.segment;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class IntListUtilsTest
 {
@@ -30,7 +29,7 @@ public class IntListUtilsTest
   public void testEmptyRangeIntList()
   {
     final IntList list = IntListUtils.fromTo(10, 10);
-    assertEquals(0, list.size());
+    Assert.assertEquals(0, list.size());
     list.getInt(0);
   }
 
@@ -45,7 +44,7 @@ public class IntListUtilsTest
   {
     final IntList list = IntListUtils.fromTo(20, 120);
     for (int i = 0; i < 100; i++) {
-      assertEquals(i + 20, list.getInt(i));
+      Assert.assertEquals(i + 20, list.getInt(i));
     }
   }
 }

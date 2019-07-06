@@ -23,11 +23,7 @@ import { ShowLog } from './show-log';
 
 describe('show log', () => {
   it('describe show log', () => {
-    const showLog =
-      <ShowLog
-        endpoint={'test'}
-        downloadFilename={'test'}
-      />;
+    const showLog = <ShowLog status={'RUNNING'} endpoint={'test'} downloadFilename={'test'} />;
     const { container } = render(showLog);
     expect(container.firstChild).toMatchSnapshot();
   });

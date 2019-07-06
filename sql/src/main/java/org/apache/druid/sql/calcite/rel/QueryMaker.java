@@ -388,6 +388,13 @@ public class QueryMaker
       } else {
         coercedValue = value.getClass().getName();
       }
+    } else if (sqlType == SqlTypeName.ARRAY) {
+      try {
+        coercedValue = jsonMapper.writeValueAsString(value);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
     }

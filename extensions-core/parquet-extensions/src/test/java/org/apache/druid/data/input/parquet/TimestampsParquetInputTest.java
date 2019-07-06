@@ -19,20 +19,19 @@
 
 package org.apache.druid.data.input.parquet;
 
-import avro.shaded.com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class TimestampsParquetInputTest extends BaseParquetInputTest
@@ -70,10 +69,10 @@ public class TimestampsParquetInputTest extends BaseParquetInputTest
     );
     List<InputRow> rowsWithString = getAllRows(parserType, configTimeAsString);
     List<InputRow> rowsWithDate = getAllRows(parserType, configTimeAsDate);
-    assertEquals(rowsWithDate.size(), rowsWithString.size());
+    Assert.assertEquals(rowsWithDate.size(), rowsWithString.size());
 
     for (int i = 0; i < rowsWithDate.size(); i++) {
-      assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
+      Assert.assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
     }
   }
 
@@ -96,7 +95,7 @@ public class TimestampsParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals("2001-01-01T01:01:01.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("2001-01-01T01:01:01.000Z", rows.get(0).getTimestamp().toString());
   }
 
   @Test
@@ -109,6 +108,6 @@ public class TimestampsParquetInputTest extends BaseParquetInputTest
     );
     config.intoConfiguration(job);
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("1970-01-01T00:00:00.010Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("1970-01-01T00:00:00.010Z", rows.get(0).getTimestamp().toString());
   }
 }

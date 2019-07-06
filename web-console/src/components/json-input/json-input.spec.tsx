@@ -23,11 +23,7 @@ import { JSONInput } from './json-input';
 
 describe('json input', () => {
   it('matches snapshot', () => {
-    const jsonCollapse =
-    <JSONInput
-      onChange={(newJSONValue: any) => {}}
-      value={'test'}
-    />;
+    const jsonCollapse = <JSONInput onChange={() => {}} value={'test'} />;
     const { container } = render(jsonCollapse);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -26,6 +26,8 @@ import junitparams.Parameters;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,22 +35,20 @@ import org.junit.runner.RunWith;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isA;
-
 @RunWith(JUnitParamsRunner.class)
 public class InfluxParserTest
 {
+  @SuppressWarnings("unused")
   private String name;
+  @SuppressWarnings("unused")
   private String input;
+  @SuppressWarnings("unused")
   private Map<String, Object> expected;
 
   private static Object[] testCase(String name, String input, Parsed expected)
   {
     return Lists.newArrayList(name, input, expected).toArray();
   }
-
 
   public Object[] testData()
   {
@@ -142,14 +142,20 @@ public class InfluxParserTest
   {
     Parser<String, Object> parser = new InfluxParser(null);
     Map<String, Object> parsed = parser.parseToMap(input);
-    assertThat("correct measurement name", parsed.get("measurement"), equalTo(expected.measurement));
-    assertThat("correct timestamp", parsed.get(InfluxParser.TIMESTAMP_KEY), equalTo(expected.timestamp));
-    expected.kv.forEach((k, v) -> {
-      assertThat("correct field " + k, parsed.get(k), equalTo(v));
-    });
+    MatcherAssert.assertThat(
+        "correct measurement name",
+        parsed.get("measurement"),
+        Matchers.equalTo(expected.measurement)
+    );
+    MatcherAssert.assertThat(
+        "correct timestamp",
+        parsed.get(InfluxParser.TIMESTAMP_KEY),
+        Matchers.equalTo(expected.timestamp)
+    );
+    expected.kv.forEach((k, v) -> MatcherAssert.assertThat("correct field " + k, parsed.get(k), Matchers.equalTo(v)));
     parsed.remove("measurement");
     parsed.remove(InfluxParser.TIMESTAMP_KEY);
-    assertThat("No extra keys in parsed data", parsed.keySet(), equalTo(expected.kv.keySet()));
+    MatcherAssert.assertThat("No extra keys in parsed data", parsed.keySet(), Matchers.equalTo(expected.kv.keySet()));
   }
 
   @Test
@@ -158,7 +164,7 @@ public class InfluxParserTest
     Parser<String, Object> parser = new InfluxParser(Sets.newHashSet("cpu"));
     String input = "cpu,host=foo.bar.baz,region=us-east,application=echo pct_idle=99.3,pct_user=88.8,m1_load=2 1465839830100400200";
     Map<String, Object> parsed = parser.parseToMap(input);
-    assertThat(parsed.get("measurement"), equalTo("cpu"));
+    MatcherAssert.assertThat(parsed.get("measurement"), Matchers.equalTo("cpu"));
   }
 
   @Test
@@ -170,7 +176,7 @@ public class InfluxParserTest
       parser.parseToMap(input);
     }
     catch (ParseException t) {
-      assertThat(t, isA(ParseException.class));
+      MatcherAssert.assertThat(t, Matchers.isA(ParseException.class));
       return;
     }
 
@@ -192,10 +198,10 @@ public class InfluxParserTest
   {
     Parser<String, Object> parser = new InfluxParser(null);
     try {
-      Map res = parser.parseToMap(testCase.rhs);
+      parser.parseToMap(testCase.rhs);
     }
     catch (ParseException t) {
-      assertThat(t, isA(ParseException.class));
+      MatcherAssert.assertThat(t, Matchers.isA(ParseException.class));
       return;
     }
 
@@ -206,9 +212,9 @@ public class InfluxParserTest
   {
     private String measurement;
     private Long timestamp;
-    private Map<String, Object> kv = new HashMap<>();
+    private final Map<String, Object> kv = new HashMap<>();
 
-    public static Parsed row(String measurement, Long timestamp)
+    static Parsed row(String measurement, Long timestamp)
     {
       Parsed e = new Parsed();
       e.measurement = measurement;
@@ -216,7 +222,7 @@ public class InfluxParserTest
       return e;
     }
 
-    public Parsed with(String k, Object v)
+    Parsed with(String k, Object v)
     {
       kv.put(k, v);
       return this;

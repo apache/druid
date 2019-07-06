@@ -23,12 +23,16 @@ import { HistoryDialog } from './history-dialog';
 
 describe('history dialog', () => {
   it('matches snapshot', () => {
-    const historyDialog =
+    const historyDialog = (
       <HistoryDialog
-        historyRecords={[{auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name : 'test' })}, {auditTime: 'test', auditInfo: 'test',  payload: JSON.stringify({ name : 'test' })}]}
+        historyRecords={[
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+        ]}
         isOpen
-      />;
-    const { container } = render(historyDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+      />
+    );
+    render(historyDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

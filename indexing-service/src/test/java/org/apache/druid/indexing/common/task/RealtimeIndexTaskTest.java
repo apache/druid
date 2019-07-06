@@ -822,7 +822,6 @@ public class RealtimeIndexTaskTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new TestFirehose.TestFirehoseFactory(),
-        null,
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
