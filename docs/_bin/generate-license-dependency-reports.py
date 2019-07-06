@@ -33,11 +33,13 @@ def generate_report(module_path, report_orig_path, report_out_path):
     os.makedirs(report_out_path, exist_ok=True)
 
     try:
+        print("Generating report for {}".format(module_path))
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
         command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
         subprocess.check_output(command, cwd=module_path, shell=True)
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
         subprocess.check_output(command, cwd=module_path, shell=True)
+        print("Generated report for {} in {}".format(module_path, report_out_path))
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
@@ -68,23 +70,11 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
             extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
             script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
     
-    print("Generating dependency reports", flush=True, end="")
-    running = True
-    def print_dots():
-        while running:
-            print(".", end="", flush=True)
-            time.sleep(10)
-    dot_thread = threading.Thread(target=print_dots)
-    dot_thread.start()
+    print("Generating dependency reports", flush=True)
 
-    # Travis kills a job if it prints nothing for 10 mins.
-    # This dot printing is to prevent from being killed by Travis.
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         for module_path, report_orig_path, report_out_path in script_args:
             executor.submit(generate_report, module_path, report_orig_path, report_out_path)
-
-    running = False
-    dot_thread.join()
 
 
 if __name__ == "__main__":
