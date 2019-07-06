@@ -72,9 +72,13 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     
     print("Generating dependency reports", flush=True)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+    if num_threads > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            for module_path, report_orig_path, report_out_path in script_args:
+                executor.submit(generate_report, module_path, report_orig_path, report_out_path)
+    else:
         for module_path, report_orig_path, report_out_path in script_args:
-            executor.submit(generate_report, module_path, report_orig_path, report_out_path)
+            generate_report(module_path, report_orig_path, report_out_path)
 
 
 if __name__ == "__main__":
