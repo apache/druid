@@ -21,6 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterators;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
@@ -35,6 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,6 +53,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private final ObjectMapper jsonMapper;
 
   private final List<StorageLocation> locations;
+  private Iterator<StorageLocation> cyclicIterator;
 
   // This directoryWriteRemoveLock is used when creating or removing a directory
   private final Object directoryWriteRemoveLock = new Object();
@@ -102,6 +105,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       );
     }
     locations.sort(COMPARATOR);
+    // cyclicIterator remembers the marker internally
+    cyclicIterator = Iterators.cycle(locations);
   }
 
   @Override
@@ -179,7 +184,13 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    for (StorageLocation loc : locations) {
+    int numLocationsToTry = locations.size();
+
+    while (cyclicIterator.hasNext() && numLocationsToTry > 0) {
+
+      StorageLocation loc = cyclicIterator.next();
+      numLocationsToTry--;
+
       if (loc.canHandle(segment)) {
         File storageDir = new File(loc.getPath(), storageDirStr);
 
@@ -189,12 +200,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         }
         catch (SegmentLoadingException e) {
           log.makeAlert(
-              e,
-              "Failed to load segment in current location %s, try next location if any",
-              loc.getPath().getAbsolutePath()
+            e,
+            "Failed to load segment in current location %s, try next location if any",
+            loc.getPath().getAbsolutePath()
           )
-             .addData("location", loc.getPath().getAbsolutePath())
-             .emit();
+            .addData("location", loc.getPath().getAbsolutePath())
+            .emit();
 
           cleanupCacheFiles(loc.getPath(), storageDir);
         }
