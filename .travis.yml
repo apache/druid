@@ -20,7 +20,6 @@ language: java
 # Please see https://github.com/apache/incubator-druid/pull/5155 for more information.
 sudo: true
 dist: xenial
-group: deprecated-2017Q4
 
 jdk:
   - openjdk8
