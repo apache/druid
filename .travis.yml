@@ -15,9 +15,6 @@
 
 language: java
 
-# On 12-12-2017, Travis updated their trusty image, which caused integration tests to fail.
-# The group: config instructs Travis to use the previous trusty image.
-# Please see https://github.com/apache/incubator-druid/pull/5155 for more information.
 sudo: true
 dist: xenial
 
@@ -120,8 +117,7 @@ matrix:
         - free -m
 
       # run integration tests
-    - sudo: required
-      services:
+    - services:
         - docker
       env:
         - NAME="integration test part 1"
@@ -141,8 +137,7 @@ matrix:
           done
 
       # run integration tests
-    - sudo: required
-      services:
+    - services:
         - docker
       env:
         - NAME="integration test part 2"
