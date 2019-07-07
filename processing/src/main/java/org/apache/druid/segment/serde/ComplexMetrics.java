@@ -40,7 +40,7 @@ public class ComplexMetrics
   public static void registerSerde(String type, ComplexMetricSerde serde)
   {
     if (complexSerializers.containsKey(type)) {
-      if (!complexSerializers.get(type).getClass().getCanonicalName().equals(serde.getClass().getCanonicalName())) {
+      if (!complexSerializers.get(type).getClass().getName().equals(serde.getClass().getName())) {
         throw new ISE(
             "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
             type,
