@@ -479,30 +479,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   renderTerminateSegmentAction() {
     const { terminateSegmentId, terminateDatasourceId } = this.state;
+    if (!terminateDatasourceId || !terminateSegmentId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          terminateSegmentId
-            ? async () => {
-                const resp = await axios.delete(
-                  `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.delete(
+            `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Drop Segment"
         successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ terminateSegmentId: null });
-          if (success) {
-            this.segmentsNoSqlQueryManager.rerunLastQuery();
-            this.segmentsSqlQueryManager.rerunLastQuery();
-          }
+        }}
+        onSuccess={() => {
+          this.segmentsNoSqlQueryManager.rerunLastQuery();
+          this.segmentsSqlQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to drop segment '${terminateSegmentId}'?`}</p>
@@ -528,8 +525,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             <RefreshButton
               onRefresh={auto =>
                 noSqlMode
-                  ? this.segmentsNoSqlQueryManager.rerunLastQueryInBackground(auto)
-                  : this.segmentsSqlQueryManager.rerunLastQueryInBackground(auto)
+                  ? this.segmentsNoSqlQueryManager.rerunLastQuery(auto)
+                  : this.segmentsSqlQueryManager.rerunLastQuery(auto)
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />

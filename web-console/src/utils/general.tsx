@@ -24,6 +24,12 @@ import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
+export function wait(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
   value = `"${value}"`;
   const currentFilter = filters.find(f => f.id === id);
