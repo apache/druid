@@ -745,11 +745,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
     DataSegment alreadyExistingSegment = dataSource.getSegment(segment.getId());
     /**
-     * Use {@link DataSegment#trueEquals(Object)} to take into account all attributes of the newly polled
+     * Use {@link DataSegment#allDataEquals(Object)} to take into account all attributes of the newly polled
      * segment like loadSpec, shardSpec, metrics, dimensions etc.
      */
     return alreadyExistingSegment != null
-           ? (alreadyExistingSegment.trueEquals(segment) ? alreadyExistingSegment : segment)
+           ? (alreadyExistingSegment.allDataEquals(segment) ? alreadyExistingSegment : segment)
            : segment;
   }
 

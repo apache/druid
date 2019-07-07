@@ -311,6 +311,16 @@
         <constraint name="k" within="" contains="" />
         <constraint name="v" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Use SegmentId instead of DataSegment as key in Map" text="$x$&lt;DataSegment, $V$&gt;" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.Map" expressionTypes="java.util.Map" within="" contains="" />
+        <constraint name="V" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use SegmentId instead of DataSegment in Set" text="$x$&lt;DataSegment&gt; $y$;" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.Set" expressionTypes="java.util.Set" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
