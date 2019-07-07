@@ -316,57 +316,6 @@ exports[`tasks view matches snapshot 1`] = `
         style={Object {}}
         subRowsKey="_subRows"
       />
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Resume supervisor"
-        failText="Could not resume supervisor"
-        intent="primary"
-        onClose={[Function]}
-        successText="Supervisor has been resumed"
-      >
-        <p>
-          Are you sure you want to resume supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Suspend supervisor"
-        failText="Could not suspend supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been suspended"
-      >
-        <p>
-          Are you sure you want to suspend supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Reset supervisor"
-        failText="Could not reset supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been reset"
-      >
-        <p>
-          Are you sure you want to reset supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Terminate supervisor"
-        failText="Could not terminate supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been terminated"
-      >
-        <p>
-          Are you sure you want to terminate supervisor 'null'?
-        </p>
-        <p>
-          This action is not reversible.
-        </p>
-      </AsyncActionDialog>
     </div>
     <div
       className="bottom-pane"
@@ -694,18 +643,6 @@ exports[`tasks view matches snapshot 1`] = `
         style={Object {}}
         subRowsKey="_subRows"
       />
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Kill task"
-        failText="Could not kill task"
-        intent="danger"
-        onClose={[Function]}
-        successText="Task was killed"
-      >
-        <p>
-          Are you sure you want to kill task 'null'?
-        </p>
-      </AsyncActionDialog>
     </div>
   </t>
   <Blueprint3.Alert
