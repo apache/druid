@@ -478,9 +478,16 @@ public class TaskLockbox
               }
             }
           }
-        } else {
-          // case 2) we found a lock posse for the given task
+        } else if (reusablePosses.size() == 1) {
+          // case 2) we found a lock posse for the given request
           return reusablePosses.get(0);
+        } else {
+          // case 3) we found multiple lock posses for the given task
+          throw new ISE(
+              "Task group[%s] has multiple locks for the same interval[%s]?",
+              request.getGroupId(),
+              request.getInterval()
+          );
         }
       } else {
         // We don't have any locks for dataSource and interval.
@@ -1051,7 +1058,7 @@ public class TaskLockbox
       if (taskLock.getLockType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
         switch (taskLock.getLockType()) {
           case SHARED:
-            // All shared lock is not reusable. Instead, a new lock posse is created for all lock request.
+            // All shared lock is not reusable. Instead, a new lock posse is created for each lock request.
             // See createOrFindLockPosse().
             return false;
           case EXCLUSIVE:
