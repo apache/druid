@@ -191,7 +191,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         super.hashCode(),
         maxNumSubTasks,
