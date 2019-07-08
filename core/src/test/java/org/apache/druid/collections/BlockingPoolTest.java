@@ -22,6 +22,7 @@ package org.apache.druid.collections;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,11 +34,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 public class BlockingPoolTest
 {
@@ -85,10 +81,10 @@ public class BlockingPoolTest
   public void testTake()
   {
     final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
-    assertNotNull(holder);
-    assertEquals(9, pool.getPoolSize());
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(9, pool.getPoolSize());
     holder.close();
-    assertEquals(10, pool.getPoolSize());
+    Assert.assertEquals(10, pool.getPoolSize());
   }
 
   @Test(timeout = 60_000L)
@@ -96,7 +92,7 @@ public class BlockingPoolTest
   {
     final List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 100L);
     final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
-    assertNull(holder);
+    Assert.assertNull(holder);
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
   }
 
@@ -104,20 +100,20 @@ public class BlockingPoolTest
   public void testTakeBatch()
   {
     final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L);
-    assertNotNull(holder);
-    assertEquals(6, holder.size());
-    assertEquals(4, pool.getPoolSize());
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(6, holder.size());
+    Assert.assertEquals(4, pool.getPoolSize());
     holder.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(10, pool.getPoolSize());
+    Assert.assertEquals(10, pool.getPoolSize());
   }
 
   @Test(timeout = 60_000L)
   public void testWaitAndTakeBatch() throws InterruptedException, ExecutionException
   {
     List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 10);
-    assertNotNull(batchHolder);
-    assertEquals(10, batchHolder.size());
-    assertEquals(0, pool.getPoolSize());
+    Assert.assertNotNull(batchHolder);
+    Assert.assertEquals(10, batchHolder.size());
+    Assert.assertEquals(0, pool.getPoolSize());
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> future = service.submit(
         () -> pool.takeBatch(8, 100)
@@ -126,19 +122,19 @@ public class BlockingPoolTest
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
 
     batchHolder = future.get();
-    assertNotNull(batchHolder);
-    assertEquals(8, batchHolder.size());
-    assertEquals(2, pool.getPoolSize());
+    Assert.assertNotNull(batchHolder);
+    Assert.assertEquals(8, batchHolder.size());
+    Assert.assertEquals(2, pool.getPoolSize());
 
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(10, pool.getPoolSize());
+    Assert.assertEquals(10, pool.getPoolSize());
   }
 
   @Test(timeout = 60_000L)
   public void testTakeBatchTooManyObjects()
   {
     final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(100, 100L);
-    assertTrue(holder.isEmpty());
+    Assert.assertTrue(holder.isEmpty());
   }
 
   @Test(timeout = 60_000L)
@@ -148,39 +144,29 @@ public class BlockingPoolTest
     final int limit2 = pool.maxSize() - limit1 + 1;
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f1 = service.submit(
-        new Callable<List<ReferenceCountingResourceHolder<Integer>>>()
-        {
-          @Override
-          public List<ReferenceCountingResourceHolder<Integer>> call()
-          {
-            List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
-            for (int i = 0; i < limit1; i++) {
-              result.add(pool.take(10));
-            }
-            return result;
+        () -> {
+          List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
+          for (int i = 0; i < limit1; i++) {
+            result.add(pool.take(10));
           }
+          return result;
         }
     );
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f2 = service.submit(
-        new Callable<List<ReferenceCountingResourceHolder<Integer>>>()
-        {
-          @Override
-          public List<ReferenceCountingResourceHolder<Integer>> call()
-          {
-            List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
-            for (int i = 0; i < limit2; i++) {
-              result.add(pool.take(10));
-            }
-            return result;
+        () -> {
+          List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
+          for (int i = 0; i < limit2; i++) {
+            result.add(pool.take(10));
           }
+          return result;
         }
     );
 
     final List<ReferenceCountingResourceHolder<Integer>> r1 = f1.get();
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
-    assertEquals(0, pool.getPoolSize());
-    assertTrue(r1.contains(null) || r2.contains(null));
+    Assert.assertEquals(0, pool.getPoolSize());
+    Assert.assertTrue(r1.contains(null) || r2.contains(null));
 
     int nonNullCount = 0;
     for (ReferenceCountingResourceHolder<Integer> holder : r1) {
@@ -194,29 +180,19 @@ public class BlockingPoolTest
         nonNullCount++;
       }
     }
-    assertEquals(pool.maxSize(), nonNullCount);
+    Assert.assertEquals(pool.maxSize(), nonNullCount);
 
-    final Future future1 = service.submit(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        for (ReferenceCountingResourceHolder<Integer> holder : r1) {
-          if (holder != null) {
-            holder.close();
-          }
+    final Future future1 = service.submit(() -> {
+      for (ReferenceCountingResourceHolder<Integer> holder : r1) {
+        if (holder != null) {
+          holder.close();
         }
       }
     });
-    final Future future2 = service.submit(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        for (ReferenceCountingResourceHolder<Integer> holder : r2) {
-          if (holder != null) {
-            holder.close();
-          }
+    final Future future2 = service.submit(() -> {
+      for (ReferenceCountingResourceHolder<Integer> holder : r2) {
+        if (holder != null) {
+          holder.close();
         }
       }
     });
@@ -224,7 +200,7 @@ public class BlockingPoolTest
     future1.get();
     future2.get();
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    Assert.assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
   @Test(timeout = 60_000L)
@@ -243,18 +219,18 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
     if (r1 != null) {
-      assertTrue(r2.isEmpty());
-      assertEquals(pool.maxSize() - batch1, pool.getPoolSize());
-      assertEquals(batch1, r1.size());
+      Assert.assertTrue(r2.isEmpty());
+      Assert.assertEquals(pool.maxSize() - batch1, pool.getPoolSize());
+      Assert.assertEquals(batch1, r1.size());
       r1.forEach(ReferenceCountingResourceHolder::close);
     } else {
-      assertNotNull(r2);
-      assertEquals(pool.maxSize() - batch2, pool.getPoolSize());
-      assertEquals(batch2, r2.size());
+      Assert.assertNotNull(r2);
+      Assert.assertEquals(pool.maxSize() - batch2, pool.getPoolSize());
+      Assert.assertEquals(batch2, r2.size());
       r2.forEach(ReferenceCountingResourceHolder::close);
     }
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    Assert.assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
   @Test(timeout = 60_000L)
@@ -272,35 +248,22 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> r1 = f1.get();
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
-    assertNotNull(r1);
-    assertNotNull(r2);
-    assertEquals(batch1, r1.size());
-    assertEquals(batch2, r2.size());
-    assertEquals(0, pool.getPoolSize());
+    Assert.assertNotNull(r1);
+    Assert.assertNotNull(r2);
+    Assert.assertEquals(batch1, r1.size());
+    Assert.assertEquals(batch2, r2.size());
+    Assert.assertEquals(0, pool.getPoolSize());
 
-    final Future future1 = service.submit(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        r1.forEach(ReferenceCountingResourceHolder::close);
-      }
-    });
-    final Future future2 = service.submit(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        r2.forEach(ReferenceCountingResourceHolder::close);
-      }
-    });
+    final Future future1 = service.submit(() -> r1.forEach(ReferenceCountingResourceHolder::close));
+    final Future future2 = service.submit(() -> r2.forEach(ReferenceCountingResourceHolder::close));
 
     future1.get();
     future2.get();
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    Assert.assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
+  @SuppressWarnings("CatchMayIgnoreException")
   @Test(timeout = 60_000L)
   public void testConcurrentTakeBatchClose() throws ExecutionException, InterruptedException
   {
@@ -309,28 +272,23 @@ public class BlockingPoolTest
     final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(10, 100);
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f2 = service.submit(c2);
-    final Future f1 = service.submit(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          Thread.sleep(50);
-        }
-        catch (InterruptedException e) {
-          // ignore
-        }
-        r1.forEach(ReferenceCountingResourceHolder::close);
+    final Future f1 = service.submit(() -> {
+      try {
+        Thread.sleep(50);
       }
+      catch (InterruptedException e) {
+        // ignore
+      }
+      r1.forEach(ReferenceCountingResourceHolder::close);
     });
 
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
     f1.get();
-    assertNotNull(r2);
-    assertEquals(10, r2.size());
-    assertEquals(0, pool.getPoolSize());
+    Assert.assertNotNull(r2);
+    Assert.assertEquals(10, r2.size());
+    Assert.assertEquals(0, pool.getPoolSize());
 
     r2.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    Assert.assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 }

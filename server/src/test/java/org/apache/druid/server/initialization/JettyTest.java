@@ -172,7 +172,7 @@ public class JettyTest extends BaseJettyTest
                         ListenableFuture<StatusResponseHolder> go =
                             client.go(
                                 new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/slow/hello")),
-                                new StatusResponseHandler(Charset.defaultCharset())
+                                StatusResponseHandler.getInstance()
                             );
                         startTime2 = System.currentTimeMillis();
                         go.get();

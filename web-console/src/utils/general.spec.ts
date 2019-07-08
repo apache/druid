@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { alphanumericCompare, sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, sortWithPrefixSuffix, sqlQueryCustomTableFilter } from './general';
 
 describe('general', () => {
   describe('sortWithPrefixSuffix', () => {
@@ -40,6 +40,24 @@ describe('general', () => {
           alphanumericCompare,
         ).join(''),
       ).toEqual('gefcdhba');
+    });
+  });
+
+  describe('sqlQueryCustomTableFilter', () => {
+    it('works', () => {
+      expect(
+        sqlQueryCustomTableFilter({
+          id: 'datasource',
+          value: `hello`,
+        }),
+      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('hello%')"`);
+
+      expect(
+        sqlQueryCustomTableFilter({
+          id: 'datasource',
+          value: `"hello"`,
+        }),
+      ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
     });
   });
 });

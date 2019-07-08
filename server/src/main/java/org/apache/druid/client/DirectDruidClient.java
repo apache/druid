@@ -64,7 +64,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -486,7 +485,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                            ? SmileMediaTypes.APPLICATION_JACKSON_SMILE
                            : MediaType.APPLICATION_JSON
                        ),
-                      new StatusResponseHandler(StandardCharsets.UTF_8),
+                      StatusResponseHandler.getInstance(),
                       Duration.standardSeconds(1)
                   ).get(1, TimeUnit.SECONDS);
 
