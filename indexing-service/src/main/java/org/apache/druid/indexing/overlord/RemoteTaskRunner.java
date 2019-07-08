@@ -92,7 +92,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -129,7 +128,6 @@ import java.util.concurrent.TimeUnit;
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
   private static final Joiner JOINER = Joiner.on("/");
 
   private final ObjectMapper jsonMapper;
@@ -564,7 +562,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         url = TaskRunnerUtils.makeWorkerURL(zkWorker.getWorker(), "/druid/worker/v1/task/%s/shutdown", taskId);
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
-            RESPONSE_HANDLER,
+            StatusResponseHandler.getInstance(),
             shutdownTimeout
         ).get();
 
