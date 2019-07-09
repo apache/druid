@@ -32,7 +32,8 @@ public interface ReadableVectorMatch
    * Returns an array of indexes into the current batch. Only the first "getSelectionSize" are valid.
    *
    * Even though this array is technically mutable, it is very poor form to mutate it if you are not the owner of the
-   * VectorMatch object.
+   * VectorMatch object. The reason we use a mutable array here instead of positional getter methods, by the way, is in
+   * the hopes of keeping access to the selection vector as low-level and optimizable as possible.
    */
   int[] getSelection();
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.timeseries;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -61,6 +62,7 @@ public class TimeseriesQueryEngine
   /**
    * Constructor for tests. In production, the @Inject constructor is used instead.
    */
+  @VisibleForTesting
   public TimeseriesQueryEngine()
   {
     this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));

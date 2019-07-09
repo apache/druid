@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -54,8 +55,10 @@ import java.util.Map;
 
 public class QueryableIndexCursorSequenceBuilder
 {
-  // At this threshold, timestamp searches switch from binary to linear. The idea is to avoid too much decompression
-  // buffer thrashing. The default value is chosen to be similar to the typical number of timestamps per block.
+  /**
+   * At this threshold, timestamp searches switch from binary to linear. See
+   * {@link #timeSearch(NumericColumn, long, int, int, int)} for more details.
+   */
   private static final int TOO_CLOSE_FOR_MISSILES = 15000;
 
   private final QueryableIndex index;
@@ -210,7 +213,13 @@ public class QueryableIndexCursorSequenceBuilder
       timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
       closer.register(timestamps);
 
-      final int result = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
+      final int result = timeSearch(
+          timestamps,
+          interval.getStartMillis(),
+          0,
+          index.getNumRows(),
+          TOO_CLOSE_FOR_MISSILES
+      );
       if (result >= 0) {
         startOffset = result;
       } else {
@@ -226,7 +235,13 @@ public class QueryableIndexCursorSequenceBuilder
         closer.register(timestamps);
       }
 
-      final int result = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
+      final int result = timeSearch(
+          timestamps,
+          interval.getEndMillis(),
+          startOffset,
+          index.getNumRows(),
+          TOO_CLOSE_FOR_MISSILES
+      );
       if (result >= 0) {
         endOffset = result;
       } else {
@@ -271,20 +286,26 @@ public class QueryableIndexCursorSequenceBuilder
   }
 
   /**
-   * Search the time column. Uses a binary search that switches to linear when it gets close.
+   * Search the time column. Uses a binary search that switches to linear when it gets close, based on
+   * the value of "tooCloseForMissiles". The idea is to avoid too much decompression buffer thrashing. The
+   * default value {@link #TOO_CLOSE_FOR_MISSILES} is chosen to be similar to the typical number of timestamps
+   * per block. It is parameterizable to make unit testing easier.
    *
-   * @param timeColumn the column
-   * @param timestamp  the timestamp to search for
-   * @param startIndex first index to search, inclusive
-   * @param endIndex   last index to search, exclusive
+   * @param timeColumn          the column
+   * @param timestamp           the timestamp to search for
+   * @param startIndex          first index to search, inclusive
+   * @param endIndex            last index to search, exclusive
+   * @param tooCloseForMissiles switch to linear search when we are this close to the target index
    *
-   * @return index of timestamp, or negative number equal to (-(insertion point) - 1).
+   * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
-  private static int timeSearch(
+  @VisibleForTesting
+  static int timeSearch(
       final NumericColumn timeColumn,
       final long timestamp,
       final int startIndex,
-      final int endIndex
+      final int endIndex,
+      final int tooCloseForMissiles
   )
   {
     final long prevTimestamp = timestamp - 1;
@@ -294,7 +315,7 @@ public class QueryableIndexCursorSequenceBuilder
     int maxIndex = endIndex - 1;
 
     while (minIndex <= maxIndex) {
-      if (maxIndex - minIndex < TOO_CLOSE_FOR_MISSILES) {
+      if (maxIndex - minIndex < tooCloseForMissiles) {
         break;
       }
 
@@ -315,14 +336,13 @@ public class QueryableIndexCursorSequenceBuilder
     // Do linear search for the actual timestamp, then return.
     for (; minIndex < endIndex; minIndex++) {
       final long currValue = timeColumn.getLongSingleValueRow(minIndex);
-      if (currValue == timestamp) {
+      if (currValue >= timestamp) {
         return minIndex;
-      } else if (currValue > timestamp) {
-        return -(minIndex + 1);
       }
     }
 
-    return -(endIndex + 1);
+    // Not found.
+    return endIndex;
   }
 
   private static class QueryableIndexVectorCursor implements VectorCursor
