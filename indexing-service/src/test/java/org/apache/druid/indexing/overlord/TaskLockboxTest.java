@@ -740,7 +740,7 @@ public class TaskLockboxTest
     Assert.assertNull(lockResult.getNewSegmentId());
     Assert.assertTrue(lockResult.getTaskLock() instanceof SegmentLock);
     final SegmentLock segmentLock = (SegmentLock) lockResult.getTaskLock();
-    Assert.assertEquals(TaskLockType.EXCLUSIVE, segmentLock.getLockType());
+    Assert.assertEquals(TaskLockType.EXCLUSIVE, segmentLock.getType());
     Assert.assertEquals(task.getGroupId(), segmentLock.getGroupId());
     Assert.assertEquals(task.getDataSource(), segmentLock.getDataSource());
     Assert.assertEquals(Intervals.of("2015-01-01/2015-01-02"), segmentLock.getInterval());
@@ -1008,7 +1008,7 @@ public class TaskLockboxTest
     final SegmentLock segmentLock = (SegmentLock) result.getTaskLock();
     final SegmentIdWithShardSpec segmentId = result.getNewSegmentId();
 
-    Assert.assertEquals(lockRequest.getType(), segmentLock.getLockType());
+    Assert.assertEquals(lockRequest.getType(), segmentLock.getType());
     Assert.assertEquals(lockRequest.getGroupId(), segmentLock.getGroupId());
     Assert.assertEquals(lockRequest.getDataSource(), segmentLock.getDataSource());
     Assert.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
@@ -1140,9 +1140,9 @@ public class TaskLockboxTest
 
     @Override
     @JsonProperty
-    public TaskLockType getLockType()
+    public TaskLockType getType()
     {
-      return super.getLockType();
+      return super.getType();
     }
 
     @Override

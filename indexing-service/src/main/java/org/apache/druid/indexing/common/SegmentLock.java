@@ -49,7 +49,7 @@ public class SegmentLock implements TaskLock
 
   @JsonCreator
   public SegmentLock(
-      @JsonProperty("lockType") TaskLockType lockType,
+      @JsonProperty("type") TaskLockType lockType,
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
@@ -82,13 +82,6 @@ public class SegmentLock implements TaskLock
     this(lockType, groupId, dataSource, interval, version, partitionId, priority, false);
   }
 
-  @JsonProperty
-  @Override
-  public String getType()
-  {
-    return TYPE;
-  }
-
   @Override
   public TaskLock revokedCopy()
   {
@@ -109,7 +102,7 @@ public class SegmentLock implements TaskLock
 
   @JsonProperty
   @Override
-  public TaskLockType getLockType()
+  public TaskLockType getType()
   {
     return lockType;
   }

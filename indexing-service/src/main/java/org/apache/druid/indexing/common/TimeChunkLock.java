@@ -44,7 +44,7 @@ public class TimeChunkLock implements TaskLock
 
   @JsonCreator
   public TimeChunkLock(
-      @JsonProperty("lockType") @Nullable TaskLockType lockType,            // nullable for backward compatibility
+      @JsonProperty("type") @Nullable TaskLockType lockType,            // nullable for backward compatibility
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
@@ -73,13 +73,6 @@ public class TimeChunkLock implements TaskLock
   )
   {
     this(type, groupId, dataSource, interval, version, priority, false);
-  }
-
-  @JsonProperty
-  @Override
-  public String getType()
-  {
-    return TYPE;
   }
 
   @Override
@@ -118,7 +111,7 @@ public class TimeChunkLock implements TaskLock
 
   @Override
   @JsonProperty
-  public TaskLockType getLockType()
+  public TaskLockType getType()
   {
     return lockType;
   }

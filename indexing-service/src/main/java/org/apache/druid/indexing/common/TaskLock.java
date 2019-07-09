@@ -31,22 +31,20 @@ import javax.annotation.Nullable;
 /**
  * Represents a lock held by some task. Immutable.
  */
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = TimeChunkLock.class)
+@JsonTypeInfo(use = Id.NAME, property = "granularity", defaultImpl = TimeChunkLock.class)
 @JsonSubTypes(value = {
     @Type(name = TimeChunkLock.TYPE, value = TimeChunkLock.class),
     @Type(name = SegmentLock.TYPE, value = SegmentLock.class)
 })
 public interface TaskLock
 {
-  String getType();
-
   TaskLock revokedCopy();
 
   TaskLock withPriority(int priority);
 
   LockGranularity getGranularity();
 
-  TaskLockType getLockType();
+  TaskLockType getType();
 
   String getGroupId();
 

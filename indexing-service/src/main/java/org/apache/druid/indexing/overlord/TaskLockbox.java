@@ -239,7 +239,7 @@ public class TaskLockbox
         case SEGMENT:
           final SegmentLock segmentLock = (SegmentLock) taskLock;
           request = new SpecificSegmentLockRequest(
-              segmentLock.getLockType(),
+              segmentLock.getType(),
               segmentLock.getGroupId(),
               segmentLock.getDataSource(),
               segmentLock.getInterval(),
@@ -252,7 +252,7 @@ public class TaskLockbox
         case TIME_CHUNK:
           final TimeChunkLock timeChunkLock = (TimeChunkLock) taskLock;
           request = new TimeChunkLockRequest(
-              timeChunkLock.getLockType(),
+              timeChunkLock.getType(),
               timeChunkLock.getGroupId(),
               timeChunkLock.getDataSource(),
               timeChunkLock.getInterval(),
@@ -578,7 +578,7 @@ public class TaskLockbox
             final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(task, interval);
             // Tasks cannot enter the critical section with a shared lock
             return lockPosses.stream().map(TaskLockPosse::getTaskLock).allMatch(
-                lock -> !lock.isRevoked() && lock.getLockType() != TaskLockType.SHARED
+                lock -> !lock.isRevoked() && lock.getType() != TaskLockType.SHARED
             );
           });
     }
@@ -971,7 +971,7 @@ public class TaskLockbox
   private static boolean isAllSharedLocks(List<TaskLockPosse> lockPosses)
   {
     return lockPosses.stream()
-                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getLockType().equals(TaskLockType.SHARED));
+                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED));
   }
 
   private static boolean isAllRevocable(List<TaskLockPosse> lockPosses, int tryLockPriority)
@@ -1017,7 +1017,7 @@ public class TaskLockbox
 
     boolean addTask(Task task)
     {
-      if (taskLock.getLockType() == TaskLockType.EXCLUSIVE) {
+      if (taskLock.getType() == TaskLockType.EXCLUSIVE) {
         Preconditions.checkArgument(
             taskLock.getGroupId().equals(task.getGroupId()),
             "groupId[%s] of task[%s] is different from the existing lockPosse's groupId[%s]",
@@ -1055,8 +1055,8 @@ public class TaskLockbox
 
     boolean reusableFor(LockRequest request)
     {
-      if (taskLock.getLockType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
-        switch (taskLock.getLockType()) {
+      if (taskLock.getType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
+        switch (taskLock.getType()) {
           case SHARED:
             // All shared lock is not reusable. Instead, a new lock posse is created for each lock request.
             // See createOrFindLockPosse().
@@ -1076,7 +1076,7 @@ public class TaskLockbox
             }
             //noinspection SuspiciousIndentAfterControlStatement
           default:
-            throw new ISE("Unknown lock type[%s]", taskLock.getLockType());
+            throw new ISE("Unknown lock type[%s]", taskLock.getType());
         }
       }
 
