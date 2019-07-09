@@ -36,7 +36,7 @@ def generate_report(module_path, report_orig_path, report_out_path):
     try:
         print("Generating report for {}".format(module_path))
         # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
-        command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
+        command = "MAVEN_OPTS='-Xmx1000m' mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
         subprocess.check_output(command, cwd=module_path, shell=True)
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
         subprocess.check_output(command, cwd=module_path, shell=True)
