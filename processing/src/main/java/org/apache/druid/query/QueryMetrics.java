@@ -237,7 +237,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void identity(String identity);
 
   /**
-   * Sets whether are not a segment scan has been vectorized. Generally expected to only be attached to segment-level
+   * Sets whether or not a segment scan has been vectorized. Generally expected to only be attached to segment-level
    * metrics, since at whole-query level we might have a mix of vectorized and non-vectorized segment scans.
    */
   void vectorized(boolean vectorized);

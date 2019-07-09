@@ -250,10 +250,11 @@ public class ByteBufferHashTable
   }
 
   /**
-   * Find a bucket for a key, attempting to resize the table with adjustTableWhenFull() if possible.
+   * Find a bucket for a key, attempting to grow the table with adjustTableWhenFull() if possible.
    *
-   * @param keyBuffer buffer containing the key
-   * @param keyHash   hash of the key
+   * @param keyBuffer              buffer containing the key
+   * @param keyHash                hash of the key
+   * @param preTableGrowthRunnable runnable that executes before the table grows
    *
    * @return bucket number of the found bucket or -1 if a bucket could not be allocated after resizing.
    */
