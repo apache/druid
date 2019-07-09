@@ -16,6 +16,6 @@
 
 mkdir -p target
 
-docs/_bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer && docs/_bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
+mvn clean install -DskipTests && docs/_bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer && docs/_bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
-MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist -Pbundle-contrib-exts
+MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end install -Pdist -Pbundle-contrib-exts
