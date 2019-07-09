@@ -46,15 +46,15 @@ public class AggregatorAdapters implements Closeable
 {
   private static final Logger log = new Logger(AggregatorAdapters.class);
 
-  private final List<AggregatorAdapter> adapters;
+  private final List<Adapter> adapters;
   private final List<AggregatorFactory> factories;
   private final int[] aggregatorPositions;
   private final int spaceNeeded;
 
-  private AggregatorAdapters(final List<AggregatorAdapter> adapters)
+  private AggregatorAdapters(final List<Adapter> adapters)
   {
     this.adapters = adapters;
-    this.factories = adapters.stream().map(AggregatorAdapter::getFactory).collect(Collectors.toList());
+    this.factories = adapters.stream().map(Adapter::getFactory).collect(Collectors.toList());
     this.aggregatorPositions = new int[adapters.size()];
 
     long nextPosition = 0;
@@ -67,12 +67,15 @@ public class AggregatorAdapters implements Closeable
     this.spaceNeeded = Ints.checkedCast(nextPosition);
   }
 
+  /**
+   * Create an adapters object based on {@link VectorAggregator}.
+   */
   public static AggregatorAdapters factorizeVector(
       final VectorColumnSelectorFactory columnSelectorFactory,
       final List<AggregatorFactory> aggregatorFactories
   )
   {
-    final AggregatorAdapter[] adapters = new AggregatorAdapter[aggregatorFactories.size()];
+    final Adapter[] adapters = new Adapter[aggregatorFactories.size()];
     for (int i = 0; i < aggregatorFactories.size(); i++) {
       final AggregatorFactory aggregatorFactory = aggregatorFactories.get(i);
       adapters[i] = new VectorAggregatorAdapter(
@@ -84,12 +87,15 @@ public class AggregatorAdapters implements Closeable
     return new AggregatorAdapters(Arrays.asList(adapters));
   }
 
+  /**
+   * Create an adapters object based on {@link BufferAggregator}.
+   */
   public static AggregatorAdapters factorizeBuffered(
       final ColumnSelectorFactory columnSelectorFactory,
       final List<AggregatorFactory> aggregatorFactories
   )
   {
-    final AggregatorAdapter[] adapters = new AggregatorAdapter[aggregatorFactories.size()];
+    final Adapter[] adapters = new Adapter[aggregatorFactories.size()];
     for (int i = 0; i < aggregatorFactories.size(); i++) {
       final AggregatorFactory aggregatorFactory = aggregatorFactories.get(i);
       adapters[i] = new BufferAggregatorAdapter(
@@ -101,26 +107,44 @@ public class AggregatorAdapters implements Closeable
     return new AggregatorAdapters(Arrays.asList(adapters));
   }
 
+  /**
+   * Return the amount of buffer bytes needed by all aggregators wrapped up in this object.
+   */
   public int spaceNeeded()
   {
     return spaceNeeded;
   }
 
+  /**
+   * Return the {@link AggregatorFactory} objects that were used to create this object.
+   */
   public List<AggregatorFactory> factories()
   {
     return factories;
   }
 
+  /**
+   * Return the individual positions of each aggregator within a hypothetical buffer of size {@link #spaceNeeded()}.
+   */
   public int[] aggregatorPositions()
   {
     return aggregatorPositions;
   }
 
+  /**
+   * Return the number of aggregators in this object.
+   */
   public int size()
   {
     return adapters.size();
   }
 
+  /**
+   * Initialize all aggregators.
+   *
+   * @param buf      aggregation buffer
+   * @param position position in buffer where our block of size {@link #spaceNeeded()} starts
+   */
   public void init(final ByteBuffer buf, final int position)
   {
     for (int i = 0; i < adapters.size(); i++) {
@@ -128,14 +152,24 @@ public class AggregatorAdapters implements Closeable
     }
   }
 
+  /**
+   * Call {@link BufferAggregator#aggregate(ByteBuffer, int)} on all of our aggregators.
+   *
+   * This method is only valid if the underlying aggregators are {@link BufferAggregator}.
+   */
   public void aggregateBuffered(final ByteBuffer buf, final int position)
   {
     for (int i = 0; i < adapters.size(); i++) {
-      final AggregatorAdapter adapter = adapters.get(i);
+      final Adapter adapter = adapters.get(i);
       adapter.asBufferAggregator().aggregate(buf, position + aggregatorPositions[i]);
     }
   }
 
+  /**
+   * Call {@link VectorAggregator#aggregate(ByteBuffer, int, int, int)} on all of our aggregators.
+   *
+   * This method is only valid if the underlying aggregators are {@link VectorAggregator}.
+   */
   public void aggregateVector(
       final ByteBuffer buf,
       final int position,
@@ -144,11 +178,16 @@ public class AggregatorAdapters implements Closeable
   )
   {
     for (int i = 0; i < adapters.size(); i++) {
-      final AggregatorAdapter adapter = adapters.get(i);
+      final Adapter adapter = adapters.get(i);
       adapter.asVectorAggregator().aggregate(buf, position + aggregatorPositions[i], start, end);
     }
   }
 
+  /**
+   * Call {@link VectorAggregator#aggregate(ByteBuffer, int, int[], int[], int)} on all of our aggregators.
+   *
+   * This method is only valid if the underlying aggregators are {@link VectorAggregator}.
+   */
   public void aggregateVector(
       final ByteBuffer buf,
       final int numRows,
@@ -157,17 +196,27 @@ public class AggregatorAdapters implements Closeable
   )
   {
     for (int i = 0; i < adapters.size(); i++) {
-      final AggregatorAdapter adapter = adapters.get(i);
+      final Adapter adapter = adapters.get(i);
       adapter.asVectorAggregator().aggregate(buf, numRows, positions, rows, aggregatorPositions[i]);
     }
   }
 
+  /**
+   * Retrieve aggregation state from one of our aggregators.
+   *
+   * @param buf              aggregation buffer
+   * @param position         position in buffer where our block of size {@link #spaceNeeded()} starts
+   * @param aggregatorNumber which aggregator to retrieve state, from 0 to {@link #size()} - 1
+   */
   @Nullable
   public Object get(final ByteBuffer buf, final int position, final int aggregatorNumber)
   {
     return adapters.get(aggregatorNumber).get(buf, position + aggregatorPositions[aggregatorNumber]);
   }
 
+  /**
+   * Inform all of our aggregators that they are being relocated.
+   */
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
     for (int i = 0; i < adapters.size(); i++) {
@@ -180,10 +229,13 @@ public class AggregatorAdapters implements Closeable
     }
   }
 
+  /**
+   * Close all of our aggregators.
+   */
   @Override
   public void close()
   {
-    for (AggregatorAdapter adapter : adapters) {
+    for (Adapter adapter : adapters) {
       try {
         adapter.close();
       }
@@ -193,12 +245,36 @@ public class AggregatorAdapters implements Closeable
     }
   }
 
-  private static class VectorAggregatorAdapter implements AggregatorAdapter
+  /**
+   * The interface that allows this class to achieve its goals of partially unifying handling of
+   * BufferAggregator and VectorAggregator. Private, since it doesn't escape this class and the
+   * only two implementations are private static classes below.
+   */
+  private interface Adapter extends Closeable
+  {
+    void init(ByteBuffer buf, int position);
+
+    @Nullable
+    Object get(ByteBuffer buf, int position);
+
+    void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer);
+
+    @Override
+    void close();
+
+    AggregatorFactory getFactory();
+
+    BufferAggregator asBufferAggregator();
+
+    VectorAggregator asVectorAggregator();
+  }
+
+  private static class VectorAggregatorAdapter implements Adapter
   {
     private final AggregatorFactory factory;
     private final VectorAggregator aggregator;
 
-    public VectorAggregatorAdapter(final AggregatorFactory factory, final VectorAggregator aggregator)
+    VectorAggregatorAdapter(final AggregatorFactory factory, final VectorAggregator aggregator)
     {
       this.factory = factory;
       this.aggregator = aggregator;
@@ -252,12 +328,12 @@ public class AggregatorAdapters implements Closeable
     }
   }
 
-  private static class BufferAggregatorAdapter implements AggregatorAdapter
+  private static class BufferAggregatorAdapter implements Adapter
   {
     private final AggregatorFactory factory;
     private final BufferAggregator aggregator;
 
-    public BufferAggregatorAdapter(final AggregatorFactory factory, final BufferAggregator aggregator)
+    BufferAggregatorAdapter(final AggregatorFactory factory, final BufferAggregator aggregator)
     {
       this.factory = factory;
       this.aggregator = aggregator;
