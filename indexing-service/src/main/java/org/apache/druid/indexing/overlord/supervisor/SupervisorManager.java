@@ -101,26 +101,6 @@ public class SupervisorManager
     }
   }
 
-  public void stopAndRemoveAllSupervisors()
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblyStopAndRemoveSupervisorInternal(id, true));
-    }
-  }
-
-  public void suspendOrResumeAllSupervisors(boolean suspend)
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblySuspendOrResumeSupervisorInternal(id, suspend));
-    }
-  }
-
   @LifecycleStart
   public void start()
   {
