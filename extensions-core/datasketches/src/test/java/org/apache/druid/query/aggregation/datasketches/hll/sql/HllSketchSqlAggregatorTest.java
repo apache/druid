@@ -425,7 +425,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + " HAVING APPROX_COUNT_DISTINCT_DS_HLL(m1) = 2";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results =
+        sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, ImmutableList.of(), authenticationResult).toList();
     final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
     Assert.assertEquals(expected, results.size());
   }
