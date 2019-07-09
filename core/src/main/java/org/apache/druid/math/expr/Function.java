@@ -76,11 +76,17 @@ interface Function
     return Collections.emptySet();
   }
 
+  /**
+   * Returns true if a function takes an array arguments
+   */
   default boolean hasArrayInputs()
   {
     return false;
   }
 
+  /**
+   * Returns true if function produces an array
+   */
   default boolean hasArrayOutput()
   {
     return false;

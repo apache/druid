@@ -256,6 +256,11 @@ public interface Expr
       return arrayVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
     }
 
+    /**
+     * Returns true if the expression has any array inputs. Note that in some cases, this can be true and
+     * {@link BindingDetails#getArrayVariables} can be empty, since the latter can only shallowly collect identifiers
+     * that are explicitly used as arrays.
+     */
     public boolean hasInputArrays()
     {
       return hasInputArrays;
@@ -286,8 +291,8 @@ public interface Expr
           ImmutableSet.copyOf(Sets.union(freeVariables, other.freeVariables)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, other.scalarVariables)),
           ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables)),
-          hasInputArrays,
-          isOutputArray
+          hasInputArrays || other.hasInputArrays,
+          isOutputArray || other.isOutputArray
       );
     }
 
@@ -330,22 +335,28 @@ public interface Expr
           ImmutableSet.copyOf(Sets.union(freeVariables, arrayIdentifiers)),
           scalarVariables,
           ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
-          hasInputArrays,
+          hasInputArrays || arrayArguments.size() > 0,
           isOutputArray
       );
     }
 
+    /**
+     * Copy, setting if an expression has array inputs
+     */
     public BindingDetails withArrayInputs(boolean hasArrays)
     {
       return new BindingDetails(
           freeVariables,
           scalarVariables,
           arrayVariables,
-          hasArrays,
+          hasArrays || arrayVariables.size() > 0,
           isOutputArray
       );
     }
 
+    /**
+     * Copy, setting if an expression produces an array output
+     */
     public BindingDetails withArrayOutput(boolean isOutputArray)
     {
       return new BindingDetails(

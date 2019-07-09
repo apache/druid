@@ -60,11 +60,17 @@ public interface ApplyFunction
    */
   Set<Expr> getArrayInputs(List<Expr> args);
 
+  /**
+   * Returns true if apply function produces an array output
+   */
   default boolean hasArrayOutput()
   {
     return false;
   }
 
+  /**
+   * Validate apply function arguments, throwing an exception if incorrect
+   */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
