@@ -70,15 +70,12 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   }
 
   /**
-   * Get the underlying selector {@link IndexedInts} row, or the null adjusted row.
+   * Get the underlying selector {@link IndexedInts} row
    */
   @Override
   public IndexedInts getRow()
   {
-    final IndexedInts row = selector.getRow();
-
-    assert row.size() <= 1;
-    return row;
+    return selector.getRow();
   }
 
   @Override

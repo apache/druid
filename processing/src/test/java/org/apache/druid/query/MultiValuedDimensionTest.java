@@ -668,10 +668,6 @@ public class MultiValuedDimensionTest
   @Test
   public void testGroupByExpressionAuto()
   {
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")

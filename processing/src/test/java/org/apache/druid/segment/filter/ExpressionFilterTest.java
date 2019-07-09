@@ -147,6 +147,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     }
     assertFilterMatches(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatches(edf("dim4 == '3'"), ImmutableList.of("3"));
+    assertFilterMatches(edf("dim4 == '4'"), ImmutableList.of("4", "5"));
   }
 
   @Test

@@ -170,26 +170,32 @@ public interface Expr
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
+    private final boolean hasInputArrays;
+    private final boolean isOutputArray;
 
     public BindingDetails()
     {
-      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of());
+      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
     public BindingDetails(IdentifierExpr expr)
     {
-      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of());
+      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
     public BindingDetails(
         ImmutableSet<IdentifierExpr> freeVariables,
         ImmutableSet<IdentifierExpr> scalarVariables,
-        ImmutableSet<IdentifierExpr> arrayVariables
+        ImmutableSet<IdentifierExpr> arrayVariables,
+        boolean hasInputArrays,
+        boolean isOutputArray
     )
     {
       this.freeVariables = freeVariables;
       this.scalarVariables = scalarVariables;
       this.arrayVariables = arrayVariables;
+      this.hasInputArrays = hasInputArrays;
+      this.isOutputArray = isOutputArray;
     }
 
     /**
@@ -197,7 +203,9 @@ public interface Expr
      */
     public List<String> getRequiredColumnsList()
     {
-      return new ArrayList<>(freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet()));
+      return new ArrayList<>(
+          freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet())
+      );
     }
 
     /**
@@ -248,6 +256,19 @@ public interface Expr
       return arrayVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
     }
 
+    public boolean hasInputArrays()
+    {
+      return hasInputArrays;
+    }
+
+    /**
+     * Returns true if this expression evaluates to an array type
+     */
+    public boolean isOutputArray()
+    {
+      return isOutputArray;
+    }
+
     /**
      * Combine with {@link BindingDetails} from {@link Expr#analyzeInputs()}
      */
@@ -264,7 +285,9 @@ public interface Expr
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, other.freeVariables)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, other.scalarVariables)),
-          ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables))
+          ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables)),
+          hasInputArrays,
+          isOutputArray
       );
     }
 
@@ -284,7 +307,9 @@ public interface Expr
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, moreScalars)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, moreScalars)),
-          arrayVariables
+          arrayVariables,
+          hasInputArrays,
+          isOutputArray
       );
     }
 
@@ -304,7 +329,31 @@ public interface Expr
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, arrayIdentifiers)),
           scalarVariables,
-          ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers))
+          ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
+          hasInputArrays,
+          isOutputArray
+      );
+    }
+
+    public BindingDetails withArrayInputs(boolean hasArrays)
+    {
+      return new BindingDetails(
+          freeVariables,
+          scalarVariables,
+          arrayVariables,
+          hasArrays,
+          isOutputArray
+      );
+    }
+
+    public BindingDetails withArrayOutput(boolean isOutputArray)
+    {
+      return new BindingDetails(
+          freeVariables,
+          scalarVariables,
+          arrayVariables,
+          hasInputArrays,
+          isOutputArray
       );
     }
 
@@ -315,9 +364,11 @@ public interface Expr
     public BindingDetails removeLambdaArguments(Set<String> lambda)
     {
       return new BindingDetails(
-        ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
-        ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
-        ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator())
+          ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          hasInputArrays,
+          isOutputArray
       );
     }
   }
@@ -785,7 +836,9 @@ class FunctionExpr implements Expr
       accumulator = accumulator.with(arg);
     }
     return accumulator.withScalarArguments(function.getScalarInputs(args))
-                      .withArrayArguments(function.getArrayInputs(args));
+                      .withArrayArguments(function.getArrayInputs(args))
+                      .withArrayInputs(function.hasArrayInputs())
+                      .withArrayOutput(function.hasArrayOutput());
   }
 }
 
@@ -824,7 +877,12 @@ class ApplyFunctionExpr implements Expr
     }
 
     lambdaBindingDetails = lambdaExpr.analyzeInputs();
-    bindingDetails = accumulator.with(lambdaBindingDetails).withArrayArguments(function.getArrayInputs(argsExpr));
+    boolean isArrayOutput = function.hasArrayOutput() || (function instanceof ApplyFunction.BaseFoldFunction
+                                                          && lambdaBindingDetails.isOutputArray());
+    bindingDetails = accumulator.with(lambdaBindingDetails)
+                                .withArrayArguments(function.getArrayInputs(argsExpr))
+                                .withArrayInputs(true)
+                                .withArrayOutput(isArrayOutput);
     argsBindingDetails = argBindingDetailsBuilder.build();
   }
 

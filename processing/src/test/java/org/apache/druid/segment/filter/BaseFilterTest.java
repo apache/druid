@@ -264,26 +264,21 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
     Sequence<List<String>> seq = Sequences.map(
         cursors,
-        new Function<Cursor, List<String>>()
-        {
-          @Override
-          public List<String> apply(Cursor input)
-          {
-            final DimensionSelector selector = input
-                .getColumnSelectorFactory()
-                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+        input -> {
+          final DimensionSelector selector = input
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = new ArrayList<>();
+          final List<String> values = new ArrayList<>();
 
-            while (!input.isDone()) {
-              IndexedInts row = selector.getRow();
-              Preconditions.checkState(row.size() == 1);
-              values.add(selector.lookupName(row.get(0)));
-              input.advance();
-            }
-
-            return values;
+          while (!input.isDone()) {
+            IndexedInts row = selector.getRow();
+            Preconditions.checkState(row.size() == 1);
+            values.add(selector.lookupName(row.get(0)));
+            input.advance();
           }
+
+          return values;
         }
     );
     return seq.toList().get(0);
@@ -294,22 +289,17 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
     Sequence<Aggregator> aggSeq = Sequences.map(
         cursors,
-        new Function<Cursor, Aggregator>()
-        {
-          @Override
-          public Aggregator apply(Cursor input)
-          {
-            Aggregator agg = new FilteredAggregatorFactory(
-                new CountAggregatorFactory("count"),
-                maybeOptimize(filter)
-            ).factorize(input.getColumnSelectorFactory());
+        input -> {
+          Aggregator agg = new FilteredAggregatorFactory(
+              new CountAggregatorFactory("count"),
+              maybeOptimize(filter)
+          ).factorize(input.getColumnSelectorFactory());
 
-            for (; !input.isDone(); input.advance()) {
-              agg.aggregate();
-            }
-
-            return agg;
+          for (; !input.isDone(); input.advance()) {
+            agg.aggregate();
           }
+
+          return agg;
         }
     );
     return aggSeq.toList().get(0).getLong();
@@ -357,26 +347,21 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);
     Sequence<List<String>> seq = Sequences.map(
         cursors,
-        new Function<Cursor, List<String>>()
-        {
-          @Override
-          public List<String> apply(Cursor input)
-          {
-            final DimensionSelector selector = input
-                .getColumnSelectorFactory()
-                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+        input -> {
+          final DimensionSelector selector = input
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = new ArrayList<>();
+          final List<String> values = new ArrayList<>();
 
-            while (!input.isDone()) {
-              IndexedInts row = selector.getRow();
-              Preconditions.checkState(row.size() == 1);
-              values.add(selector.lookupName(row.get(0)));
-              input.advance();
-            }
-
-            return values;
+          while (!input.isDone()) {
+            IndexedInts row = selector.getRow();
+            Preconditions.checkState(row.size() == 1);
+            values.add(selector.lookupName(row.get(0)));
+            input.advance();
           }
+
+          return values;
         }
     );
     return seq.toList().get(0);

@@ -60,6 +60,11 @@ public interface ApplyFunction
    */
   Set<Expr> getArrayInputs(List<Expr> args);
 
+  default boolean hasArrayOutput()
+  {
+    return false;
+  }
+
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
@@ -69,6 +74,12 @@ public interface ApplyFunction
    */
   abstract class BaseMapFunction implements ApplyFunction
   {
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
     /**
      * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
      */
@@ -395,6 +406,12 @@ public interface ApplyFunction
     public String name()
     {
       return NAME;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
     }
 
     @Override

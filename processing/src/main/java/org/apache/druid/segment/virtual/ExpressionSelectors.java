@@ -160,7 +160,7 @@ public class ExpressionSelectors
                  && capabilities.isDictionaryEncoded()
                  && capabilities.isComplete()
                  && !capabilities.hasMultipleValues()
-                 && !exprDetails.getArrayColumns().contains(column)) {
+                 && exprDetails.getArrayColumns().size() == 0) {
         // Optimization for expressions that hit one string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -230,8 +230,9 @@ public class ExpressionSelectors
           && capabilities.getType() == ValueType.STRING
           && capabilities.isDictionaryEncoded()
           && capabilities.isComplete()
-          && !capabilities.hasMultipleValues()
-          && !exprDetails.getArrayColumns().contains(column)
+          && !exprDetails.hasInputArrays()
+          && !exprDetails.isOutputArray()
+          && (!capabilities.hasMultipleValues() || exprDetails.getFreeVariables().size() == 1)
       ) {
         // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
