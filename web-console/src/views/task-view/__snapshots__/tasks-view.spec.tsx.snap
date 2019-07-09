@@ -20,10 +20,9 @@ exports[`tasks view matches snapshot 1`] = `
       <ViewControlBar
         label="Supervisors"
       >
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
+        <RefreshButton
+          localStorageKey="supervisors-refresh-rate"
+          onRefresh={[Function]}
         />
         <Blueprint3.Popover
           boundary="scrollParent"
@@ -349,10 +348,9 @@ exports[`tasks view matches snapshot 1`] = `
             Status
           </Blueprint3.Button>
         </Blueprint3.ButtonGroup>
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
+        <RefreshButton
+          localStorageKey="task-refresh-rate"
+          onRefresh={[Function]}
         />
         <Blueprint3.Button
           icon="application"

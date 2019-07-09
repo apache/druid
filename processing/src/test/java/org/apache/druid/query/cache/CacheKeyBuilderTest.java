@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -31,23 +32,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
 public class CacheKeyBuilderTest
 {
   @Test
   public void testCacheKeyBuilder()
   {
-    final Cacheable cacheable = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return new byte[]{10, 20};
-      }
-    };
+    final Cacheable cacheable = () -> new byte[]{10, 20};
 
     final byte[] actual = new CacheKeyBuilder((byte) 10)
         .appendBoolean(false)
@@ -75,7 +65,7 @@ public class CacheKeyBuilderTest
                              + cacheable.getCacheKey().length            // cacheable
                              + Integer.BYTES + 4                         // cacheable list
                              + 11;                                       // type keys
-    assertEquals(expectedSize, actual.length);
+    Assert.assertEquals(expectedSize, actual.length);
 
     final byte[] expected = ByteBuffer.allocate(expectedSize)
                                       .put((byte) 10)
@@ -108,7 +98,7 @@ public class CacheKeyBuilderTest
                                       .put(cacheable.getCacheKey())
                                       .array();
 
-    assertArrayEquals(expected, actual);
+    Assert.assertArrayEquals(expected, actual);
   }
 
   @Test
@@ -122,25 +112,11 @@ public class CacheKeyBuilderTest
         .appendStringsIgnoringOrder(Lists.newArrayList("BA", "AB"))
         .build();
 
-    assertArrayEquals(key1, key2);
+    Assert.assertArrayEquals(key1, key2);
 
-    final Cacheable cacheable1 = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return new byte[]{1};
-      }
-    };
+    final Cacheable cacheable1 = () -> new byte[]{1};
 
-    final Cacheable cacheable2 = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return new byte[]{2};
-      }
-    };
+    final Cacheable cacheable2 = () -> new byte[]{2};
 
     key1 = new CacheKeyBuilder((byte) 10)
         .appendCacheablesIgnoringOrder(Lists.newArrayList(cacheable1, cacheable2))
@@ -150,7 +126,7 @@ public class CacheKeyBuilderTest
         .appendCacheablesIgnoringOrder(Lists.newArrayList(cacheable2, cacheable1))
         .build();
 
-    assertArrayEquals(key1, key2);
+    Assert.assertArrayEquals(key1, key2);
   }
 
   @Test
@@ -222,23 +198,9 @@ public class CacheKeyBuilderTest
   @Test
   public void testNotEqualCacheables()
   {
-    final Cacheable test = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("test");
-      }
-    };
+    final Cacheable test = () -> StringUtils.toUtf8("test");
 
-    final Cacheable testtest = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("testtest");
-      }
-    };
+    final Cacheable testtest = () -> StringUtils.toUtf8("testtest");
 
     final List<byte[]> keys = new ArrayList<>();
     keys.add(
@@ -287,7 +249,7 @@ public class CacheKeyBuilderTest
   {
     for (int i = 0; i < keys.size(); i++) {
       for (int j = i + 1; j < keys.size(); j++) {
-        assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
+        Assert.assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
       }
     }
   }
@@ -303,17 +265,17 @@ public class CacheKeyBuilderTest
         .appendStrings(Collections.singletonList(""))
         .build();
 
-    assertFalse(Arrays.equals(key1, key2));
+    Assert.assertFalse(Arrays.equals(key1, key2));
 
     key1 = new CacheKeyBuilder((byte) 10)
         .appendStrings(Collections.singletonList(""))
         .build();
 
     key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Collections.singletonList((String) null))
+        .appendStrings(Collections.singletonList(null))
         .build();
 
-    assertArrayEquals(key1, key2);
+    Assert.assertArrayEquals(key1, key2);
   }
 
   @Test
@@ -324,10 +286,10 @@ public class CacheKeyBuilderTest
         .build();
 
     final byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Collections.singletonList((Cacheable) null))
+        .appendCacheables(Collections.singletonList(null))
         .build();
 
-    assertFalse(Arrays.equals(key1, key2));
+    Assert.assertFalse(Arrays.equals(key1, key2));
   }
 
   @Test
@@ -348,34 +310,13 @@ public class CacheKeyBuilderTest
                                 .put(StringUtils.toUtf8("test2"))
                                 .array();
 
-    assertArrayEquals(expected, actual);
+    Assert.assertArrayEquals(expected, actual);
 
-    final Cacheable c1 = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("te");
-      }
-    };
+    final Cacheable c1 = () -> StringUtils.toUtf8("te");
 
-    final Cacheable c2 = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("test1");
-      }
-    };
+    final Cacheable c2 = () -> StringUtils.toUtf8("test1");
 
-    final Cacheable c3 = new Cacheable()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("test2");
-      }
-    };
+    final Cacheable c3 = () -> StringUtils.toUtf8("test2");
 
     actual = new CacheKeyBuilder((byte) 10)
         .appendCacheablesIgnoringOrder(Lists.newArrayList(c3, c2, c1))
@@ -390,6 +331,6 @@ public class CacheKeyBuilderTest
                          .put(c3.getCacheKey())
                          .array();
 
-    assertArrayEquals(expected, actual);
+    Assert.assertArrayEquals(expected, actual);
   }
 }

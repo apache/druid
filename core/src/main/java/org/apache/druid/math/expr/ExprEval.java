@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -294,6 +293,9 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
+      if (isNumericNull()) {
+        return new NullDoubleExpr();
+      }
       return new DoubleExpr(value.doubleValue());
     }
   }
@@ -358,9 +360,11 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
+      if (isNumericNull()) {
+        return new NullLongExpr();
+      }
       return new LongExpr(value.longValue());
     }
-
   }
 
   private static class StringExprEval extends ExprEval<String>
@@ -629,7 +633,7 @@ public abstract class ExprEval<T>
     @Override
     public String[] asStringArray()
     {
-      return value == null ? null : Arrays.stream(value).map(String::valueOf).toArray(String[]::new);
+      return value == null ? null : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
 
     @Nullable
@@ -653,8 +657,6 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
-        case STRING:
-          return ExprEval.of(Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", ")));
         case LONG_ARRAY:
           return this;
         case DOUBLE_ARRAY:
@@ -690,7 +692,7 @@ public abstract class ExprEval<T>
     @Override
     public String[] asStringArray()
     {
-      return value == null ? null : Arrays.stream(value).map(String::valueOf).toArray(String[]::new);
+      return value == null ? null : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
 
     @Nullable
@@ -714,8 +716,6 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
-        case STRING:
-          return ExprEval.of(Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", ")));
         case LONG_ARRAY:
           return ExprEval.ofLongArray(asLongArray());
         case DOUBLE_ARRAY:
@@ -788,8 +788,6 @@ public abstract class ExprEval<T>
         return StringExprEval.OF_NULL;
       }
       switch (castTo) {
-        case STRING:
-          return ExprEval.of(Arrays.stream(value).map(String::valueOf).collect(Collectors.joining(", ")));
         case STRING_ARRAY:
           return this;
         case LONG_ARRAY:

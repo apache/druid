@@ -19,17 +19,15 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Comparator;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 public class BaseAveragerFactoryTest
 {
-
   private AveragerFactory<Long, Long> fac;
 
   @Before
@@ -55,14 +53,14 @@ public class BaseAveragerFactoryTest
   public void testGetDependentFields()
   {
     List<String> dependentFields = fac.getDependentFields();
-    assertEquals(1, dependentFields.size());
-    assertEquals("field", dependentFields.get(0));
+    Assert.assertEquals(1, dependentFields.size());
+    Assert.assertEquals("field", dependentFields.get(0));
   }
 
   @Test
   public void testFinalization()
   {
-    Long input = Long.valueOf(5L);
-    assertEquals(input, fac.finalizeComputation(input));
+    Long input = 5L;
+    Assert.assertEquals(input, fac.finalizeComputation(input));
   }
 }

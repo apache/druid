@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -30,7 +31,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -38,13 +38,14 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -59,6 +60,11 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
+  /**
+   * Function that floors a DruidExpression to a particular granularity. Not actually used by the
+   * TimeFloorOperatorConversion, but I'm not sure where else to put this. It makes some sense in this file, since
+   * it's responsible for generating "timestamp_floor" calls.
+   */
   public static DruidExpression applyTimestampFloor(
       final DruidExpression input,
       final PeriodGranularity granularity,
@@ -98,6 +104,74 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
     );
   }
 
+  /**
+   * Function that converts SQL TIME_FLOOR or TIME_CEIL args to Druid expression "timestamp_floor" or "timestamp_ceil"
+   * args. The main reason this function is necessary is because the handling of origin and timezone must take into
+   * account the SQL context timezone. It also helps with handling SQL FLOOR and CEIL, by offering handling of
+   * TimeUnitRange args.
+   */
+  @Nullable
+  public static List<DruidExpression> toTimestampFloorOrCeilArgs(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final List<RexNode> operands
+  )
+  {
+    final List<DruidExpression> functionArgs = new ArrayList<>();
+
+    // Timestamp
+    functionArgs.add(Expressions.toDruidExpression(plannerContext, rowSignature, operands.get(0)));
+
+    // Period
+    final RexNode periodOperand = operands.get(1);
+    if (periodOperand.isA(SqlKind.LITERAL) && RexLiteral.value(periodOperand) instanceof TimeUnitRange) {
+      // TimeUnitRange literals are used by FLOOR(t TO unit) and CEIL(t TO unit)
+      final Period period = TimeUnits.toPeriod((TimeUnitRange) RexLiteral.value(periodOperand));
+
+      if (period == null) {
+        // Unrecognized time unit, bail out.
+        return null;
+      }
+
+      functionArgs.add(DruidExpression.fromExpression(DruidExpression.stringLiteral(period.toString())));
+    } else {
+      // Other literal types are used by TIME_FLOOR and TIME_CEIL
+      functionArgs.add(Expressions.toDruidExpression(plannerContext, rowSignature, periodOperand));
+    }
+
+    // Origin
+    functionArgs.add(
+        OperatorConversions.getOperandWithDefault(
+            operands,
+            2,
+            operand -> {
+              if (operand.isA(SqlKind.LITERAL)) {
+                return DruidExpression.fromExpression(
+                    DruidExpression.numberLiteral(
+                        Calcites.calciteDateTimeLiteralToJoda(operand, plannerContext.getTimeZone()).getMillis()
+                    )
+                );
+              } else {
+                return Expressions.toDruidExpression(plannerContext, rowSignature, operand);
+              }
+            },
+            DruidExpression.fromExpression(DruidExpression.nullLiteral())
+        )
+    );
+
+    // Time zone
+    functionArgs.add(
+        OperatorConversions.getOperandWithDefault(
+            operands,
+            3,
+            operand -> Expressions.toDruidExpression(plannerContext, rowSignature, operand),
+            DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+        )
+    );
+
+    return functionArgs.stream().noneMatch(Objects::isNull) ? functionArgs : null;
+  }
+
   private static boolean periodIsDayMultiple(final Period period)
   {
     return period.getMillis() == 0
@@ -114,6 +188,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
   }
 
   @Override
+  @Nullable
   public DruidExpression toDruidExpression(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -121,40 +196,16 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
   )
   {
     final RexCall call = (RexCall) rexNode;
-    final List<RexNode> operands = call.getOperands();
-    final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+    final List<DruidExpression> functionArgs = toTimestampFloorOrCeilArgs(
         plannerContext,
         rowSignature,
-        operands
+        call.getOperands()
     );
 
-    if (druidExpressions == null) {
+    if (functionArgs == null) {
       return null;
-    } else if (operands.get(1).isA(SqlKind.LITERAL)
-               && (operands.size() <= 2 || operands.get(2).isA(SqlKind.LITERAL))
-               && (operands.size() <= 3 || operands.get(3).isA(SqlKind.LITERAL))) {
-      // Granularity is a literal. Special case since we can use an extractionFn here.
-      final Period period = new Period(RexLiteral.stringValue(operands.get(1)));
-
-      final DateTime origin = OperatorConversions.getOperandWithDefault(
-          call.getOperands(),
-          2,
-          operand -> Calcites.calciteDateTimeLiteralToJoda(operands.get(2), plannerContext.getTimeZone()),
-          null
-      );
-
-      final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
-          call.getOperands(),
-          3,
-          operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
-          plannerContext.getTimeZone()
-      );
-
-      final PeriodGranularity granularity = new PeriodGranularity(period, origin, timeZone);
-      return applyTimestampFloor(druidExpressions.get(0), granularity, plannerContext.getExprMacroTable());
-    } else {
-      // Granularity is dynamic
-      return DruidExpression.fromFunctionCall("timestamp_floor", druidExpressions);
     }
+
+    return DruidExpression.fromFunctionCall("timestamp_floor", functionArgs);
   }
 }

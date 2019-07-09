@@ -46,6 +46,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class ExpressionVirtualColumnTest
 {
   private static final InputRow ROW0 = new MapBasedInputRow(
@@ -91,6 +93,15 @@ public class ExpressionVirtualColumnTest
           "a", ImmutableList.of("d", "e", "f"),
           "b", ImmutableList.of("3", "4", "5"),
           "c", ImmutableList.of("7", "8", "9")
+      )
+  );
+  private static final InputRow ROWMULTI3 = new MapBasedInputRow(
+      DateTimes.of("2000-01-02T01:00:00").getMillis(),
+      ImmutableList.of(),
+      ImmutableMap.of(
+          "x", 3L,
+          "y", 4L,
+          "b", Arrays.asList(new String[]{"3", null, "5"})
       )
   );
 
@@ -202,12 +213,16 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorImplicit.getObject());
+    CURRENT_ROW.set(ROWMULTI3);
+    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorImplicit.getObject());
 
     final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
     CURRENT_ROW.set(ROWMULTI);
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorExplicit.getObject());
+    CURRENT_ROW.set(ROWMULTI3);
+    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorExplicit.getObject());
   }
 
   @Test
@@ -573,7 +588,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(ImmutableList.of("x", "y"), X_PLUS_Y.requiredColumns());
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("z", "x"), Z_CONCAT_X.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("x", "z"), Z_CONCAT_X.requiredColumns());
   }
 
   @Test

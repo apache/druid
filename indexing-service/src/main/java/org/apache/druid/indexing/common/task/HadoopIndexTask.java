@@ -75,7 +75,6 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -528,7 +527,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   public static class InnerProcessingStatsGetter implements TaskMetricsGetter
   {
-    public static final List<String> KEYS = Arrays.asList(
+    static final List<String> KEYS = ImmutableList.of(
         TaskMetricsUtils.ROWS_PROCESSED,
         TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS,
         TaskMetricsUtils.ROWS_THROWN_AWAY,

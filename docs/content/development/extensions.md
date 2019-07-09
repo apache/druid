@@ -48,7 +48,6 @@ Core extensions are maintained by Druid committers.
 |druid-datasketches|Support for approximate counts and set operations with [DataSketches](https://datasketches.github.io/).|[link](../development/extensions-core/datasketches-extension.html)|
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.html)|
 |druid-histogram|Approximate histograms and quantiles aggregator. Deprecated, please use the [DataSketches quantiles aggregator](../development/extensions-core/datasketches-quantiles.html) from the `druid-datasketches` extension instead.|[link](../development/extensions-core/approximate-histograms.html)|
-|druid-kafka-eight|Kafka ingest firehose (high level consumer) for realtime nodes(deprecated).|[link](../development/extensions-core/kafka-eight-firehose.html)|
 |druid-kafka-extraction-namespace|Kafka-based namespaced lookup. Requires namespace lookup extension.|[link](../development/extensions-core/kafka-extraction-namespace.html)|
 |druid-kafka-indexing-service|Supervised exactly-once Kafka ingestion for the indexing service.|[link](../development/extensions-core/kafka-ingestion.html)|
 |druid-kinesis-indexing-service|Supervised exactly-once Kinesis ingestion for the indexing service.|[link](../development/extensions-core/kinesis-ingestion.html)|
@@ -74,7 +73,7 @@ Community extensions are not maintained by Druid committers, although we accept 
 A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.
 If you'd like to take on maintenance for a community extension, please post on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org) to let us know!
 
-All of these community extensions can be downloaded using *pull-deps* with the coordinate org.apache.druid.extensions.contrib:EXTENSION_NAME:LATEST_DRUID_STABLE_VERSION.
+All of these community extensions can be downloaded using [pull-deps](../operations/pull-deps.html) while specifying a `-c` coordinate option to pull `org.apache.druid.extensions.contrib:{EXTENSION_NAME}:{DRUID_VERSION}`.
 
 |Name|Description|Docs|
 |----|-----------|----|
@@ -83,10 +82,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/extensions-contrib/cassandra.html)|
 |druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.html)|
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.html)|
-|druid-kafka-eight-simpleConsumer|Kafka ingest firehose (low level consumer)(deprecated).|[link](../development/extensions-contrib/kafka-simple.html)|
-|druid-rabbitmq|RabbitMQ firehose.|[link](../development/extensions-contrib/rabbitmq.html)|
 |druid-redis-cache|A cache implementation for Druid based on Redis.|[link](../development/extensions-contrib/redis-cache.html)|
-|druid-rocketmq|RocketMQ firehose.|[link](../development/extensions-contrib/rocketmq.html)|
 |druid-time-min-max|Min/Max aggregator for timestamp.|[link](../development/extensions-contrib/time-min-max.html)|
 |druid-google-extensions|Google Cloud Storage deep storage.|[link](../development/extensions-contrib/google.html)|
 |sqlserver-metadata-storage|Microsoft SqlServer deep storage.|[link](../development/extensions-contrib/sqlserver.html)|
@@ -95,6 +91,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.html)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
 |druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.html)|
+|materialized-view-selection, materialized-view-maintenance|Materialized View|[link](../development/extensions-contrib/materialized-view.html)|
 |druid-moving-average-query|Support for [Moving Average](https://en.wikipedia.org/wiki/Moving_average) and other Aggregate [Window Functions](https://en.wikibooks.org/wiki/Structured_Query_Language/Window_functions) in Druid queries.|[link](../development/extensions-contrib/moving-average-query.html)|
 |druid-influxdb-emitter|InfluxDB metrics emitter|[link](../development/extensions-contrib/influxdb-emitter.html)|
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.html)|

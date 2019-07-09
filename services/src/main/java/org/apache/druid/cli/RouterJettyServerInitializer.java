@@ -65,6 +65,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   protected static final List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
       "/",
       "/coordinator-console/*",
+      "/assets/*",
       "/public/*",
       "/old-console/*",
       "/pages/*",
@@ -137,12 +138,12 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
-    // perform no-op authorization for these resources
-    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    // perform no-op authorization/authentication for these resources
+    AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
     if (managementProxyConfig.isEnabled()) {
-      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
+      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
     }
-    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+    AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
