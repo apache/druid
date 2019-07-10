@@ -55,6 +55,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
+        DEFAULT_INDEX_SPEC,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         0L,
         false,
@@ -81,6 +82,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final PartitionsSpec partitionsSpec;
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final int rowFlushBoundary;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
@@ -105,6 +107,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") IndexSpec indexSpec,
+      final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
@@ -132,6 +135,8 @@ public class HadoopTuningConfig implements TuningConfig
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
@@ -197,6 +202,12 @@ public class HadoopTuningConfig implements TuningConfig
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
   }
 
   @JsonProperty("maxRowsInMemory")
@@ -314,6 +325,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         shardSpecs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -343,6 +355,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         shardSpecs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -372,6 +385,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         specs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,

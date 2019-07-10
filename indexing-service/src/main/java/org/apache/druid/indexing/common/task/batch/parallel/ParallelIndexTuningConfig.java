@@ -71,6 +71,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -84,6 +85,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
@@ -109,6 +111,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         numShards,
         null,
         indexSpec,
+        indexSpecForIntermediatePersists,
         maxPendingPersists,
         null,
         forceGuaranteedRollup,
@@ -188,7 +191,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         super.hashCode(),
         maxNumSubTasks,
