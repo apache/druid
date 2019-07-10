@@ -2806,10 +2806,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (spec.getContext() != null) {
       contexts.putAll(spec.getContext());
     }
-    // Kafka index task always uses incremental handoff since 0.16.0.
-    // The below is for the compatibility when you want to downgrade your cluster to something earlier than 0.16.0.
-    // Kafka index task will pick up LegacyKafkaIndexTaskRunner without the below configuration.
-    contexts.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
     return contexts;
   }
 
