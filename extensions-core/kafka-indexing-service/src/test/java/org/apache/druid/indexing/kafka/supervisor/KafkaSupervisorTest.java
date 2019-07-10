@@ -256,6 +256,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testCreateBaseTaskContexts()
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final Map<String, Object> contexts = supervisor.createBaseTaskContexts();
+    final Boolean contextValue = (Boolean) contexts.get("IS_INCREMENTAL_HANDOFF_SUPPORTED");
+    Assert.assertNotNull(contextValue);
+    Assert.assertTrue(contextValue);
+  }
+
+  @Test
   public void testNoInitialState() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
