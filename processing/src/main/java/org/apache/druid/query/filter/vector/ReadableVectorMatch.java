@@ -33,7 +33,8 @@ public interface ReadableVectorMatch
    *
    * Even though this array is technically mutable, it is very poor form to mutate it if you are not the owner of the
    * VectorMatch object. The reason we use a mutable array here instead of positional getter methods, by the way, is in
-   * the hopes of keeping access to the selection vector as low-level and optimizable as possible.
+   * the hopes of keeping access to the selection vector as low-level and optimizable as possible. Potential
+   * optimizations could include making it easier for the JVM to use CPU-level vectorization, avoid method calls, etc.
    */
   int[] getSelection();
 

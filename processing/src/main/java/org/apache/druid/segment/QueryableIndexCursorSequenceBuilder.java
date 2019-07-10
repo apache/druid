@@ -56,7 +56,8 @@ import java.util.Map;
 public class QueryableIndexCursorSequenceBuilder
 {
   /**
-   * At this threshold, timestamp searches switch from binary to linear. See
+   * At this threshold, timestamp searches switch from binary to linear. This default value is chosen to be similar to
+   * the typical number of timestamps per block. See
    * {@link #timeSearch(NumericColumn, long, int, int, int)} for more details.
    */
   private static final int TOO_CLOSE_FOR_MISSILES = 15000;
@@ -213,18 +214,13 @@ public class QueryableIndexCursorSequenceBuilder
       timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
       closer.register(timestamps);
 
-      final int result = timeSearch(
+      startOffset = timeSearch(
           timestamps,
           interval.getStartMillis(),
           0,
           index.getNumRows(),
           TOO_CLOSE_FOR_MISSILES
       );
-      if (result >= 0) {
-        startOffset = result;
-      } else {
-        startOffset = -(result + 1);
-      }
     } else {
       startOffset = 0;
     }
@@ -235,18 +231,13 @@ public class QueryableIndexCursorSequenceBuilder
         closer.register(timestamps);
       }
 
-      final int result = timeSearch(
+      endOffset = timeSearch(
           timestamps,
           interval.getEndMillis(),
           startOffset,
           index.getNumRows(),
           TOO_CLOSE_FOR_MISSILES
       );
-      if (result >= 0) {
-        endOffset = result;
-      } else {
-        endOffset = -(result + 1);
-      }
     } else {
       endOffset = index.getNumRows();
     }
@@ -287,9 +278,8 @@ public class QueryableIndexCursorSequenceBuilder
 
   /**
    * Search the time column. Uses a binary search that switches to linear when it gets close, based on
-   * the value of "tooCloseForMissiles". The idea is to avoid too much decompression buffer thrashing. The
-   * default value {@link #TOO_CLOSE_FOR_MISSILES} is chosen to be similar to the typical number of timestamps
-   * per block. It is parameterizable to make unit testing easier.
+   * the value of "tooCloseForMissiles". The idea is to avoid thrashing between adjacent blocks (yielding excessive
+   * decompressions) as the search gets close to the row. A reasonable default value is {@link #TOO_CLOSE_FOR_MISSILES}.
    *
    * @param timeColumn          the column
    * @param timestamp           the timestamp to search for
