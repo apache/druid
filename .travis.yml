@@ -15,12 +15,8 @@
 
 language: java
 
-# On 12-12-2017, Travis updated their trusty image, which caused integration tests to fail.
-# The group: config instructs Travis to use the previous trusty image.
-# Please see https://github.com/apache/incubator-druid/pull/5155 for more information.
-sudo: false
-dist: trusty
-group: deprecated-2017Q4
+sudo: true
+dist: xenial
 
 jdk:
   - openjdk8
@@ -50,8 +46,12 @@ matrix:
     # packaging check
     - env:
         - NAME="packaging check"
-      install: true
-      script: MAVEN_OPTS='-Xmx3000m' mvn -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -pl '!benchmarks' -B --fail-at-end clean install -Pdist -Pbundle-contrib-exts
+      before_install:
+        - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
+        - pip3 install wheel # install wheel first explicitly
+        - pip3 install pyyaml
+      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
+      script: ./build.sh
 
       # processing module test
     - env:
@@ -117,8 +117,7 @@ matrix:
         - free -m
 
       # run integration tests
-    - sudo: required
-      services:
+    - services:
         - docker
       env:
         - NAME="integration test part 1"
@@ -138,8 +137,7 @@ matrix:
           done
 
       # run integration tests
-    - sudo: required
-      services:
+    - services:
         - docker
       env:
         - NAME="integration test part 2"

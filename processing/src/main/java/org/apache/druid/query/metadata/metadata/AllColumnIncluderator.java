@@ -23,6 +23,8 @@ package org.apache.druid.query.metadata.metadata;
  */
 public class AllColumnIncluderator implements ColumnIncluderator
 {
+  private static final byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
+
   @Override
   public boolean include(String columnName)
   {
