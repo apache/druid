@@ -20,6 +20,7 @@ import json
 import os
 import sys
 from html.parser import HTMLParser
+import argparse
 
 
 class DependencyReportParser(HTMLParser):
@@ -544,16 +545,24 @@ def generate_license(apache_license_v2, license_yaml):
                 print_outfile("")
 
 
-# TODO: add options: debug mode
-if len(sys.argv) != 5:
-    sys.stderr.write("usage: {} <path to apache license file> <path to license.yaml> <root to maven dependency reports> <path to output file>".format(sys.argv[0]))
-    sys.exit(1)
+if __name__ == "__main__":
+    try:
+        parser = argparse.ArgumentParser(description='Check and generate license file.')
+        parser.add_argument('apache_license', metavar='<path to apache license file>', type=str)
+        parser.add_argument('license_yaml', metavar='<path to license.yaml>', type=str)
+        parser.add_argument('out_path', metavar='<path to output file>', type=str)
+        parser.add_argument('--dependency-reports', dest='dependency_reports_root', type=str, default=None, metavar='<root to maven dependency reports>')
+        args = parser.parse_args()
+        
+        with open(args.apache_license) as apache_license_file:
+            apache_license_v2 = apache_license_file.read()
+        license_yaml = args.license_yaml
+        dependency_reports_root = args.dependency_reports_root
 
-with open(sys.argv[1]) as apache_license_file:
-    apache_license_v2 = apache_license_file.read()
-license_yaml = sys.argv[2]
-dependency_reports_root = sys.argv[3]
+        with open(args.out_path, "w") as outfile:
+            if dependency_reports_root is not None:
+                check_licenses(license_yaml, dependency_reports_root)
+            generate_license(apache_license_v2, license_yaml)
 
-with open(sys.argv[4], "w") as outfile:
-    check_licenses(license_yaml, dependency_reports_root)
-    generate_license(apache_license_v2, license_yaml)
+    except KeyboardInterrupt:
+        print('Interrupted, closing.')
