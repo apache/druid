@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master)
 
 ## Apache Druid (incubating)
 
