@@ -30,6 +30,7 @@ exports[`data source view matches snapshot 1`] = `
           "Retention",
           "Compaction",
           "Size",
+          "Replicated size",
           "Num rows",
           "Actions",
         ]
@@ -139,6 +140,14 @@ exports[`data source view matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Size",
           "accessor": "size",
+          "filterable": false,
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Replicated size",
+          "accessor": "replicated_size",
           "filterable": false,
           "show": true,
           "width": 100,
