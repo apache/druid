@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -253,6 +254,52 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     zkUtils.close();
     zkUtils = null;
+  }
+
+  @Test
+  public void testCreateBaseTaskContexts() throws JsonProcessingException
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final Map<String, Object> contexts = supervisor.createIndexTasks(
+        1,
+        "seq",
+        objectMapper,
+        new TreeMap<>(),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "seq",
+            new SeekableStreamStartSequenceNumbers<>("test", Collections.emptyMap(), Collections.emptySet()),
+            new SeekableStreamEndSequenceNumbers<>("test", Collections.emptyMap()),
+            Collections.emptyMap(),
+            null,
+            null,
+            null,
+            null
+        ),
+        new KafkaIndexTaskTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    ).get(0).getContext();
+    final Boolean contextValue = (Boolean) contexts.get("IS_INCREMENTAL_HANDOFF_SUPPORTED");
+    Assert.assertNotNull(contextValue);
+    Assert.assertTrue(contextValue);
   }
 
   @Test

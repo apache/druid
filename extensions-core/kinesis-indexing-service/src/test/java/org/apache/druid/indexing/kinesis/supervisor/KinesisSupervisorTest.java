@@ -202,7 +202,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor = null;
   }
 
-
   @Test
   public void testNoInitialState() throws Exception
   {
