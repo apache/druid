@@ -690,7 +690,6 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
-                null,
                 3,
                 true,
                 false,
@@ -772,7 +771,6 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
-                null,
                 3,
                 true,
                 false,
@@ -1162,7 +1160,6 @@ public class TaskLifecycleTest
                 null,
                 indexSpec,
                 null,
-                null,
                 false,
                 null,
                 null,
@@ -1287,7 +1284,6 @@ public class TaskLifecycleTest
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
-        null,
         null,
         null,
         null,

@@ -2456,7 +2456,6 @@ public class KafkaIndexTaskTest
         null,
         null,
         null,
-        null,
         true,
         reportParseExceptions,
         handoffConditionTimeout,

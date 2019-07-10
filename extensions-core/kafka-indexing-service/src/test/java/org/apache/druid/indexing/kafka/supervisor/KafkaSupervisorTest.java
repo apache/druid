@@ -213,7 +213,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new File("/test"),
         null,
         null,
-        null,
         true,
         false,
         null,
@@ -278,7 +277,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         ),
         new KafkaIndexTaskTuningConfig(
-            null,
             null,
             null,
             null,
@@ -3051,7 +3049,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         new Period("P1Y"),
         new File("/test"),
-        null,
         null,
         null,
         true,

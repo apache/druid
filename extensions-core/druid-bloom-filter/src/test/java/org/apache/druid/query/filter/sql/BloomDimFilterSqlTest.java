@@ -80,7 +80,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   );
 
   private static ObjectMapper jsonMapper =
-       INJECTOR
+      INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 

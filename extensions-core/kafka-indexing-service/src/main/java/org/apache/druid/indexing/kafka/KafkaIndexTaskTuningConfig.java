@@ -41,7 +41,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("basePersistDirectory") @Nullable File basePersistDirectory,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
@@ -63,7 +62,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
-        indexSpecForIntermediatePersists,
         true,
         reportParseExceptions,
         handoffConditionTimeout,
@@ -89,7 +87,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         dir,
         getMaxPendingPersists(),
         getIndexSpec(),
-        getIndexSpecForIntermediatePersists(),
         true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),
@@ -115,7 +112,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
-           ", indexSpecForIntermediatePersists=" + getIndexSpecForIntermediatePersists() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +

@@ -71,7 +71,6 @@ public class ParallelIndexTuningConfigTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        new IndexSpec(),
         1,
         false,
         true,

@@ -835,7 +835,6 @@ public class RealtimeIndexTaskTest
         null,
         null,
         null,
-        null,
         true,
         0,
         0,

@@ -64,7 +64,7 @@ public class CompressionUtilsTest
 {
   private static final String CONTENT;
   private static final byte[] EXPECTED;
-  private static final byte[] GZBYTES;
+  private static final byte[] GZ_BYTES;
 
   static {
     final StringBuilder builder = new StringBuilder();
@@ -91,7 +91,7 @@ public class CompressionUtilsTest
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    GZBYTES = gzByteStream.toByteArray();
+    GZ_BYTES = gzByteStream.toByteArray();
   }
 
   @Rule
@@ -395,35 +395,35 @@ public class CompressionUtilsTest
   {
     try (OutputStream outputStream = new FileOutputStream(testFile)) {
       Assert.assertEquals(
-          GZBYTES.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(GZBYTES)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
       Assert.assertEquals(
-          GZBYTES.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(GZBYTES)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
       Assert.assertEquals(
-          GZBYTES.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(GZBYTES)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
     }
-    Assert.assertEquals(GZBYTES.length * 3, testFile.length());
+    Assert.assertEquals(GZ_BYTES.length * 3, testFile.length());
     try (InputStream inputStream = new ZeroRemainingInputStream(new FileInputStream(testFile))) {
       for (int i = 0; i < 3; ++i) {
-        final byte[] bytes = new byte[GZBYTES.length];
+        final byte[] bytes = new byte[GZ_BYTES.length];
         Assert.assertEquals(bytes.length, inputStream.read(bytes));
         Assert.assertArrayEquals(
             StringUtils.format("Failed on range %d", i),
-            GZBYTES,
+            GZ_BYTES,
             bytes
         );
       }
@@ -435,10 +435,10 @@ public class CompressionUtilsTest
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
   public void testGunzipBug() throws IOException
   {
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZBYTES.length * 3);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
     try (final InputStream inputStream = new GZIPInputStream(
         new ZeroRemainingInputStream(
             new ByteArrayInputStream(
@@ -468,10 +468,10 @@ public class CompressionUtilsTest
     testFile.delete();
     Assert.assertFalse(testFile.exists());
 
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZBYTES.length * 3);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
 
     final ByteSource inputStreamFactory = new ByteSource()
     {
@@ -505,10 +505,10 @@ public class CompressionUtilsTest
   public void testGunzipBugStreamWorkarround() throws IOException
   {
 
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZBYTES.length * 3);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
-    tripleGzByteStream.write(GZBYTES);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
 
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length * 3)) {
       Assert.assertEquals(
@@ -704,7 +704,7 @@ public class CompressionUtilsTest
     @Override
     public int read(byte b[]) throws IOException
     {
-      final int len = Math.min(b.length, GZBYTES.length - pos.get() % GZBYTES.length);
+      final int len = Math.min(b.length, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(len);
       return read(b, 0, len);
     }
@@ -719,7 +719,7 @@ public class CompressionUtilsTest
     @Override
     public int read(byte b[], int off, int len) throws IOException
     {
-      final int l = Math.min(len, GZBYTES.length - pos.get() % GZBYTES.length);
+      final int l = Math.min(len, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(l);
       return super.read(b, off, l);
     }

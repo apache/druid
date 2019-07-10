@@ -53,6 +53,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -954,12 +955,14 @@ public class RealtimePlumber implements Plumber
       try {
         int numRows = indexToPersist.getIndex().size();
 
+        final IndexSpec indexSpec = config.getIndexSpec();
+
         indexToPersist.getIndex().getMetadata().putAll(metadataElems);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            config.getIndexSpecForIntermediatePersists(),
+            indexSpec,
             config.getSegmentWriteOutMediumFactory()
         );
 

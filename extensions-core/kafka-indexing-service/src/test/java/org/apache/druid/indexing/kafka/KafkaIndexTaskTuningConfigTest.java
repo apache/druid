@@ -25,7 +25,6 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -66,7 +65,6 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
   }
@@ -83,9 +81,7 @@ public class KafkaIndexTaskTuningConfigTest
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
-                     + "  \"handoffConditionTimeout\": 100,\n"
-                     + "  \"indexSpec\": { \"metricCompression\" : \"NONE\" },\n"
-                     + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" }\n"
+                     + "  \"handoffConditionTimeout\": 100\n"
                      + "}";
 
     KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
@@ -107,8 +103,6 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
-    Assert.assertEquals(new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null), config.getIndexSpecForIntermediatePersists());
   }
 
   @Test
@@ -122,7 +116,6 @@ public class KafkaIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
         new IndexSpec(),
         true,
         true,
@@ -165,7 +158,6 @@ public class KafkaIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
         new IndexSpec(),
         true,
         true,
@@ -214,7 +206,6 @@ public class KafkaIndexTaskTuningConfigTest
         new File("/tmp/xxx"),
         4,
         new IndexSpec(),
-        new IndexSpec(),
         true,
         true,
         5L,
@@ -261,7 +252,6 @@ public class KafkaIndexTaskTuningConfigTest
         config.getBasePersistDirectory(),
         0,
         config.getIndexSpec(),
-        config.getIndexSpecForIntermediatePersists(),
         true,
         config.isReportParseExceptions(),
         config.getHandoffConditionTimeout(),

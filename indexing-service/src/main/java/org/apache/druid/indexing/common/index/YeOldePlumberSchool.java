@@ -236,7 +236,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             indexMergerV9.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
-                config.getIndexSpecForIntermediatePersists(),
+                config.getIndexSpec(),
                 config.getSegmentWriteOutMediumFactory()
             );
 

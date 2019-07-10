@@ -376,7 +376,7 @@ public class FileSmoosher implements Closeable
       for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
         final Metadata metadata = entry.getValue();
         out.write(
-                JOINER.join(
+            JOINER.join(
                 entry.getKey(),
                 metadata.getFileNum(),
                 metadata.getStartOffset(),

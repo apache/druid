@@ -96,7 +96,6 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
             null,
             null,
             null,
-            null,
             null
         ),
         ioConfig,

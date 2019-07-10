@@ -206,7 +206,6 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
-        null,
         true,
         0,
         0,

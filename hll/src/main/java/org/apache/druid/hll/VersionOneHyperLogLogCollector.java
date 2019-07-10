@@ -41,12 +41,12 @@ public class VersionOneHyperLogLogCollector extends HyperLogLogCollector
   public static final int HEADER_NUM_BYTES = 7;
   public static final int NUM_BYTES_FOR_DENSE_STORAGE = NUM_BYTES_FOR_BUCKETS + HEADER_NUM_BYTES;
 
-  private static final ByteBuffer DEAFULT_STORAGE_BUFFER = ByteBuffer.wrap(new byte[]{VERSION, 0, 0, 0, 0, 0, 0})
+  private static final ByteBuffer DEFAULT_STORAGE_BUFFER = ByteBuffer.wrap(new byte[]{VERSION, 0, 0, 0, 0, 0, 0})
                                                                    .asReadOnlyBuffer();
 
   VersionOneHyperLogLogCollector()
   {
-    super(DEAFULT_STORAGE_BUFFER.duplicate());
+    super(DEFAULT_STORAGE_BUFFER.duplicate());
   }
 
   VersionOneHyperLogLogCollector(ByteBuffer buffer)

@@ -288,7 +288,6 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        null,
         5000,
         true,
         true,
@@ -463,7 +462,6 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        null,
         5000,
         true,
         true,
@@ -524,7 +522,6 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        null,
         5000,
         true,
         true,
@@ -585,7 +582,6 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        null,
         5000,
         true,
         true,
@@ -850,7 +846,6 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
-        null,
         5000,
         true,
         true,
@@ -1039,7 +1034,6 @@ public class CompactionTaskTest
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
-            null,
             5000,
             true,
             true,

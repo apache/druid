@@ -369,7 +369,7 @@ public class JdbcExtractionNamespaceTest
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
         KEY_NAME,
-            VAL_NAME,
+        VAL_NAME,
         tsColumn,
         null,
         new Period(0)

@@ -43,7 +43,7 @@ public abstract class Granularity implements Cacheable
   /**
    * Default patterns for parsing paths.
    */
-  private static final Pattern DEAFULT_PATH_PATTEN =
+  private static final Pattern DEFAULT_PATH_PATTEN =
       Pattern.compile(
           "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
       );
@@ -145,7 +145,7 @@ public abstract class Granularity implements Cacheable
   // Used by the toDate implementations.
   final Integer[] getDateValues(String filePath, Formatter formatter)
   {
-    Pattern pattern = DEAFULT_PATH_PATTEN;
+    Pattern pattern = DEFAULT_PATH_PATTEN;
     switch (formatter) {
       case DEFAULT:
       case LOWER_DEFAULT:

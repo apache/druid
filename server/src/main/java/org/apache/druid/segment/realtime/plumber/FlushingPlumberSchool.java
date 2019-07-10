@@ -46,7 +46,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class FlushingPlumberSchool extends RealtimePlumberSchool
 {
-  private static final Duration DEAFULT_FLUSH_DURATION = new Duration("PT1H");
+  private static final Duration DEFAULT_FLUSH_DURATION = new Duration("PT1H");
 
   private final Duration flushDuration;
 
@@ -92,7 +92,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         objectMapper
     );
 
-    this.flushDuration = flushDuration == null ? DEAFULT_FLUSH_DURATION : flushDuration;
+    this.flushDuration = flushDuration == null ? DEFAULT_FLUSH_DURATION : flushDuration;
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;

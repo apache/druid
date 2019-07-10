@@ -67,8 +67,6 @@ public interface AppenderatorConfig
 
   IndexSpec getIndexSpec();
 
-  IndexSpec getIndexSpecForIntermediatePersists();
-
   File getBasePersistDirectory();
 
   @Nullable

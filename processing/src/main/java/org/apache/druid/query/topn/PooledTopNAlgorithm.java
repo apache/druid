@@ -93,13 +93,13 @@ public class PooledTopNAlgorithm
     computeSpecializedScanAndAggregateImplementations();
   }
 
-  private static final Generic1AggPooledTopNScanner DEAFULT_GENERIC1_AGG_SCANNER =
+  private static final Generic1AggPooledTopNScanner DEFAULT_GENERIC1_AGG_SCANNER =
       new Generic1AggPooledTopNScannerPrototype();
-  private static final Generic2AggPooledTopNScanner DEAFULT_GENERIC2_AGG_SCANNER =
+  private static final Generic2AggPooledTopNScanner DEFAULT_GENERIC2_AGG_SCANNER =
       new Generic2AggPooledTopNScannerPrototype();
-  private static final Historical1AggPooledTopNScanner DEAFULT_HISTORICAL1_SIMPLE_DOUBLE_AGG_SCANNER =
+  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL1_SIMPLE_DOUBLE_AGG_SCANNER =
       new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
-  private static final Historical1AggPooledTopNScanner DEAFULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER =
+  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private interface ScanAndAggregate
@@ -143,7 +143,7 @@ public class PooledTopNAlgorithm
                 positions,
                 (SimpleDoubleBufferAggregator) aggregator,
                 (HistoricalCursor) cursor,
-                DEAFULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER
+                DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER
             );
           }
         }
@@ -168,7 +168,7 @@ public class PooledTopNAlgorithm
                 positions,
                 (SimpleDoubleBufferAggregator) aggregator,
                 (HistoricalCursor) cursor,
-                DEAFULT_HISTORICAL1_SIMPLE_DOUBLE_AGG_SCANNER
+                DEFAULT_HISTORICAL1_SIMPLE_DOUBLE_AGG_SCANNER
             );
           }
         }
@@ -375,7 +375,7 @@ public class PooledTopNAlgorithm
     Class<? extends Generic1AggPooledTopNScanner> prototypeClass = Generic1AggPooledTopNScannerPrototype.class;
     SpecializationState<Generic1AggPooledTopNScanner> specializationState = SpecializationService
         .getSpecializationState(prototypeClass, runtimeShape);
-    Generic1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(DEAFULT_GENERIC1_AGG_SCANNER);
+    Generic1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(DEFAULT_GENERIC1_AGG_SCANNER);
     long processedRows = scanner.scanAndAggregate(
         params.getDimSelector(),
         aggregator,
@@ -399,7 +399,7 @@ public class PooledTopNAlgorithm
     Class<? extends Generic2AggPooledTopNScanner> prototypeClass = Generic2AggPooledTopNScannerPrototype.class;
     SpecializationState<Generic2AggPooledTopNScanner> specializationState = SpecializationService
         .getSpecializationState(prototypeClass, runtimeShape);
-    Generic2AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(DEAFULT_GENERIC2_AGG_SCANNER);
+    Generic2AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(DEFAULT_GENERIC2_AGG_SCANNER);
     int[] aggregatorSizes = params.getAggregatorSizes();
     long processedRows = scanner.scanAndAggregate(
         params.getDimSelector(),
