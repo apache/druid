@@ -50,7 +50,7 @@ matrix:
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
         - pip3 install wheel # install wheel first explicitly
         - pip3 install pyyaml
-      install: true
+      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
       script: ./build.sh
 
       # processing module test
