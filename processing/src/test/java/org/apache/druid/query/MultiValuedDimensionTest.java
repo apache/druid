@@ -1070,7 +1070,7 @@ public class MultiValuedDimensionTest
             )
         )
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(15)
         .build();
@@ -1131,7 +1131,7 @@ public class MultiValuedDimensionTest
             )
         )
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(15)
         .build();

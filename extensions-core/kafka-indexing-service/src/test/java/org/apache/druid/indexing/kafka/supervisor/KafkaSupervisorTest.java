@@ -264,7 +264,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> contexts = supervisor.createIndexTasks(
         1,
         "seq",
-        objectMapper,
+        OBJECT_MAPPER,
         new TreeMap<>(),
         new KafkaIndexTaskIOConfig(
             0,

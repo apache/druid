@@ -27,7 +27,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
-  private static final String exprFunction = "array_overlap";
+  private static final String EXPR_FUNTION = "array_overlap";
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ARRAY_OVERLAP")
@@ -49,6 +49,6 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
 
   public ArrayOverlapOperatorConversion()
   {
-    super(SQL_FUNCTION, exprFunction);
+    super(SQL_FUNCTION, EXPR_FUNTION);
   }
 }

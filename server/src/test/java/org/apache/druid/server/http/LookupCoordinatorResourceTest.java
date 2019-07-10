@@ -308,8 +308,8 @@ public class LookupCoordinatorResourceTest
 
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
         lookupCoordinatorManager,
-        mapper,
-        mapper
+        MAPPER,
+        MAPPER
     );
     final Response response = lookupCoordinatorResource.deleteTier(
         LOOKUP_TIER,
