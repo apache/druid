@@ -58,7 +58,7 @@ public class ImmutableDruidDataSourceTest
   public void testEqualsMethodThrowsUnsupportedOperationException()
   {
     expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("equals() method is not supported as ImmutableDruidDataSource should be considered a container, not a data class");
+    expectedException.expectMessage("ImmutableDruidDataSource shouldn't be used as the key in containers");
 
     final DataSegment segment1 = getTestSegment();
 
@@ -100,7 +100,7 @@ public class ImmutableDruidDataSourceTest
   public void testhashCodeMethodThrowsUnsupportedOperationException()
   {
     expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("hashCode() method is not supported as ImmutableDruidDataSource should be considered a container, not a data class");
+    expectedException.expectMessage("ImmutableDruidDataSource shouldn't be used as the key in containers");
     final DataSegment segment = getTestSegment();
     final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
 
