@@ -24,29 +24,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.impl.InlineFirehose;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 
-import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Creates firehose that produces data inlined in its own spec
  */
 public class InlineFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
-  @NotNull
   private final String data;
 
   @JsonCreator
-  public InlineFirehoseFactory(@NotNull @JsonProperty("data") String data)
+  InlineFirehoseFactory(@JsonProperty("data") String data)
   {
-    Preconditions.checkNotNull(data, "data");
-    this.data = data;
+    this.data = Preconditions.checkNotNull(data, "data");
   }
 
-  @NotNull
   @JsonProperty
   public String getData()
   {
@@ -54,8 +51,27 @@ public class InlineFirehoseFactory implements FirehoseFactory<StringInputRowPars
   }
 
   @Override
-  public Firehose connect(StringInputRowParser parser, File temporaryDirectory) throws IOException
+  public Firehose connect(StringInputRowParser parser, @Nullable File temporaryDirectory) throws IOException
   {
     return new InlineFirehose(data, parser);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InlineFirehoseFactory factory = (InlineFirehoseFactory) o;
+    return data.equals(factory.data);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(data);
   }
 }

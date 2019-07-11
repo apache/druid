@@ -19,12 +19,14 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@SuppressWarnings({"NullableProblems", "ConstantConditions"})
 public class InlineFirehoseFactoryTest
 {
   private static final String DIMENSION_0 = "timestamp";
@@ -77,7 +80,6 @@ public class InlineFirehoseFactoryTest
   @Test(expected = NullPointerException.class)
   public void testContstructorDataRequired()
   {
-    //noinspection ResultOfObjectAllocationIgnored,ConstantConditions
     new InlineFirehoseFactory(null);
   }
 
@@ -97,5 +99,15 @@ public class InlineFirehoseFactoryTest
     Assert.assertNotNull(values);
     Assert.assertEquals(1, values.size());
     Assert.assertEquals(VALUE, values.get(0));
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    InlineFirehoseFactory factory = new InlineFirehoseFactory(DATA);
+    String serialized = objectMapper.writeValueAsString(factory);
+    InlineFirehoseFactory deserialized = objectMapper.readValue(serialized, InlineFirehoseFactory.class);
+    Assert.assertEquals(factory, deserialized);
   }
 }

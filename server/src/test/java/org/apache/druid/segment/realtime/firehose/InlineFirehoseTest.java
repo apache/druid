@@ -17,10 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.utils.Runnables;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+@SuppressWarnings("ConstantConditions")
 public class InlineFirehoseTest
 {
   private static final String DIMENSION_0 = "timestamp";
@@ -147,6 +152,7 @@ public class InlineFirehoseTest
     Assert.assertSame(Runnables.getNoopRunnable(), result);
   }
 
+  @SuppressWarnings("squid:S00108") // Nested blocks of code should not be left empty
   @Test
   public void testCloseOpen() throws IOException
   {
@@ -197,6 +203,7 @@ public class InlineFirehoseTest
     Assert.assertFalse(target.hasMore());
   }
 
+  @SuppressWarnings("squid:S00112") // Generic exceptions should never be thrown
   private static InlineFirehose create(String data)
   {
     try {

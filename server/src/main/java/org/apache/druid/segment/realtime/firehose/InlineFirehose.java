@@ -17,18 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.Runnables;
 
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +43,7 @@ public class InlineFirehose implements Firehose
   private final StringInputRowParser parser;
   private final LineIterator lineIterator;
 
-  public InlineFirehose(@NotNull String data, @NotNull StringInputRowParser parser) throws IOException
+  InlineFirehose(String data, StringInputRowParser parser) throws IOException
   {
     this.parser = parser;
 
