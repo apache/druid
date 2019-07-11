@@ -258,7 +258,8 @@ public class QueryableIndexCursorSequenceBuilder
   }
 
   /**
-   * Search the time column using binary search.
+   * Search the time column using binary search. Benchmarks on various other approaches (linear search, binary
+   * search that switches to linear at various closeness thresholds) indicated that a pure binary search worked best.
    *
    * @param timeColumn          the column
    * @param timestamp           the timestamp to search for

@@ -19,14 +19,11 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Map;
 
 public class QueryableIndexCursorSequenceBuilderTest
 {
@@ -67,73 +64,54 @@ public class QueryableIndexCursorSequenceBuilderTest
       }
     };
 
-    // Binary search only
-    final Map<String, Integer> closenessThresholds = ImmutableMap.of(
-        "binary search only", 0,
-        "linear search only", Integer.MAX_VALUE,
-        "switching search", 3
+    Assert.assertEquals(
+        0,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 0, values.length)
     );
 
-    for (Map.Entry<String, Integer> entry : closenessThresholds.entrySet()) {
-      Assert.assertEquals(
-          entry.getKey(),
-          0,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 0, values.length, entry.getValue())
-      );
+    Assert.assertEquals(
+        2,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 2, values.length)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          2,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 2, values.length, entry.getValue())
-      );
+    Assert.assertEquals(
+        0,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 0, values.length / 2)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          0,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 0, 0, values.length / 2, entry.getValue())
-      );
+    Assert.assertEquals(
+        1,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 0, values.length)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          1,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 0, values.length, entry.getValue())
-      );
+    Assert.assertEquals(
+        2,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 2, values.length)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          2,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 2, values.length, entry.getValue())
-      );
+    Assert.assertEquals(
+        1,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 0, values.length / 2)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          1,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 0, values.length / 2, entry.getValue())
-      );
+    Assert.assertEquals(
+        1,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 1, 8)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          1,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 1, 1, 8, entry.getValue())
-      );
+    Assert.assertEquals(
+        8,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 2, 0, values.length)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          8,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 2, 0, values.length, entry.getValue())
-      );
+    Assert.assertEquals(
+        10,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 10, 0, values.length)
+    );
 
-      Assert.assertEquals(
-          entry.getKey(),
-          10,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 10, 0, values.length, entry.getValue())
-      );
-
-      Assert.assertEquals(
-          entry.getKey(),
-          11,
-          QueryableIndexCursorSequenceBuilder.timeSearch(column, 15, 0, values.length, entry.getValue())
-      );
-    }
+    Assert.assertEquals(
+        11,
+        QueryableIndexCursorSequenceBuilder.timeSearch(column, 15, 0, values.length)
+    );
   }
 }
