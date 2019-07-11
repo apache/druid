@@ -47,6 +47,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @Deprecated
   private final int maxPendingPersists;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
@@ -68,6 +69,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable File basePersistDirectory,
       @Nullable Integer maxPendingPersists,
       @Nullable IndexSpec indexSpec,
+      @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @Nullable Boolean reportParseExceptions,
@@ -96,6 +98,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.basePersistDirectory = defaults.getBasePersistDirectory();
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
                                  : reportParseExceptions;
@@ -185,6 +189,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
+  }
+
+  @JsonProperty
+  @Override
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
   }
 
   /**
@@ -281,6 +292,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
+           Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
            Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
   }
@@ -297,6 +309,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
+        indexSpecForIntermediatePersists,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,

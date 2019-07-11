@@ -57,6 +57,7 @@ const tableColumns: string[] = [
   'Retention',
   'Compaction',
   'Size',
+  'Replicated size',
   'Num rows',
   ActionCell.COLUMN_LABEL,
 ];
@@ -100,6 +101,7 @@ interface DatasourceQueryResultRow {
   num_segments_to_load: number;
   num_segments_to_drop: number;
   size: number;
+  replicated_size: number;
   num_rows: number;
 }
 
@@ -138,6 +140,7 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
   SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
+  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS replicated_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_rows
 FROM sys.segments
 GROUP BY 1`;
@@ -201,6 +204,7 @@ GROUP BY 1`;
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
                 size: d.properties.segments.size,
+                replicated_size: -1,
                 num_rows: -1,
               };
             },
@@ -760,6 +764,14 @@ GROUP BY 1`;
               width: 100,
               Cell: row => formatBytes(row.value),
               show: hiddenColumns.exists('Size'),
+            },
+            {
+              Header: 'Replicated size',
+              accessor: 'replicated_size',
+              filterable: false,
+              width: 100,
+              Cell: row => formatBytes(row.value),
+              show: hiddenColumns.exists('Replicated size'),
             },
             {
               Header: 'Num rows',

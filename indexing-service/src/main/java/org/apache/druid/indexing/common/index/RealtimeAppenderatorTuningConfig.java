@@ -63,6 +63,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final boolean reportParseExceptions;
   private final long publishAndHandoffTimeout;
   private final long alertTimeout;
@@ -84,6 +85,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("publishAndHandoffTimeout") Long publishAndHandoffTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
@@ -106,6 +108,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaultReportParseExceptions
                                  : reportParseExceptions;
@@ -196,6 +200,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return indexSpec;
   }
 
+  @JsonProperty
+  @Override
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
+  }
+
   @Override
   @JsonProperty
   public boolean isReportParseExceptions()
@@ -253,6 +264,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         maxPendingPersists,
         shardSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         reportParseExceptions,
         publishAndHandoffTimeout,
         alertTimeout,
