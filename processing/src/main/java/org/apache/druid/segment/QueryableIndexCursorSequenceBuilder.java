@@ -55,13 +55,6 @@ import java.util.Map;
 
 public class QueryableIndexCursorSequenceBuilder
 {
-  /**
-   * At this threshold, timestamp searches switch from binary to linear. This default value is chosen to be similar to
-   * the typical number of timestamps per block. See
-   * {@link #timeSearch(NumericColumn, long, int, int, int)} for more details.
-   */
-  private static final int TOO_CLOSE_FOR_MISSILES = 15000;
-
   private final QueryableIndex index;
   private final Interval interval;
   private final VirtualColumns virtualColumns;
@@ -214,13 +207,7 @@ public class QueryableIndexCursorSequenceBuilder
       timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
       closer.register(timestamps);
 
-      startOffset = timeSearch(
-          timestamps,
-          interval.getStartMillis(),
-          0,
-          index.getNumRows(),
-          TOO_CLOSE_FOR_MISSILES
-      );
+      startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
     } else {
       startOffset = 0;
     }
@@ -231,13 +218,7 @@ public class QueryableIndexCursorSequenceBuilder
         closer.register(timestamps);
       }
 
-      endOffset = timeSearch(
-          timestamps,
-          interval.getEndMillis(),
-          startOffset,
-          index.getNumRows(),
-          TOO_CLOSE_FOR_MISSILES
-      );
+      endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
     } else {
       endOffset = index.getNumRows();
     }
@@ -277,15 +258,12 @@ public class QueryableIndexCursorSequenceBuilder
   }
 
   /**
-   * Search the time column. Uses a binary search that switches to linear when it gets close, based on
-   * the value of "tooCloseForMissiles". The idea is to avoid thrashing between adjacent blocks (yielding excessive
-   * decompressions) as the search gets close to the row. A reasonable default value is {@link #TOO_CLOSE_FOR_MISSILES}.
+   * Search the time column using binary search.
    *
    * @param timeColumn          the column
    * @param timestamp           the timestamp to search for
    * @param startIndex          first index to search, inclusive
    * @param endIndex            last index to search, exclusive
-   * @param tooCloseForMissiles switch to linear search when we are this close to the target index
    *
    * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
@@ -294,8 +272,7 @@ public class QueryableIndexCursorSequenceBuilder
       final NumericColumn timeColumn,
       final long timestamp,
       final int startIndex,
-      final int endIndex,
-      final int tooCloseForMissiles
+      final int endIndex
   )
   {
     final long prevTimestamp = timestamp - 1;
@@ -305,10 +282,6 @@ public class QueryableIndexCursorSequenceBuilder
     int maxIndex = endIndex - 1;
 
     while (minIndex <= maxIndex) {
-      if (maxIndex - minIndex < tooCloseForMissiles) {
-        break;
-      }
-
       final int currIndex = (minIndex + maxIndex) >>> 1;
       final long currValue = timeColumn.getLongSingleValueRow(currIndex);
 
