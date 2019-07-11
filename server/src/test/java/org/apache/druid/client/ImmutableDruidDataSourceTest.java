@@ -51,7 +51,8 @@ public class ImmutableDruidDataSourceTest
         .setInjectableValues(new Std().addValue(PruneLoadSpecHolder.class, PruneLoadSpecHolder.DEFAULT));
     final String json = objectMapper.writeValueAsString(dataSource);
 
-    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(dataSource, objectMapper.readValue(json, ImmutableDruidDataSource.class));
+    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(dataSource, objectMapper.readValue(json,
+      ImmutableDruidDataSource.class));
   }
 
   @Test
