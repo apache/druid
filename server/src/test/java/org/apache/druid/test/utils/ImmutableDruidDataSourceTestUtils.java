@@ -22,7 +22,6 @@ package org.apache.druid.test.utils;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.junit.Assert;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ImmutableDruidDataSourceTestUtils
@@ -34,36 +33,60 @@ public class ImmutableDruidDataSourceTestUtils
    * @param actual actual object
    *
    */
-  public static void assertEqualsImmutableDruidDataSource(Object expected, Object actual)
+  public static void assertEqualsImmutableDruidDataSource(ImmutableDruidDataSource expected, ImmutableDruidDataSource
+    actual)
   {
-    if (equalsRegardingNull(expected, actual)) {
+    if (checkEquals(expected, actual)) {
       return;
     } else {
-      throw new AssertionError("Expected and actual objects are not equal as per equals() method");
+      throw new AssertionError("Expected and actual objects are not equal as per ImmutableDruidDataSource's " +
+        "equalsForTesting() method");
     }
   }
 
-  private static boolean equalsRegardingNull(Object expected, Object actual)
+  private static boolean checkEquals(ImmutableDruidDataSource expected, ImmutableDruidDataSource actual)
   {
     if (expected == null) {
       return actual == null;
     }
 
-    if (expected instanceof ArrayList<?> && actual instanceof ArrayList<?>) {
-      List<ImmutableDruidDataSource> expected1 = (ArrayList<ImmutableDruidDataSource>) expected;
-      List<ImmutableDruidDataSource> actual1 = (ArrayList<ImmutableDruidDataSource>) actual;
-      Assert.assertEquals("expected and actual ImmutableDruidDataSource lists should be of equal size", expected1.size(), actual1.size());
+    return expected.equalsForTesting(actual);
+  }
 
-      for (int i = 0; i < expected1.size(); i++) {
-        if (!expected1.get(i).equalsForTesting(actual1.get(i))) {
-          return false;
-        }
-      }
-      return true;
-    } else if (expected instanceof ImmutableDruidDataSource && actual instanceof ImmutableDruidDataSource) {
-      return ((ImmutableDruidDataSource) expected).equalsForTesting(actual);
+  /**
+   * This method is to check the equality of a list of {@link ImmutableDruidDataSource} objects to be called from
+   * test code
+   * @param expected expected list
+   * @param actual actual list
+   * @return
+   */
+  public static boolean assertEqualsImmutableDruidDataSource(List<ImmutableDruidDataSource> expected,
+                                                         List<ImmutableDruidDataSource> actual)
+  {
+    if (expected == null) {
+      return actual == null;
     }
 
+    Assert.assertEquals("expected and actual ImmutableDruidDataSource lists should be of equal size",
+      expected.size(), actual.size());
+
+    for (ImmutableDruidDataSource e : expected) {
+      if (!contains(e, actual)) {
+        throw new AssertionError("Expected and actual objects are not equal as per " +
+          "ImmutableDruidDataSource's equalsForTesting()" + " method");
+      }
+    }
+    return true;
+  }
+
+  private static boolean contains(ImmutableDruidDataSource expected, List<ImmutableDruidDataSource> actualList)
+  {
+    // Iterate over actual list to see if the element expected is present, if not return false
+    for(ImmutableDruidDataSource ds : actualList) {
+      if (ds.equalsForTesting(expected)) {
+        return true;
+      }
+    }
     return false;
   }
 
