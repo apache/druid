@@ -21,6 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.utils.JvmUtils;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -51,6 +52,9 @@ public class SegmentLoaderConfig
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
+
+  @JsonProperty("locationSelectorStrategy")
+  private StorageLocationSelectorStrategy locationSelectorStrategy = new RoundRobinStorageLocationSelectorStrategy(); // default strategy if no strategy is specified in the config
 
   @JsonProperty
   private File infoDir = null;
@@ -86,6 +90,11 @@ public class SegmentLoaderConfig
   public int getNumBootstrapThreads()
   {
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
+  }
+
+  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy()
+  {
+    return locationSelectorStrategy;
   }
 
   public File getInfoDir()

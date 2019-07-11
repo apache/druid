@@ -184,33 +184,30 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    int numLocationsToTry = locations.size();
+    StorageLocationSelectorStrategy strategy = config.getStorageLocationSelectorStrategy();
 
-    while (cyclicIterator.hasNext() && numLocationsToTry > 0) {
+    StorageLocation selectedLoc = strategy.select(segment, locations);
 
-      StorageLocation loc = cyclicIterator.next();
-      numLocationsToTry--;
+    if (null != selectedLoc) {
+      File storageDir = new File(selectedLoc.getPath(), storageDirStr);
 
-      if (loc.canHandle(segment)) {
-        File storageDir = new File(loc.getPath(), storageDirStr);
+      try {
+        loadInLocationWithStartMarker(segment, storageDir);
+        return selectedLoc;
+      }
+      catch (SegmentLoadingException e) {
+        log.makeAlert(
+          e,
+          "Failed to load segment in current location %s, try next location if any",
+          selectedLoc.getPath().getAbsolutePath()
+        )
+          .addData("location", selectedLoc.getPath().getAbsolutePath())
+          .emit();
 
-        try {
-          loadInLocationWithStartMarker(segment, storageDir);
-          return loc;
-        }
-        catch (SegmentLoadingException e) {
-          log.makeAlert(
-            e,
-            "Failed to load segment in current location %s, try next location if any",
-            loc.getPath().getAbsolutePath()
-          )
-            .addData("location", loc.getPath().getAbsolutePath())
-            .emit();
-
-          cleanupCacheFiles(loc.getPath(), storageDir);
-        }
+        cleanupCacheFiles(selectedLoc.getPath(), storageDir);
       }
     }
+
     throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
   }
 
