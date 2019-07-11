@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class NoopIndexingServiceClient implements IndexingServiceClient
 {
@@ -83,6 +84,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public TaskStatusResponse getTaskStatus(String taskId)
   {
     return new TaskStatusResponse(taskId, null);
+  }
+
+  @Override
+  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
+  {
+    return Collections.emptyMap();
   }
 
   @Nullable

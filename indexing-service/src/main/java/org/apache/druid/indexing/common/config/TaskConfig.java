@@ -22,10 +22,12 @@ package org.apache.druid.indexing.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 
 public class TaskConfig
@@ -35,7 +37,6 @@ public class TaskConfig
   );
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
-
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
 
   @JsonProperty
@@ -62,6 +63,9 @@ public class TaskConfig
   @JsonProperty
   private final Period directoryLockTimeout;
 
+  @JsonProperty
+  private final List<StorageLocationConfig> intermediarySegmentsLocations;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -71,7 +75,8 @@ public class TaskConfig
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
-      @JsonProperty("directoryLockTimeout") Period directoryLockTimeout
+      @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
+      @JsonProperty("intermediarySegmentsLocations") List<StorageLocationConfig> intermediarySegmentsLocations
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -89,6 +94,13 @@ public class TaskConfig
     this.directoryLockTimeout = directoryLockTimeout == null
                                 ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
                                 : directoryLockTimeout;
+    if (intermediarySegmentsLocations == null) {
+      this.intermediarySegmentsLocations = Collections.singletonList(
+          new StorageLocationConfig(new File(System.getProperty("java.io.tmpdir"), "intermediary-segments"), null, null)
+      );
+    } else {
+      this.intermediarySegmentsLocations = intermediarySegmentsLocations;
+    }
   }
 
   @JsonProperty
@@ -152,6 +164,12 @@ public class TaskConfig
   public Period getDirectoryLockTimeout()
   {
     return directoryLockTimeout;
+  }
+
+  @JsonProperty
+  public List<StorageLocationConfig> getIntermediarySegmentsLocations()
+  {
+    return intermediarySegmentsLocations;
   }
 
   private String defaultDir(String configParameter, final String defaultVal)

@@ -105,7 +105,7 @@ public class SegmentManagerThreadSafetyTest
           public List<StorageLocationConfig> getLocations()
           {
             return Collections.singletonList(
-                new StorageLocationConfig().setPath(segmentCacheDir)
+                new StorageLocationConfig(segmentCacheDir, null, null)
             );
           }
         },

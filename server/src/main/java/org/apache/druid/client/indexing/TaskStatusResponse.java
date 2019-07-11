@@ -33,7 +33,7 @@ public class TaskStatusResponse
 {
   private final String task; // Task ID, named "task" in the JSONification of this class.
   @Nullable
-  private final TaskStatusPlus status;
+  private final TaskStatusPlus status; // null for unknown tasks
 
   @JsonCreator
   public TaskStatusResponse(

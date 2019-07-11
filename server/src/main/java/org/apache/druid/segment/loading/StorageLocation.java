@@ -29,7 +29,7 @@ import java.util.Set;
 
 /**
 */
-class StorageLocation
+public class StorageLocation
 {
   private static final Logger log = new Logger(StorageLocation.class);
 
@@ -40,7 +40,7 @@ class StorageLocation
 
   private volatile long currSize = 0;
 
-  StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
+  public StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
   {
     this.path = path;
     this.maxSize = maxSize;
@@ -61,31 +61,31 @@ class StorageLocation
     this.segments = new HashSet<>();
   }
 
-  File getPath()
+  public File getPath()
   {
     return path;
   }
 
-  long getMaxSize()
+  public long getMaxSize()
   {
     return maxSize;
   }
 
-  synchronized void addSegment(DataSegment segment)
+  public synchronized void addSegment(DataSegment segment)
   {
     if (segments.add(segment)) {
       currSize += segment.getSize();
     }
   }
 
-  synchronized void removeSegment(DataSegment segment)
+  public synchronized void removeSegment(DataSegment segment)
   {
     if (segments.remove(segment)) {
       currSize -= segment.getSize();
     }
   }
 
-  boolean canHandle(DataSegment segment)
+  public boolean canHandle(DataSegment segment)
   {
     if (available() < segment.getSize()) {
       log.warn(
@@ -114,7 +114,7 @@ class StorageLocation
     return true;
   }
 
-  synchronized long available()
+  public synchronized long available()
   {
     return maxSize - currSize;
   }

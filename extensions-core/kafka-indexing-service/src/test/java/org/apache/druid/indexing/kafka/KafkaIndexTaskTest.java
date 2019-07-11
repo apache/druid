@@ -2562,6 +2562,7 @@ public class KafkaIndexTaskTest
         null,
         true,
         null,
+        null,
         null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();

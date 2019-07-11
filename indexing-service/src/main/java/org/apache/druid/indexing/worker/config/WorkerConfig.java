@@ -22,6 +22,7 @@ package org.apache.druid.indexing.worker.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.JvmUtils;
+import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -32,15 +33,24 @@ public class WorkerConfig
 {
   @JsonProperty
   @NotNull
-  private String ip = DruidNode.getDefaultHost();
+  private final String ip = DruidNode.getDefaultHost();
 
   @JsonProperty
   @NotNull
-  private String version = "0";
+  private final String version = "0";
 
   @JsonProperty
   @Min(1)
-  private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
+  private final int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
+
+  @JsonProperty
+  private final long intermediaryPartitionDiscoveryPeriodSec = 60L;
+
+  @JsonProperty
+  private final long intermediaryPartitionCleanupPeriodSec = 300L;
+
+  @JsonProperty
+  private final Period intermediaryPartitionTimeout = new Period("P1D");
 
   public String getIp()
   {
@@ -55,5 +65,20 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public long getIntermediaryPartitionDiscoveryPeriodSec()
+  {
+    return intermediaryPartitionDiscoveryPeriodSec;
+  }
+
+  public long getIntermediaryPartitionCleanupPeriodSec()
+  {
+    return intermediaryPartitionCleanupPeriodSec;
+  }
+
+  public Period getIntermediaryPartitionTimeout()
+  {
+    return intermediaryPartitionTimeout;
   }
 }

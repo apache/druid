@@ -76,6 +76,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         true,
         null,
+        null,
         null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
