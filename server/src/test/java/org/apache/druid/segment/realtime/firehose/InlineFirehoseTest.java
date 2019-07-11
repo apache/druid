@@ -152,7 +152,6 @@ public class InlineFirehoseTest
     Assert.assertSame(Runnables.getNoopRunnable(), result);
   }
 
-  @SuppressWarnings("squid:S00108") // Nested blocks of code should not be left empty
   @Test
   public void testCloseOpen() throws IOException
   {
@@ -203,7 +202,6 @@ public class InlineFirehoseTest
     Assert.assertFalse(target.hasMore());
   }
 
-  @SuppressWarnings("squid:S00112") // Generic exceptions should never be thrown
   private static InlineFirehose create(String data)
   {
     try {
