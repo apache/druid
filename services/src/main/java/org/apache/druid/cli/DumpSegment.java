@@ -363,6 +363,7 @@ public class DumpSegment extends GuiceRunnable
                         String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
                         if (val != null) {
                           final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                          jg.writeFieldName(val);
                           if (decompressBitmaps) {
                             jg.writeStartArray();
                             final IntIterator iterator = bitmap.iterator();
