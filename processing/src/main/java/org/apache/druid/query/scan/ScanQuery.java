@@ -312,7 +312,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     final ScanQuery scanQuery = (ScanQuery) o;
     return batchSize == scanQuery.batchSize &&
            limit == scanQuery.limit &&
-           legacy == scanQuery.legacy &&
+           legacy.equals(scanQuery.legacy) &&
            Objects.equals(virtualColumns, scanQuery.virtualColumns) &&
            Objects.equals(resultFormat, scanQuery.resultFormat) &&
            Objects.equals(dimFilter, scanQuery.dimFilter) &&

@@ -159,7 +159,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     SegmentAnalysis that = (SegmentAnalysis) o;
     return size == that.size &&
            numRows == that.numRows &&
-           rollup == that.rollup &&
+           rollup.equals(that.rollup) &&
            Objects.equals(id, that.id) &&
            Objects.equals(interval, that.interval) &&
            Objects.equals(columns, that.columns) &&
