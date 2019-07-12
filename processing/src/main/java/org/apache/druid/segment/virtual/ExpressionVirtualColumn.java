@@ -105,13 +105,16 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    return new ColumnCapabilitiesImpl().setType(outputType);
+    // Note: Ideally we would only "setHasMultipleValues(true)" if the expression in question could potentially return
+    // multiple values. However, we don't currently have a good way of determining this, so to be safe we always
+    // set the flag.
+    return new ColumnCapabilitiesImpl().setType(outputType).setHasMultipleValues(true);
   }
 
   @Override
   public List<String> requiredColumns()
   {
-    return parsedExpression.get().analyzeInputs().getRequiredColumns();
+    return parsedExpression.get().analyzeInputs().getRequiredColumnsList();
   }
 
   @Override

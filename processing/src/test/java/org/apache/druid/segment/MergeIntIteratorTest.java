@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import org.junit.Assert;
@@ -34,34 +35,32 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static it.unimi.dsi.fastutil.ints.IntIterators.EMPTY_ITERATOR;
-import static java.lang.Integer.MAX_VALUE;
-import static org.apache.druid.segment.IntIteratorUtils.mergeAscending;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
 public class MergeIntIteratorTest
 {
   @Test(expected = NoSuchElementException.class)
   public void testNoIterators()
   {
-    IntIterator it = mergeAscending(Collections.emptyList());
+    IntIterator it = IntIteratorUtils.mergeAscending(Collections.emptyList());
     assertEmpty(it);
   }
 
   @Test(expected = NoSuchElementException.class)
   public void testMergeEmptyIterators()
   {
-    IntIterator it = mergeAscending(Arrays.asList(EMPTY_ITERATOR, EMPTY_ITERATOR));
+    IntIterator it = IntIteratorUtils.mergeAscending(Arrays.asList(
+        IntIterators.EMPTY_ITERATOR,
+        IntIterators.EMPTY_ITERATOR
+    ));
     assertEmpty(it);
   }
 
   private static void assertEmpty(IntIterator it)
   {
-    assertFalse(it.hasNext());
+    Assert.assertFalse(it.hasNext());
     try {
+      //noinspection deprecation
       it.next();
-      fail("expected NoSuchElementException on it.next() after it.hasNext() = false");
+      Assert.fail("expected NoSuchElementException on it.next() after it.hasNext() = false");
     }
     catch (NoSuchElementException ignore) {
       // expected
@@ -82,14 +81,14 @@ public class MergeIntIteratorTest
         IntLists.singleton(Integer.MIN_VALUE),
         IntLists.singleton(-1),
         IntLists.singleton(0),
-        IntLists.singleton(MAX_VALUE)
+        IntLists.singleton(Integer.MAX_VALUE)
     );
     for (int i = 0; i < lists.size() + 1; i++) {
-      assertAscending(mergeAscending(iteratorsFromLists(lists)));
+      assertAscending(IntIteratorUtils.mergeAscending(iteratorsFromLists(lists)));
       Collections.rotate(lists, 1);
     }
     Collections.shuffle(lists);
-    assertAscending(mergeAscending(iteratorsFromLists(lists)));
+    assertAscending(IntIteratorUtils.mergeAscending(iteratorsFromLists(lists)));
   }
 
   private static List<IntIterator> iteratorsFromLists(List<IntList> lists)
@@ -115,12 +114,12 @@ public class MergeIntIteratorTest
         lists.get(r.nextInt(numIterators)).add(j);
       }
       for (int j = 0; j < lists.size() + 1; j++) {
-        assertAscending(mergeAscending(iteratorsFromLists(lists)));
+        assertAscending(IntIteratorUtils.mergeAscending(iteratorsFromLists(lists)));
         Collections.rotate(lists, 1);
       }
       for (int j = 0; j < 10; j++) {
         Collections.shuffle(lists);
-        assertAscending(mergeAscending(iteratorsFromLists(lists)));
+        assertAscending(IntIteratorUtils.mergeAscending(iteratorsFromLists(lists)));
       }
     }
   }

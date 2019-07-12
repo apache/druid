@@ -33,6 +33,7 @@ import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -44,16 +45,12 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 public class BroadcastDistributionRuleTest
 {
   private DruidCluster druidCluster;
   private ServerHolder holderOfSmallSegment;
-  private List<ServerHolder> holdersOfLargeSegments = new ArrayList<>();
-  private List<ServerHolder> holdersOfLargeSegments2 = new ArrayList<>();
+  private final List<ServerHolder> holdersOfLargeSegments = new ArrayList<>();
+  private final List<ServerHolder> holdersOfLargeSegments2 = new ArrayList<>();
   private final List<DataSegment> largeSegments = new ArrayList<>();
   private final List<DataSegment> largeSegments2 = new ArrayList<>();
   private DataSegment smallSegment;
@@ -297,20 +294,20 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(3L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    assertEquals(false, stats.hasPerTierStats());
+    Assert.assertEquals(3L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    Assert.assertFalse(stats.hasPerTierStats());
 
-    assertTrue(
+    Assert.assertTrue(
         holdersOfLargeSegments.stream()
                               .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );
 
-    assertTrue(
+    Assert.assertTrue(
         holdersOfLargeSegments2.stream()
                                .noneMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );
 
-    assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
+    Assert.assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
   }
 
   /**
@@ -320,7 +317,7 @@ public class BroadcastDistributionRuleTest
    * active           | large segment
    * decommissioning1 | small segment
    * decommissioning2 | large segment
-   *
+   * <p>
    * After running the rule for the small segment:
    * active           | large & small segments
    * decommissioning1 |
@@ -345,12 +342,12 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    assertEquals(false, stats.hasPerTierStats());
+    Assert.assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    Assert.assertFalse(stats.hasPerTierStats());
 
-    assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
-    assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
-    assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
+    Assert.assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
+    Assert.assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
+    Assert.assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -377,20 +374,20 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    assertEquals(false, stats.hasPerTierStats());
+    Assert.assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    Assert.assertFalse(stats.hasPerTierStats());
 
-    assertTrue(
+    Assert.assertTrue(
         holdersOfLargeSegments.stream()
                               .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );
 
-    assertTrue(
+    Assert.assertTrue(
         holdersOfLargeSegments2.stream()
                                .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );
 
-    assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
+    Assert.assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
   }
 
   @Test
@@ -415,10 +412,10 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(6L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    assertEquals(false, stats.hasPerTierStats());
+    Assert.assertEquals(6L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    Assert.assertFalse(stats.hasPerTierStats());
 
-    assertTrue(
+    Assert.assertTrue(
         druidCluster.getAllServers().stream()
                     .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );

@@ -31,15 +31,12 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import org.apache.druid.security.basic.authentication.validator.DBCredentialsValidator;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 public class DBCredentialsValidatorTest
 {
@@ -105,7 +102,7 @@ public class DBCredentialsValidatorTest
     String password = "helloworld";
 
     AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
-    assertNull(result);
+    Assert.assertNull(result);
   }
 
   @Test
@@ -117,7 +114,7 @@ public class DBCredentialsValidatorTest
     String password = "helloworld";
 
     AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
-    assertNull(result);
+    Assert.assertNull(result);
   }
 
   @Test
@@ -130,11 +127,11 @@ public class DBCredentialsValidatorTest
 
     AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
 
-    assertNotNull(result);
-    assertEquals(username, result.getIdentity());
-    assertEquals(authenticatorName, result.getAuthenticatedBy());
-    assertEquals(authorizerName, result.getAuthorizerName());
-    assertNull(result.getContext());
+    Assert.assertNotNull(result);
+    Assert.assertEquals(username, result.getIdentity());
+    Assert.assertEquals(authenticatorName, result.getAuthenticatedBy());
+    Assert.assertEquals(authorizerName, result.getAuthorizerName());
+    Assert.assertNull(result.getContext());
   }
 
   @Test

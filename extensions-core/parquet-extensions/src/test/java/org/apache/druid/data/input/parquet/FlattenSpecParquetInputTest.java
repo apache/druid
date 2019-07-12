@@ -33,13 +33,10 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(Parameterized.class)
 public class FlattenSpecParquetInputTest extends BaseParquetInputTest
 {
-  private static String TS1 = "2018-09-18T00:18:00.023Z";
-
+  private static final String TS1 = "2018-09-18T00:18:00.023Z";
 
   @Parameterized.Parameters(name = "type = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -71,13 +68,13 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
   @Test
@@ -92,13 +89,13 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
   @Test
@@ -113,13 +110,13 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
   @Test
@@ -134,11 +131,11 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
 
@@ -154,14 +151,14 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
     List<String> dims = rows.get(0).getDimensions();
     Assert.assertFalse(dims.contains("dim2"));
     Assert.assertFalse(dims.contains("dim3"));
     Assert.assertFalse(dims.contains("listDim"));
     Assert.assertFalse(dims.contains("nestedData"));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
   @Test
@@ -176,13 +173,13 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
     List<String> dims = rows.get(0).getDimensions();
     Assert.assertFalse(dims.contains("dim2"));
     Assert.assertFalse(dims.contains("dim3"));
     Assert.assertFalse(dims.contains("listDim"));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
   @Test
@@ -197,14 +194,14 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
-    assertEquals(2, rows.get(0).getMetric("metric2").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(2, rows.get(0).getMetric("metric2").longValue());
   }
 
   @Test
@@ -219,12 +216,11 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
-    assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
-
 }

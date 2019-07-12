@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.io.Files;
 import org.apache.druid.common.aws.FileSessionCredentialsProvider;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -30,8 +31,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-
-import static org.junit.Assert.assertEquals;
 
 public class TestFileSessionCredentialsProvider
 {
@@ -48,8 +47,8 @@ public class TestFileSessionCredentialsProvider
 
     FileSessionCredentialsProvider provider = new FileSessionCredentialsProvider(file.getAbsolutePath());
     AWSSessionCredentials sessionCredentials = (AWSSessionCredentials) provider.getCredentials();
-    assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
-    assertEquals(sessionCredentials.getAWSAccessKeyId(), "accessKeySample");
-    assertEquals(sessionCredentials.getAWSSecretKey(), "secretKeySample");
+    Assert.assertEquals("sessionTokenSample", sessionCredentials.getSessionToken());
+    Assert.assertEquals("accessKeySample", sessionCredentials.getAWSAccessKeyId());
+    Assert.assertEquals("secretKeySample", sessionCredentials.getAWSSecretKey());
   }
 }

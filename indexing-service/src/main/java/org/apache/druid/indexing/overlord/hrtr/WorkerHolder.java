@@ -45,7 +45,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +70,6 @@ public class WorkerHolder
   {
   };
 
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   private final Worker worker;
   private Worker disabledWorker;
@@ -231,7 +229,7 @@ public class WorkerHolder
                   new Request(HttpMethod.POST, url)
                       .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                       .setContent(smileMapper.writeValueAsBytes(task)),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getAssignRequestHttpTimeout().toStandardDuration()
               ).get();
 
@@ -276,7 +274,7 @@ public class WorkerHolder
             try {
               final StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.POST, url),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getShutdownRequestHttpTimeout().toStandardDuration()
               ).get();
 
