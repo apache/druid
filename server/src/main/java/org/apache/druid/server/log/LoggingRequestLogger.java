@@ -43,34 +43,27 @@ public class LoggingRequestLogger implements RequestLogger
   private final ObjectMapper mapper;
   private final boolean setMDC;
   private final boolean setContextMDC;
-  private final boolean logSegmentMetadataQueries;
 
   public LoggingRequestLogger(
       ObjectMapper mapper,
       boolean setMDC,
-      boolean setContextMDC,
-      boolean logSegmentMetadataQueries
+      boolean setContextMDC
   )
   {
     this.mapper = mapper;
     this.setMDC = setMDC;
     this.setContextMDC = setContextMDC;
-    this.logSegmentMetadataQueries = logSegmentMetadataQueries;
   }
 
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
-    final Query query = requestLogLine.getQuery();
-    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
-      return;
-    }
-
     final Map mdc = MDC.getCopyOfContextMap();
     // MDC must be set during the `LOG.info` call at the end of the try block.
     try {
       if (setMDC) {
         try {
+          final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
           MDC.put("sqlQueryId", StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
           MDC.put("dataSource", findInnerDatasource(query).toString());
@@ -112,11 +105,6 @@ public class LoggingRequestLogger implements RequestLogger
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
   {
-    final Query query = requestLogLine.getQuery();
-    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
-      return;
-    }
-
     final String line = requestLogLine.getSqlQueryLine(mapper);
     LOG.info("%s", line);
   }
@@ -161,7 +149,6 @@ public class LoggingRequestLogger implements RequestLogger
     return "LoggingRequestLogger{" +
            "setMDC=" + setMDC +
            ", setContextMDC=" + setContextMDC +
-           ", logSegmentMetadataQueries=" + logSegmentMetadataQueries +
            '}';
   }
 }

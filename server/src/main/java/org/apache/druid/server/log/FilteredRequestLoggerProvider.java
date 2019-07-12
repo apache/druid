@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
@@ -46,13 +47,17 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   private long sqlQueryTimeThresholdMs = 0;
 
+  @JsonProperty
+  private boolean logSegmentMetadataQueries = true;
+
   @Override
   public RequestLogger get()
   {
     FilteredRequestLogger logger = new FilteredRequestLogger(
         delegate.get(),
         queryTimeThresholdMs,
-        sqlQueryTimeThresholdMs
+        sqlQueryTimeThresholdMs,
+        logSegmentMetadataQueries
     );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
@@ -63,12 +68,15 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     private final RequestLogger logger;
     private final long queryTimeThresholdMs;
     private final long sqlQueryTimeThresholdMs;
+    private final boolean logSegmentMetadataQueries;
 
-    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs, long sqlQueryTimeThresholdMs)
+    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs, long sqlQueryTimeThresholdMs,
+                                 boolean logSegmentMetadataQueries)
     {
       this.logger = logger;
       this.queryTimeThresholdMs = queryTimeThresholdMs;
       this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
+      this.logSegmentMetadataQueries = logSegmentMetadataQueries;
     }
 
     public long getQueryTimeThresholdMs()
@@ -100,6 +108,10 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     {
       Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
       if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
+        Query query = requestLogLine.getQuery();
+        if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
+          return;
+        }
         logger.logNativeQuery(requestLogLine);
       }
     }
@@ -109,6 +121,10 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     {
       Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
       if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
+        Query query = requestLogLine.getQuery();
+        if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
+          return;
+        }
         logger.logSqlQuery(requestLogLine);
       }
     }
@@ -120,6 +136,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
              "logger=" + logger +
              ", queryTimeThresholdMs=" + queryTimeThresholdMs +
              ", sqlQueryTimeThresholdMs=" + sqlQueryTimeThresholdMs +
+             ", logSegmentMetadataQueries=" + logSegmentMetadataQueries +
              '}';
     }
   }

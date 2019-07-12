@@ -48,9 +48,6 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private ServiceEmitter emitter = null;
 
-  @JsonProperty
-  public boolean logSegmentMetadataQueries = true;
-
   @Inject
   public void injectMe(Injector injector)
   {
@@ -59,8 +56,7 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed, requestLogEventBuilderFactory,
-        logSegmentMetadataQueries);
+    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed, requestLogEventBuilderFactory);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }

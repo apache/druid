@@ -55,14 +55,11 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @Json
   private ObjectMapper jsonMapper = null;
 
-  @JsonProperty
-  public boolean logSegmentMetadataQueries = true;
-
   @Override
   public RequestLogger get()
   {
     FileRequestLogger logger = new FileRequestLogger(jsonMapper, factory.create(1, "RequestLogger-%s"), dir,
-        filePattern, logSegmentMetadataQueries);
+        filePattern);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }

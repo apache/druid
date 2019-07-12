@@ -20,7 +20,6 @@
 package org.apache.druid.server.log;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 
 public class EmittingRequestLogger implements RequestLogger
@@ -28,39 +27,27 @@ public class EmittingRequestLogger implements RequestLogger
   private final ServiceEmitter emitter;
   private final String feed;
   private final RequestLogEventBuilderFactory requestLogEventBuilderFactory;
-  private final boolean logSegmentMetadataQueries;
 
   EmittingRequestLogger(
       ServiceEmitter emitter,
       String feed,
-      RequestLogEventBuilderFactory requestLogEventBuilderFactory,
-      boolean logSegmentMetadataQueries
+      RequestLogEventBuilderFactory requestLogEventBuilderFactory
   )
   {
     this.emitter = emitter;
     this.feed = feed;
     this.requestLogEventBuilderFactory = requestLogEventBuilderFactory;
-    this.logSegmentMetadataQueries = logSegmentMetadataQueries;
   }
 
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine)
   {
-    final Query query = requestLogLine.getQuery();
-    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
-      return;
-    }
-
     emitter.emit(requestLogEventBuilderFactory.createRequestLogEventBuilder(feed, requestLogLine));
   }
 
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine)
   {
-    final Query query = requestLogLine.getQuery();
-    if (query != null && !logSegmentMetadataQueries && query.getType().equals(Query.SEGMENT_METADATA)) {
-      return;
-    }
     emitter.emit(requestLogEventBuilderFactory.createRequestLogEventBuilder(feed, requestLogLine));
   }
 
@@ -71,7 +58,6 @@ public class EmittingRequestLogger implements RequestLogger
            "emitter=" + emitter +
            ", feed='" + feed + '\'' +
            ", requestLogEventBuilderFactory=" + requestLogEventBuilderFactory +
-           ", logSegmentMetadataQueries=" + logSegmentMetadataQueries +
            '}';
   }
 }
