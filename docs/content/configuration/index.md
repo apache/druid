@@ -316,7 +316,6 @@ All processes that can serve queries can also log the query requests they see. B
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing, switching. How to log every query request.|[required to configure request logging]|
-| `druid.request.logging.logSegmentMetadataQueries`| Boolean indicating if SegmentMetadata Queries should be logged by the Request Logger.| true|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -380,6 +379,7 @@ For native query, only request logs where query/time is above the threshold are 
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.logSegmentMetadataQueries`| Boolean indicating if SegmentMetadata Queries should be logged by the delegate Request Logger.| true|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
