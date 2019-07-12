@@ -413,9 +413,8 @@ public class DataSourcesResourceTest
 
     EasyMock.replay(inventoryView);
 
-    DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Response response = dataSourcesResource.getTheDataSource("datasource1", null);
+    DataSourcesResource dataSourcesResource = new DataSourcesResource(inventoryView, null, null, null, null);
+    Response response = dataSourcesResource.getDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result1 = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(2, ((Map) (result1.get("tiers").get("tier1"))).get("segmentCount"));
@@ -430,7 +429,7 @@ public class DataSourcesResourceTest
     Assert.assertEquals(30L, result1.get("segments").get("size"));
     Assert.assertEquals(60L, result1.get("segments").get("replicatedSize"));
 
-    response = dataSourcesResource.getTheDataSource("datasource2", null);
+    response = dataSourcesResource.getDataSource("datasource2", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result2 = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(1, ((Map) (result2.get("tiers").get("tier1"))).get("segmentCount"));
