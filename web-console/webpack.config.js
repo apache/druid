@@ -23,6 +23,15 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 const { version } = require('./package.json');
 
+function friendlyErrorFormatter(e, colors) {
+  //const messageColor = error.severity === "warning" ? colors.bold.yellow : colors.bold.red;
+  // return (
+  //   "Does not compute.... " +
+  //   messageColor(Object.keys(error).map(key => `${key}: ${error[key]}`))
+  // );
+  return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
+}
+
 module.exports = (env) => {
   let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
   if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
@@ -77,8 +86,15 @@ module.exports = (env) => {
         },
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: 'ts-loader',
+              options: {
+                errorFormatter: friendlyErrorFormatter
+              }
+            }
+          ]
         },
         {
           test: /\.s?css$/,

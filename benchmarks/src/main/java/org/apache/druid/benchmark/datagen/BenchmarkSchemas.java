@@ -94,7 +94,7 @@ public class BenchmarkSchemas
     basicSchemaIngestAggsExpression.add(new DoubleMinAggregatorFactory("minFloatZipf", "metFloatZipf"));
     basicSchemaIngestAggsExpression.add(new HyperUniquesAggregatorFactory("hyper", "dimHyperUnique"));
 
-    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
+    Interval basicSchemaDataInterval = Intervals.of("2000-01-01/P1D");
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,

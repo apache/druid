@@ -373,11 +373,13 @@ public class DataSourcesResourceTest
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(1, ((Map) (result.get("tiers").get(null))).get("segmentCount"));
     Assert.assertEquals(10L, ((Map) (result.get("tiers").get(null))).get("size"));
+    Assert.assertEquals(10L, ((Map) (result.get("tiers").get(null))).get("replicatedSize"));
     Assert.assertNotNull(result.get("segments"));
     Assert.assertEquals("2010-01-01T00:00:00.000Z", result.get("segments").get("minTime").toString());
     Assert.assertEquals("2010-01-02T00:00:00.000Z", result.get("segments").get("maxTime").toString());
     Assert.assertEquals(1, result.get("segments").get("count"));
     Assert.assertEquals(10L, result.get("segments").get("size"));
+    Assert.assertEquals(10L, result.get("segments").get("replicatedSize"));
     EasyMock.verify(inventoryView, server);
   }
 
@@ -413,6 +415,7 @@ public class DataSourcesResourceTest
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(2, ((Map) (result.get("tiers").get("cold"))).get("segmentCount"));
     Assert.assertEquals(30L, ((Map) (result.get("tiers").get("cold"))).get("size"));
+    Assert.assertEquals(30L, ((Map) (result.get("tiers").get("cold"))).get("replicatedSize"));
     Assert.assertEquals(1, ((Map) (result.get("tiers").get("hot"))).get("segmentCount"));
     Assert.assertEquals(20L, ((Map) (result.get("tiers").get("hot"))).get("size"));
     Assert.assertNotNull(result.get("segments"));
@@ -420,7 +423,60 @@ public class DataSourcesResourceTest
     Assert.assertEquals("2010-01-23T00:00:00.000Z", result.get("segments").get("maxTime").toString());
     Assert.assertEquals(2, result.get("segments").get("count"));
     Assert.assertEquals(30L, result.get("segments").get("size"));
+    Assert.assertEquals(50L, result.get("segments").get("replicatedSize"));
     EasyMock.verify(inventoryView, server, server2, server3);
+  }
+
+  @Test
+  public void testSimpleGetTheDataSourceWithReplicatedSegments()
+  {
+    server = new DruidServer("server1", "host1", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+    DruidServer server2 = new DruidServer("server2", "host2", null, 1234, ServerType.HISTORICAL, "tier2", 0);
+    DruidServer server3 = new DruidServer("server3", "host3", null, 1234, ServerType.HISTORICAL, "tier1", 0);
+
+    server.addDataSegment(dataSegmentList.get(0));
+    server.addDataSegment(dataSegmentList.get(1));
+    server.addDataSegment(dataSegmentList.get(2));
+    server2.addDataSegment(dataSegmentList.get(0));
+    server2.addDataSegment(dataSegmentList.get(1));
+    server3.addDataSegment(dataSegmentList.get(2));
+
+    EasyMock.expect(inventoryView.getInventory()).andReturn(
+        ImmutableList.of(server, server2, server3)
+    ).atLeastOnce();
+
+    EasyMock.replay(inventoryView);
+
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
+    Response response = dataSourcesResource.getTheDataSource("datasource1", null);
+    Assert.assertEquals(200, response.getStatus());
+    Map<String, Map<String, Object>> result1 = (Map<String, Map<String, Object>>) response.getEntity();
+    Assert.assertEquals(2, ((Map) (result1.get("tiers").get("tier1"))).get("segmentCount"));
+    Assert.assertEquals(30L, ((Map) (result1.get("tiers").get("tier1"))).get("size"));
+    Assert.assertEquals(30L, ((Map) (result1.get("tiers").get("tier1"))).get("replicatedSize"));
+    Assert.assertEquals(2, ((Map) (result1.get("tiers").get("tier2"))).get("segmentCount"));
+    Assert.assertEquals(30L, ((Map) (result1.get("tiers").get("tier2"))).get("size"));
+    Assert.assertNotNull(result1.get("segments"));
+    Assert.assertEquals("2010-01-01T00:00:00.000Z", result1.get("segments").get("minTime").toString());
+    Assert.assertEquals("2010-01-23T00:00:00.000Z", result1.get("segments").get("maxTime").toString());
+    Assert.assertEquals(2, result1.get("segments").get("count"));
+    Assert.assertEquals(30L, result1.get("segments").get("size"));
+    Assert.assertEquals(60L, result1.get("segments").get("replicatedSize"));
+
+    response = dataSourcesResource.getTheDataSource("datasource2", null);
+    Assert.assertEquals(200, response.getStatus());
+    Map<String, Map<String, Object>> result2 = (Map<String, Map<String, Object>>) response.getEntity();
+    Assert.assertEquals(1, ((Map) (result2.get("tiers").get("tier1"))).get("segmentCount"));
+    Assert.assertEquals(30L, ((Map) (result2.get("tiers").get("tier1"))).get("size"));
+    Assert.assertEquals(60L, ((Map) (result2.get("tiers").get("tier1"))).get("replicatedSize"));
+    Assert.assertNotNull(result2.get("segments"));
+    Assert.assertEquals("2010-01-01T00:00:00.000Z", result2.get("segments").get("minTime").toString());
+    Assert.assertEquals("2010-01-02T00:00:00.000Z", result2.get("segments").get("maxTime").toString());
+    Assert.assertEquals(1, result2.get("segments").get("count"));
+    Assert.assertEquals(30L, result2.get("segments").get("size"));
+    Assert.assertEquals(60L, result2.get("segments").get("replicatedSize"));
+    EasyMock.verify(inventoryView);
   }
 
   @Test

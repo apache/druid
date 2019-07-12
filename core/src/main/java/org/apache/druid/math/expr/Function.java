@@ -258,7 +258,7 @@ interface Function
     public void validateArguments(List<Expr> args)
     {
       if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 argument", name());
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
     }
 
@@ -1724,6 +1724,104 @@ interface Function
     }
   }
 
+  class ArrayConstructorFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
+      // or.. something...
+      final int length = args.size();
+      String[] stringsOut = null;
+      Long[] longsOut = null;
+      Double[] doublesOut = null;
+
+      ExprType elementType = null;
+      for (int i = 0; i < length; i++) {
+
+        ExprEval evaluated = args.get(i).eval(bindings);
+        if (elementType == null) {
+          elementType = evaluated.type();
+          switch (elementType) {
+            case STRING:
+              stringsOut = new String[length];
+              break;
+            case LONG:
+              longsOut = new Long[length];
+              break;
+            case DOUBLE:
+              doublesOut = new Double[length];
+              break;
+            default:
+              throw new RE("Unhandled array constructor element type [%s]", elementType);
+          }
+        }
+
+        setArrayOutputElement(stringsOut, longsOut, doublesOut, elementType, i, evaluated);
+      }
+
+      switch (elementType) {
+        case STRING:
+          return ExprEval.ofStringArray(stringsOut);
+        case LONG:
+          return ExprEval.ofLongArray(longsOut);
+        case DOUBLE:
+          return ExprEval.ofDoubleArray(doublesOut);
+        default:
+          throw new RE("Unhandled array constructor element type [%s]", elementType);
+      }
+    }
+
+    static void setArrayOutputElement(
+        String[] stringsOut,
+        Long[] longsOut,
+        Double[] doublesOut,
+        ExprType elementType,
+        int i,
+        ExprEval evaluated
+    )
+    {
+      switch (elementType) {
+        case STRING:
+          stringsOut[i] = evaluated.asString();
+          break;
+        case LONG:
+          longsOut[i] = evaluated.isNumericNull() ? null : evaluated.asLong();
+          break;
+        case DOUBLE:
+          doublesOut[i] = evaluated.isNumericNull() ? null : evaluated.asDouble();
+          break;
+      }
+    }
+
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (!(args.size() > 0)) {
+        throw new IAE("Function[%s] needs at least 1 argument", name());
+      }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
   class ArrayLengthFunction implements Function
   {
     @Override
@@ -1817,8 +1915,12 @@ interface Function
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final String join = scalarExpr.asString();
+      final Object[] raw = arrayExpr.asArray();
+      if (raw == null || raw.length == 1 && raw[0] == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(
-          Arrays.stream(arrayExpr.asArray()).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
+          Arrays.stream(raw).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
       );
     }
   }
@@ -1889,7 +1991,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -1919,7 +2021,7 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.of(null) : ExprEval.ofLong(index + 1);
+          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -2038,7 +2140,7 @@ interface Function
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.bestEffortOf(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
     }
   }
 
@@ -2059,7 +2161,142 @@ interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.bestEffortOf(any);
+      return ExprEval.of(any, ExprType.LONG);
+    }
+  }
+
+  class ArraySliceFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array_slice";
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2 && args.size() != 3) {
+        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      final Object[] array = expr.asArray();
+      if (array == null) {
+        return ExprEval.of(null);
+      }
+
+      final int start = args.get(1).eval(bindings).asInt();
+      int end = array.length;
+      if (args.size() == 3) {
+        end = args.get(2).eval(bindings).asInt();
+      }
+
+      if (start < 0 || start > array.length || start > end) {
+        // Arrays.copyOfRange will throw exception in these cases
+        return ExprEval.of(null);
+      }
+
+      switch (expr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(Arrays.copyOfRange(expr.asStringArray(), start, end));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(Arrays.copyOfRange(expr.asLongArray(), start, end));
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
+      }
+      throw new RE("Unable to slice to unknown type %s", expr.type());
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      if (args.size() == 3) {
+        return ImmutableSet.of(args.get(1), args.get(2));
+      } else {
+        return ImmutableSet.of(args.get(1));
+      }
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+  }
+
+  class ArrayPrependFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array_prepend";
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval scalarExpr = args.get(0).eval(bindings);
+      final ExprEval arrayExpr = args.get(1).eval(bindings);
+      if (arrayExpr.asArray() == null) {
+        return ExprEval.of(null);
+      }
+      switch (arrayExpr.type()) {
+        case STRING:
+        case STRING_ARRAY:
+          return ExprEval.ofStringArray(this.prepend(scalarExpr.asString(), arrayExpr.asStringArray()).toArray(String[]::new));
+        case LONG:
+        case LONG_ARRAY:
+          return ExprEval.ofLongArray(
+              this.prepend(
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong(),
+                  arrayExpr.asLongArray()).toArray(Long[]::new
+              )
+          );
+        case DOUBLE:
+        case DOUBLE_ARRAY:
+          return ExprEval.ofDoubleArray(
+              this.prepend(
+                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble(),
+                  arrayExpr.asDoubleArray()).toArray(Double[]::new
+              )
+          );
+      }
+
+      throw new RE("Unable to prepend to unknown type %s", arrayExpr.type());
+    }
+
+    private <T> Stream<T> prepend(T val, T[] array)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array));
+      l.add(0, val);
+      return l.stream();
+    }
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(1));
     }
   }
 }

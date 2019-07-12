@@ -171,12 +171,8 @@ public class Parser
       return expr;
     }
     List<String> unapplied = toApply.stream()
-                                     .filter(x -> bindingDetails.getFreeVariables().contains(x))
+                                     .filter(x -> bindingDetails.getRequiredColumns().contains(x))
                                      .collect(Collectors.toList());
-
-    ApplyFunction fn;
-    final LambdaExpr lambdaExpr;
-    final List<Expr> args;
 
     // any unapplied identifiers that are inside a lambda expression need that lambda expression to be rewritten
     Expr newExpr = expr.visit(
@@ -215,26 +211,52 @@ public class Parser
       return newExpr;
     }
 
-    // else, it *should be safe* to wrap in either map or cartesian_map because we still have missing bindings that
-    // were *not* referenced in a lambda body
-    if (remainingUnappliedArgs.size() == 1) {
-      fn = new ApplyFunction.MapFunction();
-      IdentifierExpr lambdaArg = new IdentifierExpr(remainingUnappliedArgs.iterator().next());
-      lambdaExpr = new LambdaExpr(ImmutableList.of(lambdaArg), newExpr);
-      args = ImmutableList.of(lambdaArg);
-    } else {
-      fn = new ApplyFunction.CartesianMapFunction();
-      List<IdentifierExpr> identifiers = new ArrayList<>(remainingUnappliedArgs.size());
-      args = new ArrayList<>(remainingUnappliedArgs.size());
-      for (String remainingUnappliedArg : remainingUnappliedArgs) {
-        IdentifierExpr arg = new IdentifierExpr(remainingUnappliedArg);
-        identifiers.add(arg);
-        args.add(arg);
-      }
-      lambdaExpr = new LambdaExpr(identifiers, newExpr);
+    return applyUnapplied(newExpr, remainingUnappliedArgs);
+  }
+
+  /**
+   * translate an {@link Expr} into an {@link ApplyFunctionExpr} for {@link ApplyFunction.MapFunction} or
+   * {@link ApplyFunction.CartesianMapFunction} if there are multiple unbound arguments to be applied
+   */
+  private static Expr applyUnapplied(Expr expr, List<String> unapplied)
+  {
+    // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
+    final Map<IdentifierExpr, IdentifierExpr> toReplace = new HashMap<>();
+    final List<IdentifierExpr> args = expr.analyzeInputs()
+                                          .getFreeVariables()
+                                          .stream()
+                                          .filter(x -> unapplied.contains(x.getBindingIdentifier()))
+                                          .collect(Collectors.toList());
+
+    final List<IdentifierExpr> lambdaArgs = new ArrayList<>();
+
+    // construct lambda args from list of args to apply
+    for (IdentifierExpr applyFnArg : args) {
+      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier());
+      lambdaArgs.add(lambdaRewrite);
+      toReplace.put(applyFnArg, lambdaRewrite);
     }
 
-    Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, args);
+    // rewrite identifiers in the expression which will become the lambda body, so they match the lambda identifiers we
+    // are constructing
+    Expr newExpr = expr.visit(childExpr -> {
+      if (childExpr instanceof IdentifierExpr) {
+        if (toReplace.containsKey(childExpr)) {
+          return toReplace.get(childExpr);
+        }
+      }
+      return childExpr;
+    });
+
+    final LambdaExpr lambdaExpr = new LambdaExpr(lambdaArgs, newExpr);
+    final ApplyFunction fn;
+    if (args.size() == 1) {
+      fn = new ApplyFunction.MapFunction();
+    } else {
+      fn = new ApplyFunction.CartesianMapFunction();
+    }
+
+    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(args));
     return magic;
   }
 
@@ -249,28 +271,38 @@ public class Parser
    */
   private static ApplyFunctionExpr liftApplyLambda(ApplyFunctionExpr expr, List<String> unappliedArgs)
   {
-
     // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
-    List<String> unappliedInThisApply =
+    Set<String> unappliedInThisApply =
         unappliedArgs.stream()
-                     .filter(u -> !expr.bindingDetails.getArrayVariables().contains(u))
-                     .collect(Collectors.toList());
+                     .filter(u -> !expr.bindingDetails.getArrayColumns().contains(u))
+                     .collect(Collectors.toSet());
+
+    List<String> unappliedIdentifiers =
+        expr.bindingDetails
+            .getFreeVariables()
+            .stream()
+            .filter(x -> unappliedInThisApply.contains(x.getIdentifierBindingIfIdentifier()))
+            .map(IdentifierExpr::getIdentifierIfIdentifier)
+            .collect(Collectors.toList());
 
     List<Expr> newArgs = new ArrayList<>();
     for (int i = 0; i < expr.argsExpr.size(); i++) {
-      newArgs.add(applyUnappliedIdentifiers(
-          expr.argsExpr.get(i),
-          expr.argsBindingDetails.get(i),
-          unappliedInThisApply)
+      newArgs.add(
+          applyUnappliedIdentifiers(
+              expr.argsExpr.get(i),
+              expr.argsBindingDetails.get(i),
+              unappliedIdentifiers
+          )
       );
     }
 
     // this will _not_ include the lambda identifiers.. anything in this list needs to be applied
-    List<IdentifierExpr> unappliedLambdaBindings = expr.lambdaBindingDetails.getFreeVariables()
-                                                         .stream()
-                                                         .filter(unappliedArgs::contains)
-                                                         .map(IdentifierExpr::new)
-                                                         .collect(Collectors.toList());
+    List<IdentifierExpr> unappliedLambdaBindings =
+        expr.lambdaBindingDetails.getFreeVariables()
+                                 .stream()
+                                 .filter(x -> unappliedArgs.contains(x.getIdentifierBindingIfIdentifier()))
+                                 .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBindingIdentifier()))
+                                 .collect(Collectors.toList());
 
     if (unappliedLambdaBindings.size() == 0) {
       return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
@@ -321,11 +353,12 @@ public class Parser
         // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) =>
         //  cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
 
-        final List<Expr> newFoldArgs = new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
+        final List<Expr> newFoldArgs =
+            new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> newFoldLambdaIdentifiers =
             new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedLambdaBindings.size());
         final List<IdentifierExpr> existingFoldLambdaIdentifiers = expr.lambdaExpr.getIdentifierExprs();
-        // accumulator argument is last argument, slice it off when constructing new arg list and lambda args identifiers
+        // accumulator argument is last argument, slice it off when constructing new arg list and lambda args
         for (int i = 0; i < expr.argsExpr.size() - 1; i++) {
           newFoldArgs.add(expr.argsExpr.get(i));
           newFoldLambdaIdentifiers.add(existingFoldLambdaIdentifiers.get(i));
@@ -353,7 +386,7 @@ public class Parser
   public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
   {
     final Set<String> conflicted =
-        Sets.intersection(bindingDetails.getScalarVariables(), bindingDetails.getArrayVariables());
+        Sets.intersection(bindingDetails.getScalarColumns(), bindingDetails.getArrayColumns());
     if (conflicted.size() != 0) {
       throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }

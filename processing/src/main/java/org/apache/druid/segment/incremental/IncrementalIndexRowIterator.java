@@ -64,7 +64,12 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   )
   {
     ColumnSelectorFactory columnSelectorFactory =
-        new IncrementalIndexColumnSelectorFactory(incrementalIndex, VirtualColumns.EMPTY, false, rowHolder);
+        new IncrementalIndexColumnSelectorFactory(
+            new IncrementalIndexStorageAdapter(incrementalIndex),
+            VirtualColumns.EMPTY,
+            false,
+            rowHolder
+        );
     ColumnValueSelector[] dimensionSelectors = incrementalIndex
         .getDimensions()
         .stream()

@@ -13,7 +13,7 @@ exports[`segments-view matches snapshot 1`] = `
         onRefresh={[Function]}
       />
       <Blueprint3.Button
-        hidden={false}
+        disabled={true}
         icon="application"
         onClick={[Function]}
         text="Go to SQL"
@@ -331,20 +331,5 @@ exports[`segments-view matches snapshot 1`] = `
       subRowsKey="_subRows"
     />
   </div>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Drop Segment"
-    failText="Could not drop segment"
-    intent="danger"
-    onClose={[Function]}
-    successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
-  >
-    <p>
-      Are you sure you want to drop segment 'null'?
-    </p>
-    <p>
-      This action is not reversible.
-    </p>
-  </AsyncActionDialog>
 </Fragment>
 `;

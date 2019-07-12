@@ -202,6 +202,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -284,6 +285,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -378,8 +380,7 @@ public class TaskSerdeTest
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null,
-                null
+                (schema, config, metrics) -> null
             ),
 
             new RealtimeTuningConfig(
@@ -393,6 +394,7 @@ public class TaskSerdeTest
                 1,
                 NoneShardSpec.instance(),
                 indexSpec,
+                null,
                 null,
                 0,
                 0,

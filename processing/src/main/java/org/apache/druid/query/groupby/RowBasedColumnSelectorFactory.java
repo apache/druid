@@ -31,6 +31,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
@@ -242,7 +243,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public int getValueCardinality()
         {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
+          return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
         }
 
         @Override

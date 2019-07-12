@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -54,7 +55,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   )
   {
     // Verify expression has just one binding.
-    if (expression.analyzeInputs().getFreeVariables().size() != 1) {
+    if (expression.analyzeInputs().getRequiredColumns().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 
@@ -64,7 +65,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false);
     this.bindings = name -> inputSupplier.get();
 
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
       throw new ISE("Selector must have a dictionary");
     } else if (selector.getValueCardinality() <= CACHE_SIZE) {
       arrayEvalCache = new ExprEval[selector.getValueCardinality()];

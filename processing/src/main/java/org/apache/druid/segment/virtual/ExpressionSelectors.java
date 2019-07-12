@@ -107,8 +107,13 @@ public class ExpressionSelectors
       public Object getObject()
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
-        //noinspection ConstantConditions
-        return baseSelector.getObject().value();
+        ExprEval eval = baseSelector.getObject();
+        if (eval.isArray()) {
+          return Arrays.stream(eval.asStringArray())
+                .map(NullHandling::emptyToNullIfNeeded)
+                .collect(Collectors.toList());
+        }
+        return eval.value();
       }
 
       @Override
@@ -137,7 +142,7 @@ public class ExpressionSelectors
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumns();
+    final List<String> columns = exprDetails.getRequiredColumnsList();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -155,7 +160,7 @@ public class ExpressionSelectors
                  && capabilities.isDictionaryEncoded()
                  && capabilities.isComplete()
                  && !capabilities.hasMultipleValues()
-                 && !exprDetails.getArrayVariables().contains(column)) {
+                 && !exprDetails.getArrayColumns().contains(column)) {
         // Optimization for expressions that hit one string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -171,7 +176,7 @@ public class ExpressionSelectors
 
     final List<String> needsApplied =
         columns.stream()
-               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayVariables().contains(c))
+               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayColumns().contains(c))
                .collect(Collectors.toList());
     final Expr finalExpr;
     if (needsApplied.size() > 0) {
@@ -214,7 +219,7 @@ public class ExpressionSelectors
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumns();
+    final List<String> columns = exprDetails.getRequiredColumnsList();
 
 
     if (columns.size() == 1) {
@@ -226,7 +231,7 @@ public class ExpressionSelectors
           && capabilities.isDictionaryEncoded()
           && capabilities.isComplete()
           && !capabilities.hasMultipleValues()
-          && !exprDetails.getArrayVariables().contains(column)
+          && !exprDetails.getArrayColumns().contains(column)
       ) {
         // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
@@ -244,7 +249,7 @@ public class ExpressionSelectors
 
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
     final boolean multiVal = actualArrays.size() > 0 ||
-                             exprDetails.getArrayVariables().size() > 0 ||
+                             exprDetails.getArrayColumns().size() > 0 ||
                              unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
@@ -350,7 +355,7 @@ public class ExpressionSelectors
   )
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = bindingDetails.getRequiredColumns();
+    final List<String> columns = bindingDetails.getRequiredColumnsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
@@ -498,7 +503,7 @@ public class ExpressionSelectors
    */
   private static Object coerceListDimToStringArray(List val)
   {
-    Object[] arrayVal = val.stream().map(Object::toString).toArray(String[]::new);
+    Object[] arrayVal = val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
     if (arrayVal.length > 0) {
       return arrayVal;
     }
@@ -525,7 +530,7 @@ public class ExpressionSelectors
         } else if (
             !capabilities.isComplete() &&
             capabilities.getType().equals(ValueType.STRING) &&
-            !exprDetails.getArrayVariables().contains(column)
+            !exprDetails.getArrayColumns().contains(column)
         ) {
           unknownIfArrays.add(column);
         }

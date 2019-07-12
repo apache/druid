@@ -162,7 +162,7 @@ Returns a list of datasource names found in the cluster.
 
 * `/druid/coordinator/v1/datasources?simple`
 
-Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, minTime, and maxTime.
+Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
 
 * `/druid/coordinator/v1/datasources?full`
 
@@ -170,7 +170,7 @@ Returns a list of datasource names found in the cluster with all metadata about 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Returns a JSON object containing the name and properties of a datasource. Properties include segment count, total segment byte size, minTime, and maxTime.
+Returns a JSON object containing the name and properties of a datasource. Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}?full`
 

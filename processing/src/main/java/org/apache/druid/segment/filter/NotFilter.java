@@ -23,9 +23,14 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
+import org.apache.druid.query.filter.vector.ReadableVectorMatch;
+import org.apache.druid.query.filter.vector.VectorMatch;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 /**
  */
@@ -68,6 +73,34 @@ public class NotFilter implements Filter
         inspector.visit("baseMatcher", baseMatcher);
       }
     };
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    final VectorValueMatcher baseMatcher = baseFilter.makeVectorMatcher(factory);
+
+    return new BaseVectorValueMatcher(baseMatcher)
+    {
+      final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
+
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      {
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask);
+
+        scratch.copyFrom(mask);
+        scratch.removeAll(baseMatch);
+        assert scratch.isValid(mask);
+        return scratch;
+      }
+    };
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return baseFilter.canVectorizeMatcher();
   }
 
   @Override

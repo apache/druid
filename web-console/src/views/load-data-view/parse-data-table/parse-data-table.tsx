@@ -27,13 +27,14 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
-export interface ParseDataTableProps extends React.Props<any> {
+export interface ParseDataTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   canFlatten: boolean;
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
+  openModal: (str: string) => void;
 }
 
 export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
@@ -77,7 +78,7 @@ export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
               if (row.original.unparseable) {
                 return <TableCell unparseable />;
               }
-              return <TableCell value={row.value} />;
+              return <TableCell value={row.value} openModal={str => this.props.openModal(str)} />;
             },
             headerClassName: classNames({
               flattened: flattenField,
