@@ -28,24 +28,6 @@ describe('schema table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
-<<<<<<< HEAD
-          parsed: { c1: 'hello' }
-        }
-      ]
-    };
-
-    const schemaTable = <SchemaTable
-      sampleBundle={{
-        headerAndRows: sampleData,
-        dimensionsSpec: {},
-        metricsSpec: []
-      }}
-      columnFilter=""
-      selectedDimensionSpecIndex={-1}
-      selectedMetricSpecIndex={-1}
-      onDimensionOrMetricSelect={() => null}
-    />;
-=======
           parsed: { c1: 'hello' },
         },
       ],
@@ -64,7 +46,6 @@ describe('schema table', () => {
         onDimensionOrMetricSelect={() => null}
       />
     );
->>>>>>> upstream/master
 
     const { container } = render(schemaTable);
     expect(container.firstChild).toMatchSnapshot();

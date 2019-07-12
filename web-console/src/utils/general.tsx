@@ -19,10 +19,7 @@
 import { Button, HTMLSelect, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import FileSaver from 'file-saver';
-<<<<<<< HEAD
-=======
 import hasOwnProp from 'has-own-prop';
->>>>>>> upstream/master
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -137,14 +134,10 @@ export function caseInsensitiveContains(testString: string, searchString: string
 
 // ----------------------------
 
-<<<<<<< HEAD
-export function countBy<T>(array: T[], fn: (x: T, index: number) => string = String): Record<string, number> {
-=======
 export function countBy<T>(
   array: T[],
   fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
->>>>>>> upstream/master
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
     const key = fn(array[i], i);
@@ -247,17 +240,6 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
 }
 
 // ----------------------------
-
-export function memoize<T, U>(fn: (x: T) => U): (x: T) => U {
-  let lastInput: T;
-  let lastOutput: U;
-  return (x: T) => {
-    if (x === lastInput) return lastOutput;
-    lastInput = x;
-    lastOutput = fn(lastInput);
-    return lastOutput;
-  };
-}
 
 export function parseJson(json: string): any {
   try {

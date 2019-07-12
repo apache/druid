@@ -17,10 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-<<<<<<< HEAD
-import { number } from 'prop-types';
-=======
->>>>>>> upstream/master
 import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
@@ -198,12 +194,8 @@ export function isParallel(spec: IngestionSpec): boolean {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-<<<<<<< HEAD
-  const dimensions = deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
-=======
   const dimensions =
     deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
->>>>>>> upstream/master
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
@@ -380,21 +372,12 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
       ...BASIC_FORMAT_VALUES,
       {
         group: 'Date and time formats',
-<<<<<<< HEAD
-        suggestions: DATE_TIME_FORMAT_VALUES
-      },
-      {
-        group: 'Date only formats',
-        suggestions: DATE_FORMAT_VALUES
-      }
-=======
         suggestions: DATE_TIME_FORMAT_VALUES,
       },
       {
         group: 'Date only formats',
         suggestions: DATE_FORMAT_VALUES,
       },
->>>>>>> upstream/master
     ],
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: (
@@ -1335,13 +1318,9 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
           return filenameFromPath(firehose.baseDir);
 
         case 'static-s3':
-<<<<<<< HEAD
-          return filenameFromPath((firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0]);
-=======
           return filenameFromPath(
             (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0],
           );
->>>>>>> upstream/master
 
         case 'http':
           return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
@@ -1880,10 +1859,6 @@ export interface DimensionFiltersWithRest {
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
-<<<<<<< HEAD
-  const inputAndFilters: DruidFilter[] = filter ? ((filter.type === 'and' && Array.isArray(filter.fields)) ? filter.fields : [filter]) : EMPTY_ARRAY;
-  const dimensionFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension === 'string');
-=======
   const inputAndFilters: DruidFilter[] = filter
     ? filter.type === 'and' && Array.isArray(filter.fields)
       ? filter.fields
@@ -1892,7 +1867,6 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(
     f => typeof f.dimension === 'string',
   );
->>>>>>> upstream/master
   const restFilters: DruidFilter[] = inputAndFilters.filter(f => typeof f.dimension !== 'string');
 
   return {

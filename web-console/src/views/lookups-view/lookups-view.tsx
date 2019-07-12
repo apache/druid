@@ -19,10 +19,6 @@
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-<<<<<<< HEAD
-import classNames from 'classnames';
-=======
->>>>>>> upstream/master
 import React from 'react';
 import ReactTable from 'react-table';
 

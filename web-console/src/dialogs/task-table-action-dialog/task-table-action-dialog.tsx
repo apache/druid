@@ -42,11 +42,7 @@ export class TaskTableActionDialog extends React.PureComponent<
   constructor(props: TaskTableActionDialogProps) {
     super(props);
     this.state = {
-<<<<<<< HEAD
-      activeTab: 'status'
-=======
       activeTab: 'status',
->>>>>>> upstream/master
     };
   }
 
@@ -68,12 +64,6 @@ export class TaskTableActionDialog extends React.PureComponent<
         onClick: () => this.setState({ activeTab: 'payload' }),
       },
       {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' })
-      },
-      {
         icon: 'comparison',
         text: 'Reports',
         active: activeTab === 'reports',
@@ -87,48 +77,6 @@ export class TaskTableActionDialog extends React.PureComponent<
       },
     ];
 
-<<<<<<< HEAD
-    return <TableActionDialog
-      isOpen
-      sideButtonMetadata={taskTableSideButtonMetadata}
-      onClose={onClose}
-      title={`Task: ${taskId}`}
-      bottomButtons={basicActionsToButtons(actions)}
-    >
-      {
-        activeTab === 'status' &&
-        <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}/status`}
-          transform={x => deepGet(x, 'status')}
-          downloadFilename={`task-status-${taskId}.json`}
-        />
-      }
-      {
-        activeTab === 'payload' &&
-        <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}`}
-          transform={x => deepGet(x, 'payload')}
-          downloadFilename={`task-payload-${taskId}.json`}
-        />
-      }
-      {
-        activeTab === 'reports' &&
-        <ShowJson
-          endpoint={`/druid/indexer/v1/task/${taskId}/reports`}
-          transform={x => deepGet(x, 'ingestionStatsAndErrors.payload')}
-          downloadFilename={`task-reports-${taskId}.json`}
-        />
-      }
-      {
-        activeTab === 'log' &&
-        <ShowLog
-          endpoint={`/druid/indexer/v1/task/${taskId}/log`}
-          downloadFilename={`task-log-${taskId}.json`}
-          tailOffset={16000}
-        />
-      }
-    </TableActionDialog>;
-=======
     return (
       <TableActionDialog
         isOpen
@@ -168,6 +116,5 @@ export class TaskTableActionDialog extends React.PureComponent<
         )}
       </TableActionDialog>
     );
->>>>>>> upstream/master
   }
 }

@@ -28,21 +28,6 @@ describe('filter table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
-<<<<<<< HEAD
-          parsed: { c1: 'hello' }
-        }
-      ]
-    };
-
-    const filterTable = <FilterTable
-      sampleData={sampleData}
-      columnFilter=""
-      dimensionFilters={[]}
-      selectedFilterIndex={-1}
-      onShowGlobalFilter={() => null}
-      onFilterSelect={() => null}
-    />;
-=======
           parsed: { c1: 'hello' },
         },
       ],
@@ -58,7 +43,6 @@ describe('filter table', () => {
         onFilterSelect={() => null}
       />
     );
->>>>>>> upstream/master
 
     const { container } = render(filterTable);
     expect(container.firstChild).toMatchSnapshot();

@@ -24,19 +24,11 @@ import { TableCell } from '../../../components';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
 import { Transform } from '../../../utils/ingestion-spec';
-<<<<<<< HEAD
-import { HeaderAndRows } from '../../../utils/sampler';
-
-import './transform-table.scss';
-
-export interface TransformTableProps extends React.Props<any> {
-=======
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
 export interface TransformTableProps {
->>>>>>> upstream/master
   sampleData: HeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;
@@ -47,57 +39,6 @@ export interface TransformTableProps {
 
 export class TransformTable extends React.PureComponent<TransformTableProps> {
   render() {
-<<<<<<< HEAD
-    const { sampleData, columnFilter, transformedColumnsOnly, transforms, selectedTransformIndex, onTransformSelect } = this.props;
-
-    return <ReactTable
-      className="transform-table -striped -highlight"
-      data={sampleData.rows}
-      columns={filterMap(sampleData.header, (columnName, i) => {
-        if (!caseInsensitiveContains(columnName, columnFilter)) return null;
-        const timestamp = columnName === '__time';
-        const transformIndex = transforms.findIndex(f => f.name === columnName);
-        if (transformIndex === -1 && transformedColumnsOnly) return null;
-        const transform = transforms[transformIndex];
-
-        const columnClassName = classNames({
-          transformed: transform,
-          selected: transform && transformIndex === selectedTransformIndex
-        });
-        return {
-          Header: (
-            <div
-              className={classNames('clickable')}
-              onClick={() => {
-                if (transform) {
-                  onTransformSelect(transform, transformIndex);
-                } else {
-                  onTransformSelect({
-                    type: 'expression',
-                    name: columnName,
-                    expression: escapeColumnName(columnName)
-                  }, transformIndex);
-                }
-              }}
-            >
-              <div className="column-name">{columnName}</div>
-              <div className="column-detail">
-                {transform ? `= ${transform.expression}` : ''}&nbsp;
-              </div>
-            </div>
-          ),
-          headerClassName: columnClassName,
-          className: columnClassName,
-          id: String(i),
-          accessor: row => row.parsed ? row.parsed[columnName] : null,
-          Cell: row => <TableCell value={row.value} timestamp={timestamp}/>
-        };
-      })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
-    />;
-=======
     const {
       sampleData,
       columnFilter,
@@ -159,6 +100,5 @@ export class TransformTable extends React.PureComponent<TransformTableProps> {
         sortable={false}
       />
     );
->>>>>>> upstream/master
   }
 }

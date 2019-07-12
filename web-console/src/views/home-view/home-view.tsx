@@ -19,10 +19,7 @@
 import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-<<<<<<< HEAD
-=======
 import { sum } from 'd3-array';
->>>>>>> upstream/master
 import React from 'react';
 
 import { UrlBaser } from '../../singletons/url-baser';

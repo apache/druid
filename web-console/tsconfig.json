@@ -11,11 +11,8 @@
     "skipLibCheck": true,
     "importHelpers": true,
     "esModuleInterop": true,
-<<<<<<< HEAD
-=======
     "noUnusedParameters": true,
     "noUnusedLocals": true,
->>>>>>> upstream/master
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",

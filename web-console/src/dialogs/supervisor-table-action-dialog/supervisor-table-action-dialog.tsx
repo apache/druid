@@ -62,12 +62,6 @@ export class SupervisorTableActionDialog extends React.PureComponent<
         onClick: () => this.setState({ activeTab: 'payload' }),
       },
       {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' })
-      },
-      {
         icon: 'chart',
         text: 'Statistics',
         active: activeTab === 'stats',

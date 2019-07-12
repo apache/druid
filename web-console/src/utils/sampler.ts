@@ -304,13 +304,8 @@ export async function sampleForTimestamp(
       },
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-<<<<<<< HEAD
-      cacheKey: sampleColumns.cacheKey || cacheKey
-    })
-=======
       cacheKey: sampleColumns.cacheKey || cacheKey,
     }),
->>>>>>> upstream/master
   };
 
   const sampleTime = await postToSampler(sampleSpec, 'timestamp-time');
