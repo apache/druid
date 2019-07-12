@@ -91,7 +91,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutUsedSegments()
+        .buildFromExistingWithoutSegmentsMetadata()
         .withReplicationManager(replicatorThrottler)
         .build();
 

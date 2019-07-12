@@ -217,7 +217,7 @@ public class DruidCoordinatorRuntimeParams
     );
   }
 
-  public Builder buildFromExistingWithoutUsedSegments()
+  public Builder buildFromExistingWithoutSegmentsMetadata()
   {
     return new Builder(
         startTimeNanos,
