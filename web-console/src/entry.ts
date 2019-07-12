@@ -18,8 +18,6 @@
 
 import 'brace'; // Import Ace editor and all the sub components used in the app
 import 'brace/ext/language_tools';
-import 'brace/mode/hjson';
-import 'brace/mode/sql';
 import 'brace/theme/solarized_dark';
 import 'es6-shim/es6-shim';
 import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()

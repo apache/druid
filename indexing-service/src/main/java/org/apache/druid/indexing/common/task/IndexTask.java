@@ -91,6 +91,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CollectionUtils;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -444,8 +445,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             toolbox.getTaskActionClient(),
             intervals
         );
-        versions = locks.entrySet().stream()
-                        .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
+        versions = CollectionUtils.mapValues(locks, TaskLock::getVersion);
 
         dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
             ingestionSchema.getDataSchema()
