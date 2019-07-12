@@ -163,7 +163,7 @@ public class SqlVsNativeBenchmark
   {
     final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
                                                                    .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null, authenticationResult)) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null, null, authenticationResult)) {
       final PlannerResult plannerResult = planner.plan(sqlQuery);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
