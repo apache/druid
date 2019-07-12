@@ -596,8 +596,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     }
 
     if (taskInfo.processHolder != null) {
-      // Will trigger normal failure mechanisms due to process exit
+      // Will cleanup the underlying running task if any and trigger normal failure mechanisms due to process exit
       log.info("Killing process for task: %s", taskid);
+      taskInfo.getTask().stopGracefully(taskConfig);
       taskInfo.processHolder.process.destroy();
     }
   }

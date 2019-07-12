@@ -84,7 +84,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
-  private TaskConfig taskConfig = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
   {
@@ -223,7 +222,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return classpathPrefix;
   }
 
-  public String getHadoopJobIdFileName()
+  private String getHadoopJobIdFileName(TaskConfig taskConfig)
   {
     return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME).getAbsolutePath();
   }
@@ -232,7 +231,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public TaskStatus run(TaskToolbox toolbox)
   {
     try {
-      taskConfig = toolbox.getConfig();
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
         chatHandlerProvider.get().register(getId(), this, false);
@@ -270,7 +268,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unchecked")
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
-    String hadoopJobIdFile = getHadoopJobIdFileName();
+    String hadoopJobIdFile = getHadoopJobIdFileName(toolbox.getConfig());
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
 
@@ -432,7 +430,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     // To avoid issue of kill command once the ingestion task is actually completed
     if (!ingestionState.equals(IngestionState.COMPLETED)) {
       final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-      String hadoopJobIdFile = getHadoopJobIdFileName();
+      String hadoopJobIdFile = getHadoopJobIdFileName(taskConfig);
 
       try {
         ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
