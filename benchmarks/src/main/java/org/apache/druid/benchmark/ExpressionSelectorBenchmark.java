@@ -26,6 +26,7 @@ import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -72,12 +73,14 @@ public class ExpressionSelectorBenchmark
   @Param({"1000000"})
   private int rowsPerSegment;
 
-  private SegmentGenerator segmentGenerator;
   private QueryableIndex index;
+  private Closer closer;
 
   @Setup(Level.Trial)
   public void setup()
   {
+    this.closer = Closer.create();
+
     final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
         ImmutableList.of(
             BenchmarkColumnSchema.makeZipf(
@@ -113,22 +116,16 @@ public class ExpressionSelectorBenchmark
                                                .shardSpec(new LinearShardSpec(0))
                                                .build();
 
-    this.segmentGenerator = new SegmentGenerator();
-    this.index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, rowsPerSegment);
+    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+    this.index = closer.register(
+        segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, rowsPerSegment)
+    );
   }
 
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    if (index != null) {
-      index.close();
-      index = null;
-    }
-
-    if (segmentGenerator != null) {
-      segmentGenerator.close();
-      segmentGenerator = null;
-    }
+    closer.close();
   }
 
   @Benchmark

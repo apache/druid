@@ -38,7 +38,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -360,22 +359,22 @@ public class DumpSegment extends GuiceRunnable
                       jg.writeFieldName(columnName);
                       jg.writeStartObject();
                       for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                        if (val != null) {
-                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                          if (decompressBitmaps) {
-                            jg.writeStartArray();
-                            final IntIterator iterator = bitmap.iterator();
-                            while (iterator.hasNext()) {
-                              final int rowNum = iterator.next();
-                              jg.writeNumber(rowNum);
-                            }
-                            jg.writeEndArray();
-                          } else {
-                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                            if (bytes != null) {
-                              jg.writeBinary(bytes);
-                            }
+                        String val = bitmapIndex.getValue(i);
+                        // respect nulls if they are present in the dictionary
+                        jg.writeFieldName(val == null ? "null" : val);
+                        final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                        if (decompressBitmaps) {
+                          jg.writeStartArray();
+                          final IntIterator iterator = bitmap.iterator();
+                          while (iterator.hasNext()) {
+                            final int rowNum = iterator.next();
+                            jg.writeNumber(rowNum);
+                          }
+                          jg.writeEndArray();
+                        } else {
+                          byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                          if (bytes != null) {
+                            jg.writeBinary(bytes);
                           }
                         }
                       }

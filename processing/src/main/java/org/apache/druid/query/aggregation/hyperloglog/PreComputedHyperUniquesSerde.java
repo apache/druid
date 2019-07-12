@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.hyperloglog;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -30,9 +29,9 @@ import java.nio.ByteBuffer;
 
 public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
 {
-  public PreComputedHyperUniquesSerde(HyperLogLogHash hyperLogLogHash)
+  public PreComputedHyperUniquesSerde()
   {
-    super(hyperLogLogHash);
+    super();
   }
 
   @Override

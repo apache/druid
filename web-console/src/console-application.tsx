@@ -62,7 +62,7 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
-  private capabilitiesQueryManager: QueryManager<string, Capabilities>;
+  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
   static async discoverCapabilities(): Promise<Capabilities> {
     try {
@@ -151,7 +151,7 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    this.capabilitiesQueryManager.runQuery('dummy');
+    this.capabilitiesQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
