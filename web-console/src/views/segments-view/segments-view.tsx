@@ -101,7 +101,7 @@ interface Sorted {
   desc: boolean;
 }
 
-interface QueryAndSkip {
+interface SegmentsQuery {
   page: number;
   pageSize: number;
   filtered: Filter[];
@@ -127,7 +127,7 @@ interface SegmentQueryResultRow {
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
-  private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
+  private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
   private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -159,7 +159,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
-      processQuery: async (query: QueryAndSkip) => {
+      processQuery: async (query: SegmentsQuery) => {
         const results: any[] = (await queryDruidSql({ query: this.toSQL(query) })).slice(
           query.page * query.pageSize,
         );
@@ -237,7 +237,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsNoSqlQueryManager.terminate();
   }
 
-  toSQL(query: QueryAndSkip) {
+  toSQL(query: SegmentsQuery) {
     const totalQuerySize = (query.page + 1) * query.pageSize;
 
     let queryParts = [
