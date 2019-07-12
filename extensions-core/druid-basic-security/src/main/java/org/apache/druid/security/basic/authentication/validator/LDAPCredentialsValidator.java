@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.druid.security.basic.BasicAuthDBConfig;
+import org.apache.druid.security.basic.BasicAuthLDAPConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 @JsonTypeName("ldap")
@@ -64,7 +63,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
   private final LruBlockCache cache;
 
-  private AtomicReference<BasicAuthDBConfig> dbConfig = new AtomicReference<>();
+  private final BasicAuthLDAPConfig ldapConfig;
 
   @JsonCreator
   public LDAPCredentialsValidator(
@@ -81,15 +80,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("credentialCacheSize") Integer credentialCacheSize
   )
   {
-    this.dbConfig.set(new BasicAuthDBConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS,
-        credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
+    this.ldapConfig = new BasicAuthLDAPConfig(
         url,
         bindUser,
         bindPassword,
@@ -97,40 +88,42 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         userSearch,
         userAttribute,
         groupFilters,
+        credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
         credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
         credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize
-    ));
+    );
+
     this.cache = new LruBlockCache(
-        this.dbConfig.get().getCredentialCacheSize(),
-        this.dbConfig.get().getCredentialVerifyDuration(),
-        this.dbConfig.get().getCredentialMaxDuration()
+        this.ldapConfig.getCredentialCacheSize(),
+        this.ldapConfig.getCredentialVerifyDuration(),
+        this.ldapConfig.getCredentialMaxDuration()
     );
   }
 
-  Properties bindProperties(BasicAuthDBConfig dbConfig)
+  Properties bindProperties(BasicAuthLDAPConfig ldapConfig)
   {
-    Properties properties = commonProperties(dbConfig);
-    properties.put(Context.SECURITY_PRINCIPAL, dbConfig.getBindUser());
-    properties.put(Context.SECURITY_CREDENTIALS, dbConfig.getBindPassword().getPassword());
+    Properties properties = commonProperties(ldapConfig);
+    properties.put(Context.SECURITY_PRINCIPAL, ldapConfig.getBindUser());
+    properties.put(Context.SECURITY_CREDENTIALS, ldapConfig.getBindPassword().getPassword());
     return properties;
   }
 
-  Properties userProperties(BasicAuthDBConfig dbConfig, LdapName userDn, char[] password)
+  Properties userProperties(BasicAuthLDAPConfig ldapConfig, LdapName userDn, char[] password)
   {
-    Properties properties = commonProperties(dbConfig);
+    Properties properties = commonProperties(ldapConfig);
     properties.put(Context.SECURITY_PRINCIPAL, userDn.toString());
     properties.put(Context.SECURITY_CREDENTIALS, String.valueOf(password));
     return properties;
   }
 
-  Properties commonProperties(BasicAuthDBConfig dbConfig)
+  Properties commonProperties(BasicAuthLDAPConfig ldapConfig)
   {
     Properties properties = new Properties();
     properties.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-    properties.put(Context.PROVIDER_URL, dbConfig.getUrl());
+    properties.put(Context.PROVIDER_URL, ldapConfig.getUrl());
     properties.put(Context.SECURITY_AUTHENTICATION, "simple");
-    if (StringUtils.toLowerCase(dbConfig.getUrl()).startsWith("ldaps://")) {
+    if (StringUtils.toLowerCase(ldapConfig.getUrl()).startsWith("ldaps://")) {
       properties.put(Context.SECURITY_PROTOCOL, "ssl");
       properties.put("java.naming.ldap.factory.socket", BasicSecuritySSLSocketFactory.class.getName());
     }
@@ -145,7 +138,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    BasicAuthDBConfig currentDBConfig = this.dbConfig.get();
     Set<LdapName> groups;
     LdapName userDn;
     Map<String, Object> contexMap = new HashMap<>();
@@ -156,16 +148,16 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       return new AuthenticationResult(username, authorizerName, authenticatorName, contexMap);
     } else {
       try {
-        InitialDirContext dirContext = new InitialDirContext(bindProperties(currentDBConfig));
+        InitialDirContext dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
 
         try {
-          SearchResult userResult = getLdapUserObject(currentDBConfig, dirContext, username);
+          SearchResult userResult = getLdapUserObject(this.ldapConfig, dirContext, username);
           if (userResult == null) {
             LOG.debug("User not found: %s", username);
             return null;
           }
           userDn = new LdapName(userResult.getNameInNamespace());
-          groups = getGroupsFromLdap(currentDBConfig, userResult);
+          groups = getGroupsFromLdap(this.ldapConfig, userResult);
           if (groups == null || groups.isEmpty()) {
             LOG.debug("User is not mapped to any groups: %s", username);
             return null;
@@ -186,16 +178,16 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         return null;
       }
 
-      if (!validatePassword(currentDBConfig, userDn, password)) {
+      if (!validatePassword(this.ldapConfig, userDn, password)) {
         LOG.debug("Password incorrect for user %s", username);
         throw new BasicSecurityAuthenticationException("User LDAP authentication failed username[%s].", userDn.toString());
       }
 
       byte[] salt = BasicAuthUtils.generateSalt();
-      byte[] hash = BasicAuthUtils.hashPassword(password, salt, currentDBConfig.getIterations());
+      byte[] hash = BasicAuthUtils.hashPassword(password, salt, this.ldapConfig.getCredentialIterations());
       BasicAuthenticatorUserPrincipal newPrincipal = new BasicAuthenticatorUserPrincipal(
           username,
-          new BasicAuthenticatorCredentials(salt, hash, currentDBConfig.getIterations()),
+          new BasicAuthenticatorCredentials(salt, hash, this.ldapConfig.getCredentialIterations()),
           groups
       );
 
@@ -206,15 +198,15 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   }
 
   @Nullable
-  SearchResult getLdapUserObject(BasicAuthDBConfig dbConfig, DirContext context, String username)
+  SearchResult getLdapUserObject(BasicAuthLDAPConfig ldapConfig, DirContext context, String username)
   {
     try {
       SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-      sc.setReturningAttributes(new String[] {dbConfig.getUserAttribute(), "memberOf" });
+      sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), "memberOf" });
       NamingEnumeration<SearchResult> results = context.search(
-          dbConfig.getBaseDn(),
-          StringUtils.format(dbConfig.getUserSearch(), username),
+          ldapConfig.getBaseDn(),
+          StringUtils.format(ldapConfig.getUserSearch(), username),
           sc);
       try {
         if (!results.hasMore()) {
@@ -232,7 +224,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
   }
 
-  Set<LdapName> getGroupsFromLdap(BasicAuthDBConfig dbConfig, SearchResult userResult) throws NamingException
+  Set<LdapName> getGroupsFromLdap(BasicAuthLDAPConfig ldapConfig, SearchResult userResult) throws NamingException
   {
     Set<LdapName> groups = new TreeSet<>();
 
@@ -242,7 +234,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       return groups; // not part of any groups
     }
 
-    Set<String> groupFilters = new TreeSet<>(Arrays.asList(dbConfig.getGroupFilters()));
+    Set<String> groupFilters = new TreeSet<>(Arrays.asList(ldapConfig.getGroupFilters()));
     for (int i = 0; i < memberOf.size(); i++) {
       String memberDn = memberOf.get(i).toString();
       LdapName ln;
@@ -294,12 +286,12 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     return false;
   }
 
-  boolean validatePassword(BasicAuthDBConfig dbConfig, LdapName userDn, char[] password)
+  boolean validatePassword(BasicAuthLDAPConfig ldapConfig, LdapName userDn, char[] password)
   {
     InitialDirContext context = null;
 
     try {
-      context = new InitialDirContext(userProperties(dbConfig, userDn, password));
+      context = new InitialDirContext(userProperties(ldapConfig, userDn, password));
       return true;
     }
     catch (AuthenticationException e) {

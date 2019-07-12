@@ -78,16 +78,6 @@ public class BasicHTTPAuthenticatorTest
       false,
       null, null,
       false,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
       null
   );
 
@@ -134,17 +124,7 @@ public class BasicHTTPAuthenticatorTest
         false,
         null, null,
         false,
-        validator,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        validator
     );
 
     String header = StringUtils.utf8Base64("userA:helloworld");
@@ -220,17 +200,7 @@ public class BasicHTTPAuthenticatorTest
         false,
         null, null,
         true,
-        validator,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        validator
     );
     String header = StringUtils.utf8Base64("userA:badpassword");
     header = StringUtils.format("Basic %s", header);
@@ -301,17 +271,7 @@ public class BasicHTTPAuthenticatorTest
         false,
         null, null,
         true,
-        validator,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        validator
     );
     String header = StringUtils.utf8Base64("userB:helloworld");
     header = StringUtils.format("Basic %s", header);

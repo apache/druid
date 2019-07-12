@@ -91,8 +91,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 null,
                 false,
-                null,
-                null, null, null, null, null, null, null, null, null,
                 null
             ),
             AUTHENTICATOR_NAME2,
@@ -106,8 +104,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 null,
                 false,
-                null,
-                null, null, null, null, null, null, null, null, null,
                 null
             ),
             AUTHENTICATOR_NAME_LDAP,
@@ -121,16 +117,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 null,
                 false,
-                null,
-                "https://testUrl",
-                "testUser",
-                new DefaultPasswordProvider("testPassword"),
-                "testDn",
-                "testUserSearch",
-                "testUserAttribute",
-                new String[]{"testGroupFilter"},
-                null,
-                null,
                 null
             )
         )

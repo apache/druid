@@ -33,16 +33,6 @@ public class BasicAuthDBConfig
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
   private final int iterations;
-  private final String url;
-  private final String bindUser;
-  private final PasswordProvider bindPassword;
-  private final String baseDn;
-  private final String userSearch;
-  private final String userAttribute;
-  private final String[] groupFilters;
-  private final Integer credentialVerifyDuration;
-  private final Integer credentialMaxDuration;
-  private final Integer credentialCacheSize;
 
   public BasicAuthDBConfig(
       final PasswordProvider initialAdminPassword,
@@ -52,17 +42,7 @@ public class BasicAuthDBConfig
       final String initialAdminGroupMapping,
       final boolean enableCacheNotifications,
       final long cacheNotificationTimeout,
-      final int credentialIterations,
-      final String url,
-      final String bindUser,
-      final PasswordProvider bindPassword,
-      final String baseDn,
-      final String userSearch,
-      final String userAttribute,
-      final String[] groupFilters,
-      final Integer credentialVerifyDuration,
-      final Integer credentialMaxDuration,
-      final Integer credentialCacheSize
+      final int credentialIterations
   )
   {
     this.initialAdminPassword = initialAdminPassword;
@@ -73,16 +53,6 @@ public class BasicAuthDBConfig
     this.enableCacheNotifications = enableCacheNotifications;
     this.cacheNotificationTimeout = cacheNotificationTimeout;
     this.iterations = credentialIterations;
-    this.url = url;
-    this.bindUser = bindUser;
-    this.bindPassword = bindPassword;
-    this.baseDn = baseDn;
-    this.userSearch = userSearch;
-    this.userAttribute = userAttribute;
-    this.groupFilters = groupFilters;
-    this.credentialVerifyDuration = credentialVerifyDuration;
-    this.credentialMaxDuration = credentialMaxDuration;
-    this.credentialCacheSize = credentialCacheSize;
   }
 
   public PasswordProvider getInitialAdminPassword()
@@ -123,55 +93,5 @@ public class BasicAuthDBConfig
   public int getIterations()
   {
     return iterations;
-  }
-
-  public String getUrl()
-  {
-    return url;
-  }
-
-  public String getBindUser()
-  {
-    return bindUser;
-  }
-
-  public PasswordProvider getBindPassword()
-  {
-    return bindPassword;
-  }
-
-  public String getBaseDn()
-  {
-    return baseDn;
-  }
-
-  public String getUserSearch()
-  {
-    return userSearch;
-  }
-
-  public String getUserAttribute()
-  {
-    return userAttribute;
-  }
-
-  public String[] getGroupFilters()
-  {
-    return groupFilters;
-  }
-
-  public Integer getCredentialVerifyDuration()
-  {
-    return credentialVerifyDuration;
-  }
-
-  public Integer getCredentialMaxDuration()
-  {
-    return credentialMaxDuration;
-  }
-
-  public Integer getCredentialCacheSize()
-  {
-    return credentialCacheSize;
   }
 }

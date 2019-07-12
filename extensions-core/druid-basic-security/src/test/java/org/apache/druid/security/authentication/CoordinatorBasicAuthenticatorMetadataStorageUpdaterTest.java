@@ -76,16 +76,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                     null,
                     null,
                     false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
                     null
                 )
             )

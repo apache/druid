@@ -76,16 +76,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
         initialAdminGroupMapping,
         enableCacheNotifications == null ? true : enableCacheNotifications,
         cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
-        0,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null, null,
-        null,
-        null
+        0
     );
   }
 

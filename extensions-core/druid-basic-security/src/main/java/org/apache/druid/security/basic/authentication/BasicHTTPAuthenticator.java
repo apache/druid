@@ -72,17 +72,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout,
       @JsonProperty("credentialIterations") Integer credentialIterations,
       @JsonProperty("skipOnFailure") Boolean skipOnFailure,
-      @JsonProperty("credentialsValidator") CredentialsValidator credentialsValidator,
-      @JsonProperty("credentialsValidator.url") String url,
-      @JsonProperty("credentialsValidator.bindUser") String bindUser,
-      @JsonProperty("credentialsValidator.bindPassword") PasswordProvider bindPassword,
-      @JsonProperty("credentialsValidator.baseDn") String baseDn,
-      @JsonProperty("credentialsValidator.userSearch") String userSearch,
-      @JsonProperty("credentialsValidator.userAttribute") String userAttribute,
-      @JsonProperty("credentialsValidator.groupFilters") String[] groupFilters,
-      @JsonProperty("credentialsValidator.credentialVerifyDuration") Integer credentialVerifyDuration,
-      @JsonProperty("credentialsValidator.credentialMaxDuration") Integer credentialMaxDuration,
-      @JsonProperty("credentialsValidator.credentialCacheSize") Integer credentialCacheSize
+      @JsonProperty("credentialsValidator") CredentialsValidator credentialsValidator
   )
   {
     this.name = name;
@@ -95,17 +85,7 @@ public class BasicHTTPAuthenticator implements Authenticator
         null,
         enableCacheNotifications == null ? true : enableCacheNotifications,
         cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
-        credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
-        url,
-        bindUser,
-        bindPassword,
-        baseDn,
-        userSearch,
-        userAttribute,
-        groupFilters,
-        credentialVerifyDuration,
-        credentialMaxDuration,
-        credentialCacheSize
+        credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations
     );
     if (credentialsValidator == null) {
       this.credentialsValidator = new DBCredentialsValidator(cacheManager);

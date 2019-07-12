@@ -17,31 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication.entity;
+package org.apache.druid.security.basic;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.security.basic.BasicAuthDBConfig;
+import org.apache.druid.metadata.PasswordProvider;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class BasicAuthConfig
+public class BasicAuthLDAPConfig
 {
   private final String url;
   private final String bindUser;
-  private final String bindPassword;
+  private final PasswordProvider bindPassword;
   private final String baseDn;
   private final String userSearch;
   private final String userAttribute;
   private final String[] groupFilters;
+  private final int credentialIterations;
+  private final Integer credentialVerifyDuration;
+  private final Integer credentialMaxDuration;
+  private final Integer credentialCacheSize;
 
-  public BasicAuthConfig(
-      @JsonProperty("url") String url,
-      @JsonProperty("bindUser") String bindUser,
-      @JsonProperty("bindPassword") String bindPassword,
-      @JsonProperty("baseDn") String baseDn,
-      @JsonProperty("userSearch") String userSearch,
-      @JsonProperty("userAttribute") String userAttribute,
-      @JsonProperty("groupFilters") String[] groupFilters
+  public BasicAuthLDAPConfig(
+      final String url,
+      final String bindUser,
+      final PasswordProvider bindPassword,
+      final String baseDn,
+      final String userSearch,
+      final String userAttribute,
+      final String[] groupFilters,
+      final int credentialIterations,
+      final Integer credentialVerifyDuration,
+      final Integer credentialMaxDuration,
+      final Integer credentialCacheSize
   )
   {
     this.url = url;
@@ -51,58 +56,64 @@ public class BasicAuthConfig
     this.userSearch = userSearch;
     this.userAttribute = userAttribute;
     this.groupFilters = groupFilters;
+    this.credentialIterations = credentialIterations;
+    this.credentialVerifyDuration = credentialVerifyDuration;
+    this.credentialMaxDuration = credentialMaxDuration;
+    this.credentialCacheSize = credentialCacheSize;
   }
 
-  public BasicAuthConfig(BasicAuthDBConfig config)
-  {
-    this.url = config.getUrl();
-    this.bindUser = config.getBindUser();
-    this.bindPassword = config.getBindPassword() != null ? config.getBindPassword().getPassword() : null;
-    this.baseDn = config.getBaseDn();
-    this.userSearch = config.getUserSearch();
-    this.userAttribute = config.getUserAttribute();
-    this.groupFilters = config.getGroupFilters();
-  }
-
-  @JsonProperty
   public String getUrl()
   {
     return url;
   }
 
-  @JsonProperty
   public String getBindUser()
   {
     return bindUser;
   }
 
-  @JsonProperty
-  public String getBindPassword()
+  public PasswordProvider getBindPassword()
   {
     return bindPassword;
   }
 
-  @JsonProperty
   public String getBaseDn()
   {
     return baseDn;
   }
 
-  @JsonProperty
   public String getUserSearch()
   {
     return userSearch;
   }
 
-  @JsonProperty
   public String getUserAttribute()
   {
     return userAttribute;
   }
 
-  @JsonProperty
   public String[] getGroupFilters()
   {
     return groupFilters;
+  }
+
+  public int getCredentialIterations()
+  {
+    return credentialIterations;
+  }
+
+  public Integer getCredentialVerifyDuration()
+  {
+    return credentialVerifyDuration;
+  }
+
+  public Integer getCredentialMaxDuration()
+  {
+    return credentialMaxDuration;
+  }
+
+  public Integer getCredentialCacheSize()
+  {
+    return credentialCacheSize;
   }
 }
