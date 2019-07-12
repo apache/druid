@@ -40,8 +40,8 @@ import java.util.Map;
 @JsonTypeName("anonymous")
 public class AnonymousAuthenticator implements Authenticator
 {
+  private static final String DEFAULT_IDENTITY = "defaultUser";
   private final AuthenticationResult anonymousResult;
-  private final String DEFAULT_IDENTITY = "defaultUser";
 
   @JsonCreator
   public AnonymousAuthenticator(
