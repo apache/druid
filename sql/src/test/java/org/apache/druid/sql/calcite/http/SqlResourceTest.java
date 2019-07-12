@@ -689,6 +689,18 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
+  @Test
+  public void testExtractMillisecondFromExpr() throws Exception
+  {
+    final QueryInterruptedException exception = doPost(
+      new SqlQuery("SELECT EXTRACT(MILLISECOND FROM __time) AS T FROM druid.foo LIMIT 1",
+        ResultFormat.OBJECT, false,
+        null)
+    ).lhs;
+
+    checkSqlRequestLog(true);
+  }
+
   // Returns either an error or a result, assuming the result is a JSON object.
   private <T> Pair<QueryInterruptedException, T> doPost(
       final SqlQuery query,
