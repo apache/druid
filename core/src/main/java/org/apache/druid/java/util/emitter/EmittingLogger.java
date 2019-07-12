@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+import javax.annotation.Nullable;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -61,15 +62,22 @@ public class EmittingLogger extends Logger
     return makeAlert(null, message, objects);
   }
 
-  public AlertBuilder makeAlert(Throwable t, String message, Object... objects)
+  public AlertBuilder makeAlert(@Nullable Throwable t, String message, Object... objects)
   {
     if (emitter == null) {
       final String errorMessage = StringUtils.format(
-          "Emitter not initialized!  Cannot alert.  Please make sure to call %s.registerEmitter()", this.getClass()
+          "Emitter not initialized!  Cannot alert.  Please make sure to call %s.registerEmitter()\n"
+          + "Message: %s",
+          this.getClass(),
+          StringUtils.nonStrictFormat(message, objects)
       );
 
       error(errorMessage);
-      throw new ISE(errorMessage);
+      ISE e = new ISE(errorMessage);
+      if (t != null) {
+        e.addSuppressed(t);
+      }
+      throw e;
     }
 
     final AlertBuilder retVal = new EmittingAlertBuilder(t, StringUtils.format(message, objects), emitter)

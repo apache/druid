@@ -84,6 +84,7 @@ public class DruidCoordinatorBalancerProfiler
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
+        EasyMock.anyObject(),
         EasyMock.anyObject()
     );
     EasyMock.expectLastCall().anyTimes();
@@ -181,6 +182,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.replay(druidServer2);
 
     coordinator.moveSegment(
+        EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),

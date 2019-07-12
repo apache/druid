@@ -22,72 +22,62 @@ package org.apache.druid.timeline.partition;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.SortedSet;
 import java.util.Spliterator;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  * An object that clumps together multiple other objects which each represent a shard of some space.
  */
 public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 {
-  private final TreeSet<PartitionChunk<T>> holderSet;
+  private final TreeMap<PartitionChunk<T>, PartitionChunk<T>> holderMap;
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
-    this.holderSet = new TreeSet<>();
+    this.holderMap = new TreeMap<>();
     add(initialChunk);
   }
 
   public PartitionHolder(List<PartitionChunk<T>> initialChunks)
   {
-    this.holderSet = new TreeSet<>();
+    this.holderMap = new TreeMap<>();
     for (PartitionChunk<T> chunk : initialChunks) {
       add(chunk);
     }
   }
 
-  public PartitionHolder(PartitionHolder partitionHolder)
+  public PartitionHolder(PartitionHolder<T> partitionHolder)
   {
-    this.holderSet = new TreeSet<>();
-    this.holderSet.addAll(partitionHolder.holderSet);
+    this.holderMap = new TreeMap<>();
+    this.holderMap.putAll(partitionHolder.holderMap);
   }
 
-  public void add(PartitionChunk<T> chunk)
+  public boolean add(PartitionChunk<T> chunk)
   {
-    holderSet.add(chunk);
+    return holderMap.putIfAbsent(chunk, chunk) == null;
   }
 
+  @Nullable
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    if (!holderSet.isEmpty()) {
-      // Somewhat funky implementation in order to return the removed object as it exists in the set
-      SortedSet<PartitionChunk<T>> tailSet = holderSet.tailSet(chunk, true);
-      if (!tailSet.isEmpty()) {
-        PartitionChunk<T> element = tailSet.first();
-        if (chunk.equals(element)) {
-          holderSet.remove(element);
-          return element;
-        }
-      }
-    }
-    return null;
+    return holderMap.remove(chunk);
   }
 
   public boolean isEmpty()
   {
-    return holderSet.isEmpty();
+    return holderMap.isEmpty();
   }
 
   public boolean isComplete()
   {
-    if (holderSet.isEmpty()) {
+    if (holderMap.isEmpty()) {
       return false;
     }
 
-    Iterator<PartitionChunk<T>> iter = holderSet.iterator();
+    Iterator<PartitionChunk<T>> iter = holderMap.keySet().iterator();
 
     PartitionChunk<T> curr = iter.next();
 
@@ -117,7 +107,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   public PartitionChunk<T> getChunk(final int partitionNum)
   {
     final Iterator<PartitionChunk<T>> retVal = Iterators.filter(
-        holderSet.iterator(),
+        holderMap.keySet().iterator(),
         input -> input.getChunkNumber() == partitionNum
     );
 
@@ -127,13 +117,13 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return holderSet.iterator();
+    return holderMap.keySet().iterator();
   }
 
   @Override
   public Spliterator<PartitionChunk<T>> spliterator()
   {
-    return holderSet.spliterator();
+    return holderMap.keySet().spliterator();
   }
 
   public Iterable<T> payloads()
@@ -153,7 +143,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
     PartitionHolder that = (PartitionHolder) o;
 
-    if (!holderSet.equals(that.holderSet)) {
+    if (!holderMap.equals(that.holderMap)) {
       return false;
     }
 
@@ -163,14 +153,14 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   @Override
   public int hashCode()
   {
-    return holderSet.hashCode();
+    return holderMap.hashCode();
   }
 
   @Override
   public String toString()
   {
     return "PartitionHolder{" +
-           "holderSet=" + holderSet +
+           "holderMap=" + holderMap +
            '}';
   }
 }

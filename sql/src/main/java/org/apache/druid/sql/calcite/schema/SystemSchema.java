@@ -364,12 +364,13 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult,
-          () -> it,
-          SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
-          authorizerMapper
-      );
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+          .filterAuthorizedResources(
+              authenticationResult,
+              () -> it,
+              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
+              authorizerMapper
+          );
       return authorizedSegments.iterator();
     }
 

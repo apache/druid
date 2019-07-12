@@ -571,6 +571,7 @@ public class DruidCoordinatorBalancerTest
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
+        EasyMock.anyObject(),
         EasyMock.anyObject()
     );
     EasyMock.expectLastCall().anyTimes();

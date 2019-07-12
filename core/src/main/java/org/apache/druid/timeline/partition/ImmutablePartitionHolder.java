@@ -23,7 +23,7 @@ package org.apache.druid.timeline.partition;
  */
 public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
 {
-  public ImmutablePartitionHolder(PartitionHolder partitionHolder)
+  public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
   {
     super(partitionHolder);
   }
@@ -35,7 +35,7 @@ public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
   }
 
   @Override
-  public void add(PartitionChunk<T> tPartitionChunk)
+  public boolean add(PartitionChunk<T> tPartitionChunk)
   {
     throw new UnsupportedOperationException();
   }

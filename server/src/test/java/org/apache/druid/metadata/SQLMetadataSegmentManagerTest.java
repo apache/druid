@@ -160,14 +160,14 @@ public class SQLMetadataSegmentManagerTest
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         sqlSegmentsMetadata
-            .prepareImmutableDataSourcesWithAllUsedSegments()
+            .getImmutableDataSourcesWithAllUsedSegments()
             .stream()
             .map(ImmutableDruidDataSource::getName)
             .collect(Collectors.toList())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
@@ -181,7 +181,7 @@ public class SQLMetadataSegmentManagerTest
     DataSegment newSegment = pollThenStopThenStartIntro();
     Assert.assertEquals(
         ImmutableSet.of(newSegment),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
     );
   }
 
@@ -191,7 +191,7 @@ public class SQLMetadataSegmentManagerTest
     DataSegment newSegment = pollThenStopThenStartIntro();
     Assert.assertEquals(
         ImmutableSet.of(newSegment),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.getDataSourceWithUsedSegments("wikipedia2").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
     );
   }
 
@@ -203,7 +203,7 @@ public class SQLMetadataSegmentManagerTest
         ImmutableSet.of(segment1, segment2, newSegment),
         ImmutableSet.copyOf(
             sqlSegmentsMetadata
-                .prepareImmutableDataSourcesWithAllUsedSegments()
+                .getImmutableDataSourcesWithAllUsedSegments()
                 .stream()
                 .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream())
                 .iterator()
@@ -261,7 +261,7 @@ public class SQLMetadataSegmentManagerTest
 
     Assert.assertEquals(
         "wikipedia",
-        Iterables.getOnlyElement(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
+        Iterables.getOnlyElement(sqlSegmentsMetadata.getImmutableDataSourcesWithAllUsedSegments()).getName()
     );
   }
 
@@ -297,10 +297,11 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    awaitPollingNewDataSource(newDataSource);
+    awaitDataSourceAppeared(newDataSource);
     int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource(newDataSource);
     Assert.assertEquals(1, numChangedSegments);
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    awaitDataSourceDisappeared(newDataSource);
+    Assert.assertNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
   }
 
   private static DataSegment createNewSegment1(String newDataSource)
@@ -342,15 +343,24 @@ public class SQLMetadataSegmentManagerTest
     );
 
     publisher.publishSegment(newSegment);
+    awaitDataSourceAppeared(newDataSource);
+    Assert.assertNotNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
 
-    awaitPollingNewDataSource(newDataSource);
-    Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId()));
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId().toString()));
+    awaitDataSourceDisappeared(newDataSource);
+    Assert.assertNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
   }
 
-  private void awaitPollingNewDataSource(String newDataSource) throws InterruptedException
+  private void awaitDataSourceAppeared(String newDataSource) throws InterruptedException
   {
-    while (sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource) == null) {
+    while (sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource) == null) {
+      Thread.sleep(1000);
+    }
+  }
+
+  private void awaitDataSourceDisappeared(String dataSource) throws InterruptedException
+  {
+    while (sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(dataSource) != null) {
       Thread.sleep(1000);
     }
   }

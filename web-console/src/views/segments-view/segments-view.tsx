@@ -20,7 +20,7 @@ import { Button, Intent } from '@blueprintjs/core';
 import { H5 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
@@ -80,7 +80,7 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
-export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
+export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;

@@ -41,13 +41,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
   public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-    for (DataSegment dataSegment : appenderatorTester.getPushedSegments()) {
-      timeline.add(
-          dataSegment.getInterval(),
-          dataSegment.getVersion(),
-          dataSegment.getShardSpec().createChunk(dataSegment)
-      );
-    }
+    VersionedIntervalTimeline.addSegments(timeline, appenderatorTester.getPushedSegments().iterator());
 
     final Set<DataSegment> retVal = new HashSet<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {

@@ -265,7 +265,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
 
     // Emit segment metrics
     final Stream<DataSegment> allSegments = params
-        .getDataSourcesWithUsedSegments()
+        .getUsedSegmentsTimelinesPerDataSource()
         .values()
         .stream()
         .flatMap(timeline -> timeline.getAllTimelineEntries().values().stream())

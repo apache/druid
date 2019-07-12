@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { render } from 'react-testing-library';
 
 import { TableCell } from './table-cell';
@@ -27,6 +27,17 @@ describe('table cell', () => {
       value={null}
       unparseable={false}
       timestamp={false}
+    />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot null timestamp', () => {
+    const tableCell = <TableCell
+      value={null}
+      unparseable={false}
+      timestamp
     />;
 
     const { container } = render(tableCell);

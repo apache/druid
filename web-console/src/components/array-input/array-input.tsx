@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { ITagInputProps, TextArea } from '@blueprintjs/core';
-import * as React from 'react';
+import { TextArea } from '@blueprintjs/core';
+import React from 'react';
 
 export interface ArrayInputProps {
   className?: string;
@@ -28,7 +28,7 @@ export interface ArrayInputProps {
   disabled?: boolean;
 }
 
-export class ArrayInput extends React.Component<ArrayInputProps, { stringValue: string }> {
+export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringValue: string }> {
   constructor(props: ArrayInputProps) {
     super(props);
     this.state = {

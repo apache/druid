@@ -19,7 +19,7 @@
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 
 import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
@@ -38,7 +38,7 @@ export interface OverlordDynamicConfigDialogState {
   historyRecords: any[];
 }
 
-export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
+export class OverlordDynamicConfigDialog extends React.PureComponent<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
   private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: OverlordDynamicConfigDialogProps) {

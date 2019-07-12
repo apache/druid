@@ -268,6 +268,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         movingSegments.put(segmentId, segment);
         callback = () -> movingSegments.remove(segmentId);
         coordinator.moveSegment(
+            params,
             fromServer,
             toServer,
             segmentToMove,

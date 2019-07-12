@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Icon, IconName, IDialogProps, Intent } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import './table-action-dialog.scss';
 
@@ -34,7 +34,7 @@ interface TableActionDialogProps extends IDialogProps {
   bottomButtons?: React.ReactNode;
 }
 
-export class TableActionDialog extends React.Component<TableActionDialogProps, {}> {
+export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
   constructor(props: TableActionDialogProps) {
     super(props);
     this.state = {};

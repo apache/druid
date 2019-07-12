@@ -502,7 +502,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(dataSourceName, segmentId);
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
@@ -614,9 +614,7 @@ public class DataSourcesResource
         continue;
       }
 
-      if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, new HashSet<>());
-      }
+      tierDistinctSegments.computeIfAbsent(tier, t -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {

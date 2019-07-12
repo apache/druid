@@ -19,7 +19,7 @@
 import { Button, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 export interface ClearableInputProps extends React.Props<any> {
   className?: string;
@@ -28,7 +28,7 @@ export interface ClearableInputProps extends React.Props<any> {
   placeholder: string;
 }
 
-export class ClearableInput extends React.Component<ClearableInputProps, {}> {
+export class ClearableInput extends React.PureComponent<ClearableInputProps> {
   render() {
     const { className, value, onChange, placeholder } = this.props;
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 
 import './loader.scss';
 
@@ -28,7 +28,7 @@ export interface LoaderProps extends React.Props<any> {
 export interface LoaderState {
 }
 
-export class Loader extends React.Component<LoaderProps, LoaderState> {
+export class Loader extends React.PureComponent<LoaderProps, LoaderState> {
 
   render() {
     const { loadingText, loading } = this.props;

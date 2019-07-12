@@ -39,6 +39,8 @@ public interface Supervisor
 
   SupervisorReport getStatus();
 
+  SupervisorStateManager.State getState();
+
   default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();

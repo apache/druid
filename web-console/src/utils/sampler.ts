@@ -24,13 +24,12 @@ import {
   DimensionsSpec,
   getEmptyTimestampSpec, getSpecType,
   IngestionSpec,
-  IoConfig, MetricSpec,
+  IoConfig, isColumnTimestampSpec, MetricSpec,
   Parser,
   ParseSpec,
   Transform, TransformSpec
 } from './ingestion-spec';
-import { deepGet, deepSet, shallowCopy, whitelistKeys } from './object-change';
-import { QueryState } from './query-state';
+import { deepGet, deepSet, whitelistKeys } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
@@ -209,7 +208,42 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
   const ioConfig: IoConfig = makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy);
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+  const timestampSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || getEmptyTimestampSpec();
+  const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
 
+  // First do a query with a static timestamp spec
+  const sampleSpecColumns: SampleSpec = {
+    type: samplerType,
+    spec: {
+      type: samplerType,
+      ioConfig: deepSet(ioConfig, 'type', samplerType),
+      dataSchema: {
+        dataSource: 'sample',
+        parser: {
+          type: parser.type,
+          parseSpec: (
+            parser.parseSpec ?
+              Object.assign({}, parseSpec, {
+                dimensionsSpec: {},
+                timestampSpec: columnTimestampSpec ? getEmptyTimestampSpec() : timestampSpec
+              }) :
+              undefined
+          ) as any
+        }
+      }
+    },
+    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
+      cacheKey
+    })
+  };
+
+  const sampleColumns = await postToSampler(sampleSpecColumns, 'timestamp-columns');
+
+  // If we are not parsing a column then there is nothing left to do
+  if (!columnTimestampSpec) return sampleColumns;
+
+  // If we are trying to parts a column then get a bit fancy:
+  // Query the same sample again (same cache key)
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
@@ -226,11 +260,31 @@ export async function sampleForTimestamp(spec: IngestionSpec, sampleStrategy: Sa
       }
     },
     samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
+      cacheKey: sampleColumns.cacheKey || cacheKey
     })
   };
 
-  return postToSampler(sampleSpec, 'timestamp');
+  const sampleTime = await postToSampler(sampleSpec, 'timestamp-time');
+
+  if (
+    sampleTime.cacheKey !== sampleColumns.cacheKey ||
+    sampleTime.data.length !== sampleColumns.data.length
+  ) {
+    // If the two responses did not come from the same cache (or for some reason have different lengths) then
+    // just return the one with the parsed time column.
+    return sampleTime;
+  }
+
+  const sampleTimeData = sampleTime.data;
+  return Object.assign({}, sampleColumns, {
+    data: sampleColumns.data.map((d, i) => {
+      // Merge the column sample with the time column sample
+      if (!d.parsed) return d;
+      const timeDatumParsed = sampleTimeData[i].parsed;
+      d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
+      return d;
+    })
+  });
 }
 
 export async function sampleForTransform(spec: IngestionSpec, sampleStrategy: SampleStrategy, cacheKey: string | undefined): Promise<SampleResponse> {

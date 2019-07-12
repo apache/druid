@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
 
@@ -33,7 +33,7 @@ export interface QueryPlanDialogState {
 
 }
 
-export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, QueryPlanDialogState> {
+export class QueryPlanDialog extends React.PureComponent<QueryPlanDialogProps, QueryPlanDialogState> {
 
   constructor(props: QueryPlanDialogProps) {
     super(props);

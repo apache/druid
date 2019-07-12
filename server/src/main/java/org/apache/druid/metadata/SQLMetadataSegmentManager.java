@@ -24,12 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.client.DruidDataSource;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
@@ -70,7 +71,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -96,10 +96,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private static class PeriodicDatabasePoll implements DatabasePoll
   {
     /**
-     * This future allows to wait until {@link #dataSources} is initialized in the first {@link #poll()} happening since
-     * {@link #startPollingDatabasePeriodically()} is called for the first time, or since the last visible (in
-     * happens-before terms) call to {@link #startPollingDatabasePeriodically()} in case of Coordinator's leadership
-     * changes.
+     * This future allows to wait until {@link #dataSourcesSnapshot} is initialized in the first {@link #poll()}
+     * happening since {@link #startPollingDatabasePeriodically()} is called for the first time, or since the last
+     * visible (in happens-before terms) call to {@link #startPollingDatabasePeriodically()} in case of Coordinator's
+     * leadership changes.
      */
     final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
   }
@@ -148,40 +148,41 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   /**
    * This field is made volatile to avoid "ghost secondary reads" that may result in NPE, see
-   * https://github.com/code-review-checklists/java-concurrency#safe-local-dcl (note that dataSources resembles a lazily
-   * initialized field). Alternative is to always read the field in a snapshot local variable, but it's too easy to
-   * forget to do.
+   * https://github.com/code-review-checklists/java-concurrency#safe-local-dcl (note that dataSourcesSnapshot resembles
+   * a lazily initialized field). Alternative is to always read the field in a snapshot local variable, but it's too
+   * easy to forget to do.
    *
    * This field may be updated from {@link #exec}, or from whatever thread calling {@link #doOnDemandPoll} via {@link
    * #awaitOrPerformDatabasePoll()} via one of the public methods of SqlSegmentsMetadata.
    */
-  private volatile @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSources = null;
+  private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
   /**
-   * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSources}, either
+   * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSourcesSnapshot}, either
    * periodically (see {@link PeriodicDatabasePoll}, {@link #startPollingDatabasePeriodically}, {@link
    * #stopPollingDatabasePeriodically}) or "on demand" (see {@link OnDemandDatabasePoll}), when one of the methods that
-   * accesses {@link #dataSources} state (such as {@link #prepareImmutableDataSourceWithUsedSegments}) is called when
-   * the Coordinator is not the leader and therefore SqlSegmentsMetadata isn't polling the database periodically.
+   * accesses {@link #dataSourcesSnapshot}'s state (such as {@link #getImmutableDataSourceWithUsedSegments}) is
+   * called when the Coordinator is not the leader and therefore SqlSegmentsMetadata isn't polling the database
+   * periodically.
    *
    * Note that if there is a happens-before relationship between a call to {@link #startPollingDatabasePeriodically()}
-   * (on Coordinators' leadership change) and one of the methods accessing the {@link #dataSources}'s state in this
-   * class the latter is guaranteed to await for the initiated periodic poll. This is because when the latter method
-   * calls to {@link #awaitLatestDatabasePoll()} via {@link #awaitOrPerformDatabasePoll}, they will
+   * (on Coordinators' leadership change) and one of the methods accessing the {@link #dataSourcesSnapshot}'s state in
+   * this class the latter is guaranteed to await for the initiated periodic poll. This is because when the latter
+   * method calls to {@link #awaitLatestDatabasePoll()} via {@link #awaitOrPerformDatabasePoll}, they will
    * see the latest {@link PeriodicDatabasePoll} value (stored in this field, latestDatabasePoll, in {@link
    * #startPollingDatabasePeriodically()}) and to await on its {@link PeriodicDatabasePoll#firstPollCompletionFuture}.
    *
    * However, the guarantee explained above doesn't make any actual semantic difference, because on both periodic and
    * on-demand database polls the same invariant is maintained that the results not older than {@link
    * #periodicPollDelay} are used. The main difference is in performance: since on-demand polls are irregular and happen
-   * in the context of the thread wanting to access the {@link #dataSources}, that may cause delays in the logic.
-   * On the other hand, periodic polls are decoupled into {@link #exec} and {@link #dataSources}-accessing methods
-   * should be generally "wait free" for database polls.
+   * in the context of the thread wanting to access the {@link #dataSourcesSnapshot}, that may cause delays in the
+   * logic. On the other hand, periodic polls are decoupled into {@link #exec} and {@link
+   * #dataSourcesSnapshot}-accessing methods should be generally "wait free" for database polls.
    *
    * The notion and the complexity of "on demand" database polls was introduced to simplify the interface of {@link
-   * MetadataSegmentManager} and guarantee that it always returns consistent and relatively up-to-date data from methods like
-   * {@link #prepareImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive polls. The last part is
-   * achieved via "hooking on" other polls by awaiting on {@link PeriodicDatabasePoll#firstPollCompletionFuture} or
+   * MetadataSegmentManager} and guarantee that it always returns consistent and relatively up-to-date data from methods
+   * like {@link #getImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive polls. The last part
+   * is achieved via "hooking on" other polls by awaiting on {@link PeriodicDatabasePoll#firstPollCompletionFuture} or
    * {@link OnDemandDatabasePoll#pollCompletionFuture}, see {@link #awaitOrPerformDatabasePoll} method
    * implementation for details.
    *
@@ -368,8 +369,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
 
-      // NOT nulling dataSources, allowing to query the latest polled data even when this SegmentsMetadata object is
-      // stopped.
+      // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadata
+      // object is stopped.
 
       currentStartPollingOrder = -1;
     }
@@ -528,7 +529,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         Iterators.concat(usedSegmentsOverlappingInterval.iterator(), unusedSegmentsInInterval.iterator())
     );
 
-    return markNonOvershadowedSegmentsAsUsed(dataSourceName, unusedSegmentsInInterval, versionedIntervalTimeline);
+    return markNonOvershadowedSegmentsAsUsed(unusedSegmentsInInterval, versionedIntervalTimeline);
   }
 
   private static void consume(Iterator<?> iterator)
@@ -538,28 +539,15 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  /** Also puts non-overshadowed segments into {@link #dataSources}. */
   private int markNonOvershadowedSegmentsAsUsed(
-      String dataSourceName,
       List<DataSegment> unusedSegments,
       VersionedIntervalTimeline<String, DataSegment> timeline
   )
   {
-    @Nullable
-    DruidDataSource dataSource = null;
-    if (dataSources != null) {
-      dataSource = dataSources.computeIfAbsent(
-          dataSourceName,
-          dsName -> new DruidDataSource(dsName, createDefaultDataSourceProperties())
-      );
-    }
     List<String> segmentIdsToMarkAsUsed = new ArrayList<>();
     for (DataSegment segment : unusedSegments) {
       if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion())) {
         continue;
-      }
-      if (dataSource != null) {
-        dataSource.addSegment(segment);
       }
       segmentIdsToMarkAsUsed.add(segment.getId().toString());
     }
@@ -590,7 +578,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       List<DataSegment> unusedSegments = unusedSegmentsAndTimeline.lhs;
       VersionedIntervalTimeline<String, DataSegment> timeline = unusedSegmentsAndTimeline.rhs;
-      return markNonOvershadowedSegmentsAsUsed(dataSource, unusedSegments, timeline);
+      return markNonOvershadowedSegmentsAsUsed(unusedSegments, timeline);
     }
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);
@@ -726,10 +714,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .execute()
       );
 
-      if (dataSources != null) {
-        dataSources.remove(dataSource);
-      }
-
       return numUpdatedDatabaseEntries;
     }
     catch (RuntimeException e) {
@@ -738,62 +722,15 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  /**
+   * This method does not update {@link #dataSourcesSnapshot}, see the comments in {@link #doPoll()} about
+   * snapshot update. The update of the segment's state will be reflected after the next {@link DatabasePoll}.
+   */
   @Override
-  public boolean markSegmentAsUnused(String dataSourceName, final String segmentId)
+  public boolean markSegmentAsUnused(final String segmentId)
   {
     try {
-      boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId);
-      if (dataSources != null) {
-        removeSegmentFromPolledDataSources(dataSourceName, segmentId, dataSources);
-      }
-      return segmentStateChanged;
-    }
-    catch (RuntimeException e) {
-      log.error(e, "Exception marking segment [%s] as unused", segmentId);
-      throw e;
-    }
-  }
-
-  private static void removeSegmentFromPolledDataSources(
-      String dataSourceName,
-      String segmentId,
-      ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot
-  )
-  {
-    // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is
-    // a potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run
-    // fast.
-    List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-    dataSourcesSnapshot.computeIfPresent(
-        dataSourceName,
-        (dsName, dataSource) -> {
-          for (SegmentId possibleSegmentId : possibleSegmentIds) {
-            if (dataSource.removeSegment(possibleSegmentId) != null) {
-              break;
-            }
-          }
-          // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-          return dataSource.isEmpty() ? null : dataSource;
-        }
-    );
-  }
-
-  @Override
-  public boolean markSegmentAsUnused(SegmentId segmentId)
-  {
-    try {
-      final boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId.toString());
-      if (dataSources != null) {
-        dataSources.computeIfPresent(
-            segmentId.getDataSource(),
-            (dsName, dataSource) -> {
-              dataSource.removeSegment(segmentId);
-              // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-              return dataSource.isEmpty() ? null : dataSource;
-            }
-        );
-      }
-      return segmentStateChanged;
+      return markSegmentAsUnusedInDatabase(segmentId);
     }
     catch (RuntimeException e) {
       log.error(e, "Exception marking segment [%s] as unused", segmentId);
@@ -820,18 +757,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             )
         ));
         final int[] segmentChanges = batch.execute();
-        int numChangedSegments = computeNumChangedSegments(segmentIdList, segmentChanges);
-
-        // Also remove segments from polled dataSources.
-        // Cache dataSourcesSnapshot locally to make sure that we do all updates to a single map, not to two different
-        // maps if poll() happens concurrently.
-        @MonotonicNonNull ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = this.dataSources;
-        if (dataSourcesSnapshot != null) {
-          for (String segmentId : segmentIdList) {
-            removeSegmentFromPolledDataSources(dataSourceName, segmentId, dataSourcesSnapshot);
-          }
-        }
-        return numChangedSegments;
+        return computeNumChangedSegments(segmentIdList, segmentChanges);
       });
     }
     catch (Exception e) {
@@ -858,13 +784,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .bind("end", interval.getEnd().toString())
               .execute()
       );
-      if (dataSources != null) {
-        dataSources.computeIfPresent(dataSourceName, (dsName, dataSource) -> {
-          dataSource.removeSegmentsIf(segment -> interval.contains(segment.getInterval()));
-          // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-          return dataSource.isEmpty() ? null : dataSource;
-        });
-      }
       return numUpdatedDatabaseEntries;
     }
     catch (Exception e) {
@@ -924,37 +843,36 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public @Nullable ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSourceName)
+  public @Nullable ImmutableDruidDataSource getImmutableDataSourceWithUsedSegments(String dataSourceName)
   {
-    awaitOrPerformDatabasePoll();
-    final DruidDataSource dataSource = dataSources.get(dataSourceName);
-    return dataSource == null || dataSource.isEmpty() ? null : dataSource.toImmutableDruidDataSource();
+    return getSnapshotOfDataSourcesWithAllUsedSegments().getDataSource(dataSourceName);
   }
 
   @Override
-  public @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource)
+  public Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments()
   {
-    awaitOrPerformDatabasePoll();
-    return dataSources.get(dataSource);
+    return getSnapshotOfDataSourcesWithAllUsedSegments().getDataSourcesWithAllUsedSegments();
   }
 
   @Override
-  public Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments()
+  public Set<SegmentId> getOvershadowedSegments()
+  {
+    return getSnapshotOfDataSourcesWithAllUsedSegments().getOvershadowedSegments();
+  }
+
+  @Override
+  public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     awaitOrPerformDatabasePoll();
-    return dataSources
-        .values()
-        .stream()
-        .map(DruidDataSource::toImmutableDruidDataSource)
-        .collect(Collectors.toList());
+    return dataSourcesSnapshot;
   }
 
   @Override
   public Iterable<DataSegment> iterateAllUsedSegments()
   {
     awaitOrPerformDatabasePoll();
-    return () -> dataSources
-        .values()
+    return () -> dataSourcesSnapshot
+        .getDataSourcesWithAllUsedSegments()
         .stream()
         .flatMap(dataSource -> dataSource.getSegments().stream())
         .iterator();
@@ -1021,7 +939,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                         catch (IOException e) {
                           log.makeAlert(e, "Failed to read segment from db.").emit();
                           // If one entry in database is corrupted doPoll() should continue to work overall. See
-                          // .filter(Objects::nonNull) below in this method.
+                          // filter by `Objects::nonNull` below in this method.
                           return null;
                         }
                       }
@@ -1039,20 +957,20 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
     log.info("Polled and found %,d segments in the database", segments.size());
 
-    ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
-
     ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
-    segments
-        .stream()
-        .filter(Objects::nonNull) // Filter corrupted entries (see above in this method).
-        .forEach(segment -> {
-          newDataSources
-              .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
-              .addSegmentIfAbsent(segment);
-        });
 
-    // Replace dataSources atomically.
-    dataSources = newDataSources;
+    // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
+    // segments are marked as used or unused directly (via markAs...() methods in MetadataSegmentManager), the
+    // dataSourcesSnapshot can become invalid until the next database poll.
+    // DataSourcesSnapshot computes the overshadowed segments, which makes it an expensive operation if the
+    // snapshot was invalidated on each segment mark as unused or used, especially if a user issues a lot of single
+    // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
+    // Updates outside of database polls were primarily for the user experience, so users would immediately see the
+    // effect of a segment mark call reflected in MetadataResource API calls.
+    dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+        Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+        dataSourceProperties
+    );
   }
 
   private static ImmutableMap<String, String> createDefaultDataSourceProperties()
@@ -1063,18 +981,19 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and then replace them in {@link #dataSources}. This method allows to use already
-   * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
+   * existing segments each time, and then replace them in {@link #dataSourcesSnapshot}. This method allows to use
+   * already existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
    * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
    * full GCs.
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    if (dataSources == null) {
+    @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = this.dataSourcesSnapshot;
+    if (dataSourcesSnapshot == null) {
       return segment;
     }
-    @Nullable DruidDataSource dataSource = dataSources.get(segment.getDataSource());
+    @Nullable ImmutableDruidDataSource dataSource = dataSourcesSnapshot.getDataSource(segment.getDataSource());
     if (dataSource == null) {
       return segment;
     }

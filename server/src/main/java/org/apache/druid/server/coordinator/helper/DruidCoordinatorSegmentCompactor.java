@@ -76,7 +76,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     final CoordinatorStats stats = new CoordinatorStats();
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSourcesWithUsedSegments();
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+          params.getUsedSegmentsTimelinesPerDataSource();
       List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {

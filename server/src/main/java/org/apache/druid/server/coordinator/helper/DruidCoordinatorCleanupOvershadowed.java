@@ -61,12 +61,11 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
-          if (timeline == null) {
-            timeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-            timelines.put(dataSource.getName(), timeline);
-          }
-
+          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+              .computeIfAbsent(
+                  dataSource.getName(),
+                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+              );
           VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
         }
       }
