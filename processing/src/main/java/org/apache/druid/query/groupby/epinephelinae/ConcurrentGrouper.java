@@ -264,9 +264,12 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
       synchronized (hashBasedGrouper) {
         if (!spilling) {
-          if (hashBasedGrouper.aggregate(key, keyHash).isOk()) {
+          final AggregateResult aggregateResult = hashBasedGrouper.aggregate(key, keyHash);
+          if (aggregateResult.isOk()) {
             return AggregateResult.ok();
           } else {
+            // Expecting all-or-nothing behavior.
+            assert aggregateResult.getCount() == 0;
             spilling = true;
           }
         }

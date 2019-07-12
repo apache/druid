@@ -35,11 +35,15 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Comparator;
 
@@ -122,6 +126,22 @@ public class BoundFilter implements Filter
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return Filters.makeValueMatcher(factory, boundDimFilter.getDimension(), getPredicateFactory());
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        boundDimFilter.getDimension(),
+        VectorValueMatcherColumnStrategizer.instance(),
+        factory
+    ).makeMatcher(getPredicateFactory());
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
   }
 
   @Override

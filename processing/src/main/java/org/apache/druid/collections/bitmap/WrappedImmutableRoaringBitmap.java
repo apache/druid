@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
+import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
@@ -74,6 +75,12 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   public IntIterator iterator()
   {
     return bitmap.getIntIterator();
+  }
+
+  @Override
+  public BatchIterator batchIterator()
+  {
+    return bitmap.getBatchIterator();
   }
 
   @Override

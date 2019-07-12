@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 
 import java.nio.ByteBuffer;
@@ -31,7 +30,11 @@ import java.nio.FloatBuffer;
 public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloats>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseFloatBuffers;
+
+  // The number of rows in this column.
   private final int totalSize;
+
+  // The number of floats per buffer.
   private final int sizePer;
 
   public BlockLayoutColumnarFloatsSupplier(
@@ -81,7 +84,9 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** floatBuffer's position must be 0 */
+    /**
+     * floatBuffer's position must be 0
+     */
     FloatBuffer floatBuffer;
 
     @Override
@@ -105,17 +110,59 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     }
 
     @Override
-    public void fill(int index, float[] toFill)
+    public void get(final float[] out, final int start, final int length)
     {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            StringUtils.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
+      // division + remainder is optimized by the compiler so keep those together
+      int bufferNum = start / sizePer;
+      int bufferIndex = start % sizePer;
+
+      int p = 0;
+
+      while (p < length) {
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int limit = Math.min(length - p, sizePer - bufferIndex);
+        final int oldPosition = floatBuffer.position();
+        try {
+          floatBuffer.position(bufferIndex);
+          floatBuffer.get(out, p, limit);
+        }
+        finally {
+          floatBuffer.position(oldPosition);
+        }
+        p += limit;
+        bufferNum++;
+        bufferIndex = 0;
       }
-      for (int i = 0; i < toFill.length; i++) {
-        toFill[i] = get(index + i);
+    }
+
+    @Override
+    public void get(final float[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        int bufferNum = indexes[p] / sizePer;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int indexOffset = bufferNum * sizePer;
+
+        int i = p;
+        for (; i < length; i++) {
+          int index = indexes[i] - indexOffset;
+          if (index >= sizePer) {
+            break;
+          }
+
+          out[i] = floatBuffer.get(index);
+        }
+
+        assert i > p;
+        p = i;
       }
     }
 

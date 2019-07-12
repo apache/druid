@@ -22,9 +22,12 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 
@@ -55,10 +58,29 @@ public interface DimensionSpec extends Cacheable
 
   DimensionSelector decorate(DimensionSelector selector);
 
+  default SingleValueDimensionVectorSelector decorate(SingleValueDimensionVectorSelector selector)
+  {
+    throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
+  }
+
+  default MultiValueDimensionVectorSelector decorate(MultiValueDimensionVectorSelector selector)
+  {
+    throw new UOE("DimensionSpec[%s] cannot vectorize", getClass().getName());
+  }
+
   /**
    * Does this DimensionSpec require that decorate() be called to produce correct results?
    */
   boolean mustDecorate();
+
+  /**
+   * Does this DimensionSpec have working {@link #decorate(SingleValueDimensionVectorSelector)} and
+   * {@link #decorate(MultiValueDimensionVectorSelector)} methods?
+   */
+  default boolean canVectorize()
+  {
+    return false;
+  }
 
   boolean preservesOrdering();
 }

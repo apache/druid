@@ -84,7 +84,7 @@ public class Sequences
     return new MappedSequence<>(sequence, fn::apply);
   }
 
-  public static <T> Sequence<T> filter(Sequence<T> sequence, Predicate<T> pred)
+  public static <T> Sequence<T> filter(Sequence<T> sequence, Predicate<? super T> pred)
   {
     return new FilteredSequence<>(sequence, pred);
   }

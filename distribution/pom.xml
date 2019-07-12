@@ -131,6 +131,21 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>generate-license</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.parent.basedir}/docs/_bin/generate-license.py</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../licenses/APACHE2</argument>
+                                        <argument>${project.basedir}/../licenses.yaml</argument>
+                                        <argument>${project.basedir}/../LICENSE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
                                 <goals>
