@@ -89,11 +89,25 @@ export interface SegmentsViewState {
   hiddenColumns: LocalStorageBackedArray<string>;
   groupSegmentsBy: null | 'interval';
   loaded: boolean;
+
+  // table state
+  page: number | null;
+  pageSize: number | null;
+  filtered: number[] | null;
+  sorted: Sorted | null;
+}
+
+interface Sorted {
+  id: number;
+  desc: boolean;
 }
 
 interface QueryAndSkip {
-  query: string;
-  skip: number;
+  page: number;
+  pageSize: number;
+  filtered: Filter[];
+  sorted: Sorted[];
+  groupBy: boolean;
 }
 
 interface SegmentQueryResultRow {
@@ -116,7 +130,6 @@ interface SegmentQueryResultRow {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
   private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private previousTableState: any;
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
 
@@ -139,11 +152,18 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
       loaded: false,
+
+      page: null,
+      pageSize: null,
+      sorted: null,
+      filtered: null,
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
       processQuery: async (query: QueryAndSkip) => {
-        const results: any[] = (await queryDruidSql({ query: query.query })).slice(query.skip);
+        const results: any[] = (await queryDruidSql({ query: this.toSQL(query) })).slice(
+          query.page * query.pageSize,
+        );
         results.forEach(result => {
           try {
             result.payload = JSON.parse(result.payload);
@@ -218,17 +238,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsJsonQueryManager.terminate();
   }
 
-  private fetchData = (state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : this.previousTableState;
-    if (state) this.previousTableState = state;
-    const totalQuerySize = (page + 1) * pageSize;
+  toSQL(query: QueryAndSkip) {
+    const totalQuerySize = (query.page + 1) * query.pageSize;
 
-    const queryParts = [
+    let queryParts = [
       `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
       `FROM sys.segments`,
     ];
 
-    const whereParts = filtered
+    const whereParts = query.filtered
       .map((f: Filter) => {
         if (f.id.startsWith('is_')) {
           if (f.value === 'all') return null;
@@ -243,10 +261,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       queryParts.push('WHERE ' + whereParts.join(' AND '));
     }
 
-    if (sorted.length) {
+    if (query.sorted.length) {
       queryParts.push(
         'ORDER BY ' +
-          sorted
+          query.sorted
             .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
             .join(', '),
       );
@@ -254,34 +272,29 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     queryParts.push(`LIMIT ${totalQuerySize}`);
 
-    const query = queryParts.join('\n');
+    if (query.groupBy) {
+      queryParts = [
+        `SELECT ("start" || '/' || "end") AS "interval", * FROM sys.segments`,
+        `WHERE ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT  ${totalQuerySize})`,
+        `LIMIT ${totalQuerySize * 1000}`,
+      ];
+    }
+    return queryParts.join('\n');
+  }
+
+  private fetchData = (state?: any, groupBy?: boolean) => {
+    const { page, pageSize, filtered, sorted } = state ? state : this.state;
     this.segmentsSqlQueryManager.runQuery({
-      query,
-      skip: totalQuerySize - pageSize,
-    });
-  };
-
-  private fetchGroupData = (state?: any) => {
-    const { page, pageSize } = state ? state : this.previousTableState;
-    if (state) this.previousTableState = state;
-    const totalQuerySize = (page + 1) * pageSize;
-
-    const queryParts = [
-      'SELECT ("start" || \'/\' || "end") AS "interval", * FROM sys.segments',
-      `WHERE ("start" || \'/\' || "end") IN (SELECT "start" || \'/\' || "end" FROM sys.segments GROUP BY 1 LIMIT  ${totalQuerySize})`,
-      `LIMIT ${totalQuerySize * 1000}`,
-    ];
-
-    const query = queryParts.join('\n');
-    this.segmentsSqlQueryManager.runQuery({
-      query,
-      skip: totalQuerySize - pageSize,
+      page,
+      pageSize,
+      filtered,
+      sorted,
+      groupBy: groupBy ? true : false,
     });
   };
 
   private fetchClientSideData = (state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : this.previousTableState;
-    if (state) this.previousTableState = state;
+    const { page, pageSize, filtered, sorted } = state ? state : state;
     const { allSegments } = this.state;
     if (allSegments == null) return;
     const startPage = page * pageSize;
@@ -349,9 +362,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFetchData={
           noSqlMode
             ? this.fetchClientSideData
-            : groupSegmentsBy
-            ? this.fetchGroupData
-            : this.fetchData
+            : state => {
+                this.setState({
+                  page: state.page,
+                  pageSize: state.pageSize,
+                  filtered: state.filtered,
+                  sorted: state.sorted,
+                });
+                this.fetchData(state, groupSegmentsBy ? true : false);
+              }
         }
         showPageJump={false}
         ofText=""
@@ -598,7 +617,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 icon={IconNames.APPLICATION}
                 text="Go to SQL"
                 hidden={noSqlMode}
-                onClick={() => goToQuery(this.segmentsSqlQueryManager.getLastQuery().query)}
+                onClick={() => goToQuery(this.toSQL(this.segmentsSqlQueryManager.getLastQuery()))}
               />
             )}
             <Label>Group by</Label>
@@ -616,7 +635,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 active={groupSegmentsBy === 'interval'}
                 onClick={() => {
                   this.setState({ groupSegmentsBy: 'interval' });
-                  this.fetchGroupData();
+                  this.fetchData(null, true);
                 }}
               >
                 Interval
