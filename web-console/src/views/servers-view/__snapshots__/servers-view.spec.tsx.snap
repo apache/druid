@@ -30,10 +30,9 @@ exports[`servers view action servers view 1`] = `
         Tier
       </Blueprint3.Button>
     </Blueprint3.ButtonGroup>
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
+    <RefreshButton
+      localStorageKey="servers-refresh-rate"
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="application"
@@ -285,29 +284,5 @@ exports[`servers view action servers view 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Disable worker"
-    failText="Could not disable worker"
-    intent="danger"
-    onClose={[Function]}
-    successText="Worker has been disabled"
-  >
-    <p>
-      Are you sure you want to disable worker 'null'?
-    </p>
-  </AsyncActionDialog>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Enable worker"
-    failText="Could not enable worker"
-    intent="primary"
-    onClose={[Function]}
-    successText="Worker has been enabled"
-  >
-    <p>
-      Are you sure you want to enable worker 'null'?
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

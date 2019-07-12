@@ -21,8 +21,17 @@
     &.dimension {
       background: rgba(38, 170, 201, 0.5);
 
+<<<<<<< HEAD
       &.long { background: rgba(19, 129, 201, 0.5); }
       &.float { background: rgba(25, 145, 201, 0.5); }
+=======
+      &.long {
+        background: rgba(19, 129, 201, 0.5);
+      }
+      &.float {
+        background: rgba(25, 145, 201, 0.5);
+      }
+>>>>>>> upstream/master
     }
 
     &.metric {
@@ -34,8 +43,17 @@
     &.dimension {
       background: rgba(38, 170, 201, 0.1);
 
+<<<<<<< HEAD
       &.long { background: rgba(19, 129, 201, 0.1); }
       &.float { background: rgba(25, 145, 201, 0.1); }
+=======
+      &.long {
+        background: rgba(19, 129, 201, 0.1);
+      }
+      &.float {
+        background: rgba(25, 145, 201, 0.1);
+      }
+>>>>>>> upstream/master
     }
 
     &.metric {

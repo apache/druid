@@ -36,10 +36,6 @@ When submitting a pull request (PR), please use the following guidelines:
 - Do not use author tags/information in the code.
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
-- Keep the number of commits small and combine commits for related changes.
-  Each commit should compile on its own and ideally pass tests.
-- Keep formatting changes in separate commits to make code reviews easier and
-  distinguish them from actual code changes.
 
 You can find more developers' resources in [`dev/`](dev) directory.
 

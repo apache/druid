@@ -22,12 +22,21 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
+<<<<<<< HEAD
 import { DruidFilter, Transform } from '../../../utils/ingestion-spec';
 import { HeaderAndRows } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
 export interface FilterTableProps extends React.Props<any> {
+=======
+import { DruidFilter } from '../../../utils/ingestion-spec';
+import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+
+import './filter-table.scss';
+
+export interface FilterTableProps {
+>>>>>>> upstream/master
   sampleData: HeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
@@ -38,6 +47,7 @@ export interface FilterTableProps extends React.Props<any> {
 
 export class FilterTable extends React.PureComponent<FilterTableProps> {
   render() {
+<<<<<<< HEAD
     const { sampleData, columnFilter, dimensionFilters, selectedFilterIndex, onShowGlobalFilter, onFilterSelect } = this.props;
 
     return <ReactTable
@@ -84,5 +94,60 @@ export class FilterTable extends React.PureComponent<FilterTableProps> {
       showPagination={false}
       sortable={false}
     />;
+=======
+    const {
+      sampleData,
+      columnFilter,
+      dimensionFilters,
+      selectedFilterIndex,
+      onShowGlobalFilter,
+      onFilterSelect,
+    } = this.props;
+
+    return (
+      <ReactTable
+        className="filter-table -striped -highlight"
+        data={sampleData.rows}
+        columns={filterMap(sampleData.header, (columnName, i) => {
+          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          const timestamp = columnName === '__time';
+          const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
+          const filter = dimensionFilters[filterIndex];
+
+          const columnClassName = classNames({
+            filtered: filter,
+            selected: filter && filterIndex === selectedFilterIndex,
+          });
+          return {
+            Header: (
+              <div
+                className={classNames('clickable')}
+                onClick={() => {
+                  if (timestamp) {
+                    onShowGlobalFilter();
+                  } else if (filter) {
+                    onFilterSelect(filter, filterIndex);
+                  } else {
+                    onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
+                  }
+                }}
+              >
+                <div className="column-name">{columnName}</div>
+                <div className="column-detail">{filter ? `(filtered)` : ''}&nbsp;</div>
+              </div>
+            ),
+            headerClassName: columnClassName,
+            className: columnClassName,
+            id: String(i),
+            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+            Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
+          };
+        })}
+        defaultPageSize={50}
+        showPagination={false}
+        sortable={false}
+      />
+    );
+>>>>>>> upstream/master
   }
 }

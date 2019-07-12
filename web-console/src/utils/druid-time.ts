@@ -18,6 +18,7 @@
 
 import { jodaFormatToRegExp } from './joda-to-regexp';
 
+<<<<<<< HEAD
 export const BASIC_FORMAT_VALUES: string[] = [
   'iso',
   'millis',
@@ -42,6 +43,31 @@ export const DATE_TIME_FORMAT_VALUES: string[] = [
 ];
 
 const ALL_FORMAT_VALUES: string[] = BASIC_FORMAT_VALUES.concat(DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES);
+=======
+export const BASIC_FORMAT_VALUES: string[] = ['iso', 'millis', 'posix'];
+
+export const DATE_FORMAT_VALUES: string[] = [
+  'dd/MM/yyyy',
+  'MM/dd/yyyy',
+  'd/M/yy',
+  'M/d/yy',
+  'd/M/yyyy',
+  'M/d/yyyy',
+];
+
+export const DATE_TIME_FORMAT_VALUES: string[] = [
+  'd/M/yyyy H:mm:ss',
+  'M/d/yyyy H:mm:ss',
+  'MM/dd/yyyy hh:mm:ss a',
+  'yyyy-MM-dd HH:mm:ss',
+  'yyyy-MM-dd HH:mm:ss.S',
+];
+
+const ALL_FORMAT_VALUES: string[] = BASIC_FORMAT_VALUES.concat(
+  DATE_FORMAT_VALUES,
+  DATE_TIME_FORMAT_VALUES,
+);
+>>>>>>> upstream/master
 
 const EXAMPLE_DATE_ISO = '2015-10-29T23:00:00.000Z';
 const EXAMPLE_DATE_VALUE = Date.parse(EXAMPLE_DATE_ISO);
@@ -73,7 +99,15 @@ export function timeFormatMatches(format: string, value: string | number): boole
 }
 
 export function possibleDruidFormatForValues(values: any[]): string | null {
+<<<<<<< HEAD
   return ALL_FORMAT_VALUES.filter(format => {
     return values.every(value => timeFormatMatches(format, value));
   })[0] || null;
+=======
+  return (
+    ALL_FORMAT_VALUES.filter(format => {
+      return values.every(value => timeFormatMatches(format, value));
+    })[0] || null
+  );
+>>>>>>> upstream/master
 }

@@ -23,12 +23,14 @@ import { ArrayInput } from './array-input';
 
 describe('array input', () => {
   it('matches snapshot', () => {
-    const arrayInput = <ArrayInput
-      values={['apple', 'banana', 'pear']}
-      className={'test'}
-      placeholder={'test'}
-      onChange={() => null}
-    />;
+    const arrayInput = (
+      <ArrayInput
+        values={['apple', 'banana', 'pear']}
+        className={'test'}
+        placeholder={'test'}
+        onChange={() => null}
+      />
+    );
 
     const { container } = render(arrayInput);
     expect(container.firstChild).toMatchSnapshot();

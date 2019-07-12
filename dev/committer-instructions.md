@@ -50,7 +50,7 @@ committer who visits an issue or a PR authored by a non-committer.
    API elements (`@PublicApi` or `@ExtensionPoint`), runtime configuration options, emitted metric names, HTTP endpoint
    behavior, or server behavior in some way that affects one of the following:
 
-     - Ability to do a rolling update [as documented](http://druid.io/docs/latest/operations/rolling-updates.html)
+     - Ability to do a rolling update [as documented](https://druid.apache.org/docs/latest/operations/rolling-updates.html)
      without needing any modifications to server configurations or query workload.
      - Ability to roll back a Druid cluster to a prior version.
      - Ability to continue using old Druid extensions without recompiling them.
@@ -87,7 +87,10 @@ committer who visits an issue or a PR authored by a non-committer.
    that need to be merged before some other PRs could even be published. `Development Blocker` PRs should be prioritized
    by reviewers, so that they could be merged as soon as possible, thus not blocking somebody's work.
 
-2. Consider adding one or several **`Area -`** tags to the PR or issue. Consider [creating a new `Area -` tag](
+2. If you added some tags on the previous step, describe why did you do that, either in the PR description (if you are
+the author of the PR) or in a comment (if you have added tags to a PR submitted by someone else).
+
+3. Consider adding one or several **`Area -`** tags to the PR or issue. Consider [creating a new `Area -` tag](
 #creating-a-new-tag-on-github) if none of the existing `Area` tags is applicable to the PR or issue.
 
    - [`Area - Automation/Static Analysis`](
@@ -131,15 +134,15 @@ committer who visits an issue or a PR authored by a non-committer.
    any PRs and issues related to ZooKeeper, Curator, and node discovery in Druid.
 
 
-3. **Consider adding any `Bug` and `Security` PRs to the next Druid milestone** whenever they are important enough to
+4. **Consider adding any `Bug` and `Security` PRs to the next Druid milestone** whenever they are important enough to
 fix before the next release. This ensures that they will be considered by the next release manager as potential release
 blockers. Please don't add PRs that are neither `Bug` nor `Security`-related to milestones until after they are
 committed, to avoid cluttering the release manager's workflow.
 
-4. If the PR has obvious problems, such as an empty description or the PR fails the CI, ask the PR author to fix these
+5. If the PR has obvious problems, such as an empty description or the PR fails the CI, ask the PR author to fix these
 problems even if you don't plan to review the PR.
 
-5. If you create an issue that is relatively small and self-contained and you don't plan to work on it in the near
+6. If you create an issue that is relatively small and self-contained and you don't plan to work on it in the near
 future, consider tagging it [**`Contributions Welcome`**](
 https://github.com/apache/incubator-druid/labels/Contributions%20Welcome) so that other people know that the issue is
 free to pick up and is relatively easily doable even for those who are not very familiar with the codebase.

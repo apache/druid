@@ -360,31 +360,17 @@ public class AuthorizationUtils
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the
    * datasource name.
    */
-  public static Function<String, ResourceAction> DATASOURCE_READ_RA_GENERATOR = new Function<String, ResourceAction>()
-  {
-    @Override
-    public ResourceAction apply(String input)
-    {
-      return new ResourceAction(
-          new Resource(input, ResourceType.DATASOURCE),
-          Action.READ
-      );
-    }
-  };
+  public static final Function<String, ResourceAction> DATASOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
+      new Resource(input, ResourceType.DATASOURCE),
+      Action.READ
+  );
 
   /**
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the
    * datasource name.
    */
-  public static Function<String, ResourceAction> DATASOURCE_WRITE_RA_GENERATOR = new Function<String, ResourceAction>()
-  {
-    @Override
-    public ResourceAction apply(String input)
-    {
-      return new ResourceAction(
-          new Resource(input, ResourceType.DATASOURCE),
-          Action.WRITE
-      );
-    }
-  };
+  public static final Function<String, ResourceAction> DATASOURCE_WRITE_RA_GENERATOR = input -> new ResourceAction(
+      new Resource(input, ResourceType.DATASOURCE),
+      Action.WRITE
+  );
 }

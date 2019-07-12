@@ -23,7 +23,6 @@
   }
 
   .history-record-container {
-
     padding: 15px 15px 0 15px;
 
     .history-dialog-title {
@@ -41,13 +40,11 @@
     }
 
     .history-record-entries {
-
       margin: 10px 0;
       max-height: 60vh;
       overflow: scroll;
 
       .history-record-entry {
-
         padding: 5px;
         border-style: dot-dash;
         word-wrap: break-word;
@@ -67,7 +64,6 @@
           }
         }
 
-
         .json-collapse {
           button {
             position: relative;
@@ -85,4 +81,3 @@
     }
   }
 }
-

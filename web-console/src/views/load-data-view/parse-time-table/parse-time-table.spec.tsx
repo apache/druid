@@ -30,6 +30,7 @@ describe('parse time table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
+<<<<<<< HEAD
           parsed: { c1: 'hello' }
         }
       ]
@@ -44,6 +45,24 @@ describe('parse time table', () => {
       possibleTimestampColumnsOnly={false}
       onTimestampColumnSelect={() => null}
     />;
+=======
+          parsed: { c1: 'hello' },
+        },
+      ],
+    };
+
+    const parseTimeTable = (
+      <ParseTimeTable
+        sampleBundle={{
+          headerAndRows: sampleData,
+          timestampSpec: getEmptyTimestampSpec(),
+        }}
+        columnFilter=""
+        possibleTimestampColumnsOnly={false}
+        onTimestampColumnSelect={() => null}
+      />
+    );
+>>>>>>> upstream/master
 
     const { container } = render(parseTimeTable);
     expect(container.firstChild).toMatchSnapshot();

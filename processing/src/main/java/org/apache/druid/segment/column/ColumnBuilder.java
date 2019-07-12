@@ -109,6 +109,7 @@ public class ColumnBuilder
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
+            .setIsComplete(true)
             .setFilterable(filterable),
         columnSupplier,
         bitmapIndex,

@@ -23,18 +23,21 @@ import { AutoForm } from './auto-form';
 
 describe('auto-form snapshot', () => {
   it('matches snapshot', () => {
-    const autoForm =
+    const autoForm = (
       <AutoForm
-        fields={[{name: 'testOne', type: 'number'},
-          {name: 'testTwo', type: 'size-bytes'},
-          {name: 'testThree', type: 'string'},
-          {name: 'testFour', type: 'boolean'},
-          {name: 'testFive', type: 'string-array'},
-          {name: 'testSix', type: 'json'},
-          {name: 'testSeven', type: 'json'}]}
+        fields={[
+          { name: 'testOne', type: 'number' },
+          { name: 'testTwo', type: 'size-bytes' },
+          { name: 'testThree', type: 'string' },
+          { name: 'testFour', type: 'boolean' },
+          { name: 'testFive', type: 'string-array' },
+          { name: 'testSix', type: 'json' },
+          { name: 'testSeven', type: 'json' },
+        ]}
         model={String}
-        onChange={(newModel: Record<string, any>) => {}}
-      />;
+        onChange={() => {}}
+      />
+    );
     const { container } = render(autoForm);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -79,9 +78,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),

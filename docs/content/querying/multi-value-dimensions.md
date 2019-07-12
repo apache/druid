@@ -24,12 +24,15 @@ title: "Multi-value dimensions"
 
 # Multi-value dimensions
 
-Apache Druid (incubating) supports "multi-value" string dimensions. These are generated when an input field contains an array of values
-instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter` characters).
+Apache Druid (incubating) supports "multi-value" string dimensions. These are generated when an input field contains an
+array of values instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter`
+characters).
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
 are used as a dimension being grouped by. See the section on multi-value columns in
-[segments](../design/segments.html#multi-value-columns) for internal representation details.
+[segments](../design/segments.html#multi-value-columns) for internal representation details. Examples in this document
+are in the form of [native Druid queries](querying.html). Refer to the [Druid SQL documentation](sql.html) for details
+about using multi-value string dimensions in SQL.
 
 ## Querying multi-value dimensions
 
@@ -109,9 +112,10 @@ This "selector" filter would match row4 of the dataset above:
 ### Grouping
 
 topN and groupBy queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
-from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
-there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match only row1, and
-generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
+from matching rows will be used to generate one group per value. This can be thought of as the equivalent to the
+`UNNEST` operator used on an `ARRAY` type that many SQL dialects support. This means it's possible for a query to return
+more groups than there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match
+only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
 your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
 improve performance.
 
@@ -280,11 +284,15 @@ returns following result.
 ]
 ```
 
-You might be surprised to see inclusion of "t1", "t2", "t4" and "t5" in the results. It happens because query filter is applied on the row before explosion. For multi-value dimensions, selector filter for "t3" would match row1 and row2, after which exploding is done. For multi-value dimensions, query filter matches a row if any individual value inside the multiple values matches the query filter.
+You might be surprised to see inclusion of "t1", "t2", "t4" and "t5" in the results. It happens because query filter is
+applied on the row before explosion. For multi-value dimensions, selector filter for "t3" would match row1 and row2,
+after which exploding is done. For multi-value dimensions, query filter matches a row if any individual value inside
+the multiple values matches the query filter.
 
 ### Example: GroupBy query with a selector query filter and additional filter in "dimensions" attributes
 
-To solve the problem above and to get only rows for "t3" returned, you would have to use a "filtered dimension spec" as in the query below.
+To solve the problem above and to get only rows for "t3" returned, you would have to use a "filtered dimension spec" as
+in the query below.
 
 See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.html#filtered-dimensionspecs) for details.
 
@@ -337,4 +345,6 @@ returns the following result.
 ]
 ```
 
-Note that, for groupBy queries, you could get similar result with a [having spec](having.html) but using a filtered dimensionSpec is much more efficient because that gets applied at the lowest level in the query processing pipeline. Having specs are applied at the outermost level of groupBy query processing.
+Note that, for groupBy queries, you could get similar result with a [having spec](having.html) but using a filtered
+dimensionSpec is much more efficient because that gets applied at the lowest level in the query processing pipeline.
+Having specs are applied at the outermost level of groupBy query processing.

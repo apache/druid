@@ -82,8 +82,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     final ISOChronology chronology = ISOChronology.getInstance(timeZone);
 
-    class TimestampExtractExpr implements Expr
+    class TimestampExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private TimestampExtractExpr(Expr arg)
+      {
+        super(arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -123,13 +128,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new TimestampExtractExpr(newArg));
       }
     }
 
-    return new TimestampExtractExpr();
+    return new TimestampExtractExpr(arg);
   }
 }

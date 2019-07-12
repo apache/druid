@@ -43,44 +43,31 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
   render() {
     const { sideButtonMetadata, isOpen, onClose, title, bottomButtons } = this.props;
 
-    return <Dialog
-      className="table-action-dialog"
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-    >
-      <div className={Classes.DIALOG_BODY}>
-        <div className="side-bar">
-          {
-            sideButtonMetadata.map((d: SideButtonMetaData) => (
+    return (
+      <Dialog className="table-action-dialog" isOpen={isOpen} onClose={onClose} title={title}>
+        <div className={Classes.DIALOG_BODY}>
+          <div className="side-bar">
+            {sideButtonMetadata.map((d, i) => (
               <Button
                 className="tab-button"
-                icon={<Icon icon={d.icon} iconSize={20}/>}
-                key={d.text}
+                icon={<Icon icon={d.icon} iconSize={20} />}
+                key={i}
                 text={d.text}
                 intent={d.active ? Intent.PRIMARY : Intent.NONE}
                 minimal={!d.active}
                 onClick={d.onClick}
               />
-            ))
-          }
+            ))}
+          </div>
+          <div className="main-section">{this.props.children}</div>
         </div>
-        <div className="main-section">
-          {this.props.children}
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className="footer-actions-left">{bottomButtons}</div>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+          </div>
         </div>
-      </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className="footer-actions-left">
-          {bottomButtons}
-        </div>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Close"
-            intent={Intent.PRIMARY}
-            onClick={onClose}
-          />
-        </div>
-      </div>
-    </Dialog>;
+      </Dialog>
+    );
   }
 }

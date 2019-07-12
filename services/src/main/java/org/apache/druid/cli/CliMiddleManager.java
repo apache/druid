@@ -69,7 +69,7 @@ import java.util.List;
  */
 @Command(
     name = "middleManager",
-    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see http://druid.io/docs/latest/design/middlemanager.html for a description"
+    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see https://druid.apache.org/docs/latest/design/middlemanager.html for a description"
 )
 public class CliMiddleManager extends ServerRunnable
 {

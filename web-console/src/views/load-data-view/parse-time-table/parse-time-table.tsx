@@ -23,12 +23,24 @@ import ReactTable from 'react-table';
 import { TableCell } from '../../../components';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { possibleDruidFormatForValues } from '../../../utils/druid-time';
+<<<<<<< HEAD
 import { getTimestampSpecColumn, isColumnTimestampSpec, TimestampSpec } from '../../../utils/ingestion-spec';
+=======
+import {
+  getTimestampSpecColumn,
+  isColumnTimestampSpec,
+  TimestampSpec,
+} from '../../../utils/ingestion-spec';
+>>>>>>> upstream/master
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
+<<<<<<< HEAD
 export interface ParseTimeTableProps extends React.Props<any> {
+=======
+export interface ParseTimeTableProps {
+>>>>>>> upstream/master
   sampleBundle: {
     headerAndRows: HeaderAndRows;
     timestampSpec: TimestampSpec;
@@ -40,11 +52,21 @@ export interface ParseTimeTableProps extends React.Props<any> {
 
 export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
   render() {
+<<<<<<< HEAD
     const { sampleBundle, columnFilter, possibleTimestampColumnsOnly, onTimestampColumnSelect } = this.props;
+=======
+    const {
+      sampleBundle,
+      columnFilter,
+      possibleTimestampColumnsOnly,
+      onTimestampColumnSelect,
+    } = this.props;
+>>>>>>> upstream/master
     const { headerAndRows, timestampSpec } = sampleBundle;
     const timestampSpecColumn = getTimestampSpecColumn(timestampSpec);
     const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
 
+<<<<<<< HEAD
     return <ReactTable
       className="parse-time-table -striped -highlight"
       data={headerAndRows.rows}
@@ -101,5 +123,77 @@ export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
       showPagination={false}
       sortable={false}
     />;
+=======
+    return (
+      <ReactTable
+        className="parse-time-table -striped -highlight"
+        data={headerAndRows.rows}
+        columns={filterMap(
+          headerAndRows.header.length ? headerAndRows.header : ['__error__'],
+          (columnName, i) => {
+            const timestamp = columnName === '__time';
+            if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return null;
+            const selected = timestampSpec.column === columnName;
+            const possibleFormat = timestamp
+              ? null
+              : possibleDruidFormatForValues(
+                  filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : null)),
+                );
+            if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return null;
+
+            const columnClassName = classNames({
+              timestamp,
+              selected,
+            });
+            return {
+              Header: (
+                <div
+                  className={classNames({ clickable: !timestamp })}
+                  onClick={
+                    timestamp
+                      ? undefined
+                      : () => {
+                          onTimestampColumnSelect({
+                            column: columnName,
+                            format: possibleFormat || '!!! Could not auto detect a format !!!',
+                          });
+                        }
+                  }
+                >
+                  <div className="column-name">{columnName}</div>
+                  <div className="column-detail">
+                    {timestamp
+                      ? timestampSpecFromColumn
+                        ? `from: '${timestampSpecColumn}'`
+                        : `mv: ${timestampSpec.missingValue}`
+                      : possibleFormat || ''}
+                    &nbsp;
+                  </div>
+                </div>
+              ),
+              headerClassName: columnClassName,
+              className: columnClassName,
+              id: String(i),
+              accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+              Cell: row => {
+                if (columnName === '__error__') {
+                  return <TableCell value={row.original.error} />;
+                }
+                if (row.original.unparseable) {
+                  return <TableCell unparseable />;
+                }
+                return <TableCell value={row.value} timestamp={timestamp} />;
+              },
+              minWidth: timestamp ? 200 : 100,
+              resizable: !timestamp,
+            };
+          },
+        )}
+        defaultPageSize={50}
+        showPagination={false}
+        sortable={false}
+      />
+    );
+>>>>>>> upstream/master
   }
 }

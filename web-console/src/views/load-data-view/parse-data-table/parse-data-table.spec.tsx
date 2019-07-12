@@ -28,6 +28,7 @@ describe('parse data table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
+<<<<<<< HEAD
           parsed: { c1: 'hello' }
         }
       ]
@@ -41,6 +42,24 @@ describe('parse data table', () => {
       flattenFields={[]}
       onFlattenFieldSelect={() => null}
     />;
+=======
+          parsed: { c1: 'hello' },
+        },
+      ],
+    };
+
+    const parseDataTable = (
+      <ParseDataTable
+        openModal={() => null}
+        sampleData={sampleData}
+        columnFilter=""
+        canFlatten={false}
+        flattenedColumnsOnly={false}
+        flattenFields={[]}
+        onFlattenFieldSelect={() => null}
+      />
+    );
+>>>>>>> upstream/master
 
     const { container } = render(parseDataTable);
     expect(container.firstChild).toMatchSnapshot();

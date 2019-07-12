@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
 
-export interface ClearableInputProps extends React.Props<any> {
+export interface ClearableInputProps {
   className?: string;
   value: string;
   onChange: (value: string) => void;
@@ -32,12 +32,16 @@ export class ClearableInput extends React.PureComponent<ClearableInputProps> {
   render() {
     const { className, value, onChange, placeholder } = this.props;
 
-    return <InputGroup
-      className={classNames('clearable-input', className)}
-      value={value}
-      onChange={(e: any) => onChange(e.target.value)}
-      rightElement={value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined}
-      placeholder={placeholder}
-    />;
+    return (
+      <InputGroup
+        className={classNames('clearable-input', className)}
+        value={value}
+        onChange={(e: any) => onChange(e.target.value)}
+        rightElement={
+          value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
+        }
+        placeholder={placeholder}
+      />
+    );
   }
 }

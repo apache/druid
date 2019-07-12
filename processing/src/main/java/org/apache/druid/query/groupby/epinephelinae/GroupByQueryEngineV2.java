@@ -48,11 +48,13 @@ import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSele
 import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -115,14 +117,6 @@ public class GroupByQueryEngineV2
         null
     );
 
-    final boolean allSingleValueDims = query
-        .getDimensions()
-        .stream()
-        .allMatch(dimension -> {
-          final ColumnCapabilities columnCapabilities = storageAdapter.getColumnCapabilities(dimension.getDimension());
-          return columnCapabilities != null && !columnCapabilities.hasMultipleValues();
-        });
-
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
@@ -140,18 +134,38 @@ public class GroupByQueryEngineV2
               @Override
               public GroupByEngineIterator make()
               {
+                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                final boolean allSingleValueDims = query
+                    .getDimensions()
+                    .stream()
+                    .allMatch(dimension -> {
+                      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(
+                          dimension.getDimension()
+                      );
+                      return columnCapabilities != null && !columnCapabilities.hasMultipleValues();
+                    });
+
                 ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
                     .createColumnSelectorPluses(
                         STRATEGY_FACTORY,
                         query.getDimensions(),
-                        cursor.getColumnSelectorFactory()
+                        columnSelectorFactory
                     );
                 GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
                 final ByteBuffer buffer = bufferHolder.get();
 
-                // Check array-based aggregation is applicable
-                if (isArrayAggregateApplicable(querySpecificConfig, query, dims, storageAdapter, buffer)) {
+                // Check if array-based aggregation is applicable
+                final boolean useArrayAggregation = isArrayAggregateApplicable(
+                    querySpecificConfig,
+                    query,
+                    dims,
+                    storageAdapter,
+                    query.getVirtualColumns(),
+                    buffer
+                );
+
+                if (useArrayAggregation) {
                   return new ArrayAggregateIterator(
                       query,
                       querySpecificConfig,
@@ -191,6 +205,7 @@ public class GroupByQueryEngineV2
       GroupByQuery query,
       GroupByColumnSelectorPlus[] dims,
       StorageAdapter storageAdapter,
+      VirtualColumns virtualColumns,
       ByteBuffer buffer
   )
   {
@@ -206,11 +221,19 @@ public class GroupByQueryEngineV2
       columnCapabilities = null;
       cardinality = 1;
     } else if (dims.length == 1) {
+      // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
+      // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
+      // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
+      // real columns).
+      if (virtualColumns.exists(dims[0].getName())) {
+        return false;
+      }
+
       columnCapabilities = storageAdapter.getColumnCapabilities(dims[0].getName());
       cardinality = storageAdapter.getDimensionCardinality(dims[0].getName());
     } else {
-      columnCapabilities = null;
-      cardinality = -1; // ArrayAggregateIterator is not available
+      // Cannot use array-based aggregation with more than one dimension.
+      return false;
     }
 
     // Choose array-based aggregation if the grouping key is a single string dimension of a
@@ -225,11 +248,11 @@ public class GroupByQueryEngineV2
           aggregatorFactories
       );
 
-      // Check that all keys and aggregated values can be contained the buffer
+      // Check that all keys and aggregated values can be contained in the buffer
       return requiredBufferCapacity <= buffer.capacity();
+    } else {
+      return false;
     }
-
-    return false;
   }
 
   private static class GroupByStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>

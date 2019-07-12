@@ -7,10 +7,9 @@ exports[`data source view matches snapshot 1`] = `
   <ViewControlBar
     label="Datasources"
   >
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
+    <RefreshButton
+      localStorageKey="datasources-refresh-rate"
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="application"
@@ -27,9 +26,11 @@ exports[`data source view matches snapshot 1`] = `
         Array [
           "Datasource",
           "Availability",
+          "Segment load/drop",
           "Retention",
           "Compaction",
           "Size",
+          "Replicated size",
           "Num rows",
           "Actions",
         ]
@@ -113,6 +114,14 @@ exports[`data source view matches snapshot 1`] = `
         },
         Object {
           "Cell": [Function],
+          "Header": "Segment load/drop",
+          "accessor": "num_segments_to_load",
+          "filterable": false,
+          "id": "load-drop",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
           "Header": "Retention",
           "accessor": [Function],
           "filterable": false,
@@ -131,6 +140,14 @@ exports[`data source view matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Size",
           "accessor": "size",
+          "filterable": false,
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Replicated size",
+          "accessor": "replicated_size",
           "filterable": false,
           "show": true,
           "width": 100,
@@ -238,64 +255,5 @@ exports[`data source view matches snapshot 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Drop data"
-    failText="Could not drop data"
-    intent="danger"
-    onClose={[Function]}
-    successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
-  >
-    <p>
-      Are you sure you want to drop all the data for datasource 'null'?
-    </p>
-  </AsyncActionDialog>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Enable datasource"
-    failText="Could not enable datasource"
-    intent="primary"
-    onClose={[Function]}
-    successText="Datasource has been enabled"
-  >
-    <p>
-      Are you sure you want to enable datasource 'null'?
-    </p>
-  </AsyncActionDialog>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonDisabled={true}
-    confirmButtonText="Drop selected data"
-    failText="Could not drop data"
-    intent="primary"
-    onClose={[Function]}
-    successText="Drop request submitted"
-  >
-    <p>
-      Please select the interval that you want to drop?
-    </p>
-    <Blueprint3.FormGroup>
-      <Blueprint3.InputGroup
-        onChange={[Function]}
-        placeholder="2018-01-01T00:00:00/2018-01-03T00:00:00"
-        value=""
-      />
-    </Blueprint3.FormGroup>
-  </AsyncActionDialog>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Permanently delete data"
-    failText="Could not submit kill task"
-    intent="danger"
-    onClose={[Function]}
-    successText="Kill task was issued. Datasource will be deleted"
-  >
-    <p>
-      Are you sure you want to permanently delete the data in datasource 'null'?
-    </p>
-    <p>
-      This action can not be undone.
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

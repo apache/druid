@@ -23,11 +23,8 @@ import { AboutDialog } from './about-dialog';
 
 describe('about dialog', () => {
   it('matches snapshot', () => {
-    const aboutDialog =
-     <AboutDialog
-       onClose={() => null}
-     />;
-    const { container } = render(aboutDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    const aboutDialog = <AboutDialog onClose={() => null} />;
+    render(aboutDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

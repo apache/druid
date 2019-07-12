@@ -56,6 +56,11 @@ public interface StorageAdapter extends CursorFactory
    * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
    * columns.
    *
+   * Note that StorageAdapters are representations of "real" segments, so they are not aware of any virtual columns
+   * that may be involved in a query. In general, query engines should instead use the method
+   * {@link ColumnSelectorFactory#getColumnCapabilities(String)}, which returns capabilities for virtual columns as
+   * well.
+   *
    * @param column column name
    *
    * @return capabilities, or null
