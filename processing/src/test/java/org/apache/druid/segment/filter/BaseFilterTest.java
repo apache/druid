@@ -295,7 +295,7 @@ public abstract class BaseFilterTest
 
           final List<String> values = new ArrayList<>();
 
-          while (!input.isDone()) {
+          while (!cursor.isDone()) {
             IndexedInts row = selector.getRow();
             Preconditions.checkState(row.size() == 1);
             values.add(selector.lookupName(row.get(0)));
@@ -419,7 +419,7 @@ public abstract class BaseFilterTest
 
           final List<String> values = new ArrayList<>();
 
-          while (!input.isDone()) {
+          while (!cursor.isDone()) {
             IndexedInts row = selector.getRow();
             Preconditions.checkState(row.size() == 1);
             values.add(selector.lookupName(row.get(0)));
