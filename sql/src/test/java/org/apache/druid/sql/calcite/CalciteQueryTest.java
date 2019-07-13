@@ -340,6 +340,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.<Object[]>builder()
             .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
