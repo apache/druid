@@ -44,8 +44,8 @@ public class ImmutableDruidDataSourceTestUtils
   }
 
   private static boolean checkEquals(
-    @Nullable ImmutableDruidDataSource expected,
-    @Nullable ImmutableDruidDataSource actual
+      @Nullable ImmutableDruidDataSource expected,
+      @Nullable ImmutableDruidDataSource actual
   )
   {
     if (expected == null) {
@@ -69,7 +69,7 @@ public class ImmutableDruidDataSourceTestUtils
     }
 
     Assert.assertEquals("expected and actual ImmutableDruidDataSource lists should be of equal size",
-      expected.size(), actual.size());
+        expected.size(), actual.size());
 
     for (ImmutableDruidDataSource e : expected) {
       if (!contains(e, actual)) {
@@ -83,7 +83,7 @@ public class ImmutableDruidDataSourceTestUtils
   private static boolean contains(ImmutableDruidDataSource expected, List<ImmutableDruidDataSource> actualList)
   {
     // Iterate over actual list to see if the element expected is present, if not return false
-    for(ImmutableDruidDataSource ds : actualList) {
+    for (ImmutableDruidDataSource ds : actualList) {
       if (ds.equalsForTesting(expected)) {
         return true;
       }

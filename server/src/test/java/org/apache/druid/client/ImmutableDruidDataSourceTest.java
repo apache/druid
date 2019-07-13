@@ -52,7 +52,7 @@ public class ImmutableDruidDataSourceTest
     final String json = objectMapper.writeValueAsString(dataSource);
 
     ImmutableDruidDataSourceTestUtils.assertEquals(dataSource, objectMapper.readValue(json,
-      ImmutableDruidDataSource.class));
+        ImmutableDruidDataSource.class));
   }
 
   @Test
