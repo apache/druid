@@ -313,20 +313,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"},
-            new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"},
-            new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"},
-            new Object[]{"druid", "aview", "VIEW"},
-            new Object[]{"druid", "bview", "VIEW"},
-            new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"},
-            new Object[]{"sys", "segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "server_segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "servers", "SYSTEM_TABLE"},
-            new Object[]{"sys", "tasks", "SYSTEM_TABLE"}
-        )
+        ImmutableList.<Object[]>builder()
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
+          .add(new Object[]{"druid", "aview", "VIEW"})
+          .add(new Object[]{"druid", "bview", "VIEW"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+          .build()
     );
 
     testQuery(
@@ -5676,6 +5677,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{2L}
         )
+    );
+  }
+
+  @Test
+  public void testFilterOnTimeExtractWithMilliseconds() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo4\n"
+          + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
+          + "AND EXTRACT(MILLISECOND FROM __time) = 695",
+        TIMESERIES_CONTEXT_DEFAULT,
+        ImmutableList.of(
+        Druids.newTimeseriesQueryBuilder()
+          .dataSource(CalciteTests.DATASOURCE4)
+          .intervals(querySegmentSpec(Filtration.eternity()))
+          .granularity(Granularities.ALL)
+          .virtualColumns(
+            expressionVirtualColumn("v0", "timestamp_extract(\"__time\",'YEAR','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v1", "timestamp_extract(\"__time\",'MILLISECOND','UTC')", ValueType.LONG)
+          )
+          .aggregators(aggregators(new CountAggregatorFactory("a0")))
+          .filters(
+            and(
+              selector("v0", "2000", null),
+              selector("v1", "695", null)
+            )
+          )
+          .context(TIMESERIES_CONTEXT_DEFAULT)
+          .build()
+      ),
+        ImmutableList.of(
+        new Object[]{2L}
+      )
     );
   }
 
