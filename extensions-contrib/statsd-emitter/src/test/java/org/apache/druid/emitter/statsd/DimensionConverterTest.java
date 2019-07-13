@@ -23,12 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.junit.Assert;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
-/**
- */
 public class DimensionConverterTest
 {
   @Test
@@ -56,10 +53,10 @@ public class DimensionConverterTest
         event.getUserDims(),
         actual
     );
-    assertEquals("correct StatsDMetric.Type", StatsDMetric.Type.timer, statsDMetric.type);
+    Assert.assertEquals("correct StatsDMetric.Type", StatsDMetric.Type.timer, statsDMetric.type);
     ImmutableMap.Builder<String, String> expected = new ImmutableMap.Builder<>();
     expected.put("dataSource", "data-source");
     expected.put("type", "groupBy");
-    assertEquals("correct Dimensions", expected.build(), actual.build());
+    Assert.assertEquals("correct Dimensions", expected.build(), actual.build());
   }
 }

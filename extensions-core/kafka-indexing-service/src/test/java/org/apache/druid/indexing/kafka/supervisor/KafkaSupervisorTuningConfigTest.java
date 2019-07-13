@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -63,6 +64,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(), config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
@@ -90,7 +92,9 @@ public class KafkaSupervisorTuningConfigTest
                      + "  \"chatRetries\": 14,\n"
                      + "  \"httpTimeout\": \"PT15S\",\n"
                      + "  \"shutdownTimeout\": \"PT95S\",\n"
-                     + "  \"offsetFetchPeriod\": \"PT20S\"\n"
+                     + "  \"offsetFetchPeriod\": \"PT20S\",\n"
+                     + "  \"indexSpec\": { \"metricCompression\" : \"NONE\" },\n"
+                     + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" }\n"
                      + "}";
 
     KafkaSupervisorTuningConfig config = (KafkaSupervisorTuningConfig) mapper.readValue(
@@ -116,6 +120,8 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
+    Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null), config.getIndexSpecForIntermediatePersists());
   }
 
 }

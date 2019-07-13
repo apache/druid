@@ -95,6 +95,10 @@ export interface TasksViewState {
   resetSupervisorId: string | null;
   terminateSupervisorId: string | null;
 
+  showResumeAllSupervisors: boolean;
+  showSuspendAllSupervisors: boolean;
+  showTerminateAllSupervisors: boolean;
+
   tasksLoading: boolean;
   tasks: any[] | null;
   tasksError: string | null;
@@ -205,6 +209,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       resetSupervisorId: null,
       supervisorTableActionDialogId: null,
       terminateSupervisorId: null,
+
+      showResumeAllSupervisors: false,
+      showSuspendAllSupervisors: false,
+      showTerminateAllSupervisors: false,
 
       tasksLoading: true,
       tasks: null,
@@ -394,27 +402,26 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   renderResumeSupervisorAction() {
     const { resumeSupervisorId } = this.state;
+    if (!resumeSupervisorId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          resumeSupervisorId
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/supervisor/${resumeSupervisorId}/resume`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Resume supervisor"
         successText="Supervisor has been resumed"
         failText="Could not resume supervisor"
         intent={Intent.PRIMARY}
-        onClose={success => {
+        onClose={() => {
           this.setState({ resumeSupervisorId: null });
-          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to resume supervisor '${resumeSupervisorId}'?`}</p>
@@ -424,27 +431,26 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   renderSuspendSupervisorAction() {
     const { suspendSupervisorId } = this.state;
+    if (!suspendSupervisorId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          suspendSupervisorId
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/supervisor/${suspendSupervisorId}/suspend`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Suspend supervisor"
         successText="Supervisor has been suspended"
         failText="Could not suspend supervisor"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ suspendSupervisorId: null });
-          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to suspend supervisor '${suspendSupervisorId}'?`}</p>
@@ -454,27 +460,26 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   renderResetSupervisorAction() {
     const { resetSupervisorId } = this.state;
+    if (!resetSupervisorId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          resetSupervisorId
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/supervisor/${resetSupervisorId}/reset`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Reset supervisor"
         successText="Supervisor has been reset"
         failText="Could not reset supervisor"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ resetSupervisorId: null });
-          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to reset supervisor '${resetSupervisorId}'?`}</p>
@@ -484,27 +489,26 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   renderTerminateSupervisorAction() {
     const { terminateSupervisorId } = this.state;
+    if (!terminateSupervisorId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          terminateSupervisorId
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Terminate supervisor"
         successText="Supervisor has been terminated"
         failText="Could not terminate supervisor"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ terminateSupervisorId: null });
-          if (success) this.supervisorQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to terminate supervisor '${terminateSupervisorId}'?`}</p>
@@ -638,24 +642,23 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   renderKillTaskAction() {
     const { killTaskId } = this.state;
+    if (!killTaskId) return;
 
     return (
       <AsyncActionDialog
-        action={
-          killTaskId
-            ? async () => {
-                const resp = await axios.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/task/${killTaskId}/shutdown`, {});
+          return resp.data;
+        }}
         confirmButtonText="Kill task"
         successText="Task was killed"
         failText="Could not kill task"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ killTaskId: null });
-          if (success) this.taskQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.taskQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to kill task '${killTaskId}'?`}</p>
@@ -849,6 +852,118 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
+  renderBulkSupervisorActions() {
+    const bulkSupervisorActionsMenu = (
+      <Menu>
+        <MenuItem
+          icon={IconNames.PLAY}
+          text="Resume all supervisors"
+          onClick={() => this.setState({ showResumeAllSupervisors: true })}
+        />
+        <MenuItem
+          icon={IconNames.PAUSE}
+          text="Suspend all supervisors"
+          onClick={() => this.setState({ showSuspendAllSupervisors: true })}
+        />
+        <MenuItem
+          icon={IconNames.CROSS}
+          text="Terminate all supervisors"
+          intent={Intent.DANGER}
+          onClick={() => this.setState({ showTerminateAllSupervisors: true })}
+        />
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSupervisorActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+        {this.renderResumeAllSupervisorAction()}
+        {this.renderSuspendAllSupervisorAction()}
+        {this.renderTerminateAllSupervisorAction()}
+      </>
+    );
+  }
+
+  renderResumeAllSupervisorAction() {
+    const { showResumeAllSupervisors } = this.state;
+    if (!showResumeAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/resumeAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Resume all supervisors"
+        successText="All supervisors have been resumed"
+        failText="Could not resume all supervisors"
+        intent={Intent.PRIMARY}
+        onClose={() => {
+          this.setState({ showResumeAllSupervisors: false });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to resume all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
+  renderSuspendAllSupervisorAction() {
+    const { showSuspendAllSupervisors } = this.state;
+    if (!showSuspendAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/suspendAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Suspend all supervisors"
+        successText="All supervisors have been suspended"
+        failText="Could not suspend all supervisors"
+        intent={Intent.DANGER}
+        onClose={() => {
+          this.setState({ showSuspendAllSupervisors: false });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to suspend all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
+  renderTerminateAllSupervisorAction() {
+    const { showTerminateAllSupervisors } = this.state;
+    if (!showTerminateAllSupervisors) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/terminateAll`, {});
+          return resp.data;
+        }}
+        confirmButtonText="Terminate all supervisors"
+        successText="All supervisors have been terminated"
+        failText="Could not terminate all supervisors"
+        intent={Intent.DANGER}
+        onClose={() => {
+          this.setState({ showTerminateAllSupervisors: false });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>Are you sure you want to terminate all the supervisors?</p>
+      </AsyncActionDialog>
+    );
+  }
+
   render() {
     const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
     const {
@@ -912,11 +1027,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
-                onRefresh={auto => this.supervisorQueryManager.rerunLastQueryInBackground(auto)}
+                onRefresh={auto => this.supervisorQueryManager.rerunLastQuery(auto)}
               />
               <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
                 <Button icon={IconNames.PLUS} text="Submit supervisor" />
               </Popover>
+              {this.renderBulkSupervisorActions()}
               <TableColumnSelector
                 columns={supervisorTableColumns}
                 onChange={column =>
@@ -958,7 +1074,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               </ButtonGroup>
               <RefreshButton
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
-                onRefresh={auto => this.taskQueryManager.rerunLastQueryInBackground(auto)}
+                onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
               />
               {!noSqlMode && (
                 <Button

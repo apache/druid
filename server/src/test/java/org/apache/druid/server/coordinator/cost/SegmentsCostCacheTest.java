@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -31,10 +32,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class SegmentsCostCacheTest
 {
@@ -49,7 +46,7 @@ public class SegmentsCostCacheTest
     SegmentsCostCache.Builder cacheBuilder = SegmentsCostCache.builder();
     cacheBuilder.addSegment(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100));
     SegmentsCostCache cache = cacheBuilder.build();
-    assertEquals(
+    Assert.assertEquals(
         7.8735899489011E-4,
         cache.cost(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, -2), 100)),
         EPSILON
@@ -64,7 +61,7 @@ public class SegmentsCostCacheTest
         createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100)
     );
     SegmentsCostCache cache = cacheBuilder.build();
-    assertEquals(
+    Assert.assertEquals(
         0,
         cache.cost(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, (int) TimeUnit.DAYS.toHours(50)), 100)),
         EPSILON
@@ -86,7 +83,7 @@ public class SegmentsCostCacheTest
     SegmentsCostCache.Bucket bucket = prototype.build();
 
     double segmentCost = bucket.cost(segmentB);
-    assertEquals(7.8735899489011E-4, segmentCost, EPSILON);
+    Assert.assertEquals(7.8735899489011E-4, segmentCost, EPSILON);
   }
 
   @Test
@@ -105,8 +102,8 @@ public class SegmentsCostCacheTest
     prototype.addSegment(segmentA);
     SegmentsCostCache.Bucket bucket = prototype.build();
 
-    assertTrue(bucket.inCalculationInterval(segmentA));
-    assertFalse(bucket.inCalculationInterval(segmentB));
+    Assert.assertTrue(bucket.inCalculationInterval(segmentA));
+    Assert.assertFalse(bucket.inCalculationInterval(segmentB));
   }
 
   @Test
@@ -124,7 +121,7 @@ public class SegmentsCostCacheTest
     SegmentsCostCache.Bucket bucket = prototype.build();
 
     double segmentCost = bucket.cost(segmentB);
-    assertEquals(8.26147353873985E-4, segmentCost, EPSILON);
+    Assert.assertEquals(8.26147353873985E-4, segmentCost, EPSILON);
   }
 
   @Test
@@ -145,7 +142,7 @@ public class SegmentsCostCacheTest
 
     double segmentCost = bucket.cost(segmentB);
 
-    assertEquals(0.001574717989780039, segmentCost, EPSILON);
+    Assert.assertEquals(0.001574717989780039, segmentCost, EPSILON);
   }
 
   @Test
@@ -167,10 +164,10 @@ public class SegmentsCostCacheTest
     SegmentsCostCache.Bucket bucket = prototype.build();
 
     double cost = bucket.cost(referenceSegment);
-    assertEquals(0.7065117101966677, cost, EPSILON);
+    Assert.assertEquals(0.7065117101966677, cost, EPSILON);
   }
 
-  public static Interval shifted1HInterval(DateTime REFERENCE_TIME, int shiftInHours)
+  private static Interval shifted1HInterval(DateTime REFERENCE_TIME, int shiftInHours)
   {
     return new Interval(
         REFERENCE_TIME.plusHours(shiftInHours),
@@ -178,7 +175,7 @@ public class SegmentsCostCacheTest
     );
   }
 
-  public static DataSegment createSegment(String dataSource, Interval interval, long size)
+  private static DataSegment createSegment(String dataSource, Interval interval, long size)
   {
     return new DataSegment(
         dataSource,

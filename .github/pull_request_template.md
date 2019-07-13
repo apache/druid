@@ -43,13 +43,10 @@ Some of the aspects mentioned above may be omitted for simple and small changes.
 
 This PR has:
 - [ ] been self-reviewed.
-   - [ ] using the [concurrency checklist](
-   https://github.com/apache/incubator-druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR
-   doesn't have any relation to concurrency.)
+   - [ ] using the [concurrency checklist](https://github.com/apache/incubator-druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
-- [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar
-reader. 
+- [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar reader.
 - [ ] added unit tests or modified existing tests to cover new code paths.
 - [ ] added integration tests.
 - [ ] been tested in a test Druid cluster.
