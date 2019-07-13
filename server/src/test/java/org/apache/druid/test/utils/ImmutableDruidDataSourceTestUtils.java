@@ -22,6 +22,7 @@ package org.apache.druid.test.utils;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class ImmutableDruidDataSourceTestUtils
@@ -31,10 +32,8 @@ public class ImmutableDruidDataSourceTestUtils
    * This method is to check equality of {@link ImmutableDruidDataSource} objects to be called from test code.
    * @param expected expected object
    * @param actual actual object
-   *
    */
-  public static void assertEqualsImmutableDruidDataSource(ImmutableDruidDataSource expected, ImmutableDruidDataSource
-    actual)
+  public static void assertEquals(ImmutableDruidDataSource expected, ImmutableDruidDataSource actual)
   {
     if (checkEquals(expected, actual)) {
       return;
@@ -44,7 +43,10 @@ public class ImmutableDruidDataSourceTestUtils
     }
   }
 
-  private static boolean checkEquals(ImmutableDruidDataSource expected, ImmutableDruidDataSource actual)
+  private static boolean checkEquals(
+    @Nullable ImmutableDruidDataSource expected,
+    @Nullable ImmutableDruidDataSource actual
+  )
   {
     if (expected == null) {
       return actual == null;
@@ -60,8 +62,7 @@ public class ImmutableDruidDataSourceTestUtils
    * @param actual actual list
    * @return
    */
-  public static boolean assertEqualsImmutableDruidDataSource(List<ImmutableDruidDataSource> expected,
-                                                         List<ImmutableDruidDataSource> actual)
+  public static boolean assertEquals(List<ImmutableDruidDataSource> expected, List<ImmutableDruidDataSource> actual)
   {
     if (expected == null) {
       return actual == null;

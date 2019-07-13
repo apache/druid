@@ -182,7 +182,7 @@ public class DataSourcesResourceTest
     Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(2, result.size());
-    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(
+    ImmutableDruidDataSourceTestUtils.assertEquals(
         listDataSources.stream().map(DruidDataSource::toImmutableDruidDataSource).collect(Collectors.toList()),
         new ArrayList<>(result)
     );
@@ -268,7 +268,7 @@ public class DataSourcesResourceTest
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(1, result.size());
-    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(
+    ImmutableDruidDataSourceTestUtils.assertEquals(
         listDataSources.subList(0, 1).stream()
                        .map(DruidDataSource::toImmutableDruidDataSource)
                        .collect(Collectors.toList()),
@@ -337,7 +337,7 @@ public class DataSourcesResourceTest
     Response response = dataSourcesResource.getTheDataSource("datasource1", "full");
     ImmutableDruidDataSource result = (ImmutableDruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
-    ImmutableDruidDataSourceTestUtils.assertEqualsImmutableDruidDataSource(dataSource1.toImmutableDruidDataSource(), result);
+    ImmutableDruidDataSourceTestUtils.assertEquals(dataSource1.toImmutableDruidDataSource(), result);
     EasyMock.verify(inventoryView, server);
   }
 
