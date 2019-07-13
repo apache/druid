@@ -25,7 +25,12 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
+import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorSelectorUtils;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -38,7 +43,19 @@ public interface ColumnarFloats extends Closeable
 
   float get(int index);
 
-  void fill(int index, float[] toFill);
+  default void get(float[] out, int start, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(i + start);
+    }
+  }
+
+  default void get(float[] out, int[] indexes, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(indexes[i]);
+    }
+  }
 
   @Override
   void close();
@@ -107,5 +124,61 @@ public interface ColumnarFloats extends Closeable
       }
       return new HistoricalFloatColumnSelectorwithNulls();
     }
+  }
+
+  default VectorValueSelector makeVectorValueSelector(
+      final ReadableVectorOffset theOffset,
+      final ImmutableBitmap nullValueBitmap
+  )
+  {
+    class ColumnarFloatsVectorValueSelector extends BaseFloatVectorValueSelector
+    {
+      private final float[] floatVector;
+
+      private int id = ReadableVectorOffset.NULL_ID;
+
+      @Nullable
+      private boolean[] nullVector = null;
+
+      private ColumnarFloatsVectorValueSelector()
+      {
+        super(theOffset);
+        this.floatVector = new float[offset.getMaxVectorSize()];
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        computeVectorsIfNeeded();
+        return nullVector;
+      }
+
+      @Override
+      public float[] getFloatVector()
+      {
+        computeVectorsIfNeeded();
+        return floatVector;
+      }
+
+      private void computeVectorsIfNeeded()
+      {
+        if (id == offset.getId()) {
+          return;
+        }
+
+        if (offset.isContiguous()) {
+          ColumnarFloats.this.get(floatVector, offset.getStartOffset(), offset.getCurrentVectorSize());
+        } else {
+          ColumnarFloats.this.get(floatVector, offset.getOffsets(), offset.getCurrentVectorSize());
+        }
+
+        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullValueBitmap);
+
+        id = offset.getId();
+      }
+    }
+
+    return new ColumnarFloatsVectorValueSelector();
   }
 }

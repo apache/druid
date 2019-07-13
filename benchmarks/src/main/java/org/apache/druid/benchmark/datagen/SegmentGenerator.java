@@ -20,7 +20,7 @@
 package org.apache.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
@@ -30,8 +30,8 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,18 +41,20 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class SegmentGenerator implements Closeable
@@ -60,15 +62,43 @@ public class SegmentGenerator implements Closeable
   private static final Logger log = new Logger(SegmentGenerator.class);
 
   private static final int MAX_ROWS_IN_MEMORY = 200000;
-  private static final int STARTING_SEED = 9999; // Consistent seed for reproducibility
 
-  private final File tempDir;
-  private final AtomicInteger seed;
+  // Setup can take a long time due to the need to generate large segments.
+  // Allow users to specify a cache directory via a JVM property or an environment variable.
+  private static final String CACHE_DIR_PROPERTY = "druid.benchmark.cacheDir";
+  private static final String CACHE_DIR_ENV_VAR = "DRUID_BENCHMARK_CACHE_DIR";
+
+  private final File cacheDir;
+  private final boolean cleanupCacheDir;
 
   public SegmentGenerator()
   {
-    this.tempDir = Files.createTempDir();
-    this.seed = new AtomicInteger(STARTING_SEED);
+    this(null);
+  }
+
+  public SegmentGenerator(@Nullable final File cacheDir)
+  {
+    if (cacheDir != null) {
+      this.cacheDir = cacheDir;
+      this.cleanupCacheDir = false;
+    } else {
+      final String userConfiguredCacheDir = System.getProperty(CACHE_DIR_PROPERTY, System.getenv(CACHE_DIR_ENV_VAR));
+      if (userConfiguredCacheDir != null) {
+        this.cacheDir = new File(userConfiguredCacheDir);
+        this.cleanupCacheDir = false;
+      } else {
+        log.warn("No cache directory provided; benchmark data caching is disabled. "
+                 + "Set the 'druid.benchmark.cacheDir' property or 'DRUID_BENCHMARK_CACHE_DIR' environment variable "
+                 + "to use caching.");
+        this.cacheDir = Files.createTempDir();
+        this.cleanupCacheDir = true;
+      }
+    }
+  }
+
+  public File getCacheDir()
+  {
+    return cacheDir;
   }
 
   public QueryableIndex generate(
@@ -79,11 +109,34 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+
+    final String dataHash = Hashing.sha256()
+                                   .newHasher()
+                                   .putString(dataSegment.getId().toString(), StandardCharsets.UTF_8)
+                                   .putString(schemaInfo.toString(), StandardCharsets.UTF_8)
+                                   .putString(granularity.toString(), StandardCharsets.UTF_8)
+                                   .putInt(numRows)
+                                   .hash()
+                                   .toString();
+
+    final File outDir = new File(getSegmentDir(dataSegment.getId(), dataHash), "merged");
+
+    if (outDir.exists()) {
+      try {
+        log.info("Found segment with hash[%s] cached in directory[%s].", dataHash, outDir);
+        return TestHelper.getTestIndexIO().loadIndex(outDir);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    log.info("Writing segment with hash[%s] to directory[%s].", dataHash, outDir);
 
     final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),
-        seed.getAndIncrement(),
+        dataSegment.getId().hashCode(), /* Use segment identifier hashCode as seed */
         schemaInfo.getDataInterval(),
         numRows
     );
@@ -125,61 +178,69 @@ public class SegmentGenerator implements Closeable
       rows.add(row);
 
       if ((i + 1) % 20000 == 0) {
-        log.info("%,d/%,d rows generated.", i + 1, numRows);
+        log.info("%,d/%,d rows generated for[%s].", i + 1, numRows, dataSegment);
       }
 
       if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
-        indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
+        indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema));
         rows.clear();
       }
     }
 
-    log.info("%,d/%,d rows generated.", numRows, numRows);
+    log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
 
     if (rows.size() > 0) {
-      indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
+      indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema));
       rows.clear();
     }
 
+    final QueryableIndex retVal;
+
     if (indexes.isEmpty()) {
       throw new ISE("No rows to index?");
-    } else if (indexes.size() == 1) {
-      return Iterables.getOnlyElement(indexes);
     } else {
       try {
-        final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
-            TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()).merge(
-                indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
-                false,
-                schemaInfo.getAggs()
-                          .stream()
-                          .map(AggregatorFactory::getCombiningFactory)
-                          .toArray(AggregatorFactory[]::new),
-                new File(tempDir, "merged"),
-                new IndexSpec()
-            )
-        );
+        retVal = TestHelper
+            .getTestIndexIO()
+            .loadIndex(
+                TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                          .merge(
+                              indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
+                              false,
+                              schemaInfo.getAggs()
+                                        .stream()
+                                        .map(AggregatorFactory::getCombiningFactory)
+                                        .toArray(AggregatorFactory[]::new),
+                              outDir,
+                              new IndexSpec(new RoaringBitmapSerdeFactory(true), null, null, null)
+                          )
+            );
 
         for (QueryableIndex index : indexes) {
           index.close();
         }
-
-        return merged;
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
+
+    log.info("Finished writing segment[%s] to[%s]", dataSegment, outDir);
+
+    return retVal;
   }
 
   @Override
   public void close() throws IOException
   {
-    FileUtils.deleteDirectory(tempDir);
+    if (cleanupCacheDir) {
+      FileUtils.deleteDirectory(cacheDir);
+    }
   }
 
   private QueryableIndex makeIndex(
       final SegmentId identifier,
+      final String dataHash,
       final int indexNumber,
       final List<InputRow> rows,
       final IncrementalIndexSchema indexSchema
@@ -188,9 +249,14 @@ public class SegmentGenerator implements Closeable
     return IndexBuilder
         .create()
         .schema(indexSchema)
-        .tmpDir(new File(new File(tempDir, identifier.toString()), String.valueOf(indexNumber)))
+        .tmpDir(new File(getSegmentDir(identifier, dataHash), String.valueOf(indexNumber)))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .rows(rows)
         .buildMMappedIndex();
+  }
+
+  private File getSegmentDir(final SegmentId identifier, final String dataHash)
+  {
+    return new File(cacheDir, StringUtils.format("%s_%s", identifier, dataHash));
   }
 }

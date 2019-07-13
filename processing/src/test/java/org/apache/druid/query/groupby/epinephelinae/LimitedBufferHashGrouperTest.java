@@ -20,12 +20,13 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.junit.Assert;
@@ -202,11 +203,13 @@ public class LimitedBufferHashGrouperTest
     LimitedBufferHashGrouper<Integer> grouper = new LimitedBufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("valueSum", "value"),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
         Integer.MAX_VALUE,
         0.5f,
         initialBuckets,

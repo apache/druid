@@ -25,6 +25,8 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -108,6 +110,24 @@ public class DefaultDimensionSpec implements DimensionSpec
   public DimensionSelector decorate(DimensionSelector selector)
   {
     return selector;
+  }
+
+  @Override
+  public SingleValueDimensionVectorSelector decorate(final SingleValueDimensionVectorSelector selector)
+  {
+    return selector;
+  }
+
+  @Override
+  public MultiValueDimensionVectorSelector decorate(final MultiValueDimensionVectorSelector selector)
+  {
+    return selector;
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return true;
   }
 
   @Override

@@ -44,12 +44,12 @@ public class OldApiSketchModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ComplexMetrics.registerSerde(SKETCH_BUILD, SketchBuildComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SET_SKETCH, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SKETCH_MERGE, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, SketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, SketchBuildComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
+    ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 
   @Override
