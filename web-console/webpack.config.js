@@ -21,6 +21,8 @@ const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const ALWAYS_BABEL = false;
+
 const { version } = require('./package.json');
 
 function friendlyErrorFormatter(e) {
@@ -41,6 +43,7 @@ module.exports = (env) => {
   console.log(`Webpack running in ${mode} mode`);
   return {
     mode: mode,
+    devtool: 'hidden-source-map',
     entry: {
       'web-console': './src/entry.ts'
     },
@@ -94,12 +97,9 @@ module.exports = (env) => {
           ]
         },
         {
-          test: mode === 'production' ? /\.m?js$/ : /^xxx$/, // Only match stuff for production builds
+          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
           use: {
-            loader: 'babel-loader',
-            options: {
-              presets: ['@babel/preset-env']
-            }
+            loader: 'babel-loader'
           }
         },
         {
@@ -122,6 +122,9 @@ module.exports = (env) => {
           ]
         }
       ]
+    },
+    performance: {
+      hints: false
     },
     plugins: [
       // new BundleAnalyzerPlugin()
