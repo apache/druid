@@ -87,7 +87,7 @@ function injectConsoleLicenses(consoleLicenses) {
   const textLines = text.split('\n');
 
   let ownLicense = '';
-  while (textLines.length && textLines[0].startsWith('# ')) {
+  while (textLines.length && textLines[0].startsWith('#')) {
     ownLicense += textLines[0] + '\n';
     textLines.shift();
   }
