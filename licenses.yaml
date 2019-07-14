@@ -2328,25 +2328,6 @@ license_file_path: licenses/bin/@types-dom4.MIT
 
 ---
 
-name: "@types/memoize-one"
-license_category: binary
-module: web-console
-license_name: MIT License
-version: 4.1.1
-license_file_path: licenses/bin/@types-memoize-one.MIT
-
----
-
-name: "array-includes"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 3.0.3
-license_file_path: licenses/bin/array-includes.MIT
-
----
-
 name: "asap"
 license_category: binary
 module: web-console
@@ -2414,6 +2395,15 @@ license_file_path: licenses/bin/core-js.MIT
 
 ---
 
+name: "core-js"
+license_category: binary
+module: web-console
+license_name: MIT License
+version: 3.1.4
+license_file_path: licenses/bin/core-js.MIT
+
+---
+
 name: "create-react-context"
 license_category: binary
 module: web-console
@@ -2441,16 +2431,6 @@ license_name: MIT License
 copyright: TJ Holowaychuk
 version: 3.1.0
 license_file_path: licenses/bin/debug.MIT
-
----
-
-name: "define-properties"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.1.3
-license_file_path: licenses/bin/define-properties.MIT
 
 ---
 
@@ -2503,46 +2483,6 @@ license_file_path: licenses/bin/encoding.MIT
 
 ---
 
-name: "es-abstract"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.13.0
-license_file_path: licenses/bin/es-abstract.MIT
-
----
-
-name: "es-to-primitive"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.2.0
-license_file_path: licenses/bin/es-to-primitive.MIT
-
----
-
-name: "es6-shim"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Paul Miller
-version: 0.35.5
-license_file_path: licenses/bin/es6-shim.MIT
-
----
-
-name: "es7-shim"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 6.0.0
-license_file_path: licenses/bin/es7-shim.MIT
-
----
-
 name: "fbjs"
 license_category: binary
 module: web-console
@@ -2572,22 +2512,13 @@ license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
 
-name: "function-bind"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Raynos
-version: 1.1.1
-license_file_path: licenses/bin/function-bind.MIT
-
----
-
 name: "gud"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jamie Kyle
 version: 1.0.0
+license_file_path: licenses/bin/gud.MIT
 
 ---
 
@@ -2598,26 +2529,6 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 2.0.0
 license_file_path: licenses/bin/has-own-prop.MIT
-
----
-
-name: "has-symbols"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.0.0
-license_file_path: licenses/bin/has-symbols.MIT
-
----
-
-name: "has"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Thiago de Arruda
-version: 1.0.3
-license_file_path: licenses/bin/has.MIT
 
 ---
 
@@ -2671,36 +2582,6 @@ license_file_path: licenses/bin/is-buffer.MIT
 
 ---
 
-name: "is-callable"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.1.4
-license_file_path: licenses/bin/is-callable.MIT
-
----
-
-name: "is-date-object"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.0.1
-license_file_path: licenses/bin/is-date-object.MIT
-
----
-
-name: "is-regex"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.0.4
-license_file_path: licenses/bin/is-regex.MIT
-
----
-
 name: "is-stream"
 license_category: binary
 module: web-console
@@ -2711,22 +2592,13 @@ license_file_path: licenses/bin/is-stream.MIT
 
 ---
 
-name: "is-symbol"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.0.2
-license_file_path: licenses/bin/is-symbol.MIT
-
----
-
 name: "isarray"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Julian Gruber
 version: 0.0.1
+license_file_path: licenses/bin/isarray.MIT
 
 ---
 
@@ -2858,46 +2730,6 @@ license_file_path: licenses/bin/object-assign.MIT
 
 ---
 
-name: "object-keys"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.1.1
-license_file_path: licenses/bin/object-keys.MIT
-
----
-
-name: "object.entries"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.1.0
-license_file_path: licenses/bin/object.entries.MIT
-
----
-
-name: "object.getownpropertydescriptors"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 2.0.3
-license_file_path: licenses/bin/object.getownpropertydescriptors.MIT
-
----
-
-name: "object.values"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.1.0
-license_file_path: licenses/bin/object.values.MIT
-
----
-
 name: "path-to-regexp"
 license_category: binary
 module: web-console
@@ -2913,6 +2745,7 @@ module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
 version: 1.15.0
+license_file_path: licenses/bin/popper.js.MIT
 
 ---
 
@@ -3043,6 +2876,7 @@ module: web-console
 license_name: MIT License
 copyright: Ben Newman
 version: 0.13.2
+license_file_path: licenses/bin/regenerator-runtime.MIT
 
 ---
 
@@ -3062,6 +2896,7 @@ module: web-console
 license_name: MIT License
 copyright: Michael Jackson
 version: 2.2.0
+license_file_path: licenses/bin/resolve-pathname.MIT
 
 ---
 
@@ -3094,56 +2929,6 @@ license_file_path: licenses/bin/setimmediate.MIT
 
 ---
 
-name: "string-at"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 1.0.1
-license_file_path: licenses/bin/string-at.MIT
-
----
-
-name: "string.prototype.padend"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 3.0.0
-license_file_path: licenses/bin/string.prototype.padend.MIT
-
----
-
-name: "string.prototype.padstart"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 3.0.0
-license_file_path: licenses/bin/string.prototype.padstart.MIT
-
----
-
-name: "string.prototype.trimleft"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 2.0.0
-license_file_path: licenses/bin/string.prototype.trimleft.MIT
-
----
-
-name: "string.prototype.trimright"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Jordan Harband
-version: 2.0.0
-license_file_path: licenses/bin/string.prototype.trimright.MIT
-
----
-
 name: "tiny-invariant"
 license_category: binary
 module: web-console
@@ -3170,6 +2955,7 @@ module: web-console
 license_name: MIT License
 copyright: sudodoki
 version: 1.0.6
+license_file_path: licenses/bin/toggle-selection.MIT
 
 ---
 
@@ -3209,6 +2995,7 @@ module: web-console
 license_name: MIT License
 copyright: Michael Jackson
 version: 0.4.0
+license_file_path: licenses/bin/value-equal.MIT
 
 ---
 

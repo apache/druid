@@ -37,8 +37,9 @@ module.exports = (env) => {
     secure: false
   };
 
+  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
   return {
-    mode: process.env.NODE_ENV || 'development',
+    mode: mode,
     entry: {
       'web-console': './src/entry.ts'
     },
@@ -90,6 +91,15 @@ module.exports = (env) => {
               }
             }
           ]
+        },
+        {
+          test: mode === 'production' ? /\.m?js$/ : /^xxx$/, // Only match stuff for production builds
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: ['@babel/preset-env']
+            }
+          }
         },
         {
           test: /\.s?css$/,

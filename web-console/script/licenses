@@ -22,7 +22,7 @@ const checker = require('license-checker');
 const yaml = require('js-yaml');
 
 const LICENSES_FILE = '../licenses.yaml';
-const LICENSES_FILE_INPUT = LICENSES_FILE; // './private/licenses_orig.yaml';
+const LICENSES_FILE_INPUT = './private/licenses_orig.yaml';
 const SEPARATOR = '\n\n---\n\n';
 
 const extraFromOldConsole = `
@@ -160,18 +160,22 @@ checker.init({
     const simpleName = name.replace('/', '-');
     const licenseDest = `licenses/bin/${simpleName}.${licenseExt}`
 
-    let licenseCopied = false;
+    let hasLicense = false;
     if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
       try {
         fs.copyFileSync(licenseFile, `../${licenseDest}`);
-        licenseCopied = true;
+        hasLicense = true;
       } catch (e) {
-        console.log(meta);
-        console.log(`Could not copy license for '${p}'`);
+        console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
       }
     } else {
-      console.log(meta);
-      console.log(`Could not find license for '${p}'`);
+      try {
+        // See if the license is already there (manually)
+        fs.statSync(`../${licenseDest}`);
+        hasLicense = true;
+      } catch (e) {
+        console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+      }
     }
 
     const lines = [
@@ -181,7 +185,7 @@ checker.init({
       `license_name: ${properLicenseName}`,
       publisher ? `copyright: ${publisher}` : null,
       `version: ${version}`,
-      licenseCopied ? `license_file_path: ${licenseDest}` : null,
+      hasLicense ? `license_file_path: ${licenseDest}` : null,
     ];
 
     return lines.filter(Boolean).join('\n');
