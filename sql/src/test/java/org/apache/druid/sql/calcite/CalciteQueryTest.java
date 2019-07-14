@@ -5804,6 +5804,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnTimeExtractWithMilliseconds() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*) FROM druid.foo4\n"
           + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
