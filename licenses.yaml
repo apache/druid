@@ -15,970 +15,42 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Apache Avro
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 1.9.0
-libraries:
-  - org.apache.avro: avro
-  - org.apache.avro: avro-mapred
-  - org.apache.avro: avro-ipc
-  - org.apache.avro: avro-ipc-jetty
-
----
-
-name: Apache Velocity
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 1.7
-libraries:
-  - org.apache.velocity: velocity
-
----
-
-name: Apache Velocity Engine
-version: 2.0
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-libraries:
-  - org.apache.velocity: velocity-engine-core
-
----
-
-name: Gson
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 2.3.1
-libraries:
-  - com.google.code.gson: gson
-
----
-
-name: Javax Annotation API
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: CDDL 1.1
-version: 1.3.2
-copyright: Oracle and/or its affiliates
-license_file_path: licenses/bin/javax.annotation-api.CDDL11
-libraries:
-  - javax.annotation: javax.annotation-api
-
----
-
-name: Jersey
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: CDDL 1.1
-version: 1.15
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/jersey.CDDL11
-libraries:
-  - com.sun.jersey: jersey-client
-
----
-
-name: Jetty
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 2.5-20081211
-libraries:
-  - org.mortbay.jetty: servlet-api
-
----
-
-name: Jetty
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 6.1.26
-libraries:
-  - org.mortbay.jetty: jetty
-
----
-
-name: Kafka Schema Registry Client
-version: 3.0.1
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-libraries:
-  - io.confluent: kafka-schema-registry-client
-
----
-
-name: Objenesis
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 2.4
-libraries:
-  - org.objenesis: objenesis
-
----
-
-name: Paranamer
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: BSD-3-Clause License
-version: 2.7
-copyright: Paul Hammant & ThoughtWorks Inc
-license_file_path: licenses/bin/paranamer.BSD3
-libraries:
-  - com.thoughtworks.paranamer: paranamer
-
----
-
-name: Schema Repository
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 0.1.3
-libraries:
-  - org.schemarepo: schema-repo-api
-  - org.schemarepo: schema-repo-avro
-  - org.schemarepo: schema-repo-client
-  - org.schemarepo: schema-repo-common
-
----
-
-name: snappy-java
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-version: 1.1.1.3
-libraries:
-  - org.xerial.snappy: snappy-java
-
----
-
-name: Apache Hive
-license_category: binary
-module: extensions/druid-bloom-filter
-license_name: Apache License version 2.0
-version: 2.7.0
-libraries:
-  - org.apache.hive: hive-storage-api
-
----
-
-name: DataSketches
-license_category: binary
-module: extensions/druid-datasketches
-license_name: Apache License version 2.0
-version: 0.12.2
-libraries:
-  - com.yahoo.datasketches: memory
-
----
-
-name: DataSketches
-license_category: binary
-module: extensions/druid-datasketches
-license_name: Apache License version 2.0
-version: 0.13.4
-libraries:
-  - com.yahoo.datasketches: sketches-core
-
----
-
-name: Google Cloud Storage JSON API
-license_category: binary
-module: extensions/druid-google-extensions
-license_name: Apache License version 2.0
-version: v1-rev79-1.22.0
-libraries:
-  - com.google.apis: google-api-services-storage
-
----
-
-name: Apache Kafka
-version: 2.1.0
-license_category: binary
-module: extensions/druid-kafka-indexing-service
-license_name: Apache License version 2.0
-libraries:
-  - org.apache.kafka: kafka-clients
-
----
-
-name: snappy-java
-license_category: binary
-module: extensions/druid-kafka-indexing-service
-license_name: Apache License version 2.0
-version: 1.1.2.6
-libraries:
-  - org.xerial.snappy: snappy-java
-
----
-
-name: Jackson
-license_category: binary
-module: extensions/druid-kerberos
-license_name: Apache License version 2.0
-version: 1.9.2
-libraries:
-  - org.codehaus.jackson: jackson-jaxrs
-  - org.codehaus.jackson: jackson-xc
-
----
-
-name: Jersey JSON
-license_category: binary
-module: extensions/druid-kerberos
-license_name: CDDL 1.1
-version: 1.19.3
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/jersey-json.CDDL11
-libraries:
-  - com.sun.jersey: jersey-json
-
----
-
-name: Jets3t
-license_category: binary
-module: extensions/druid-kerberos
-license_name: Apache License version 2.0
-version: 0.9.0
-libraries:
-  - net.java.dev.jets3t: jets3t
-
----
-
-name: Jettison
-license_category: binary
-module: extensions/druid-kerberos
-license_name: Apache License version 2.0
-version: 1.1
-libraries:
-  - org.codehaus.jettison: jettison
-
----
-
-name: JSch - Java Secure Channel
-license_category: binary
-module: extensions/druid-kerberos
-license_name: BSD-3-Clause License
-version: 0.1.54
-copyright: Atsuhiko Yamanaka, JCraft,Inc.
-license_file_path: licenses/bin/jsch.BSD3
-libraries:
-  - com.jcraft: jsch
-
----
-
-name: Objenesis
-license_category: binary
-module: extensions/druid-kerberos
-license_name: Apache License version 2.0
-version: 3.0.1
-libraries:
-  - org.objenesis: objenesis
-
----
-
-name: Old JAXB Runtime
-license_category: binary
-module: extensions/druid-kerberos
-license_name: CDDL 1.1
-version: 2.2.3-1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/old-jaxb.CDDL11
-libraries:
-  - com.sun.xml.bind: jaxb-impl
-
----
-
-name: XML Builder
-license_category: binary
-module: extensions/druid-kerberos
-license_name: Apache License version 2.0
-version: 0.4
-libraries:
-  - com.jamesmurty.utils: java-xmlbuilder
-
----
-
-name: xmlenc
-license_category: binary
-module: extensions/druid-kerberos
-license_name: BSD-3-Clause License
-version: 0.52
-copyright: Ernst de Haan
-license_file_path: licenses/bin/xmlenc.BSD3
-libraries:
-  - xmlenc: xmlenc
-
----
-
-name: AWS SDK for Java
-license_category: binary
-module: extensions/druid-kinesis-indexing-service
-license_name: Apache License version 2.0
-version: 1.11.199
-libraries:
-  - com.amazonaws: aws-java-sdk-kinesis
-  - com.amazonaws: aws-java-sdk-sts
-
----
-
-name: ANTLR
-license_category: binary
-module: extensions/druid-lookups-cached-single
-license_name: BSD-3-Clause License
-version: 2.7.7
-copyright: The ANTLR Project
-license_file_path: licenses/bin/antlr.BSD3
-libraries:
-  - antlr: antlr
-
----
-
-name: StringTemplate
-license_category: binary
-module: extensions/druid-lookups-cached-single
-license_name: BSD-3-Clause License
-version: 3.2
-copyright: Terrence Parr
-license_file_path: licenses/bin/antlr-stringtemplate.BSD3
-libraries:
-  - org.antlr: stringtemplate
-
----
-
-name: aircompressor
-license_category: binary
-module: extensions/druid-orc-extensions
-license_name: Apache License version 2.0
-version: "0.10"
-libraries:
-  - io.airlift: aircompressor
-
----
-
-name: Apache ORC libraries
-license_category: binary
-module: extensions/druid-orc-extensions
-license_name: Apache License version 2.0
-version: 1.5.5
-libraries:
-  - org.apache.orc: orc-mapreduce
-  - org.apache.orc: orc-core
-  - org.apache.orc: orc-shims
-
----
-
-name: Hive storage API
-license_category: binary
-module: extensions/druid-orc-extensions
-license_name: Apache License version 2.0
-version: 2.6.0
-libraries:
-  - org.apache.hive: hive-storage-api
-
----
-
-name: Apache Parquet
-license_category: binary
-module: extensions/druid-parquet-extensions
-license_name: Apache License version 2.0
-version: 1.10.1
-libraries:
-  - org.apache.parquet: parquet-avro
-  - org.apache.parquet: parquet-column
-  - org.apache.parquet: parquet-common
-  - org.apache.parquet: parquet-encoding
-  - org.apache.parquet: parquet-hadoop
-  - org.apache.parquet: parquet-jackson
-
----
-
-name: Apache Parquet Format
-license_category: binary
-module: extensions/druid-parquet-extensions
-license_name: Apache License version 2.0
-version: 2.4.0
-libraries:
-  - org.apache.parquet: parquet-format
-
----
-
-name: snappy-java
-license_category: binary
-module: extensions/druid-parquet-extensions
-license_name: Apache License version 2.0
-version: 1.1.7.2
-libraries:
-  - org.xerial.snappy: snappy-java
-
----
-
-name: Protocol Buffers
-license_category: binary
-module: extensions/druid-protobuf-extensions
-license_name: BSD-3-Clause License
-version: 3.2.0
-copyright: Google, Inc.
-license_file_path: licenses/bin/protobuf-java.BSD3
-libraries:
-  - com.google.protobuf: protobuf-java
-  - com.google.protobuf: protobuf-java-util
-
----
-
-name: Apache Kafka
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-version: 0.8.2.1
-libraries:
-  - org.apache.kafka: kafka_2.10
-  - org.apache.kafka: kafka-clients
-
----
-
-name: JOpt Simple
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: MIT License
-copyright: Paul R. Holser, Jr.
-version: 3.2
-license_file_path: licenses/bin/jopt-simple.MIT
-libraries:
-  - net.sf.jopt-simple: jopt-simple
-
----
-
-name: Metrics Core Library
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-version: 2.2.0
-libraries:
-  - com.yammer.metrics: metrics-core
-
----
-
-name: Scala Library
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: BSD-3-Clause License
-copyright: EPFL, Lightbend Inc.
-version: 2.10.4
-license_file_path: licenses/bin/scala-lang.BSD3
-libraries:
-  - org.scala-lang: scala-library
-
----
-
-name: ZooKeeper Client
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-version: 0.3
-libraries:
-  - com.101tec: zkclient
-
----
-
-name: PostgreSQL JDBC Driver
-license_category: binary
-module: extensions/postgresql-metadata-storage
-license_name: BSD-3-Clause License
-version: 9.4.1208.jre7
-copyright: PostgreSQL Global Development Group
-license_file_path: licenses/bin/postgresql.BSD3
-libraries:
-  - org.postgresql: postgresql
-
----
-
-name: Gson
-license_category: binary
-module: extensions/protobuf-extensions
-license_name: Apache License version 2.0
-version: 2.7
-libraries:
-  - com.google.code.gson: gson
-
----
-
-name: Protocol Buffers Dynamic Schema
-license_category: binary
-module: extensions/protobuf-extensions
-license_name: Apache License version 2.0
-version: 0.9.3
-libraries:
-  - com.github.os72: protobuf-dynamic
-
----
-
-name: \"Java Concurrency In Practice\" Book Annotations
-license_category: binary
-module: hadoop-client
-license_name: Creative Commons Attribution 2.5
-version: 1.0
-copyright: Brian Goetz and Tim Peierls
-license_file_path: licenses/bin/creative-commons-2.5.LICENSE
-libraries:
-  - net.jcip: jcip-annotations
-
----
-
-name: Apache Avro
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.7.4
-libraries:
-  - org.apache.avro: avro
-
----
-
-name: Apache Commons BeanUtils
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.7.0
-libraries:
-  - commons-beanutils: commons-beanutils
-
----
-
-name: Apache Commons BeanUtils
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.8.0
-libraries:
-  - commons-beanutils: commons-beanutils-core
-
----
-
-name: Apache Commons Codec
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.4
-libraries:
-  - commons-codec: commons-codec
-
----
-
-name: Apache Commons Compress
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.4.1
-libraries:
-  - org.apache.commons: commons-compress
-
----
-
-name: Apache Commons Configuration
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.6
-libraries:
-  - commons-configuration: commons-configuration
-
----
-
-name: Apache Commons Digester
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.8
-libraries:
-  - commons-digester: commons-digester
-
----
-
-name: Apache Commons IO
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.4
-libraries:
-  - commons-io: commons-io
-
----
-
-name: Apache Commons Logging
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.1.3
-libraries:
-  - commons-logging: commons-logging
-
----
-
-name: Apache Commons Math
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 3.1.1
-libraries:
-  - org.apache.commons: commons-math3
-
----
-
-name: Apache Commons Net
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 3.1
-libraries:
-  - commons-net: commons-net
-
----
-
-name: Apache Directory
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.0.0-M20
-libraries:
-  - org.apache.directory.api: api-asn1-api
-  - org.apache.directory.api: api-util
-
----
-
-name: Apache Directory Server
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.0.0-M15
-libraries:
-  - org.apache.directory.server: apacheds-i18n
-  - org.apache.directory.server: apacheds-kerberos-codec
-
----
-
-name: Apache Hadoop
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.8.3
-libraries:
-  - org.apache.hadoop: hadoop-annotations
-  - org.apache.hadoop: hadoop-auth
-  - org.apache.hadoop: hadoop-client
-  - org.apache.hadoop: hadoop-common
-  - org.apache.hadoop: hadoop-hdfs-client
-  - org.apache.hadoop: hadoop-mapreduce-client-app
-  - org.apache.hadoop: hadoop-mapreduce-client-common
-  - org.apache.hadoop: hadoop-mapreduce-client-core
-  - org.apache.hadoop: hadoop-mapreduce-client-jobclient
-  - org.apache.hadoop: hadoop-mapreduce-client-shuffle
-  - org.apache.hadoop: hadoop-yarn-api
-  - org.apache.hadoop: hadoop-yarn-client
-  - org.apache.hadoop: hadoop-yarn-common
-  - org.apache.hadoop: hadoop-yarn-server-common
-
----
-
-name: Apache HTrace
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 4.0.1-incubating
-libraries:
-  - org.apache.htrace: htrace-core4
-
----
-
-name: Apache HttpClient
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 4.5.2
-libraries:
-  - org.apache.httpcomponents: httpclient
-
----
-
-name: Apache Log4j
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.2.17
-libraries:
-  - log4j: log4j
-
----
-
-name: Apache Zookeeper
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 3.4.6
-libraries:
-  - org.apache.zookeeper: zookeeper
-
----
-
-name: components from Jackson
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.9.13
-libraries:
-  - org.codehaus.jackson: jackson-jaxrs
-  - org.codehaus.jackson: jackson-xc
-
----
-
-name: FindBugs JSR305
-license_category: binary
-module: hadoop-client
-license_name: BSD-3-Clause License
-version: 3.0.0
-copyright: FindBugs
-license_file_path: licenses/bin/jsr305.BSD3
-libraries:
-  - com.google.code.findbugs: jsr305
-skip_dependency_report_check: true
-
----
-
-name: Gson
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.2.4
-libraries:
-  - com.google.code.gson: gson
-
----
-
-name: Guava
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 11.0.2
-libraries:
-  - com.google.guava: guava
-
----
-
-name: Java Servlet API
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.5
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.servlet: javax.servlet-api
-
----
-
-name: JavaBeans Activation Framework
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 1.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javaxCDDL11
-libraries:
-  - javax.activation: activation
-
----
-
-name: JAXB
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.2.2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: Jersey
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 1.9
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/jersey.CDDL11
-libraries:
-  - com.sun.jersey: jersey-client
-  - com.sun.jersey: jersey-core
-
----
-
-name: Jetty
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 6.1.26
-libraries:
-  - org.mortbay.jetty: jetty-sslengine
-  - org.mortbay.jetty: jetty-util
-
----
-
-name: JSON Small and Fast Parser
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.1.1
-libraries:
-  - net.minidev: json-smart
-
----
-
-name: jsp-api
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.servlet.jsp: jsp-api
-
----
-
-name: LevelDB JNI
-license_category: binary
-module: hadoop-client
-license_name: BSD-3-Clause License
-version: 1.8
-copyright: FuseSource Corp.
-license_file_path: licenses/bin/leveldb-jni.BSD3
-libraries:
-  - org.fusesource.leveldbjni: leveldbjni-all
-
----
-
-name: Netty
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 3.6.2.Final
-libraries:
-  - io.netty: netty
-
----
-
-name: Nimbus JOSE+JWT
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 3.9
-libraries:
-  - com.nimbusds: nimbus-jose-jwt
-
----
-
-name: OkHttp
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.4.0
-libraries:
-  - com.squareup.okhttp: okhttp
-
----
-
-name: Okio
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.4.0
-libraries:
-  - com.squareup.okio: okio
-
----
-
-name: Paranamer
-license_category: binary
-module: hadoop-client
-license_name: BSD-3-Clause License
-version: 2.3
-copyright: Paul Hammant & ThoughtWorks Inc
-license_file_path: licenses/bin/paranamer.BSD3
-libraries:
-  - com.thoughtworks.paranamer: paranamer
-
----
-
-name: Protocol Buffers
-license_category: binary
-module: hadoop-client
-license_name: BSD-3-Clause License
-version: 2.5.0
-copyright: Google, Inc.
-license_file_path: licenses/bin/protobuf-java.BSD3
-libraries:
-  - com.google.protobuf: protobuf-java
-
----
-
-name: SLF4J API
-version: 1.7.10
-license_category: binary
-module: hadoop-client
-license_name: MIT License
-copyright: QOS.ch
-license_file_path: licenses/bin/slf4j.MIT
-libraries:
-  - org.slf4j: slf4j-api
-  - org.slf4j: slf4j-log4j12
-
----
-
-name: snappy-java
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 1.0.4.1
-libraries:
-  - org.xerial.snappy: snappy-java
-
----
-
-name: stax-api
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 1.0-2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.stream: stax-api
-
----
-
-name: XZ
-license_category: binary
-module: hadoop-client
-license_name: Public Domain
-version: 1.0
-libraries:
-  - org.tukaani: xz
-
----
-
-name: a modified version of the CONCISE (COmpressed 'N' Composable Integer SEt) library
+name: conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter adapted from Apache Hive
+version:
 license_category: source
 module: java-core
 license_name: Apache License version 2.0
-copyright: Alessandro Colantonio (https://sourceforge.net/projects/concise/)
 source_paths:
-  - extendedset/src/main/java/org/apache/druid/extendedset/intset/
+  - processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+  - extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
+  - extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
+
+---
+
+name: variable length long deserialization code adapted from Apache Lucene
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - processing/src/main/java/org/apache/druid/segment/data/VSizeLongSerde.java
+
+---
+
+name: SQL query planning code adapted from Apache Calcite
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - sql/src/main/java/org/apache/druid/sql/calcite/
+
+---
+
+name: Kerberos authentication code adapted from Apache Hadoop
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
 
 ---
 
@@ -989,6 +61,16 @@ license_name: Apache License version 2.0
 copyright: Andrew Duffy (https://github.com/amjjd/java-alphanum)
 source_paths:
   - processing/src/main/java/org/apache/druid/query/ordering/StringComparators.java
+
+---
+
+name: a modified version of the Metamarkets java-util library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Metamarkets Group Inc. (https://github.com/metamx/java-util)
+source_paths:
+  - java-util/
 
 ---
 
@@ -1012,88 +94,201 @@ source_paths:
 
 ---
 
-name: a modified version of the Metamarkets java-util library
+name: a modified version of the CONCISE (COmpressed 'N' Composable Integer SEt) library
 license_category: source
 module: java-core
 license_name: Apache License version 2.0
-copyright: Metamarkets Group Inc. (https://github.com/metamx/java-util)
+copyright: Alessandro Colantonio (https://sourceforge.net/projects/concise/)
 source_paths:
-  - java-util/
+  - extendedset/src/main/java/org/apache/druid/extendedset/intset/
 
 ---
 
-name: a smear function adapted from MurmurHash3
+name: modified portions of the Guava library
+license_category: source
+license_name: Apache License version 2.0
+module: java-core
+copyright: The Guava Authors (https://github.com/google/guava)
+source_paths:
+  - Closer class: core/src/main/java/org/apache/druid/java/util/common/io/Closer.java
+  - Splitter.splitToList() method: core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
+  - DirectExecutorService class: core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
+
+---
+
+name: modified versions of the Dockerfile and related configuration files
 license_category: source
 module: java-core
-license_name: Public Domain
-copyright: Austin Appleby who has placed MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
+license_name: Apache License version 2.0
+copyright: SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
 source_paths:
-  - processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java
+  - examples/quickstart/tutorial/hadoop/docker/
 
 ---
 
-name: Aggregate Designer Algorithm
+name: fixed bins histogram percentile computation code adapted from Netflix Spectator
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Netflix, Inc. (https://github.com/Netflix/spectator)
+source_paths:
+  - extensions-core/histogram/src/main/java/org/apache/druid/query/aggregation/histogram/FixedBucketsHistogram.java
+
+---
+
+name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 6.0
+version: 1.11.199
 libraries:
-  - net.hydromatic: aggdesigner-algorithm
+  - com.amazonaws: aws-java-sdk-core
+  - com.amazonaws: aws-java-sdk-ec2
+  - com.amazonaws: aws-java-sdk-kms
+  - com.amazonaws: aws-java-sdk-s3
+  - com.amazonaws: jmespath-java
 
 ---
 
-name: Airline
+name: Esri Geometry API for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7
+version: 2.0.0
 libraries:
-  - io.airlift: airline
+  - com.esri.geometry: esri-geometry-api
 
 ---
 
-name: ANTLR 4 Runtime
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 4.5.1
-copyright: The ANTLR Project
-license_file_path: licenses/bin/antlr4-runtime.BSD3
-libraries:
-  - org.antlr: antlr4-runtime
-
----
-
-name: AOP Alliance
-license_category: binary
-module: java-core
-license_name: Public Domain
-version: 1.0
-libraries:
-  - aopalliance: aopalliance
-
----
-
-name: Apache Calcite
+name: ClassMate
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.0
+version: 1.0.0
 libraries:
-  - org.apache.calcite: calcite-core
-  - org.apache.calcite: calcite-linq4j
+  - com.fasterxml: classmate
 
 ---
 
-name: Apache Calcite Avatica
+name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 2.6.7
 libraries:
-  - org.apache.calcite.avatica: avatica-core
-  - org.apache.calcite.avatica: avatica-metrics
-  - org.apache.calcite.avatica: avatica-server
+  - com.fasterxml.jackson.core: jackson-annotations
+  - com.fasterxml.jackson.core: jackson-core
+  - com.fasterxml.jackson.core: jackson-databind
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
+  - com.fasterxml.jackson.datatype: jackson-datatype-guava
+  - com.fasterxml.jackson.datatype: jackson-datatype-joda
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-base
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-json-provider
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
+  - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
+
+---
+
+name: Caffeine
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.5.5
+libraries:
+  - com.github.ben-manes.caffeine: caffeine
+
+---
+
+name: Error Prone Annotations
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3.2
+libraries:
+  - com.google.errorprone: error_prone_annotations
+
+---
+
+name: Guava
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 16.0.1
+libraries:
+  - com.google.guava: guava
+
+---
+
+name: Guice
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.0
+libraries:
+  - com.google.inject: guice
+  - com.google.inject.extensions: guice-multibindings
+  - com.google.inject.extensions: guice-servlet
+
+---
+
+name: JsonPath
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3.0
+libraries:
+  - com.jayway.jsonpath: json-path
+
+---
+
+name: LMAX Disruptor
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.3.6
+libraries:
+  - com.lmax: disruptor
+
+---
+
+name: LZF Compressor
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.4
+libraries:
+  - com.ning: compress-lzf
+
+---
+
+name: OpenCSV
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.2
+libraries:
+  - com.opencsv: opencsv
+
+---
+
+name: OkHttp
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.2
+libraries:
+  - com.squareup.okhttp: okhttp
+
+---
+
+name: Netty Reactive Streams
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.0.0
+libraries:
+  - com.typesafe.netty: netty-reactive-streams
 
 ---
 
@@ -1137,6 +332,46 @@ libraries:
 
 ---
 
+name: Apache Commons IO
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.5
+libraries:
+  - commons-io: commons-io
+
+---
+
+name: Apache Commons Lang
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - commons-lang: commons-lang
+
+---
+
+name: Apache Commons Logging
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - commons-logging: commons-logging
+
+---
+
+name: Apache Commons Pool
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.6
+libraries:
+  - commons-pool: commons-pool
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -1167,26 +402,6 @@ libraries:
 
 ---
 
-name: Apache Commons IO
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.5
-libraries:
-  - commons-io: commons-io
-
----
-
-name: Apache Commons Lang
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6
-libraries:
-  - commons-lang: commons-lang
-
----
-
 name: Apache Commons Lang
 license_category: binary
 module: java-core
@@ -1197,16 +412,6 @@ libraries:
 
 ---
 
-name: Apache Commons Logging
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.1.1
-libraries:
-  - commons-logging: commons-logging
-
----
-
 name: Apache Commons Math
 license_category: binary
 module: java-core
@@ -1214,16 +419,6 @@ license_name: Apache License version 2.0
 version: 3.6.1
 libraries:
   - org.apache.commons: commons-math3
-
----
-
-name: Apache Commons Pool
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.6
-libraries:
-  - commons-pool: commons-pool
 
 ---
 
@@ -1244,6 +439,191 @@ license_name: Apache License version 2.0
 version: 1.3
 libraries:
   - org.apache.commons: commons-text
+
+---
+
+name: Airline
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.7
+libraries:
+  - io.airlift: airline
+
+---
+
+name: DropWizard Metrics Core
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.0.0
+libraries:
+  - io.dropwizard.metrics: metrics-core
+
+---
+
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.10.6.Final
+libraries:
+  - io.netty: netty
+
+---
+
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.30.Final
+libraries:
+  - io.netty: netty-all
+
+---
+
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.29.Final
+libraries:
+  - io.netty: netty-buffer
+  - io.netty: netty-codec
+  - io.netty: netty-codec-dns
+  - io.netty: netty-codec-http
+  - io.netty: netty-codec-socks
+  - io.netty: netty-common
+  - io.netty: netty-handler
+  - io.netty: netty-handler-proxy
+  - io.netty: netty-resolver
+  - io.netty: netty-resolver-dns
+  - io.netty: netty-transport
+  - io.netty: netty-transport-native-epoll
+  - io.netty: netty-transport-native-unix-common
+
+---
+
+name: fastutil
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 8.1.0
+libraries:
+  - it.unimi.dsi: fastutil
+
+---
+
+name: Javax Inject
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1
+libraries:
+  - javax.inject: javax.inject
+
+---
+
+name: Bean Validation API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.0.Final
+libraries:
+  - javax.validation: validation-api
+
+---
+
+name: Joda-Time
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.10.2
+libraries:
+  - joda-time: joda-time
+
+---
+
+name: Aggregate Designer Algorithm
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 6.0
+libraries:
+  - net.hydromatic: aggdesigner-algorithm
+
+---
+
+name: Java Native Access (JNA)
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.5.1
+libraries:
+  - net.java.dev.jna: jna
+
+---
+
+name: ASM Based Accessors Helper Used By JSON Smart
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2
+libraries:
+  - net.minidev: accessors-smart
+
+---
+
+name: JSON Small and Fast Parser
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3
+libraries:
+  - net.minidev: json-smart
+
+---
+
+name: Spymemcached
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.12.3
+libraries:
+  - net.spy: spymemcached
+
+---
+
+name: jackson-jq
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.0.7
+libraries:
+  - net.thisptr: jackson-jq
+
+---
+
+name: Apache Calcite
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.17.0
+libraries:
+  - org.apache.calcite: calcite-core
+  - org.apache.calcite: calcite-linq4j
+
+---
+
+name: Apache Calcite Avatica
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.12.0
+libraries:
+  - org.apache.calcite.avatica: avatica-core
+  - org.apache.calcite.avatica: avatica-metrics
+  - org.apache.calcite.avatica: avatica-server
 
 ---
 
@@ -1361,31 +741,6 @@ libraries:
 
 ---
 
-name: ASM
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 7.1
-copyright: INRIA, France Telecom
-license_file_path: licenses/bin/asm.BSD3
-libraries:
-  - org.ow2.asm: asm
-  - org.ow2.asm: asm-commons
-  - org.ow2.asm: asm-tree
-  - org.ow2.asm: asm-analysis
-
----
-
-name: ASM Based Accessors Helper Used By JSON Smart
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.2
-libraries:
-  - net.minidev: accessors-smart
-
----
-
 name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
@@ -1397,37 +752,782 @@ libraries:
 
 ---
 
-name: AWS SDK for Java
+name: components from Jackson
 license_category: binary
 module: java-core
+license_name: Apache License version 2.0
+version: 1.9.13
+libraries:
+  - org.codehaus.jackson: jackson-core-asl
+  - org.codehaus.jackson: jackson-mapper-asl
+
+---
+
+name: Plexus Interpolation API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.19
+libraries:
+  - org.codehaus.plexus: plexus-interpolation
+
+---
+
+name: Plexus Common Utilities
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.0.15
+libraries:
+  - org.codehaus.plexus: plexus-utils
+
+---
+
+name: Jetty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 9.4.10.v20180503
+libraries:
+  - org.eclipse.jetty: jetty-client
+  - org.eclipse.jetty: jetty-continuation
+  - org.eclipse.jetty: jetty-http
+  - org.eclipse.jetty: jetty-io
+  - org.eclipse.jetty: jetty-proxy
+  - org.eclipse.jetty: jetty-security
+  - org.eclipse.jetty: jetty-server
+  - org.eclipse.jetty: jetty-servlet
+  - org.eclipse.jetty: jetty-servlets
+  - org.eclipse.jetty: jetty-util
+
+---
+
+name: JVM Attach API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.5
+libraries:
+  - org.gridkit.lab: jvm-attach-api
+
+---
+
+name: Hibernate Validator Engine
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.1.3.Final
+libraries:
+  - org.hibernate: hibernate-validator
+
+---
+
+name: SIGAR
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.6.5.132
+libraries:
+  - org.hyperic: sigar
+
+---
+
+name: JBoss Logging 3
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.3.GA
+libraries:
+  - org.jboss.logging: jboss-logging
+
+---
+
+name: JDBI
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.63.1
+libraries:
+  - org.jdbi: jdbi
+
+---
+
+name: LZ4 Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.6.0
+libraries:
+  - org.lz4: lz4-java
+
+---
+
+name: MapDB
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.8
+libraries:
+  - org.mapdb: mapdb
+
+---
+
+name: Objenesis
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: RoaringBitmap
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.8.6
+libraries:
+  - org.roaringbitmap: RoaringBitmap
+  - org.roaringbitmap: shims
+
+---
+
+name: Config Magic
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.9
+libraries:
+  - org.skife.config: config-magic
+
+---
+
+name: Ion Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.2
+libraries:
+  - software.amazon.ion: ion-java
+
+---
+
+name: Apache Hadoop
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.8.3
+libraries:
+  - org.apache.hadoop: hadoop-annotations
+  - org.apache.hadoop: hadoop-auth
+  - org.apache.hadoop: hadoop-client
+  - org.apache.hadoop: hadoop-common
+  - org.apache.hadoop: hadoop-hdfs-client
+  - org.apache.hadoop: hadoop-mapreduce-client-app
+  - org.apache.hadoop: hadoop-mapreduce-client-common
+  - org.apache.hadoop: hadoop-mapreduce-client-core
+  - org.apache.hadoop: hadoop-mapreduce-client-jobclient
+  - org.apache.hadoop: hadoop-mapreduce-client-shuffle
+  - org.apache.hadoop: hadoop-yarn-api
+  - org.apache.hadoop: hadoop-yarn-client
+  - org.apache.hadoop: hadoop-yarn-common
+  - org.apache.hadoop: hadoop-yarn-server-common
+
+---
+
+name: Gson
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.2.4
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Guava
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 11.0.2
+libraries:
+  - com.google.guava: guava
+
+---
+
+name: Nimbus JOSE+JWT
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.9
+libraries:
+  - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: OkHttp
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.4.0
+libraries:
+  - com.squareup.okhttp: okhttp
+
+---
+
+name: Okio
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4.0
+libraries:
+  - com.squareup.okio: okio
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.7.0
+libraries:
+  - commons-beanutils: commons-beanutils
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.8.0
+libraries:
+  - commons-beanutils: commons-beanutils-core
+
+---
+
+name: Apache Commons Codec
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4
+libraries:
+  - commons-codec: commons-codec
+
+---
+
+name: Apache Commons Configuration
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.6
+libraries:
+  - commons-configuration: commons-configuration
+
+---
+
+name: Apache Commons Digester
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.8
+libraries:
+  - commons-digester: commons-digester
+
+---
+
+name: Apache Commons IO
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.4
+libraries:
+  - commons-io: commons-io
+
+---
+
+name: Apache Commons Logging
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.1.3
+libraries:
+  - commons-logging: commons-logging
+
+---
+
+name: Apache Commons Net
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.1
+libraries:
+  - commons-net: commons-net
+
+---
+
+name: Apache Commons Compress
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4.1
+libraries:
+  - org.apache.commons: commons-compress
+
+---
+
+name: Apache Commons Math
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.1.1
+libraries:
+  - org.apache.commons: commons-math3
+
+---
+
+name: Netty
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.6.2.Final
+libraries:
+  - io.netty: netty
+
+---
+
+name: Apache Log4j
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.2.17
+libraries:
+  - log4j: log4j
+
+---
+
+name: JSON Small and Fast Parser
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - net.minidev: json-smart
+
+---
+
+name: Apache Avro
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.7.4
+libraries:
+  - org.apache.avro: avro
+
+---
+
+name: Apache Directory
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.0.0-M20
+libraries:
+  - org.apache.directory.api: api-asn1-api
+  - org.apache.directory.api: api-util
+
+---
+
+name: Apache Directory Server
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.0.0-M15
+libraries:
+  - org.apache.directory.server: apacheds-i18n
+  - org.apache.directory.server: apacheds-kerberos-codec
+
+---
+
+name: Apache HTrace
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.0.1-incubating
+libraries:
+  - org.apache.htrace: htrace-core4
+
+---
+
+name: Apache HttpClient
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.5.2
+libraries:
+  - org.apache.httpcomponents: httpclient
+
+---
+
+name: Apache Zookeeper
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.4.6
+libraries:
+  - org.apache.zookeeper: zookeeper
+
+---
+
+name: components from Jackson
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.9.13
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+
+---
+
+name: Jetty
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 6.1.26
+libraries:
+  - org.mortbay.jetty: jetty-sslengine
+  - org.mortbay.jetty: jetty-util
+
+---
+
+name: snappy-java
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.0.4.1
+libraries:
+  - org.xerial.snappy: snappy-java
+
+---
+
+name: Kafka Schema Registry Client
+version: 3.0.1
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+
+---
+
+name: Apache Velocity Engine
+version: 2.0
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.velocity: velocity-engine-core
+
+---
+
+name: Apache Avro
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 1.9.0
+libraries:
+  - org.apache.avro: avro
+  - org.apache.avro: avro-mapred
+  - org.apache.avro: avro-ipc
+  - org.apache.avro: avro-ipc-jetty
+
+---
+
+name: Javax Annotation API
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: CDDL 1.1
+version: 1.3.2
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.annotation-api.CDDL11
+libraries:
+  - javax.annotation: javax.annotation-api
+
+---
+
+name: Schema Repository
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 0.1.3
+libraries:
+  - org.schemarepo: schema-repo-api
+  - org.schemarepo: schema-repo-avro
+  - org.schemarepo: schema-repo-client
+  - org.schemarepo: schema-repo-common
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 2.3.1
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Apache Velocity
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 1.7
+libraries:
+  - org.apache.velocity: velocity
+
+---
+
+name: Jetty
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 6.1.26
+libraries:
+  - org.mortbay.jetty: jetty
+
+---
+
+name: Jetty
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 2.5-20081211
+libraries:
+  - org.mortbay.jetty: servlet-api
+
+---
+
+name: Objenesis
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 2.4
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: snappy-java
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 1.1.1.3
+libraries:
+  - org.xerial.snappy: snappy-java
+
+---
+
+name: Apache Hive
+license_category: binary
+module: extensions/druid-bloom-filter
+license_name: Apache License version 2.0
+version: 2.7.0
+libraries:
+  - org.apache.hive: hive-storage-api
+
+---
+
+name: DataSketches
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 0.13.4
+libraries:
+  - com.yahoo.datasketches: sketches-core
+
+---
+
+name: DataSketches
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 0.12.2
+libraries:
+  - com.yahoo.datasketches: memory
+
+---
+
+name: Apache Kafka
+version: 2.1.0
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+
+---
+
+name: snappy-java
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+version: 1.1.2.6
+libraries:
+  - org.xerial.snappy: snappy-java
+
+---
+
+name: XML Builder
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 0.4
+libraries:
+  - com.jamesmurty.utils: java-xmlbuilder
+
+---
+
+name: Jettison
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 1.1
+libraries:
+  - org.codehaus.jettison: jettison
+
+---
+
+name: Jets3t
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 0.9.0
+libraries:
+  - net.java.dev.jets3t: jets3t
+
+---
+
+name: Jackson
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 1.9.2
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+
+---
+
+name: Objenesis
+license_category: binary
+module: extensions/druid-kerberos
+license_name: Apache License version 2.0
+version: 3.0.1
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: xmlenc
+license_category: binary
+module: extensions/druid-kerberos
+license_name: BSD-3-Clause License
+version: 0.52
+copyright: Ernst de Haan
+license_file_path: licenses/bin/xmlenc.BSD3
+libraries:
+  - xmlenc: xmlenc
+
+---
+
+name: Jersey JSON
+license_category: binary
+module: extensions/druid-kerberos
+license_name: CDDL 1.1
+version: 1.19.3
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey-json.CDDL11
+libraries:
+  - com.sun.jersey: jersey-json
+
+---
+
+name: Old JAXB Runtime
+license_category: binary
+module: extensions/druid-kerberos
+license_name: CDDL 1.1
+version: 2.2.3-1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/old-jaxb.CDDL11
+libraries:
+  - com.sun.xml.bind: jaxb-impl
+
+---
+
+name: AWS SDK for Java
+license_category: binary
+module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 version: 1.11.199
 libraries:
-  - com.amazonaws: aws-java-sdk-core
-  - com.amazonaws: aws-java-sdk-ec2
-  - com.amazonaws: aws-java-sdk-kms
-  - com.amazonaws: aws-java-sdk-s3
-  - com.amazonaws: jmespath-java
+  - com.amazonaws: aws-java-sdk-kinesis
+  - com.amazonaws: aws-java-sdk-sts
 
 ---
 
-name: Bean Validation API
+name: Apache Parquet
 license_category: binary
-module: java-core
+module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.1.0.Final
+version: 1.10.1
 libraries:
-  - javax.validation: validation-api
+  - org.apache.parquet: parquet-avro
+  - org.apache.parquet: parquet-column
+  - org.apache.parquet: parquet-common
+  - org.apache.parquet: parquet-encoding
+  - org.apache.parquet: parquet-hadoop
+  - org.apache.parquet: parquet-jackson
 
 ---
 
-name: Caffeine
+name: Apache Parquet Format
 license_category: binary
-module: java-core
+module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 2.5.5
+version: 2.4.0
 libraries:
-  - com.github.ben-manes.caffeine: caffeine
+  - org.apache.parquet: parquet-format
+
+---
+
+name: snappy-java
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: 1.1.7.2
+libraries:
+  - org.xerial.snappy: snappy-java
+
+---
+
+name: Protocol Buffers Dynamic Schema
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 0.9.3
+libraries:
+  - com.github.os72: protobuf-dynamic
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 2.7
+libraries:
+  - com.google.code.gson: gson
 
 ---
 
@@ -1443,56 +1543,498 @@ libraries:
 
 ---
 
-name: ClassMate
+name: JCodings
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 1.0.0
+license_name: MIT License
+version: 1.0.13
+copyright: JRuby Team
+license_file_path: licenses/bin/jcodings.MIT
 libraries:
-  - com.fasterxml: classmate
+  - org.jruby.jcodings: jcodings
 
 ---
 
-name: components from Jackson
+name: Joni
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 1.9.13
+license_name: MIT License
+version: 2.1.11
+copyright: JRuby Team
+license_file_path: licenses/bin/joni.MIT
 libraries:
-  - org.codehaus.jackson: jackson-core-asl
-  - org.codehaus.jackson: jackson-mapper-asl
+  - org.jruby.joni: joni
 
 ---
 
-name: Config Magic
+name: JCL 1.2 Implemented Over SLF4J
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 0.9
+license_name: MIT License
+version: 1.7.12
+copyright: QOS.ch
+license_file_path: licenses/bin/jcl-over-slf4j.MIT
 libraries:
-  - org.skife.config: config-magic
+  - org.slf4j: jcl-over-slf4j
 
 ---
 
-name: conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter adapted from Apache Hive
-version:
-license_category: source
+name: SLF4J API
+license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-source_paths:
-  - processing/src/main/java/org/apache/druid/segment/filter/Filters.java
-  - extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
-  - extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
+license_name: MIT License
+version: 1.7.25
+copyright: QOS.ch
+license_file_path: licenses/bin/slf4j.MIT
+libraries:
+  - org.slf4j: slf4j-api
 
 ---
 
-name: DropWizard Metrics Core
+name: SLF4J API
+version: 1.7.10
+license_category: binary
+module: hadoop-client
+license_name: MIT License
+copyright: QOS.ch
+license_file_path: licenses/bin/slf4j.MIT
+libraries:
+  - org.slf4j: slf4j-api
+  - org.slf4j: slf4j-log4j12
+
+---
+
+name: JNI binding for Zstd
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 4.0.0
+license_name: BSD-2-Clause License
+version: 1.3.3-1
+copyright: Luben Karavelov
+license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
-  - io.dropwizard.metrics: metrics-core
+  - com.github.luben: zstd-jni
+
+---
+
+name: Zstandard
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 1.3.3
+copyright: Facebook, Inc.
+license_file_path: licenses/bin/zstandard.BSD3
+
+---
+
+name: FindBugs JSR305
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 2.0.1
+copyright: FindBugs
+license_file_path: licenses/bin/jsr305.BSD3
+libraries:
+  - com.google.code.findbugs: jsr305
+skip_dependency_report_check: true
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 3.1.0
+copyright: Google, Inc.
+license_file_path:
+  - licenses/bin/protobuf-java.BSD3
+  - licenses/bin/protobuf-java-redhat.BSD3
+  - licenses/bin/protobuf-java-bloomberg.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+additional_license_statement: except src/google/protobuf/stubs/atomicops_internals_generic_gcc.h and src/google/protobuf/stubs/atomicops_internals_power.h files which are copyrighted by Red Hat Inc and Bloomberg Finance LP, respectively, and available under a BSD-3-Clause
+
+---
+
+name: JLine
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 0.9.94
+copyright: Marc Prud'hommeaux
+license_file_path: licenses/bin/jline.BSD3
+libraries:
+  - jline: jline
+
+---
+
+name: ANTLR 4 Runtime
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 4.5.1
+copyright: The ANTLR Project
+license_file_path: licenses/bin/antlr4-runtime.BSD3
+libraries:
+  - org.antlr: antlr4-runtime
+
+---
+
+name: Janino and Commons Compiler
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 2.7.6
+copyright: Arno Unkrig and TIBCO Software Inc.
+license_file_path: licenses/bin/janino.BSD3
+libraries:
+  - org.codehaus.janino: janino
+  - org.codehaus.janino: commons-compiler
+
+---
+
+name: ASM
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 7.1
+copyright: INRIA, France Telecom
+license_file_path: licenses/bin/asm.BSD3
+libraries:
+  - org.ow2.asm: asm
+  - org.ow2.asm: asm-commons
+  - org.ow2.asm: asm-tree
+  - org.ow2.asm: asm-analysis
+
+---
+
+name: FindBugs JSR305
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 3.0.0
+copyright: FindBugs
+license_file_path: licenses/bin/jsr305.BSD3
+libraries:
+  - com.google.code.findbugs: jsr305
+skip_dependency_report_check: true
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 2.5.0
+copyright: Google, Inc.
+license_file_path: licenses/bin/protobuf-java.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+
+---
+
+name: Paranamer
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 2.3
+copyright: Paul Hammant & ThoughtWorks Inc
+license_file_path: licenses/bin/paranamer.BSD3
+libraries:
+  - com.thoughtworks.paranamer: paranamer
+
+---
+
+name: LevelDB JNI
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 1.8
+copyright: FuseSource Corp.
+license_file_path: licenses/bin/leveldb-jni.BSD3
+libraries:
+  - org.fusesource.leveldbjni: leveldbjni-all
+
+---
+
+name: Paranamer
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: BSD-3-Clause License
+version: 2.7
+copyright: Paul Hammant & ThoughtWorks Inc
+license_file_path: licenses/bin/paranamer.BSD3
+libraries:
+  - com.thoughtworks.paranamer: paranamer
+
+---
+
+name: JSch - Java Secure Channel
+license_category: binary
+module: extensions/druid-kerberos
+license_name: BSD-3-Clause License
+version: 0.1.54
+copyright: Atsuhiko Yamanaka, JCraft,Inc.
+license_file_path: licenses/bin/jsch.BSD3
+libraries:
+  - com.jcraft: jsch
+
+---
+
+name: StringTemplate
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-3-Clause License
+version: 3.2
+copyright: Terrence Parr
+license_file_path: licenses/bin/antlr-stringtemplate.BSD3
+libraries:
+  - org.antlr: stringtemplate
+
+---
+
+name: ANTLR
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-3-Clause License
+version: 2.7.7
+copyright: The ANTLR Project
+license_file_path: licenses/bin/antlr.BSD3
+libraries:
+  - antlr: antlr
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/postgresql-metadata-storage
+license_name: BSD-3-Clause License
+version: 9.4.1208.jre7
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD3
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: BSD-3-Clause License
+version: 3.2.0
+copyright: Google, Inc.
+license_file_path: licenses/bin/protobuf-java.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+  - com.google.protobuf: protobuf-java-util
+
+---
+
+name: ICU4J
+license_category: binary
+module: java-core
+license_name: ICU License
+version: 54.1.1
+copyright: International Business Machines Corporation and others
+license_file_path: licenses/bin/icu4j.ICU
+libraries:
+  - com.ibm.icu: icu4j
+
+---
+
+name: JavaBeans Activation Framework
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.2.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.activation.CDDL11
+libraries:
+  - com.sun.activation: javax.activation
+
+---
+
+name: Jersey
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.19.3
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-core
+  - com.sun.jersey: jersey-server
+  - com.sun.jersey: jersey-servlet
+  - com.sun.jersey: contribs
+  - com.sun.jersey.contribs: jersey-guice
+
+---
+
+name: Expression Language 3.0 API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.el: javax.el-api
+
+---
+
+name: Java Servlet API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.1.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet: javax.servlet-api
+
+---
+
+name: JSR311 API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.1.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jsr311-api.CDDL11
+libraries:
+  - javax.ws.rs: jsr311-api
+
+---
+
+name: Expression Language 3.0
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - org.glassfish: javax.el
+
+---
+
+name: Jersey
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.9
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-client
+  - com.sun.jersey: jersey-core
+
+---
+
+name: JavaBeans Activation Framework
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javaxCDDL11
+libraries:
+  - javax.activation: activation
+
+---
+
+name: Java Servlet API
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.5
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet: javax.servlet-api
+
+---
+
+name: JAXB
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.2.2
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.bind: jaxb-api
+
+---
+
+name: JAXB
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.bind: jaxb-api
+
+---
+
+name: stax-api
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.0-2
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.stream: stax-api
+
+---
+
+name: jsp-api
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet.jsp: jsp-api
+
+---
+
+name: Jersey
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: CDDL 1.1
+version: 1.15
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-client
+
+---
+
+name: OkHttp Aether Connector
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 1.0
+version: 0.0.9
+copyright: to original author or authors
+license_file_path: licenses/bin/aether-connector-okhttp.EPL1
+libraries:
+  - io.tesla.aether: aether-connector-okhttp
+
+---
+
+name: Tesla Aether
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 1.0
+version: 0.0.5
+copyright: to original author or authors
+license_file_path: licenses/bin/tesla-aether.EPL1
+libraries:
+  - io.tesla.aether: tesla-aether
 
 ---
 
@@ -1512,80 +2054,130 @@ libraries:
 
 ---
 
-name: Error Prone Annotations
+name: Rhino
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 2.3.2
+license_name: Mozilla Public License Version 2.0
+version: 1.7R5
+copyright: Mozilla and individual contributors.
+license_file_path: licenses/bin/rhino.MPL2
 libraries:
-  - com.google.errorprone: error_prone_annotations
+  - org.mozilla: rhino
 
 ---
 
-name: Esri Geometry API for Java
+name: \"Java Concurrency In Practice\" Book Annotations
 license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.0.0
+module: hadoop-client
+license_name: Creative Commons Attribution 2.5
+version: 1.0
+copyright: Brian Goetz and Tim Peierls
+license_file_path: licenses/bin/creative-commons-2.5.LICENSE
 libraries:
-  - com.esri.geometry: esri-geometry-api
+  - net.jcip: jcip-annotations
 
 ---
 
-name: Expression Language 3.0
+name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: CDDL 1.1
-version: 3.0.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
+license_name: Creative Commons CC0
+version: 1.0.2
+license_file_path: licenses/bin/reactive-streams.CC0
 libraries:
-  - org.glassfish: javax.el
+  - org.reactivestreams: reactive-streams
 
 ---
 
-name: Expression Language 3.0 API
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 3.0.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.el: javax.el-api
-
----
-
-name: fastutil
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 8.1.0
-libraries:
-  - it.unimi.dsi: fastutil
-
----
-
-name: FindBugs JSR305
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 2.0.1
-copyright: FindBugs
-license_file_path: licenses/bin/jsr305.BSD3
-libraries:
-  - com.google.code.findbugs: jsr305
-skip_dependency_report_check: true
-
----
-
-name: fixed bins histogram percentile computation code adapted from Netflix Spectator
+name: a smear function adapted from MurmurHash3
 license_category: source
 module: java-core
-license_name: Apache License version 2.0
-copyright: Netflix, Inc. (https://github.com/Netflix/spectator)
+license_name: Public Domain
+copyright: Austin Appleby who has placed MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
 source_paths:
-  - extensions-core/histogram/src/main/java/org/apache/druid/query/aggregation/histogram/FixedBucketsHistogram.java
+  - processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java
+
+---
+
+name: AOP Alliance
+license_category: binary
+module: java-core
+license_name: Public Domain
+version: 1.0
+libraries:
+  - aopalliance: aopalliance
+
+---
+
+name: XZ
+license_category: binary
+module: java-core
+license_name: Public Domain
+version: 1.8
+libraries:
+  - org.tukaani: xz
+
+---
+
+name: XZ
+license_category: binary
+module: hadoop-client
+license_name: Public Domain
+version: 1.0
+libraries:
+  - org.tukaani: xz
+
+---
+
+name: Apache ORC libraries
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 1.5.5
+libraries:
+  - org.apache.orc: orc-mapreduce
+  - org.apache.orc: orc-core
+  - org.apache.orc: orc-shims
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: "0.10"
+libraries:
+  - io.airlift: aircompressor
+
+---
+
+name: Hive storage API
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 2.6.0
+libraries:
+  - org.apache.hive: hive-storage-api
+
+---
+
+name: Google Cloud Storage JSON API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: v1-rev79-1.22.0
+libraries:
+  - com.google.apis: google-api-services-storage
+
+---
+
+name: "Jackson Module: Guice"
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6.7
+libraries:
+  - com.fasterxml.jackson.module: jackson-module-guice
 
 ---
 
@@ -1620,147 +2212,6 @@ libraries:
 
 ---
 
-name: Guava
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 16.0.1
-libraries:
-  - com.google.guava: guava
-
----
-
-name: Guice
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.0
-libraries:
-  - com.google.inject: guice
-  - com.google.inject.extensions: guice-multibindings
-  - com.google.inject.extensions: guice-servlet
-
----
-
-name: Hibernate Validator Engine
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 5.1.3.Final
-libraries:
-  - org.hibernate: hibernate-validator
-
----
-
-name: ICU4J
-license_category: binary
-module: java-core
-license_name: ICU License
-version: 54.1.1
-copyright: International Business Machines Corporation and others
-license_file_path: licenses/bin/icu4j.ICU
-libraries:
-  - com.ibm.icu: icu4j
-
----
-
-name: Ion Java
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.2
-libraries:
-  - software.amazon.ion: ion-java
-
----
-
-name: Jackson
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6.7
-libraries:
-  - com.fasterxml.jackson.core: jackson-annotations
-  - com.fasterxml.jackson.core: jackson-core
-  - com.fasterxml.jackson.core: jackson-databind
-  - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
-  - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
-  - com.fasterxml.jackson.datatype: jackson-datatype-guava
-  - com.fasterxml.jackson.datatype: jackson-datatype-joda
-  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-base
-  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-json-provider
-  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
-  - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
-
----
-
-name: "Jackson Module: Guice"
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6.7
-libraries:
-  - com.fasterxml.jackson.module: jackson-module-guice
-
----
-
-name: jackson-jq
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 0.0.7
-libraries:
-  - net.thisptr: jackson-jq
-
----
-
-name: Janino and Commons Compiler
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 2.7.6
-copyright: Arno Unkrig and TIBCO Software Inc.
-license_file_path: licenses/bin/janino.BSD3
-libraries:
-  - org.codehaus.janino: janino
-  - org.codehaus.janino: commons-compiler
-
----
-
-name: Java Native Access (JNA)
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.5.1
-libraries:
-  - net.java.dev.jna: jna
-
----
-
-name: Java Servlet API
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 3.1.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.servlet: javax.servlet-api
-
----
-
-name: JavaBeans Activation Framework
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 1.2.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.activation.CDDL11
-libraries:
-  - com.sun.activation: javax.activation
-
----
-
 name: JavaBeans Activation Framework API
 license_category: binary
 module: java-core
@@ -1773,509 +2224,58 @@ libraries:
 
 ---
 
-name: Javax Inject
+name: Apache Kafka
 license_category: binary
-module: java-core
+module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 1
+version: 0.8.2.1
 libraries:
-  - javax.inject: javax.inject
+  - org.apache.kafka: kafka_2.10
+  - org.apache.kafka: kafka-clients
 
 ---
 
-name: JAXB
+name: ZooKeeper Client
 license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 2.3.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: JBoss Logging 3
-license_category: binary
-module: java-core
+module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.1.3.GA
+version: 0.3
 libraries:
-  - org.jboss.logging: jboss-logging
+  - com.101tec: zkclient
 
 ---
 
-name: JCL 1.2 Implemented Over SLF4J
+name: Metrics Core Library
 license_category: binary
-module: java-core
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.2.0
+libraries:
+  - com.yammer.metrics: metrics-core
+
+---
+
+name: JOpt Simple
+license_category: binary
+module: extensions/kafka-extraction-namespace
 license_name: MIT License
-version: 1.7.12
-copyright: QOS.ch
-license_file_path: licenses/bin/jcl-over-slf4j.MIT
+copyright: Paul R. Holser, Jr.
+version: 3.2
+license_file_path: licenses/bin/jopt-simple.MIT
 libraries:
-  - org.slf4j: jcl-over-slf4j
+  - net.sf.jopt-simple: jopt-simple
 
 ---
 
-name: JCodings
+name: Scala Library
 license_category: binary
-module: java-core
-license_name: MIT License
-version: 1.0.13
-copyright: JRuby Team
-license_file_path: licenses/bin/jcodings.MIT
-libraries:
-  - org.jruby.jcodings: jcodings
-
----
-
-name: JDBI
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.63.1
-libraries:
-  - org.jdbi: jdbi
-
----
-
-name: Jersey
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 1.19.3
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/jersey.CDDL11
-libraries:
-  - com.sun.jersey: jersey-core
-  - com.sun.jersey: jersey-server
-  - com.sun.jersey: jersey-servlet
-  - com.sun.jersey: contribs
-  - com.sun.jersey.contribs: jersey-guice
-
----
-
-name: Jetty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 9.4.10.v20180503
-libraries:
-  - org.eclipse.jetty: jetty-client
-  - org.eclipse.jetty: jetty-continuation
-  - org.eclipse.jetty: jetty-http
-  - org.eclipse.jetty: jetty-io
-  - org.eclipse.jetty: jetty-proxy
-  - org.eclipse.jetty: jetty-security
-  - org.eclipse.jetty: jetty-server
-  - org.eclipse.jetty: jetty-servlet
-  - org.eclipse.jetty: jetty-servlets
-  - org.eclipse.jetty: jetty-util
-
----
-
-name: JLine
-license_category: binary
-module: java-core
+module: extensions/kafka-extraction-namespace
 license_name: BSD-3-Clause License
-version: 0.9.94
-copyright: Marc Prud'hommeaux
-license_file_path: licenses/bin/jline.BSD3
+copyright: EPFL, Lightbend Inc.
+version: 2.10.4
+license_file_path: licenses/bin/scala-lang.BSD3
 libraries:
-  - jline: jline
-
----
-
-name: JNI binding for Zstd
-license_category: binary
-module: java-core
-license_name: BSD-2-Clause License
-version: 1.3.3-1
-copyright: Luben Karavelov
-license_file_path: licenses/bin/zstd-jni.BSD2
-libraries:
-  - com.github.luben: zstd-jni
-
----
-
-name: Joda-Time
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.10.2
-libraries:
-  - joda-time: joda-time
-
----
-
-name: Joni
-license_category: binary
-module: java-core
-license_name: MIT License
-version: 2.1.11
-copyright: JRuby Team
-license_file_path: licenses/bin/joni.MIT
-libraries:
-  - org.jruby.joni: joni
-
----
-
-name: JSON Small and Fast Parser
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.3
-libraries:
-  - net.minidev: json-smart
-
----
-
-name: JsonPath
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.3.0
-libraries:
-  - com.jayway.jsonpath: json-path
-
----
-
-name: JSR311 API
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 1.1.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/jsr311-api.CDDL11
-libraries:
-  - javax.ws.rs: jsr311-api
-
----
-
-name: JVM Attach API
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.5
-libraries:
-  - org.gridkit.lab: jvm-attach-api
-
----
-
-name: Kerberos authentication code adapted from Apache Hadoop
-license_category: source
-module: java-core
-license_name: Apache License version 2.0
-source_paths:
-  - extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
-
----
-
-name: LMAX Disruptor
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 3.3.6
-libraries:
-  - com.lmax: disruptor
-
----
-
-name: LZ4 Java
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.6.0
-libraries:
-  - org.lz4: lz4-java
-
----
-
-name: LZF Compressor
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.4
-libraries:
-  - com.ning: compress-lzf
-
----
-
-name: MapDB
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.8
-libraries:
-  - org.mapdb: mapdb
-
----
-
-name: modified portions of the Guava library
-license_category: source
-license_name: Apache License version 2.0
-module: java-core
-copyright: The Guava Authors (https://github.com/google/guava)
-source_paths:
-  - Closer class: core/src/main/java/org/apache/druid/java/util/common/io/Closer.java
-  - Splitter.splitToList() method: core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
-  - DirectExecutorService class: core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
-
----
-
-name: modified versions of the Dockerfile and related configuration files
-license_category: source
-module: java-core
-license_name: Apache License version 2.0
-copyright: SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
-source_paths:
-  - examples/quickstart/tutorial/hadoop/docker/
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.30.Final
-libraries:
-  - io.netty: netty-all
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 3.10.6.Final
-libraries:
-  - io.netty: netty
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.29.Final
-libraries:
-  - io.netty: netty-buffer
-  - io.netty: netty-codec
-  - io.netty: netty-codec-dns
-  - io.netty: netty-codec-http
-  - io.netty: netty-codec-socks
-  - io.netty: netty-common
-  - io.netty: netty-handler
-  - io.netty: netty-handler-proxy
-  - io.netty: netty-resolver
-  - io.netty: netty-resolver-dns
-  - io.netty: netty-transport
-  - io.netty: netty-transport-native-epoll
-  - io.netty: netty-transport-native-unix-common
-
----
-
-name: Netty Reactive Streams
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.0.0
-libraries:
-  - com.typesafe.netty: netty-reactive-streams
-
----
-
-name: Objenesis
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.6
-libraries:
-  - org.objenesis: objenesis
-
----
-
-name: OkHttp
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.2
-libraries:
-  - com.squareup.okhttp: okhttp
-
----
-
-name: OkHttp Aether Connector
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.9
-copyright: to original author or authors
-license_file_path: licenses/bin/aether-connector-okhttp.EPL1
-libraries:
-  - io.tesla.aether: aether-connector-okhttp
-
----
-
-name: OpenCSV
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.2
-libraries:
-  - com.opencsv: opencsv
-
----
-
-name: Plexus Common Utilities
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 3.0.15
-libraries:
-  - org.codehaus.plexus: plexus-utils
-
----
-
-name: Plexus Interpolation API
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.19
-libraries:
-  - org.codehaus.plexus: plexus-interpolation
-
----
-
-name: Protocol Buffers
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 3.1.0
-copyright: Google, Inc.
-license_file_path:
-  - licenses/bin/protobuf-java.BSD3
-  - licenses/bin/protobuf-java-redhat.BSD3
-  - licenses/bin/protobuf-java-bloomberg.BSD3
-libraries:
-  - com.google.protobuf: protobuf-java
-additional_license_statement: except src/google/protobuf/stubs/atomicops_internals_generic_gcc.h and src/google/protobuf/stubs/atomicops_internals_power.h files which are copyrighted by Red Hat Inc and Bloomberg Finance LP, respectively, and available under a BSD-3-Clause
-
----
-
-name: Reactive Streams
-license_category: binary
-module: java-core
-license_name: Creative Commons CC0
-version: 1.0.2
-license_file_path: licenses/bin/reactive-streams.CC0
-libraries:
-  - org.reactivestreams: reactive-streams
-
----
-
-name: Rhino
-license_category: binary
-module: java-core
-license_name: Mozilla Public License Version 2.0
-version: 1.7R5
-copyright: Mozilla and individual contributors.
-license_file_path: licenses/bin/rhino.MPL2
-libraries:
-  - org.mozilla: rhino
-
----
-
-name: RoaringBitmap
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 0.8.6
-libraries:
-  - org.roaringbitmap: RoaringBitmap
-  - org.roaringbitmap: shims
-
----
-
-name: SIGAR
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.6.5.132
-libraries:
-  - org.hyperic: sigar
-
----
-
-name: SLF4J API
-license_category: binary
-module: java-core
-license_name: MIT License
-version: 1.7.25
-copyright: QOS.ch
-license_file_path: licenses/bin/slf4j.MIT
-libraries:
-  - org.slf4j: slf4j-api
-
----
-
-name: Spymemcached
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.12.3
-libraries:
-  - net.spy: spymemcached
-
----
-
-name: SQL query planning code adapted from Apache Calcite
-license_category: source
-module: java-core
-license_name: Apache License version 2.0
-source_paths:
-  - sql/src/main/java/org/apache/druid/sql/calcite/
-
----
-
-name: Tesla Aether
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.5
-copyright: to original author or authors
-license_file_path: licenses/bin/tesla-aether.EPL1
-libraries:
-  - io.tesla.aether: tesla-aether
-
----
-
-name: variable length long deserialization code adapted from Apache Lucene
-license_category: source
-module: java-core
-license_name: Apache License version 2.0
-source_paths:
-  - processing/src/main/java/org/apache/druid/segment/data/VSizeLongSerde.java
-
----
-
-name: XZ
-license_category: binary
-module: java-core
-license_name: Public Domain
-version: 1.8
-libraries:
-  - org.tukaani: xz
-
----
-
-name: Zstandard
-license_category: binary
-module: java-core
-license_name: BSD-3-Clause License
-version: 1.3.3
-copyright: Facebook, Inc.
-license_file_path: licenses/bin/zstandard.BSD3
+  - org.scala-lang: scala-library
 
 ---
 
@@ -2454,16 +2454,6 @@ license_file_path: licenses/bin/define-properties.MIT
 
 ---
 
-name: demo_table.css and jquery.dataTables.js from DataTables
-license_category: source
-module: web-console
-license_name: BSD-3-Clause License
-version: 1.8.2
-copyright: Allan Jardine.
-license_file_path: licenses/src/datatables.BSD3
-
----
-
 name: "diff-match-patch"
 license_category: binary
 module: web-console
@@ -2601,16 +2591,6 @@ version: 1.0.0
 
 ---
 
-name: "has"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Thiago de Arruda
-version: 1.0.3
-license_file_path: licenses/bin/has.MIT
-
----
-
 name: "has-own-prop"
 license_category: binary
 module: web-console
@@ -2628,6 +2608,16 @@ license_name: MIT License
 copyright: Jordan Harband
 version: 1.0.0
 license_file_path: licenses/bin/has-symbols.MIT
+
+---
+
+name: "has"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Thiago de Arruda
+version: 1.0.3
+license_file_path: licenses/bin/has.MIT
 
 ---
 
@@ -2747,26 +2737,6 @@ license_name: MIT License
 copyright: Matt Andrews
 version: 2.2.1
 license_file_path: licenses/bin/isomorphic-fetch.MIT
-
----
-
-name: jQuery
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.11.0
-copyright: jQuery Foundation, Inc.
-license_file_path: licenses/src/jquery.MIT
-
----
-
-name: jQuery UI
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.9.2
-copyright: jQuery Foundation and other contributors
-license_file_path: licenses/src/jquery-ui.MIT
 
 ---
 
@@ -2965,15 +2935,6 @@ license_file_path: licenses/bin/prop-types.MIT
 
 ---
 
-name: "react"
-license_category: binary
-module: web-console
-license_name: MIT License
-version: 16.8.6
-license_file_path: licenses/bin/react.MIT
-
----
-
 name: "react-ace"
 license_category: binary
 module: web-console
@@ -3021,21 +2982,21 @@ license_file_path: licenses/bin/react-popper.MIT
 
 ---
 
-name: "react-router"
-license_category: binary
-module: web-console
-license_name: MIT License
-version: 5.0.1
-license_file_path: licenses/bin/react-router.MIT
-
----
-
 name: "react-router-dom"
 license_category: binary
 module: web-console
 license_name: MIT License
 version: 5.0.1
 license_file_path: licenses/bin/react-router-dom.MIT
+
+---
+
+name: "react-router"
+license_category: binary
+module: web-console
+license_name: MIT License
+version: 5.0.1
+license_file_path: licenses/bin/react-router.MIT
 
 ---
 
@@ -3064,6 +3025,15 @@ module: web-console
 license_name: BSD-3-Clause License
 version: 2.9.0
 license_file_path: licenses/bin/react-transition-group.BSD3
+
+---
+
+name: "react"
+license_category: binary
+module: web-console
+license_name: MIT License
+version: 16.8.6
+license_file_path: licenses/bin/react.MIT
 
 ---
 
@@ -3121,16 +3091,6 @@ license_name: MIT License
 copyright: YuzuJS
 version: 1.0.5
 license_file_path: licenses/bin/setimmediate.MIT
-
----
-
-name: sizzle.js by way of jQuery
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.11.0
-copyright: jQuery Foundation and other contributors
-license_file_path: licenses/src/sizzle.MIT
 
 ---
 
@@ -3243,16 +3203,6 @@ license_file_path: licenses/bin/ua-parser-js.MIT
 
 ---
 
-name: underscore
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.2.2
-copyright: Jeremy Ashkenas, DocumentCloud
-license_file_path: licenses/src/underscore.MIT
-
----
-
 name: "value-equal"
 license_category: binary
 module: web-console
@@ -3278,3 +3228,53 @@ module: web-console
 license_name: MIT License
 version: 3.0.0
 license_file_path: licenses/bin/whatwg-fetch.MIT
+
+---
+
+name: jQuery
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.11.0
+copyright: jQuery Foundation, Inc.
+license_file_path: licenses/src/jquery.MIT
+
+---
+
+name: jQuery UI
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.9.2
+copyright: jQuery Foundation and other contributors
+license_file_path: licenses/src/jquery-ui.MIT
+
+---
+
+name: demo_table.css and jquery.dataTables.js from DataTables
+license_category: source
+module: web-console
+license_name: BSD-3-Clause License
+version: 1.8.2
+copyright: Allan Jardine.
+license_file_path: licenses/src/datatables.BSD3
+
+---
+
+name: sizzle.js by way of jQuery
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.11.0
+copyright: jQuery Foundation and other contributors
+license_file_path: licenses/src/sizzle.MIT
+
+---
+
+name: underscore
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.2.2
+copyright: Jeremy Ashkenas, DocumentCloud
+license_file_path: licenses/src/underscore.MIT

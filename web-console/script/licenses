@@ -100,7 +100,7 @@ function injectConsoleLicenses(consoleLicenses) {
     .filter(p => p.json.module !== 'web-console')
     .concat(consoleLicenses.map(parseDesc))
     .concat(extraFromOldConsole.map(parseDesc))
-    .sort((a, b) => String(a.json.module).localeCompare(b.json.module) || String(a.json.name).localeCompare(b.json.name))
+    //.sort((a, b) => String(a.json.module).localeCompare(b.json.module) || String(a.json.name).localeCompare(b.json.name))
 
   fs.writeFileSync(LICENSES_FILE, ownLicense + '\n' + modules.map(m => m.text).join(SEPARATOR) + '\n');
 }
