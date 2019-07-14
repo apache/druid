@@ -38,6 +38,7 @@ module.exports = (env) => {
   };
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  console.log(`Webpack running in ${mode} mode`);
   return {
     mode: mode,
     entry: {
