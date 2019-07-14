@@ -1,37 +1,21 @@
-# react-router-dom
+MIT License
 
-DOM bindings for [React Router](https://reacttraining.com/react-router).
+Copyright (c) React Training 2016-2018
 
-## Installation
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Using [npm](https://www.npmjs.com/):
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-    $ npm install --save react-router-dom
-
-Then with a module bundler like [webpack](https://webpack.github.io/), use as you would anything else:
-
-```js
-// using ES6 modules
-import { BrowserRouter, Route, Link } from 'react-router-dom'
-
-// using CommonJS modules
-const BrowserRouter = require('react-router-dom').BrowserRouter
-const Route = require('react-router-dom').Route
-const Link = require('react-router-dom').Link
-```
-
-The UMD build is also available on [unpkg](https://unpkg.com):
-
-```html
-<script src="https://unpkg.com/react-router-dom/umd/react-router-dom.min.js"></script>
-```
-
-You can find the library on `window.ReactRouterDOM`.
-
-## Issues
-
-If you find a bug, please file an issue on [our issue tracker on GitHub](https://github.com/ReactTraining/react-router/issues).
-
-## Credits
-
-React Router is built and maintained by [React Training](https://reacttraining.com).
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
