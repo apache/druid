@@ -142,6 +142,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}
@@ -199,6 +200,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}
@@ -266,6 +268,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}
