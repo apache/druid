@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,12 +37,14 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -60,6 +63,9 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -71,7 +77,9 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -94,10 +102,11 @@ public abstract class BaseFilterTest
 
   protected final IndexBuilder indexBuilder;
   protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
-  protected StorageAdapter adapter;
-  protected boolean cnf;
-  protected boolean optimize;
+  protected final boolean cnf;
+  protected final boolean optimize;
   protected final String testName;
+
+  protected StorageAdapter adapter;
 
   // JUnit creates a new test instance for every test method call.
   // For filter tests, the test setup creates a segment.
@@ -204,10 +213,11 @@ public abstract class BaseFilterTest
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
               final String testName = StringUtils.format(
-                  "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
+                  "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
                   segmentWriteOutMediumFactoryEntry.getKey(),
                   finisherEntry.getKey(),
+                  cnf,
                   optimize
               );
               final IndexBuilder indexBuilder = IndexBuilder
@@ -256,6 +266,20 @@ public abstract class BaseFilterTest
     );
   }
 
+  private VectorCursor makeVectorCursor(final Filter filter)
+  {
+    return adapter.makeVectorCursor(
+        filter,
+        Intervals.ETERNITY,
+        // VirtualColumns do not support vectorization yet. Avoid passing them in, and any tests that need virtual
+        // columns should skip vectorization tests.
+        VirtualColumns.EMPTY,
+        false,
+        3, // Vector size smaller than the number of rows, to ensure we use more than one.
+        null
+    );
+  }
+
   /**
    * Selects elements from "selectColumn" from rows matching a filter. selectColumn must be a single valued dimension.
    */
@@ -291,28 +315,64 @@ public abstract class BaseFilterTest
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
+    final Sequence<Cursor> cursors = makeCursorSequence(null);
     Sequence<Aggregator> aggSeq = Sequences.map(
         cursors,
-        new Function<Cursor, Aggregator>()
-        {
-          @Override
-          public Aggregator apply(Cursor input)
-          {
-            Aggregator agg = new FilteredAggregatorFactory(
-                new CountAggregatorFactory("count"),
-                maybeOptimize(filter)
-            ).factorize(input.getColumnSelectorFactory());
+        cursor -> {
+          Aggregator agg = new FilteredAggregatorFactory(
+              new CountAggregatorFactory("count"),
+              maybeOptimize(filter)
+          ).factorize(cursor.getColumnSelectorFactory());
 
-            for (; !input.isDone(); input.advance()) {
-              agg.aggregate();
-            }
-
-            return agg;
+          for (; !cursor.isDone(); cursor.advance()) {
+            agg.aggregate();
           }
+
+          return agg;
         }
     );
     return aggSeq.toList().get(0).getLong();
+  }
+
+  private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
+  {
+    Preconditions.checkState(makeFilter(dimFilter).canVectorizeMatcher(), "Cannot vectorize filter: %s", dimFilter);
+
+    try (final VectorCursor cursor = makeVectorCursor(null)) {
+      final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
+          new CountAggregatorFactory("count"),
+          maybeOptimize(dimFilter)
+      );
+      final VectorAggregator aggregator = aggregatorFactory.factorizeVector(cursor.getColumnSelectorFactory());
+      final ByteBuffer buf = ByteBuffer.allocate(aggregatorFactory.getMaxIntermediateSizeWithNulls() * 2);
+
+      // Use two slots: one for each form of aggregate.
+      aggregator.init(buf, 0);
+      aggregator.init(buf, aggregatorFactory.getMaxIntermediateSizeWithNulls());
+
+      for (; !cursor.isDone(); cursor.advance()) {
+        aggregator.aggregate(buf, 0, 0, cursor.getCurrentVectorSize());
+
+        final int[] positions = new int[cursor.getCurrentVectorSize()];
+        Arrays.fill(positions, aggregatorFactory.getMaxIntermediateSizeWithNulls());
+
+        final int[] allRows = new int[cursor.getCurrentVectorSize()];
+        for (int i = 0; i < allRows.length; i++) {
+          allRows[i] = i;
+        }
+
+        aggregator.aggregate(buf, cursor.getCurrentVectorSize(), positions, allRows, 0);
+      }
+
+      final long val1 = (long) aggregator.get(buf, 0);
+      final long val2 = (long) aggregator.get(buf, aggregatorFactory.getMaxIntermediateSizeWithNulls());
+
+      if (val1 != val2) {
+        throw new ISE("Oh no, val1[%d] != val2[%d]", val1, val2);
+      }
+
+      return val1;
+    }
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingPostFiltering(
@@ -382,6 +442,100 @@ public abstract class BaseFilterTest
     return seq.toList().get(0);
   }
 
+  private List<String> selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(
+      final DimFilter filter,
+      final String selectColumn
+  )
+  {
+    final Filter theFilter = makeFilter(filter);
+    final Filter postFilteringFilter = new Filter()
+    {
+      @Override
+      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+      {
+        return theFilter.makeMatcher(factory);
+      }
+
+      @Override
+      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+
+      @Override
+      public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
+      {
+        return theFilter.makeVectorMatcher(factory);
+      }
+
+      @Override
+      public boolean canVectorizeMatcher()
+      {
+        return theFilter.canVectorizeMatcher();
+      }
+
+      @Override
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      {
+        return false;
+      }
+
+      @Override
+      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      {
+        return 1.0;
+      }
+    };
+
+    try (final VectorCursor cursor = makeVectorCursor(postFilteringFilter)) {
+      final SingleValueDimensionVectorSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+
+      final List<String> values = new ArrayList<>();
+
+      while (!cursor.isDone()) {
+        final int[] rowVector = selector.getRowVector();
+        for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+          values.add(selector.lookupName(rowVector[i]));
+        }
+        cursor.advance();
+      }
+
+      return values;
+    }
+  }
+
+  private List<String> selectColumnValuesMatchingFilterUsingVectorCursor(
+      final DimFilter filter,
+      final String selectColumn
+  )
+  {
+    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+      final SingleValueDimensionVectorSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+
+      final List<String> values = new ArrayList<>();
+
+      while (!cursor.isDone()) {
+        final int[] rowVector = selector.getRowVector();
+        for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+          values.add(selector.lookupName(rowVector[i]));
+        }
+        cursor.advance();
+      }
+
+      return values;
+    }
+  }
+
   private List<String> selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(
       final DimFilter filter,
       final String selectColumn
@@ -413,21 +567,67 @@ public abstract class BaseFilterTest
       final List<String> expectedRows
   )
   {
+    // IncrementalIndex cannot ever vectorize.
+    final boolean testVectorized = !(adapter instanceof IncrementalIndexStorageAdapter);
+    assertFilterMatches(filter, expectedRows, testVectorized);
+  }
+
+  protected void assertFilterMatchesSkipVectorize(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    assertFilterMatches(filter, expectedRows, false);
+  }
+
+  private void assertFilterMatches(
+      final DimFilter filter,
+      final List<String> expectedRows,
+      final boolean testVectorized
+  )
+  {
     Assert.assertEquals(
         "Cursor: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilter(filter, "dim0")
     );
+
+    if (testVectorized) {
+      Assert.assertEquals(
+          "Cursor (vectorized): " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+      );
+    }
+
     Assert.assertEquals(
         "Cursor with postFiltering: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
     );
+
+    if (testVectorized) {
+      Assert.assertEquals(
+          "Cursor with postFiltering (vectorized): " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
+      );
+    }
+
     Assert.assertEquals(
         "Filtered aggregator: " + filter,
         expectedRows.size(),
         selectCountUsingFilteredAggregator(filter)
     );
+
+    if (testVectorized) {
+      Assert.assertEquals(
+          "Filtered aggregator (vectorized): " + filter,
+          expectedRows.size(),
+          selectCountUsingVectorizedFilteredAggregator(filter)
+      );
+    }
+
     Assert.assertEquals(
         "RowBasedColumnSelectorFactory: " + filter,
         expectedRows,

@@ -24,6 +24,9 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 
@@ -32,11 +35,17 @@ import javax.annotation.Nullable;
 public interface DictionaryEncodedColumn<ActualType extends Comparable<? super ActualType>> extends BaseColumn
 {
   int length();
+
   boolean hasMultipleValues();
+
   int getSingleValueRow(int rowNum);
+
   IndexedInts getMultiValueRow(int rowNum);
+
   ActualType lookupName(int id);
+
   int lookupId(ActualType name);
+
   int getCardinality();
 
   DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn);
@@ -46,4 +55,8 @@ public interface DictionaryEncodedColumn<ActualType extends Comparable<? super A
   {
     return makeDimensionSelector(offset, null);
   }
+
+  SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset vectorOffset);
+
+  MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset);
 }

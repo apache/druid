@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
@@ -39,8 +39,6 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
-
-  private final AggregatorFactory[] aggregatorFactories;
 
   // Limit to apply to results.
   private int limit;
@@ -66,8 +64,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   public LimitedBufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final Grouper.KeySerde<KeyType> keySerde,
-      final ColumnSelectorFactory columnSelectorFactory,
-      final AggregatorFactory[] aggregatorFactories,
+      final AggregatorAdapters aggregators,
       final int bufferGrouperMaxSize,
       final float maxLoadFactor,
       final int initialBuckets,
@@ -75,7 +72,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       final boolean sortHasNonGroupingFields
   )
   {
-    super(bufferSupplier, keySerde, aggregatorFactories, bufferGrouperMaxSize);
+    super(bufferSupplier, keySerde, aggregators, HASH_SIZE + keySerde.keySize(), bufferGrouperMaxSize);
     this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
     this.limit = limit;
@@ -85,18 +82,9 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       throw new IAE("Invalid maxLoadFactor[%f], must be < 1.0", maxLoadFactor);
     }
 
-    int offset = HASH_SIZE + keySize;
-    this.aggregatorFactories = aggregatorFactories;
-    for (int i = 0; i < aggregatorFactories.length; i++) {
-      aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
-      aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
-    }
-
     // For each bucket, store an extra field indicating the bucket's current index within the heap when
-    // pushing down limits
-    offset += Integer.BYTES;
-    this.bucketSize = offset;
+    // pushing down limits (size Integer.BYTES).
+    this.bucketSize = HASH_SIZE + keySerde.keySize() + Integer.BYTES + aggregators.spaceNeeded();
   }
 
   @Override
@@ -374,8 +362,8 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     return new Comparator<Integer>()
     {
       final BufferComparator bufferComparator = keySerde.bufferComparatorWithAggregators(
-          aggregatorFactories,
-          aggregatorOffsets
+          aggregators.factories().toArray(new AggregatorFactory[0]),
+          aggregators.aggregatorPositions()
       );
 
       @Override
@@ -511,14 +499,12 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           offsetHeap.setAt(i, newBucketOffset);
 
           // relocate aggregators (see https://github.com/apache/incubator-druid/pull/4071)
-          for (int j = 0; j < aggregators.length; j++) {
-            aggregators[j].relocate(
-                oldBucketOffset + aggregatorOffsets[j],
-                newBucketOffset + aggregatorOffsets[j],
-                tableBuffer,
-                newTableBuffer
-            );
-          }
+          aggregators.relocate(
+              oldBucketOffset + baseAggregatorOffset,
+              newBucketOffset + baseAggregatorOffset,
+              tableBuffer,
+              newTableBuffer
+          );
         }
       }
 

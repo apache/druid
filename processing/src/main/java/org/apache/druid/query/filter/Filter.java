@@ -20,10 +20,13 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 public interface Filter
 {
@@ -84,6 +87,17 @@ public interface Filter
    */
   ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
+  /**
+   * Get a VectorValueMatcher that applies this filter to row vectors.
+   *
+   * @param factory Object used to create ValueMatchers
+   *
+   * @return VectorValueMatcher that applies this filter to row vectors.
+   */
+  default VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
+  {
+    throw new UOE("Filter[%s] cannot vectorize", getClass().getName());
+  }
 
   /**
    * Indicates whether this filter can return a bitmap index for filtering, based on
@@ -107,4 +121,12 @@ public interface Filter
    * @return true if this Filter supports selectivity estimation, false otherwise.
    */
   boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
+
+  /**
+   * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.
+   */
+  default boolean canVectorizeMatcher()
+  {
+    return false;
+  }
 }

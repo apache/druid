@@ -28,6 +28,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 
 public class DoublesSketchMergeBufferAggregator implements BufferAggregator
@@ -113,7 +114,7 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf));
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN));
   }
 
   private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)

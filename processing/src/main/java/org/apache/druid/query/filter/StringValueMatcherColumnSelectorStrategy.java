@@ -20,20 +20,72 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DimensionSelector>
 {
   private static final String[] NULL_VALUE = new String[]{null};
   private static final ValueGetter NULL_VALUE_GETTER = () -> NULL_VALUE;
 
-  @Override
-  public ValueMatcher makeValueMatcher(final DimensionSelector selector, String value)
+  private final boolean hasMultipleValues;
+
+  public StringValueMatcherColumnSelectorStrategy(final boolean hasMultipleValues)
+  {
+    this.hasMultipleValues = hasMultipleValues;
+  }
+
+  @Nullable
+  public static Boolean toBooleanIfPossible(
+      final DimensionDictionarySelector selector,
+      final boolean hasMultipleValues,
+      final Predicate<String> predicate
+  )
   {
     if (selector.getValueCardinality() == 0) {
-      return BooleanValueMatcher.of(value == null);
+      // Column has no values (it doesn't exist, or it's all empty arrays).
+      // Match if and only if "predicate" matches null.
+      return predicate.apply(null);
+    } else if (!hasMultipleValues && selector.getValueCardinality() == 1 && selector.nameLookupPossibleInAdvance()) {
+      // Every row has the same value. Match if and only if "predicate" matches the possible value.
+      return predicate.apply(selector.lookupName(0));
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  private static ValueMatcher toBooleanMatcherIfPossible(
+      final DimensionSelector selector,
+      final boolean hasMultipleValues,
+      final Predicate<String> predicate
+  )
+  {
+    final Boolean booleanValue = StringValueMatcherColumnSelectorStrategy.toBooleanIfPossible(
+        selector,
+        hasMultipleValues,
+        predicate
+    );
+    return booleanValue == null ? null : BooleanValueMatcher.of(booleanValue);
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final DimensionSelector selector, final String value)
+  {
+    final ValueMatcher booleanMatcher = toBooleanMatcherIfPossible(
+        selector,
+        hasMultipleValues,
+        s -> Objects.equals(s, NullHandling.emptyToNullIfNeeded(value))
+    );
+
+    if (booleanMatcher != null) {
+      return booleanMatcher;
     } else {
       return selector.makeValueMatcher(value);
     }
@@ -46,8 +98,10 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   )
   {
     final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    if (selector.getValueCardinality() == 0) {
-      return BooleanValueMatcher.of(predicate.apply(null));
+    final ValueMatcher booleanMatcher = toBooleanMatcherIfPossible(selector, hasMultipleValues, predicate);
+
+    if (booleanMatcher != null) {
+      return booleanMatcher;
     } else {
       return selector.makeValueMatcher(predicate);
     }
