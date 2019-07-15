@@ -25,6 +25,7 @@ const LICENSES_FILE = '../licenses.yaml';
 const LICENSES_FILE_INPUT = './private/licenses_orig.yaml' || LICENSES_FILE;
 const SEPARATOR = '\n\n---\n\n';
 
+// These are extra licenses for the old console (jquery + friends, underscore)
 const extraFromOldConsole = `
 name: jQuery
 license_category: source
@@ -86,6 +87,7 @@ function injectConsoleLicenses(consoleLicenses) {
   const text = fs.readFileSync(LICENSES_FILE_INPUT, 'utf-8');
   const textLines = text.split('\n');
 
+  // Extract the license for the file itself
   let ownLicense = '';
   while (textLines.length && textLines[0].startsWith('#')) {
     ownLicense += textLines[0] + '\n';
@@ -93,15 +95,16 @@ function injectConsoleLicenses(consoleLicenses) {
   }
 
   const modules = textLines
-    .join('\n')
-    .trim()
-    .split(SEPARATOR)
-    .map(parseDesc)
-    .filter(p => p.json.module !== 'web-console')
-    .concat(consoleLicenses.map(parseDesc))
-    .concat(extraFromOldConsole.map(parseDesc))
+    .join('\n') // Take the existing licenses
+    .trim() // Remove the extra new lines on the ends
+    .split(SEPARATOR) // Separate
+    .map(parseDesc) // Parse them
+    .filter(p => p.json.module !== 'web-console') // Remove any existing web-console stuff
+    .concat(consoleLicenses.map(parseDesc)) // Add in the modules from the unified console
+    .concat(extraFromOldConsole.map(parseDesc)) // Add in the modules from the old console
     //.sort((a, b) => String(a.json.module).localeCompare(b.json.module) || String(a.json.name).localeCompare(b.json.name))
 
+  // Write out the new file
   fs.writeFileSync(LICENSES_FILE, ownLicense + '\n' + modules.map(m => m.text).join(SEPARATOR) + '\n');
 }
 
@@ -114,16 +117,6 @@ checker.init({
     return;
   }
 
-  /*
-  name: "@blueprintjs/core"
-  license_category: binary
-  module: web-console
-  license_name: Apache License version 2.0
-  copyright: Paul R. Holser, Jr.
-  version: 1.0.1
-  license_file_path: licenses/bin/jopt-simple.MIT
-  */
-
   const mapped = Object.keys(packages).map(p => {
     const m = p.match(/^(.+)@(\d+\.\d+\.\d+.*)$/);
     if (!m) throw new Error(`Malformed name@version`);
@@ -135,8 +128,8 @@ checker.init({
     const { publisher, licenses, licenseFile } = meta;
     if (!licenses) throw new Error(`Package '${p} does not have a licenses`);
 
-    let properLicenseName;
-    let licenseExt;
+    let properLicenseName; // Map the licenses to their proper name
+    let licenseExt; // Map the licenses to the right extension
     switch (licenses) {
       case 'MIT':
         properLicenseName = 'MIT License';
@@ -163,6 +156,7 @@ checker.init({
     let hasLicense = false;
     if (licenseExt !== 'A2') {
       if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
+        // If the file ends with license.ext? then copy it over
         try {
           fs.copyFileSync(licenseFile, `../${licenseDest}`);
           hasLicense = true;
@@ -170,8 +164,8 @@ checker.init({
           console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
         }
       } else {
+        // See if the license is already there (manually) keep it
         try {
-          // See if the license is already there (manually)
           fs.statSync(`../${licenseDest}`);
           hasLicense = true;
         } catch (e) {
@@ -180,6 +174,7 @@ checker.init({
       }
     }
 
+    // Make our blob
     const lines = [
       `name: "${name}"`,
       `license_category: binary`,
