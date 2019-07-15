@@ -298,14 +298,13 @@ public class GroupByQueryEngine
     private final ByteBuffer metricsBuffer;
     private final int maxIntermediateRows;
 
-    private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
     private final ArrayList<String> dimNames;
-    private final List<AggregatorFactory> aggregatorSpecs;
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
     private final int[] sizesRequired;
 
+    @Nullable
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
 
@@ -320,7 +319,7 @@ public class GroupByQueryEngine
 
       unprocessedKeys = null;
       delegate = Collections.emptyIterator();
-      dimensionSpecs = query.getDimensions();
+      List<DimensionSpec> dimensionSpecs = query.getDimensions();
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
 
@@ -340,7 +339,7 @@ public class GroupByQueryEngine
         dimNames.add(dimSpec.getOutputName());
       }
 
-      aggregatorSpecs = query.getAggregatorSpecs();
+      List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
       aggregators = new BufferAggregator[aggregatorSpecs.size()];
       metricNames = new String[aggregatorSpecs.size()];
       sizesRequired = new int[aggregatorSpecs.size()];

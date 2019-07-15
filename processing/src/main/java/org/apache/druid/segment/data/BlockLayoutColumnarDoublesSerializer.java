@@ -25,6 +25,8 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -45,6 +47,7 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
   private final CompressionStrategy compression;
 
   private int numInserted = 0;
+  @Nullable
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarDoublesSerializer(

@@ -22,6 +22,8 @@ package org.apache.druid.segment.incremental;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.LongColumnSelector;
 
+import javax.annotation.Nullable;
+
 /**
  * IncrementalIndexRowHolder is a simple {@link #get}/{@link #set} holder of {@link IncrementalIndexRow}. It is used
  * to implement various machinery around {@link IncrementalIndex}, e. g. {@link
@@ -33,6 +35,7 @@ import org.apache.druid.segment.LongColumnSelector;
  */
 public class IncrementalIndexRowHolder implements LongColumnSelector
 {
+  @Nullable
   private IncrementalIndexRow currEntry = null;
 
   public IncrementalIndexRow get()

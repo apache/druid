@@ -24,11 +24,14 @@ import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 public class DoublesSketchBuildAggregator implements Aggregator
 {
 
   private final ColumnValueSelector<Double> valueSelector;
 
+  @Nullable
   private UpdateDoublesSketch sketch;
 
   public DoublesSketchBuildAggregator(final ColumnValueSelector<Double> valueSelector, final int size)

@@ -22,13 +22,11 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
+
 import java.nio.ByteOrder;
 
 /**
@@ -66,7 +64,9 @@ public class LongNumericColumnPartSerde implements ColumnPartSerde
 
   public static class SerializerBuilder
   {
+    @Nullable
     private ByteOrder byteOrder = null;
+    @Nullable
     private Serializer delegate = null;
 
     public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
@@ -97,23 +97,18 @@ public class LongNumericColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return new Deserializer()
-    {
-      @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
-      {
-        final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
-            buffer,
-            byteOrder
-        );
-        LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
-            column,
-            IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
-        );
-        builder.setType(ValueType.LONG)
-               .setHasMultipleValues(false)
-               .setNumericColumnSupplier(columnSupplier);
-      }
+    return (buffer, builder, columnConfig) -> {
+      final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
+          buffer,
+          byteOrder
+      );
+      LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
+          column,
+          IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+      );
+      builder.setType(ValueType.LONG)
+             .setHasMultipleValues(false)
+             .setNumericColumnSupplier(columnSupplier);
     };
   }
 }

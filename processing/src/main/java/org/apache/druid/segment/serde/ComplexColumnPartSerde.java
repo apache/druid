@@ -22,16 +22,15 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
 
 /**
  */
 public class ComplexColumnPartSerde implements ColumnPartSerde
 {
   private final String typeName;
+  @Nullable
   private final ComplexMetricSerde serde;
   private final Serializer serializer;
 
@@ -70,21 +69,18 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return new Deserializer()
-    {
-      @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
-      {
-        if (serde != null) {
-          serde.deserializeColumn(buffer, builder);
-        }
+    return (buffer, builder, columnConfig) -> {
+      if (serde != null) {
+        serde.deserializeColumn(buffer, builder);
       }
     };
   }
 
   public static class SerializerBuilder
   {
+    @Nullable
     private String typeName = null;
+    @Nullable
     private GenericColumnSerializer delegate = null;
 
     public SerializerBuilder withTypeName(final String typeName)

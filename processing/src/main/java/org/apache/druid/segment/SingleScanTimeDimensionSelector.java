@@ -46,9 +46,11 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
 
   private final List<String> timeValues = new ArrayList<>();
   private final SingleIndexedInt row = new SingleIndexedInt();
-  private String currentValue = null;
   private long currentTimestamp = Long.MIN_VALUE;
   private int index = -1;
+
+  @Nullable
+  private String currentValue = null;
 
   public SingleScanTimeDimensionSelector(
       BaseLongColumnValueSelector selector,

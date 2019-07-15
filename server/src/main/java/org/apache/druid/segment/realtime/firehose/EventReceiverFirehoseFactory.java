@@ -104,7 +104,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
    * {@link EventReceiverFirehose} that may change in the future.
    */
   private final long maxIdleTimeMillis;
-  private final @Nullable ChatHandlerProvider chatHandlerProvider;
+  private final ChatHandlerProvider chatHandlerProvider;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final EventReceiverFirehoseRegister eventReceiverFirehoseRegister;
@@ -225,6 +225,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * This field and {@link #rowsRunOut} are not volatile because they are accessed only from {@link #hasMore()} and
      * {@link #nextRow()} methods that are called from a single thread according to {@link Firehose} spec.
      */
+    @Nullable
     private InputRow nextRow = null;
     private boolean rowsRunOut = false;
 
@@ -241,7 +242,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * If they were not volatile, NPE would be possible in {@link #delayedCloseExecutor}. See
      * https://shipilev.net/blog/2016/close-encounters-of-jmm-kind/#wishful-hb-actual for explanations.
      */
+    @Nullable
     private volatile Long idleCloseTimeNs = null;
+    @Nullable
     private volatile Long requestedShutdownTimeNs = null;
 
     EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)

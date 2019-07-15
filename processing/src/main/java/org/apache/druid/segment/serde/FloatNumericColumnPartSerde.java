@@ -66,7 +66,9 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
 
   public static class SerializerBuilder
   {
+    @Nullable
     private ByteOrder byteOrder = null;
+    @Nullable
     private Serializer delegate = null;
 
     public SerializerBuilder withByteOrder(final ByteOrder byteOrder)

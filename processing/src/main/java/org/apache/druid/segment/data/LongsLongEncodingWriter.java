@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -31,7 +33,9 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
 
   private final ByteBuffer orderBuffer;
   private final ByteOrder order;
+  @Nullable
   private ByteBuffer outBuffer = null;
+  @Nullable
   private OutputStream outStream = null;
 
   public LongsLongEncodingWriter(ByteOrder order)

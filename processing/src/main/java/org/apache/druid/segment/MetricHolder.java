@@ -26,6 +26,8 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -96,7 +98,9 @@ public class MetricHolder
   private final String name;
   private final String typeName;
   private final MetricType type;
+  @Nullable
   CompressedColumnarFloatsSupplier floatType = null;
+  @Nullable
   GenericIndexed<?> complexType = null;
 
   private MetricHolder(

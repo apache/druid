@@ -21,15 +21,15 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 
-import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 
 /**
  */
 public class BatchDataSegmentAnnouncerProvider implements DataSegmentAnnouncerProvider
 {
   @JacksonInject
-  @NotNull
-  private BatchDataSegmentAnnouncer batchAnnouncer = null;
+  @Nullable
+  private final BatchDataSegmentAnnouncer batchAnnouncer = null;
 
   @Override
   public DataSegmentAnnouncer get()

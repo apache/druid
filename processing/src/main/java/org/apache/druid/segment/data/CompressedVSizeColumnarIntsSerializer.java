@@ -25,6 +25,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -67,9 +69,10 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final ByteBuffer intBuffer;
-
-  private ByteBuffer endBuffer;
   private int numInserted;
+
+  @Nullable
+  private ByteBuffer endBuffer;
 
   CompressedVSizeColumnarIntsSerializer(
       final SegmentWriteOutMedium segmentWriteOutMedium,

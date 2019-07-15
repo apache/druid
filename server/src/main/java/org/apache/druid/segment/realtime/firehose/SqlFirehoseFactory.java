@@ -35,6 +35,8 @@ import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
 import org.skife.jdbi.v2.exceptions.StatementException;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -51,6 +53,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
 {
   @JsonProperty
   private final List<String> sqls;
+  @Nullable
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
   private final ObjectMapper objectMapper;

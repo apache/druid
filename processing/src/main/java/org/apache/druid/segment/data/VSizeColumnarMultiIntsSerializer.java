@@ -26,6 +26,8 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
@@ -83,7 +85,9 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
   private final WriteInt writeInt;
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
+  @Nullable
   private WriteOutBytes headerOut = null;
+  @Nullable
   private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
   private boolean numBytesForMaxWritten = false;

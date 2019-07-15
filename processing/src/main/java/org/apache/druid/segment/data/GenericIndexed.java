@@ -198,6 +198,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   private int logBaseTwoOfElementsPerValueFile;
   private int relativeIndexMask;
 
+  @Nullable
   private final ByteBuffer theBuffer;
 
   /**

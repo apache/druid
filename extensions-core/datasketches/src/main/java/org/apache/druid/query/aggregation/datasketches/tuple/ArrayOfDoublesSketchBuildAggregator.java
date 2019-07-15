@@ -26,6 +26,8 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**
@@ -38,7 +40,9 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
+  @Nullable
   private double[] values; // not part of the state, but to reuse in aggregate() method
+  @Nullable
   private ArrayOfDoublesUpdatableSketch sketch;
 
   public ArrayOfDoublesSketchBuildAggregator(

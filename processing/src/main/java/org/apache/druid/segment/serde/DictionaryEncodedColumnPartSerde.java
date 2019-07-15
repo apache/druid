@@ -143,13 +143,21 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   public static class SerializerBuilder
   {
-    private VERSION version = null;
     private int flags = STARTING_FLAGS;
+
+    @Nullable
+    private VERSION version = null;
+    @Nullable
     private GenericIndexedWriter<String> dictionaryWriter = null;
+    @Nullable
     private ColumnarIntsSerializer valueWriter = null;
+    @Nullable
     private BitmapSerdeFactory bitmapSerdeFactory = null;
+    @Nullable
     private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = null;
+    @Nullable
     private ByteBufferWriter<ImmutableRTree> spatialIndexWriter = null;
+    @Nullable
     private ByteOrder byteOrder = null;
 
     public SerializerBuilder withDictionary(GenericIndexedWriter<String> dictionaryWriter)

@@ -69,7 +69,8 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final ConcurrentMap<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
-  private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory();
+  private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
+  @Nullable
   private final SegmentZNode dummyZnode;
 
   @Inject
@@ -87,20 +88,15 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     this.server = server;
 
     this.liveSegmentLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), server.getName());
-    segmentTransformer = new Function<DataSegment, DataSegment>()
-    {
-      @Override
-      public DataSegment apply(DataSegment input)
-      {
-        DataSegment rv = input;
-        if (config.isSkipDimensionsAndMetrics()) {
-          rv = rv.withDimensions(null).withMetrics(null);
-        }
-        if (config.isSkipLoadSpec()) {
-          rv = rv.withLoadSpec(null);
-        }
-        return rv;
+    segmentTransformer = input -> {
+      DataSegment rv = input;
+      if (config.isSkipDimensionsAndMetrics()) {
+        rv = rv.withDimensions(null).withMetrics(null);
       }
+      if (config.isSkipLoadSpec()) {
+        rv = rv.withLoadSpec(null);
+      }
+      return rv;
     };
 
     if (this.config.isSkipSegmentAnnouncementOnZk()) {

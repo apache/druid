@@ -26,12 +26,16 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+
+  @Nullable
   private Union union;
 
   public SketchAggregator(BaseObjectColumnValueSelector selector, int size)

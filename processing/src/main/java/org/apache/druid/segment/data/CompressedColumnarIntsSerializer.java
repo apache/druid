@@ -24,6 +24,8 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -45,8 +47,10 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   private final int chunkFactor;
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
-  private ByteBuffer endBuffer;
   private int numInserted;
+
+  @Nullable
+  private ByteBuffer endBuffer;
 
   CompressedColumnarIntsSerializer(
       final SegmentWriteOutMedium segmentWriteOutMedium,

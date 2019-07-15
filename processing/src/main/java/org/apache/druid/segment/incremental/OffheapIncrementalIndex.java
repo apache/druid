@@ -33,6 +33,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -59,14 +61,17 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   protected final int maxRowCount;
 
+  @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
 
   //given a ByteBuffer and an offset where all aggregates for a row are stored
   //offset + aggOffsetInBuffer[i] would give position in ByteBuffer where ith aggregate
   //is stored
+  @Nullable
   private volatile int[] aggOffsetInBuffer;
   private volatile int aggsTotalSize;
 
+  @Nullable
   private String outOfRowsReason = null;
 
   OffheapIncrementalIndex(
