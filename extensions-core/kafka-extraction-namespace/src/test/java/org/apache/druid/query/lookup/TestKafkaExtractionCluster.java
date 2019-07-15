@@ -25,34 +25,31 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import kafka.admin.AdminUtils;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.Time;
-import kafka.utils.ZKStringSerializer$;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.exception.ZkException;
-import org.apache.curator.test.TestingServer;
+import org.apache.curator.test.TestingCluster;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
-import org.apache.zookeeper.CreateMode;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.utils.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import scala.Some;
+import scala.collection.immutable.List$;
 
-import java.io.Closeable;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -76,166 +72,37 @@ public class TestKafkaExtractionCluster
 
   private final Closer closer = Closer.create();
 
+  private TestingCluster zkServer;
   private KafkaServer kafkaServer;
-  private KafkaConfig kafkaConfig;
-  private TestingServer zkTestServer;
-  private ZkClient zkClient;
   private Injector injector;
   private ObjectMapper mapper;
   private KafkaLookupExtractorFactory factory;
 
+  private static List<ProducerRecord<byte[], byte[]>> generateRecords()
+  {
+    return ImmutableList.of(
+            new ProducerRecord<>(topicName, 0,
+                    StringUtils.toUtf8("abcdefg"),
+                    StringUtils.toUtf8("abcdefg")));
+  }
+
   @Before
   public void setUp() throws Exception
   {
-    zkTestServer = new TestingServer(-1, temporaryFolder.newFolder(), true);
-    zkTestServer.start();
+    zkServer = new TestingCluster(1);
+    zkServer.start();
 
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        zkTestServer.stop();
-      }
-    });
-
-    zkClient = new ZkClient(
-        zkTestServer.getConnectString(),
-        10000,
-        10000,
-        ZKStringSerializer$.MODULE$
-    );
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        zkClient.close();
-      }
-    });
-    if (!zkClient.exists("/kafka")) {
-      zkClient.create("/kafka", null, CreateMode.PERSISTENT);
-    }
-
-    log.info("---------------------------Started ZK---------------------------");
-
-    final String zkKafkaPath = "/kafka";
-
-    final Properties serverProperties = new Properties();
-    serverProperties.putAll(kafkaProperties);
-    serverProperties.put("broker.id", "0");
-    serverProperties.put("log.dir", temporaryFolder.newFolder().getAbsolutePath());
-    serverProperties.put("log.cleaner.enable", "true");
-    serverProperties.put("host.name", "127.0.0.1");
-    serverProperties.put("zookeeper.connect", zkTestServer.getConnectString() + zkKafkaPath);
-    serverProperties.put("zookeeper.session.timeout.ms", "10000");
-    serverProperties.put("zookeeper.sync.time.ms", "200");
-    serverProperties.put("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
-
-    kafkaConfig = new KafkaConfig(serverProperties);
-
-    final long time = DateTimes.of("2015-01-01").getMillis();
     kafkaServer = new KafkaServer(
-        kafkaConfig,
-        new Time()
-        {
+          getBrokerProperties(),
+          Time.SYSTEM,
+          Some.apply(StringUtils.format("TestingBroker[%d]-", 1)),
+          List$.MODULE$.empty());
 
-          @Override
-          public long milliseconds()
-          {
-            return time;
-          }
-
-          @Override
-          public long nanoseconds()
-          {
-            return TimeUnit.MILLISECONDS.toNanos(milliseconds());
-          }
-
-          @Override
-          public void sleep(long ms)
-          {
-            try {
-              Thread.sleep(ms);
-            }
-            catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
     kafkaServer.startup();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        kafkaServer.shutdown();
-        kafkaServer.awaitShutdown();
-      }
-    });
+    log.info("---------------------------Started Kafka Broker ---------------------------");
 
-    int sleepCount = 0;
-
-    while (!kafkaServer.kafkaController().isActive()) {
-      Thread.sleep(100);
-      if (++sleepCount > 10) {
-        throw new InterruptedException("Controller took to long to awaken");
-      }
-    }
-
-    log.info("---------------------------Started Kafka Server---------------------------");
-
-    final ZkClient zkClient = new ZkClient(
-        zkTestServer.getConnectString() + zkKafkaPath, 10000, 10000,
-        ZKStringSerializer$.MODULE$
-    );
-
-    try (final AutoCloseable autoCloseable = new AutoCloseable()
-    {
-      @Override
-      public void close()
-      {
-        if (zkClient.exists(zkKafkaPath)) {
-          try {
-            zkClient.deleteRecursive(zkKafkaPath);
-          }
-          catch (ZkException ex) {
-            log.warn(ex, "error deleting %s zk node", zkKafkaPath);
-          }
-        }
-        zkClient.close();
-      }
-    }) {
-      final Properties topicProperties = new Properties();
-      topicProperties.put("cleanup.policy", "compact");
-      if (!AdminUtils.topicExists(zkClient, topicName)) {
-        AdminUtils.createTopic(zkClient, topicName, 1, 1, topicProperties);
-      }
-
-      log.info("---------------------------Created topic---------------------------");
-
-      Assert.assertTrue(AdminUtils.topicExists(zkClient, topicName));
-    }
-
-    final Properties kafkaProducerProperties = makeProducerProperties();
-    final Producer<byte[], byte[]> producer = new Producer<>(new ProducerConfig(kafkaProducerProperties));
-    try (final AutoCloseable autoCloseable = new AutoCloseable()
-    {
-      @Override
-      public void close()
-      {
-        producer.close();
-      }
-    }) {
-      producer.send(
-          new KeyedMessage<>(
-              topicName,
-              StringUtils.toUtf8("abcdefg"),
-              StringUtils.toUtf8("abcdefg")
-          )
-      );
-    }
+    log.info("---------------------------Publish Messages to topic-----------------------");
+    publishRecordsToKafka();
 
     System.setProperty("druid.extensions.searchCurrentClassloader", "false");
 
@@ -260,10 +127,7 @@ public class TestKafkaExtractionCluster
     mapper = injector.getInstance(ObjectMapper.class);
 
     log.info("--------------------------- placed default item via producer ---------------------------");
-    final Map<String, String> consumerProperties = new HashMap<>(kafkaProperties);
-    consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + zkKafkaPath);
-    consumerProperties.put("zookeeper.session.timeout.ms", "10000");
-    consumerProperties.put("zookeeper.sync.time.ms", "200");
+    final Map<String, String> consumerProperties = getConsumerProperties();
 
     final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
         null,
@@ -278,15 +142,46 @@ public class TestKafkaExtractionCluster
     Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaTopic(), factory.getKafkaTopic());
     Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaProperties(), factory.getKafkaProperties());
     factory.start();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        factory.close();
-      }
-    });
+    closer.register(() -> factory.close());
     log.info("--------------------------- started rename manager ---------------------------");
+  }
+
+  @Nonnull
+  private Map<String, String> getConsumerProperties()
+  {
+    final Map<String, String> props = new HashMap<>(kafkaProperties);
+    int port = kafkaServer.socketServer().config().port();
+    props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
+    return props;
+  }
+
+  private void publishRecordsToKafka()
+  {
+    final Properties kafkaProducerProperties = makeProducerProperties();
+
+    try (final Producer<byte[], byte[]> producer = new KafkaProducer(kafkaProducerProperties)) {
+      generateRecords().forEach(producer::send);
+    }
+  }
+
+  @Nonnull
+  private KafkaConfig getBrokerProperties() throws IOException
+  {
+    final Properties serverProperties = new Properties();
+    serverProperties.putAll(kafkaProperties);
+    serverProperties.put("broker.id", "0");
+    serverProperties.put("zookeeper.connect", zkServer.getConnectString());
+    serverProperties.put("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
+    serverProperties.put("auto.create.topics.enable", "true");
+    serverProperties.put("log.dir", temporaryFolder.newFolder().getAbsolutePath());
+    serverProperties.put("num.partitions", "1");
+    serverProperties.put("offsets.topic.replication.factor", "1");
+    serverProperties.put("default.replication.factor", "1");
+    serverProperties.put("log.cleaner.enable", "true");
+    serverProperties.put("advertised.host.name", "localhost");
+    serverProperties.put("zookeeper.session.timeout.ms", "30000");
+    serverProperties.put("zookeeper.sync.time.ms", "200");
+    return new KafkaConfig(serverProperties);
   }
 
   @After
@@ -299,10 +194,11 @@ public class TestKafkaExtractionCluster
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(kafkaProperties);
-    kafkaProducerProperties.put(
-        "metadata.broker.list",
-        StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().port())
-    );
+    int port = kafkaServer.socketServer().config().port();
+    kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
+    kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
+    kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());
+    kafkaProducerProperties.put("acks", "all");
     kafkaProperties.put("request.required.acks", "1");
     return kafkaProducerProperties;
   }
@@ -315,56 +211,48 @@ public class TestKafkaExtractionCluster
   }
 
   @Test(timeout = 60_000L)
-  public void testSimpleRename() throws InterruptedException
+  public void testSimpleLookup() throws InterruptedException
   {
-    final Properties kafkaProducerProperties = makeProducerProperties();
-    final Producer<byte[], byte[]> producer = new Producer<>(new ProducerConfig(kafkaProducerProperties));
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        producer.close();
+    try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
+      checkServer();
+
+      assertUpdated(null, "foo");
+      assertReverseUpdated(ImmutableList.of(), "foo");
+
+      long events = factory.getCompletedEventCount();
+
+      log.info("-------------------------     Sending foo bar     -------------------------------");
+      producer.send(new ProducerRecord<>(topicName, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
+
+      long start = System.currentTimeMillis();
+      while (events == factory.getCompletedEventCount()) {
+        Thread.sleep(100);
+        if (System.currentTimeMillis() > start + 60_000) {
+          throw new ISE("Took too long to update event");
+        }
       }
-    });
-    checkServer();
 
-    assertUpdated(null, "foo");
-    assertReverseUpdated(ImmutableList.of(), "foo");
+      log.info("-------------------------     Checking foo bar     -------------------------------");
+      assertUpdated("bar", "foo");
+      assertReverseUpdated(Collections.singletonList("foo"), "bar");
+      assertUpdated(null, "baz");
 
-    long events = factory.getCompletedEventCount();
+      checkServer();
+      events = factory.getCompletedEventCount();
 
-    log.info("-------------------------     Sending foo bar     -------------------------------");
-    producer.send(new KeyedMessage<>(topicName, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
-
-    long start = System.currentTimeMillis();
-    while (events == factory.getCompletedEventCount()) {
-      Thread.sleep(100);
-      if (System.currentTimeMillis() > start + 60_000) {
-        throw new ISE("Took too long to update event");
+      log.info("-------------------------     Sending baz bat     -------------------------------");
+      producer.send(new ProducerRecord<>(topicName, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
+      while (events == factory.getCompletedEventCount()) {
+        Thread.sleep(10);
+        if (System.currentTimeMillis() > start + 60_000) {
+          throw new ISE("Took too long to update event");
+        }
       }
+
+      log.info("-------------------------     Checking baz bat     -------------------------------");
+      Assert.assertEquals("bat", factory.get().apply("baz"));
+      Assert.assertEquals(Collections.singletonList("baz"), factory.get().unapply("bat"));
     }
-
-    log.info("-------------------------     Checking foo bar     -------------------------------");
-    assertUpdated("bar", "foo");
-    assertReverseUpdated(Collections.singletonList("foo"), "bar");
-    assertUpdated(null, "baz");
-
-    checkServer();
-    events = factory.getCompletedEventCount();
-
-    log.info("-------------------------     Sending baz bat     -------------------------------");
-    producer.send(new KeyedMessage<>(topicName, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
-    while (events == factory.getCompletedEventCount()) {
-      Thread.sleep(10);
-      if (System.currentTimeMillis() > start + 60_000) {
-        throw new ISE("Took too long to update event");
-      }
-    }
-
-    log.info("-------------------------     Checking baz bat     -------------------------------");
-    Assert.assertEquals("bat", factory.get().apply("baz"));
-    Assert.assertEquals(Collections.singletonList("baz"), factory.get().unapply("bat"));
   }
 
   private void assertUpdated(
