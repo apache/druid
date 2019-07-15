@@ -668,6 +668,8 @@ public class MultiValuedDimensionTest
   @Test
   public void testGroupByExpressionAuto()
   {
+    // virtual column is a single input column and input is not used explicitly as an array,
+    // so this one will work for group by v1, even with multi-value inputs
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")
