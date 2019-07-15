@@ -16,7 +16,7 @@ exports[`async action dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog bp3-alert async-alert-dialog"
+        class="bp3-dialog bp3-alert async-action-dialog"
       >
         <div
           class="bp3-alert-body"

@@ -52,6 +52,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,10 +63,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static org.easymock.EasyMock.anyLong;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
 
 public class KinesisSamplerSpecTest extends EasyMockSupport
 {
@@ -132,18 +129,18 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   @Test(timeout = 10_000L)
   public void testSample() throws Exception
   {
-    expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).once();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).once();
 
     recordSupplier.assign(ImmutableSet.of(StreamPartition.of(STREAM, SHARD_ID)));
-    expectLastCall().once();
+    EasyMock.expectLastCall().once();
 
     recordSupplier.seekToEarliest(ImmutableSet.of(StreamPartition.of(STREAM, SHARD_ID)));
-    expectLastCall().once();
+    EasyMock.expectLastCall().once();
 
-    expect(recordSupplier.poll(anyLong())).andReturn(generateRecords(STREAM)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(generateRecords(STREAM)).once();
 
     recordSupplier.close();
-    expectLastCall().once();
+    EasyMock.expectLastCall().once();
 
     replayAll();
 

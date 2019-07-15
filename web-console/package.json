@@ -33,7 +33,6 @@
     "endOfLine": "lf"
   },
   "scripts": {
-    "watch": "./script/watch",
     "compile": "./script/build",
     "pretest": "./script/build",
     "run": "./script/run",

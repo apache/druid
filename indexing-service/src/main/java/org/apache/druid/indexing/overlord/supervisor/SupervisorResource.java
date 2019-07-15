@@ -306,27 +306,36 @@ public class SupervisorResource
   @POST
   @Path("/suspendAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response suspendAll()
+  public Response suspendAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(true);
+    return suspendOrResumeAll(req, true);
   }
 
   @POST
   @Path("/resumeAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response resumeAll()
+  public Response resumeAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(false);
+    return suspendOrResumeAll(req, false);
   }
 
   @POST
   @Path("/terminateAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response terminateAll()
+  public Response terminateAll(@Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.stopAndRemoveAllSupervisors();
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.stopAndRemoveSupervisor(supervisorId);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
@@ -473,11 +482,20 @@ public class SupervisorResource
     );
   }
 
-  private Response suspendOrResumeAll(boolean suspend)
+  private Response suspendOrResumeAll(final HttpServletRequest req, final boolean suspend)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.suspendOrResumeAllSupervisors(suspend);
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.suspendOrResumeSupervisor(supervisorId, suspend);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );

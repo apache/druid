@@ -43,9 +43,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
-      @JsonProperty("tgtHllType") @Nullable final String tgtHllType)
+      @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("round") final boolean round
+  )
   {
-    super(name, fieldName, lgK, tgtHllType);
+    super(name, fieldName, lgK, tgtHllType, round);
   }
 
   @Override

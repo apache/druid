@@ -43,6 +43,11 @@ public class HyperUniquesSerde extends ComplexMetricSerde
 
   private final HyperLogLogHash hyperLogLogHash;
 
+  public HyperUniquesSerde()
+  {
+    this(HyperLogLogHash.getDefault());
+  }
+
   public HyperUniquesSerde(HyperLogLogHash hyperLogLogHash)
   {
     this.hyperLogLogHash = hyperLogLogHash;

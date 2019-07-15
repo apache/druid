@@ -117,18 +117,15 @@ export class QueryManager<Q, R> {
   }
 
   public runQuery(query: Q): void {
+    if (this.terminated) return;
     this.nextQuery = query;
     this.trigger();
   }
 
-  public rerunLastQuery(): void {
+  public rerunLastQuery(runInBackground = false): void {
+    if (this.terminated) return;
     this.nextQuery = this.lastQuery;
-    this.trigger();
-  }
-
-  public rerunLastQueryInBackground(auto: boolean): void {
-    this.nextQuery = this.lastQuery;
-    if (auto) {
+    if (runInBackground) {
       this.runWhenIdle();
     } else {
       this.trigger();

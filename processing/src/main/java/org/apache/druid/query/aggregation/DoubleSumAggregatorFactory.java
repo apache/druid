@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -62,9 +64,21 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return columnSelectorFactory.makeValueSelector(fieldName);
+  }
+
+  @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
   {
     return new DoubleSumAggregator(selector);
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return expression == null;
   }
 
   @Override
@@ -74,6 +88,15 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   )
   {
     return new DoubleSumBufferAggregator(selector);
+  }
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new DoubleSumVectorAggregator(selector);
   }
 
   @Override

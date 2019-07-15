@@ -80,7 +80,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int getCardinality()
   {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

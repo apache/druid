@@ -25,6 +25,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.data.ColumnarFloats;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
  */
@@ -59,6 +61,12 @@ public class FloatsColumn implements NumericColumn
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap());
+  }
+
+  @Override
+  public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+  {
+    return column.makeVectorValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap());
   }
 
   @Override

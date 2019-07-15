@@ -185,8 +185,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         <ResizeSensor onResize={this.handleAceContainerResize}>
           <div className="ace-container">
             <AceEditor
-              key={runeMode ? 'hjson' : 'sql'}
-              mode={runeMode ? 'hjson' : 'sql'}
+              mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
               name="ace-editor"
               onChange={onQueryStringChange}

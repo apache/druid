@@ -560,27 +560,26 @@ ORDER BY "rank" DESC, "server" DESC`;
 
   renderDisableWorkerAction() {
     const { middleManagerDisableWorkerHost } = this.state;
+    if (!middleManagerDisableWorkerHost) return;
 
     return (
       <AsyncActionDialog
-        action={
-          middleManagerDisableWorkerHost
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Disable worker"
         successText="Worker has been disabled"
         failText="Could not disable worker"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ middleManagerDisableWorkerHost: null });
-          if (success) this.serverQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.serverQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to disable worker '${middleManagerDisableWorkerHost}'?`}</p>
@@ -590,27 +589,26 @@ ORDER BY "rank" DESC, "server" DESC`;
 
   renderEnableWorkerAction() {
     const { middleManagerEnableWorkerHost } = this.state;
+    if (!middleManagerEnableWorkerHost) return;
 
     return (
       <AsyncActionDialog
-        action={
-          middleManagerEnableWorkerHost
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Enable worker"
         successText="Worker has been enabled"
         failText="Could not enable worker"
         intent={Intent.PRIMARY}
-        onClose={success => {
+        onClose={() => {
           this.setState({ middleManagerEnableWorkerHost: null });
-          if (success) this.serverQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.serverQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to enable worker '${middleManagerEnableWorkerHost}'?`}</p>
@@ -647,7 +645,7 @@ ORDER BY "rank" DESC, "server" DESC`;
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serverQueryManager.rerunLastQueryInBackground(auto)}
+            onRefresh={auto => this.serverQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
           />
           {!noSqlMode && (

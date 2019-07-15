@@ -44,6 +44,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ValueType;
@@ -331,7 +332,7 @@ public class GroupByQueryEngine
         }
 
         final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimSpec);
-        if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+        if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
           throw new UnsupportedOperationException(
               "GroupBy v1 does not support dimension selectors with unknown cardinality.");
         }

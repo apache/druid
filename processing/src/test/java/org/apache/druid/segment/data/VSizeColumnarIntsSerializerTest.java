@@ -25,13 +25,12 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
 
 public class VSizeColumnarIntsSerializerTest
 {
@@ -75,15 +74,15 @@ public class VSizeColumnarIntsSerializerTest
     WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
     writer.writeTo(writeOutBytes, null);
 
-    assertEquals(writtenLength, intsFromList.getSerializedSize());
+    Assert.assertEquals(writtenLength, intsFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
     VSizeColumnarInts intsFromByteBuffer = VSizeColumnarInts.readFromByteBuffer(
         ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream()))
     );
-    assertEquals(vals.length, intsFromByteBuffer.size());
+    Assert.assertEquals(vals.length, intsFromByteBuffer.size());
     for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], intsFromByteBuffer.get(i));
+      Assert.assertEquals(vals[i], intsFromByteBuffer.get(i));
     }
   }
 
