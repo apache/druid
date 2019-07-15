@@ -38,12 +38,29 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
     this.selector = selector;
   }
 
-  @Override
-  public void init(ByteBuffer buf, int position)
+  public static void doInit(ByteBuffer buf, int position)
   {
     final ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
     mutationBuffer.put(EMPTY_BYTES);
+  }
+
+  public static HyperLogLogCollector doGet(ByteBuffer buf, int position)
+  {
+    final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
+    ByteBuffer dataCopyBuffer = ByteBuffer.allocate(size);
+    ByteBuffer mutationBuffer = buf.duplicate();
+    mutationBuffer.position(position);
+    mutationBuffer.limit(position + size);
+    dataCopyBuffer.put(mutationBuffer);
+    dataCopyBuffer.rewind();
+    return HyperLogLogCollector.makeCollector(dataCopyBuffer);
+  }
+
+  @Override
+  public void init(ByteBuffer buf, int position)
+  {
+    doInit(buf, position);
   }
 
   @Override
@@ -73,14 +90,7 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
-    ByteBuffer dataCopyBuffer = ByteBuffer.allocate(size);
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-    mutationBuffer.limit(position + size);
-    dataCopyBuffer.put(mutationBuffer);
-    dataCopyBuffer.rewind();
-    return HyperLogLogCollector.makeCollector(dataCopyBuffer);
+    return doGet(buf, position);
   }
 
   @Override

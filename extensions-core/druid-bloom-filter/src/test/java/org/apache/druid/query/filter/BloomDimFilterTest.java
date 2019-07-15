@@ -246,21 +246,24 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testExpressionVirtualColumn() throws IOException
   {
-    assertFilterMatches(
+    assertFilterMatchesSkipVectorize(
         new BloomDimFilter("expr", bloomKFilter(1000, 1.1F), null),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatches(new BloomDimFilter("expr", bloomKFilter(1000, 1.2F), null), ImmutableList.of());
-    assertFilterMatches(
+    assertFilterMatchesSkipVectorize(new BloomDimFilter("expr", bloomKFilter(1000, 1.2F), null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(
         new BloomDimFilter("exprDouble", bloomKFilter(1000, 2.1D), null),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatches(new BloomDimFilter("exprDouble", bloomKFilter(1000, 2.2D), null), ImmutableList.of());
-    assertFilterMatches(
+    assertFilterMatchesSkipVectorize(
+        new BloomDimFilter("exprDouble", bloomKFilter(1000, 2.2D), null),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
         new BloomDimFilter("exprLong", bloomKFilter(1000, 3L), null),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
-    assertFilterMatches(new BloomDimFilter("exprLong", bloomKFilter(1000, 4L), null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new BloomDimFilter("exprLong", bloomKFilter(1000, 4L), null), ImmutableList.of());
   }
 
   @Test
