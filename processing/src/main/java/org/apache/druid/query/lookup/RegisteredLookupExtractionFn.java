@@ -96,7 +96,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getName());
     final byte[] lookupName = StringUtils.toUtf8(getLookup());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer

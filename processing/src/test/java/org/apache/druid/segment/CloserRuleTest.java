@@ -279,7 +279,7 @@ public class CloserRuleTest
             runnable.run();
           }
         }, Description.createTestDescription(
-            CloserRuleTest.class.getCanonicalName(), "baseRunner", UUID.randomUUID()
+            CloserRuleTest.class.getName(), "baseRunner", UUID.randomUUID()
         )
     ).evaluate();
   }

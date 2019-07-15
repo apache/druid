@@ -48,7 +48,7 @@ public class StatusResourceTest
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
 
     for (DruidModule module : modules) {
-      String moduleName = module.getClass().getCanonicalName();
+      String moduleName = module.getClass().getName();
 
       boolean contains = Boolean.FALSE;
       for (StatusResource.ModuleVersion version : statusResourceModuleList) {
