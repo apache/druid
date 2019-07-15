@@ -55,7 +55,6 @@
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
     <Bug pattern="MS_FINAL_PKGPROTECT"/>
-    <Bug pattern="MS_OOI_PKGPROTECT"/>
     <Bug pattern="MS_PKGPROTECT"/>
     <Bug pattern="NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT"/>
     <Bug pattern="NP_GUARANTEED_DEREF"/>

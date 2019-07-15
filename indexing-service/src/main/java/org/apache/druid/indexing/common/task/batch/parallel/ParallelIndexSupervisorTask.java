@@ -361,6 +361,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getNumShards(),
         null,
         tuningConfig.getIndexSpec(),
+        tuningConfig.getIndexSpecForIntermediatePersists(),
         tuningConfig.getMaxPendingPersists(),
         true,
         false,

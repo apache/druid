@@ -296,6 +296,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             1,
             null,
             null,
@@ -351,6 +352,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
         segmentGranularity,
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,

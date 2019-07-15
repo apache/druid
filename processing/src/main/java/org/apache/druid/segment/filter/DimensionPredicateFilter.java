@@ -31,8 +31,12 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 /**
  */
@@ -98,6 +102,22 @@ public class DimensionPredicateFilter implements Filter
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return Filters.makeValueMatcher(factory, dimension, predicateFactory);
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnStrategizer.instance(),
+        factory
+    ).makeMatcher(predicateFactory);
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
   }
 
   @Override

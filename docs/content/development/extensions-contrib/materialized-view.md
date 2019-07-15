@@ -33,6 +33,7 @@ In materialized-view-maintenance, dataSouces user ingested are called "base-data
 The `derivativeDataSource` supervisor is used to keep the timeline of derived-dataSource consistent with base-dataSource. Each `derivativeDataSource` supervisor  is responsible for one derived-dataSource.
 
 A sample derivativeDataSource supervisor spec is shown below:
+
 ```json
    {
        "type": "derivativeDataSource",
@@ -90,6 +91,7 @@ A sample derivativeDataSource supervisor spec is shown below:
 In materialized-view-selection, we implement a new query type `view`. When we request a view query, Druid will try its best to optimize the query based on query dataSource and intervals.
 
 A sample view query spec is shown below:
+
 ```json
    {
        "queryType": "view",
@@ -124,6 +126,7 @@ A sample view query spec is shown below:
        }
    }
 ```
+
 There are 2 parts in a view query:
 
 |Field|Description|Required|
