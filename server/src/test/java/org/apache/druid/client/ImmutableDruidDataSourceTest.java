@@ -98,7 +98,7 @@ public class ImmutableDruidDataSourceTest
   }
 
   @Test
-  public void testhashCodeMethodThrowsUnsupportedOperationException()
+  public void testHashCodeMethodThrowsUnsupportedOperationException()
   {
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("ImmutableDruidDataSource shouldn't be used as the key in containers");
