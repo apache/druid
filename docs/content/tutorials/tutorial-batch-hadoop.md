@@ -196,7 +196,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Once the Hadoop .xml files have been copied to the Druid cluster and the segment/log storage configuration has been updated to use HDFS, the Druid cluster needs to be restarted for the new configurations to take effect.
 
-If the cluster is still running, CTRL-C to terminate the `bin/supervise` script, and re-reun it to bring the Druid services back up.
+If the cluster is still running, CTRL-C to terminate the `bin/start-micro-quickstart` script, and re-reun it to bring the Druid services back up.
 
 ## Load batch data
 
