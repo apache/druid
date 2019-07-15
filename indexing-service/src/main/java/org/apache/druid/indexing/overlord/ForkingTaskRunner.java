@@ -681,8 +681,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     );
   }
 
-  // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
-  // occur while saving.
+  /**
+   * Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that occur
+   * while saving.
+   */
   @GuardedBy("tasks")
   private void saveRunningTasks()
   {
@@ -701,6 +703,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     }
   }
 
+  /**
+   * Close task output stream (input stream of process) sending EOF telling process to terminate, destroying the process
+   * if an exception is encountered.
+   */
   private void shutdownTaskProcess(ForkingTaskRunnerWorkItem taskInfo)
   {
     if (taskInfo.processHolder != null) {
