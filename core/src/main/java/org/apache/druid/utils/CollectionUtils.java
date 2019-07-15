@@ -94,7 +94,6 @@ public final class CollectionUtils
    *
    * @throws ISE if key collisions occur while applying specified keyMapper
    */
-
   public static <K, V, K2> Map<K2, V> mapKeys(Map<K, V> map, Function<K, K2> keyMapper)
   {
     final Map<K2, V> result = Maps.newHashMapWithExpectedSize(map.size());
@@ -103,7 +102,7 @@ public final class CollectionUtils
       if (result.containsKey(k2)) {
         throw new ISE("Conflicting key[%s] calculated via keyMapper for original key[%s]", k2, k);
       }
-      result.put(k2, v);
+      result.putIfAbsent(k2, v);
     });
     return result;
   }
