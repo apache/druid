@@ -89,7 +89,7 @@ public class ServerCostCache
     {
       return new ServerCostCache(
           allSegmentsCostCache.build(),
-          CollectionUtils.mapValues(segmentsPerDataSource, v -> v.build())
+          CollectionUtils.mapValues(segmentsPerDataSource, SegmentsCostCache.Builder::build)
       );
     }
   }

@@ -723,7 +723,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     // https://github.com/apache/incubator-druid/pull/7653 are in.
     final Map<String, ImmutableDruidDataSource> updatedDataSources = CollectionUtils.mapValues(
         newDataSources,
-        v -> v.toImmutableDruidDataSource()
+        DruidDataSource::toImmutableDruidDataSource
     );
     dataSourcesSnapshot = new DataSourcesSnapshot(updatedDataSources);
   }

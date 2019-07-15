@@ -20,6 +20,7 @@
 package org.apache.druid.utils;
 
 import com.google.common.collect.Maps;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
@@ -88,12 +89,22 @@ public final class CollectionUtils
 
   /**
    * Returns a transformed map from the given input map where the key is modified based on the given keyMapper
-   * function.
+   * function. This method fails if keys collide after applying the  given keyMapper function and
+   * throws a IllegalStateException.
+   *
+   * @throws ISE if key collisions occur while applying specified keyMapper
    */
+
   public static <K, V, K2> Map<K2, V> mapKeys(Map<K, V> map, Function<K, K2> keyMapper)
   {
     final Map<K2, V> result = Maps.newHashMapWithExpectedSize(map.size());
-    map.forEach((k, v) -> result.put(keyMapper.apply(k), v));
+    map.forEach((k, v) -> {
+      final K2 k2 = keyMapper.apply(k);
+      if (result.containsKey(k2)) {
+        throw new ISE("Conflicting key[%s] calculated via keyMapper for original key[%s]", k2, k);
+      }
+      result.put(k2, v);
+    });
     return result;
   }
 

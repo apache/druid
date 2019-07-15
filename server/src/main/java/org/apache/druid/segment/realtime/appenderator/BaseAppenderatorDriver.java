@@ -690,7 +690,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 )
             )
         ),
-        CollectionUtils.mapValues(snapshot, v -> v.lastSegmentId),
+        CollectionUtils.mapValues(snapshot, segmentsForSequence -> segmentsForSequence.lastSegmentId),
         committer.getMetadata()
     );
 

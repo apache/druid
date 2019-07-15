@@ -62,8 +62,8 @@ public class DruidCluster
     this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
     this.historicals = CollectionUtils.mapValues(
         historicals,
-        v -> StreamSupport
-            .stream(v.spliterator(), false)
+        holders -> StreamSupport
+            .stream(holders.spliterator(), false)
             .collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
     );
   }

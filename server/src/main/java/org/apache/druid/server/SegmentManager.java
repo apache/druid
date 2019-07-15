@@ -114,7 +114,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceSizes()
   {
-    return CollectionUtils.mapValues(dataSources, v -> v.getTotalSegmentSize());
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
   /**
@@ -125,7 +125,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceCounts()
   {
-    return CollectionUtils.mapValues(dataSources, v -> v.getNumSegments());
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
   public boolean isSegmentCached(final DataSegment segment)

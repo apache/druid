@@ -445,7 +445,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             toolbox.getTaskActionClient(),
             intervals
         );
-        versions = CollectionUtils.mapValues(locks, v -> v.getVersion());
+        versions = CollectionUtils.mapValues(locks, TaskLock::getVersion);
 
         dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
             ingestionSchema.getDataSchema()

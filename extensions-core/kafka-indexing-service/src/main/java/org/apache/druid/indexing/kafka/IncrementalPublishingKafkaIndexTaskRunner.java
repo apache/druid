@@ -163,9 +163,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     }
 
     if (doReset) {
-      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, k -> StreamPartition.of(
-          k.topic(),
-          k.partition()
+      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
+          streamPartition.topic(),
+          streamPartition.partition()
       )), taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());

@@ -322,6 +322,17 @@
         <constraint name="y" within="" contains="" />
         <constraint name="__context__" target="true" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;K,V&gt;, Function&lt;K,K2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, $v$ -&gt; $v$.getValue()))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="v" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;k,v&gt;, Function&lt;k,k2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, Map.Entry::getValue))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">

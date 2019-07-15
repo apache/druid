@@ -622,7 +622,7 @@ public class TaskQueue
 
   public Map<String, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, v -> v.get());
+    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
     prevTotalSuccessfulTaskCount = total;
     return delta;
@@ -630,7 +630,7 @@ public class TaskQueue
 
   public Map<String, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, v -> v.get());
+    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
     prevTotalFailedTaskCount = total;
     return delta;

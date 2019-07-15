@@ -187,7 +187,7 @@ public class ExpressionPostAggregator implements PostAggregator
         expression,
         ordering,
         macroTable,
-        CollectionUtils.mapValues(aggregators, v -> o -> v.finalizeComputation(o)),
+        CollectionUtils.mapValues(aggregators, aggregatorFactory -> obj -> aggregatorFactory.finalizeComputation(obj)),
         parsed,
         dependentFields
     );

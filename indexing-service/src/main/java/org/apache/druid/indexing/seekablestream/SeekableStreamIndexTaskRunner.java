@@ -1277,7 +1277,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap = CollectionUtils.mapKeys(
         outOfRangePartitions,
-        k -> k.getPartitionId()
+        StreamPartition::getPartitionId
     );
 
     boolean result = taskToolbox

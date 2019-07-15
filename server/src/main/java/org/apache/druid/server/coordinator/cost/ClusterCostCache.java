@@ -82,7 +82,7 @@ public class ClusterCostCache
     public ClusterCostCache build()
     {
       return new ClusterCostCache(
-          CollectionUtils.mapValues(serversCostCache, v -> v.build())
+          CollectionUtils.mapValues(serversCostCache, ServerCostCache.Builder::build)
       );
     }
   }
