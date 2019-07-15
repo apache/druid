@@ -355,12 +355,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
       // 2. Visible timelineEntries can also have overshadowed segments. Add them to the result too.
       for (TimelineEntry entry : incompletePartitionsTimeline.values()) {
-        if (!entry.partitionHolder.getOvershadowed().isEmpty()) {
+        final List<PartitionChunk<ObjectType>> entryOvershadowed = entry.partitionHolder.getOvershadowed();
+        if (!entryOvershadowed.isEmpty()) {
           retVal.add(
               new TimelineObjectHolder<>(
                   entry.trueInterval,
                   entry.version,
-                  new PartitionHolder<>(new ArrayList<>(entry.partitionHolder.getOvershadowed()))
+                  new PartitionHolder<>(entryOvershadowed)
               )
           );
         }
@@ -380,8 +381,16 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       TimelineEntry entry = completePartitionsTimeline.get(interval);
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
-        return majorVersionCompare < 0
-            || (majorVersionCompare == 0 && entry.partitionHolder.stream().anyMatch(chunk -> chunk.getObject().isOvershadow(object)));
+        if (majorVersionCompare == 0) {
+          for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
+            if (chunk.getObject().isOvershadow(object)) {
+              return true;
+            }
+          }
+          return false;
+        } else {
+          return majorVersionCompare < 0;
+        }
       }
 
       Interval lower = completePartitionsTimeline.floorKey(

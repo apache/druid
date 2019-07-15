@@ -22,7 +22,6 @@ package org.apache.druid.timeline.partition;
 import com.google.common.collect.Iterables;
 import org.apache.druid.timeline.Overshadowable;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -126,7 +125,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     return StreamSupport.stream(spliterator(), false);
   }
 
-  public Collection<PartitionChunk<T>> getOvershadowed()
+  public List<PartitionChunk<T>> getOvershadowed()
   {
     return overshadowableManager.getOvershadowed();
   }

@@ -35,12 +35,12 @@ import it.unimi.dsi.fastutil.shorts.ShortComparator;
 import it.unimi.dsi.fastutil.shorts.ShortComparators;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +49,6 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /**
  * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details of
@@ -120,7 +119,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  private void transitPartitionChunkState(AtomicUpdateGroup<T> atomicUpdateGroup, State from, State to)
+  private void transitAtomicUpdateGroupState(AtomicUpdateGroup<T> atomicUpdateGroup, State from, State to)
   {
     Preconditions.checkNotNull(atomicUpdateGroup, "atomicUpdateGroup");
     Preconditions.checkArgument(!atomicUpdateGroup.isEmpty(), "empty atomicUpdateGroup");
@@ -168,7 +167,12 @@ class OvershadowableManager<T extends Overshadowable<T>>
           }
         }
 
-        determineVisibleGroupAfterRemove(atomicUpdateGroup, RootPartitionRange.of(chunk), chunk.getObject().getMinorVersion(), state);
+        determineVisibleGroupAfterRemove(
+            atomicUpdateGroup,
+            RootPartitionRange.of(chunk),
+            chunk.getObject().getMinorVersion(),
+            state
+        );
         return atomicUpdateGroup;
       }
     }
@@ -228,10 +232,10 @@ class OvershadowableManager<T extends Overshadowable<T>>
         // A visible atomicUpdateGroup becomes overshadowed when a fully available standby atomicUpdateGroup becomes
         // visible which overshadows the current visible one.
         findOvershadowedBy(aug, State.VISIBLE)
-            .forEach(entry -> transitPartitionChunkState(entry.getValue(), State.VISIBLE, State.OVERSHADOWED));
+            .forEach(entry -> transitAtomicUpdateGroupState(entry.getValue(), State.VISIBLE, State.OVERSHADOWED));
         findOvershadowedBy(aug, State.STANDBY)
-            .forEach(entry -> transitPartitionChunkState(entry.getValue(), State.STANDBY, State.OVERSHADOWED));
-        transitPartitionChunkState(aug, State.STANDBY, State.VISIBLE);
+            .forEach(entry -> transitAtomicUpdateGroupState(entry.getValue(), State.STANDBY, State.OVERSHADOWED));
+        transitAtomicUpdateGroupState(aug, State.STANDBY, State.VISIBLE);
       }
     }
   }
@@ -343,9 +347,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
         // Move the atomicUpdateGroup to standby
         // and move the fully available overshadowed atomicUpdateGroup to visible
         if (!augOfRemovedChunk.isEmpty()) {
-          transitPartitionChunkState(augOfRemovedChunk, State.VISIBLE, State.STANDBY);
+          transitAtomicUpdateGroupState(augOfRemovedChunk, State.VISIBLE, State.STANDBY);
         }
-        latestFullAugs.forEach(group -> transitPartitionChunkState(group, State.OVERSHADOWED, State.VISIBLE));
+        latestFullAugs.forEach(group -> transitAtomicUpdateGroupState(group, State.OVERSHADOWED, State.VISIBLE));
       }
     }
   }
@@ -365,15 +369,17 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
 
     final OvershadowableManager<T> manager = new OvershadowableManager<>();
-    overshadowedGroups.stream()
-                      .flatMap(entry -> entry.getValue().getChunks().stream())
-                      .forEach(manager::addChunk);
+    for (Short2ObjectMap.Entry<AtomicUpdateGroup<T>> entry : overshadowedGroups) {
+      for (PartitionChunk<T> chunk : entry.getValue().getChunks()) {
+        manager.addChunk(chunk);
+      }
+    }
 
-    return manager.visibleGroup
-        .values()
-        .stream()
-        .flatMap(versionToGroup -> versionToGroup.values().stream())
-        .collect(Collectors.toList());
+    final List<AtomicUpdateGroup<T>> visibles = new ArrayList<>();
+    for (Short2ObjectSortedMap<AtomicUpdateGroup<T>> map : manager.visibleGroup.values()) {
+      visibles.addAll(map.values());
+    }
+    return visibles;
   }
 
   private void removeFrom(AtomicUpdateGroup<T> aug, State state)
@@ -466,20 +472,24 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
   public List<PartitionChunk<T>> getVisibles()
   {
-    return visibleGroup.values()
-                       .stream()
-                       .flatMap(treeMap -> treeMap.values().stream())
-                       .flatMap(aug -> aug.getChunks().stream())
-                       .collect(Collectors.toList());
+    final List<PartitionChunk<T>> visibles = new ArrayList<>();
+    for (Short2ObjectSortedMap<AtomicUpdateGroup<T>> treeMap : visibleGroup.values()) {
+      for (AtomicUpdateGroup<T> aug : treeMap.values()) {
+        visibles.addAll(aug.getChunks());
+      }
+    }
+    return visibles;
   }
 
-  public Collection<PartitionChunk<T>> getOvershadowed()
+  public List<PartitionChunk<T>> getOvershadowed()
   {
-    return overshadowedGroups.values()
-                             .stream()
-                             .flatMap(treeMap -> treeMap.values().stream())
-                             .flatMap(aug -> aug.getChunks().stream())
-                             .collect(Collectors.toList());
+    final List<PartitionChunk<T>> overshadowed = new ArrayList<>();
+    for (Short2ObjectSortedMap<AtomicUpdateGroup<T>> treeMap : overshadowedGroups.values()) {
+      for (AtomicUpdateGroup<T> aug : treeMap.values()) {
+        overshadowed.addAll(aug.getChunks());
+      }
+    }
+    return overshadowed;
   }
 
   @Override
@@ -608,7 +618,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       if (fromKey <= key && toKey > key) {
         return this;
       } else {
-        throw new IllegalArgumentException();
+        throw new IAE("fromKey: %s, toKey: %s, key: %s", fromKey, toKey, key);
       }
     }
 
