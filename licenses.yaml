@@ -2305,7 +2305,6 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
 version: 3.17.1
-license_file_path: licenses/bin/@blueprintjs-core.A2
 
 ---
 
@@ -2315,7 +2314,6 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
 version: 3.9.1
-license_file_path: licenses/bin/@blueprintjs-icons.A2
 
 ---
 
@@ -2439,7 +2437,6 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 version: 1.0.4
-license_file_path: licenses/bin/diff-match-patch.A2
 
 ---
 
@@ -2469,7 +2466,6 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Tarek Rached
 version: 0.0.2
-license_file_path: licenses/bin/druid-console.A2
 
 ---
 
@@ -2965,7 +2961,6 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Microsoft Corp.
 version: 1.10.0
-license_file_path: licenses/bin/tslib.A2
 
 ---
 

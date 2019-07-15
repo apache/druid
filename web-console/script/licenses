@@ -22,7 +22,7 @@ const checker = require('license-checker');
 const yaml = require('js-yaml');
 
 const LICENSES_FILE = '../licenses.yaml';
-const LICENSES_FILE_INPUT = './private/licenses_orig.yaml';
+const LICENSES_FILE_INPUT = './private/licenses_orig.yaml' || LICENSES_FILE;
 const SEPARATOR = '\n\n---\n\n';
 
 const extraFromOldConsole = `
@@ -161,20 +161,22 @@ checker.init({
     const licenseDest = `licenses/bin/${simpleName}.${licenseExt}`
 
     let hasLicense = false;
-    if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
-      try {
-        fs.copyFileSync(licenseFile, `../${licenseDest}`);
-        hasLicense = true;
-      } catch (e) {
-        console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
-      }
-    } else {
-      try {
-        // See if the license is already there (manually)
-        fs.statSync(`../${licenseDest}`);
-        hasLicense = true;
-      } catch (e) {
-        console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+    if (licenseExt !== 'A2') {
+      if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
+        try {
+          fs.copyFileSync(licenseFile, `../${licenseDest}`);
+          hasLicense = true;
+        } catch (e) {
+          console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
+        }
+      } else {
+        try {
+          // See if the license is already there (manually)
+          fs.statSync(`../${licenseDest}`);
+          hasLicense = true;
+        } catch (e) {
+          console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+        }
       }
     }
 
