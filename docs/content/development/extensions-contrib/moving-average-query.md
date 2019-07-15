@@ -33,6 +33,7 @@ These Aggregate Window Functions consume standard Druid Aggregators and outputs 
 Moving Average encapsulates the [groupBy query](../../querying/groupbyquery.html) (Or [timeseries](../../querying/timeseriesquery.html) in case of no dimensions) in order to rely on the maturity of these query types.
 
 It runs the query in two main phases:
+
 1. Runs an inner [groupBy](../../querying/groupbyquery.html) or [timeseries](../../querying/timeseriesquery.html) query to compute Aggregators (i.e. daily count of events).
 2. Passes over aggregated results in Broker, in order to compute Averagers (i.e. moving 7 day average of the daily count).
 
@@ -110,6 +111,7 @@ These are properties which are common to all Averagers:
 #### Standard averagers
 
 These averagers offer four functions:
+
 * Mean (Average)
 * MeanNoNulls (Ignores empty buckets).
 * Max
@@ -121,6 +123,7 @@ In that case, the first records will ignore missing buckets and average won't be
 However, this also means that empty days in a sparse dataset will also be ignored.
 
 Example of usage:
+
 ```json
 { "type" : "doubleMean", "name" : <output_name>, "fieldName": <input_name> }
 ```
@@ -130,6 +133,7 @@ This optional parameter is used to calculate over a single bucket within each cy
 A prime example would be weekly buckets, resulting in a Day of Week calculation. (Other examples: Month of year, Hour of day).
 
 I.e. when using these parameters:
+
 * *granularity*: period=P1D (daily)
 * *buckets*: 28
 * *cycleSize*: 7
@@ -146,6 +150,7 @@ All examples are based on the Wikipedia dataset provided in the Druid [tutorials
 Calculating a 7-buckets moving average for Wikipedia edit deltas.
 
 Query syntax:
+
 ```json
 {
   "queryType": "movingAverage",
@@ -176,6 +181,7 @@ Query syntax:
 ```
 
 Result:
+
 ```json
 [ {
    "version" : "v1",
@@ -217,6 +223,7 @@ Result:
 Calculating a 7-buckets moving average for Wikipedia edit deltas, plus a ratio between the current period and the moving average.
 
 Query syntax:
+
 ```json
 {
   "queryType": "movingAverage",
@@ -264,6 +271,7 @@ Query syntax:
 ```
 
 Result:
+
 ```json
 [ {
   "version" : "v1",
@@ -306,6 +314,7 @@ Result:
 Calculating an average of every first 10-minutes of the last 3 hours:
 
 Query syntax:
+
 ```json
 {
   "queryType": "movingAverage",
