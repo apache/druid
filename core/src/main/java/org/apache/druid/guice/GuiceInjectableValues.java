@@ -54,7 +54,7 @@ public class GuiceInjectableValues extends InjectableValues
     }
     throw new IAE(
         "Unknown class type [%s] for valueId [%s]",
-        valueId.getClass().getCanonicalName(),
+        valueId.getClass().getName(),
         valueId.toString()
     );
   }
