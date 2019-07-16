@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
-import org.apache.druid.client.selector.WeightedServerSelectorStrategy;
+import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -129,7 +129,7 @@ public class DirectDruidClientTest
             0,
             0L
         ),
-        new HighestPriorityTierSelectorStrategy(new WeightedServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 
     DirectDruidClient client1 = new DirectDruidClient(
@@ -168,20 +168,20 @@ public class DirectDruidClientTest
     Assert.assertTrue(capturedRequest.hasCaptured());
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(1, client1.getWeight());
+    Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
     client1.run(QueryPlus.wrap(query), defaultContext);
-    Assert.assertEquals(2, client1.getWeight());
+    Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
-    Assert.assertEquals(1, client1.getWeight());
+    Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
     client1.run(QueryPlus.wrap(query), defaultContext);
     client1.run(QueryPlus.wrap(query), defaultContext);
     client1.run(QueryPlus.wrap(query), defaultContext);
 
-    Assert.assertTrue(client1.getWeight() == 4);
+    Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
     // produce result for first connection
     futureResult.set(
@@ -192,12 +192,12 @@ public class DirectDruidClientTest
     List<Result> results = s1.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
-    Assert.assertEquals(3, client1.getWeight());
+    Assert.assertEquals(3, client1.getNumOpenConnections());
 
     client2.run(QueryPlus.wrap(query), defaultContext);
     client2.run(QueryPlus.wrap(query), defaultContext);
 
-    Assert.assertTrue(client2.getWeight() == 2);
+    Assert.assertTrue(client2.getNumOpenConnections() == 2);
 
     Assert.assertTrue(serverSelector.pick() == queryableDruidServer2);
 
@@ -247,7 +247,7 @@ public class DirectDruidClientTest
             0,
             0L
         ),
-        new HighestPriorityTierSelectorStrategy(new WeightedServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 
     DirectDruidClient client1 = new DirectDruidClient(
@@ -271,7 +271,7 @@ public class DirectDruidClientTest
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
     Sequence results = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(0, client1.getWeight());
+    Assert.assertEquals(0, client1.getNumOpenConnections());
 
 
     QueryInterruptedException exception = null;
@@ -318,7 +318,7 @@ public class DirectDruidClientTest
     );
     final ServerSelector serverSelector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new WeightedServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 
     DirectDruidClient client1 = new DirectDruidClient(

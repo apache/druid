@@ -80,16 +80,24 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
    * potentially merges the stream of ordered ResultType objects.
    *
+   * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
+   * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
+   * {@link QueryToolChest#createOrderingFn(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
+   * toolchest.
+   *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
    *
    * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
-  public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
+  {
+    return new ResultMergeQueryRunner<>(runner, this::createOrderingFn, this::createMergeFn);
+  }
 
   /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
-   * function is used in {@link ResultMergeQueryRunner} and can be used in additional future merge
-   * implementations
+   * function is used in the default {@link ResultMergeQueryRunner} provided by
+   * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
    */
   public CombiningFunction<ResultType> createMergeFn(Query<ResultType> query)
   {
@@ -97,8 +105,8 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
-   * Creates an ordering comparator that is used to order results. This ordering function is used in
-   * {@link ResultMergeQueryRunner}
+   * Creates an ordering comparator that is used to order results. This ordering function is used in the defaul
+   * {@link ResultMergeQueryRunner} provided by {@link QueryToolChest#mergeResults(QueryRunner)}
    */
   public Ordering<ResultType> createOrderingFn(Query<ResultType> query)
   {

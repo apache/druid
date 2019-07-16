@@ -21,6 +21,7 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -28,10 +29,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-public class WeightedServerSelectorStrategy implements ServerSelectorStrategy
+public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final Comparator<QueryableDruidServer> COMPARATOR =
-      Comparator.comparingInt(QueryableDruidServer::getWeight);
+      Comparator.comparingInt(s -> ((DirectDruidClient) s.getQueryRunner()).getNumOpenConnections());
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)

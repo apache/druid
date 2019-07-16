@@ -42,7 +42,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
-import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
@@ -106,14 +105,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         query.getPostAggregatorSpecs(),
         query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
     );
-  }
-
-  @Override
-  public QueryRunner<Result<TopNResultValue>> mergeResults(
-      QueryRunner<Result<TopNResultValue>> runner
-  )
-  {
-    return new ResultMergeQueryRunner<>(runner, this::createOrderingFn, this::createMergeFn);
   }
 
   @Override

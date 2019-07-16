@@ -44,7 +44,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
-import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
@@ -92,18 +91,6 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     this.config = config;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
-  }
-
-  @Override
-  public QueryRunner<Result<SearchResultValue>> mergeResults(
-      QueryRunner<Result<SearchResultValue>> runner
-  )
-  {
-    return new ResultMergeQueryRunner<>(
-        runner,
-        this::createOrderingFn,
-        this::createMergeFn
-    );
   }
 
   @Override

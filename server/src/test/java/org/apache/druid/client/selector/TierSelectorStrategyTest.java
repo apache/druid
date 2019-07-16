@@ -54,7 +54,7 @@ public class TierSelectorStrategyTest
     );
 
     testTierSelectorStrategy(
-        new HighestPriorityTierSelectorStrategy(new WeightedServerSelectorStrategy()),
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
         highPriority, lowPriority
     );
   }
@@ -73,7 +73,7 @@ public class TierSelectorStrategyTest
     );
 
     testTierSelectorStrategy(
-        new LowestPriorityTierSelectorStrategy(new WeightedServerSelectorStrategy()),
+        new LowestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
         lowPriority, highPriority
     );
   }
@@ -97,7 +97,7 @@ public class TierSelectorStrategyTest
 
     testTierSelectorStrategy(
         new CustomTierSelectorStrategy(
-            new WeightedServerSelectorStrategy(),
+            new ConnectionCountServerSelectorStrategy(),
             new CustomTierSelectorStrategyConfig()
             {
               @Override

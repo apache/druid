@@ -31,13 +31,4 @@ public interface QueryRunner<T>
    * Runs the given query and returns results in a time-ordered sequence.
    */
   Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext);
-
-  /**
-   * Get 'weight' for a QueryRunner, e.g. the number of open connections, as some measure of how heavily utilized a
-   * query runner is to aid in server selection to decide where to run queries.
-   */
-  default int getWeight()
-  {
-    return 0;
-  }
 }
