@@ -184,7 +184,7 @@ public class IntermediaryDataManager
   {
     if (supervisorTaskChecker != null) {
       supervisorTaskChecker.shutdownNow();
-      supervisorTaskChecker.awaitTermination(300, TimeUnit.SECONDS);
+      supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
       supervisorTaskChecker = null;
     }
     supervisorTaskCheckTimes.clear();
