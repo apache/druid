@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -96,7 +97,7 @@ public class TaskConfig
                                 : directoryLockTimeout;
     if (intermediarySegmentsLocations == null) {
       this.intermediarySegmentsLocations = Collections.singletonList(
-          new StorageLocationConfig(new File(System.getProperty("java.io.tmpdir"), "intermediary-segments"), null, null)
+          new StorageLocationConfig(new File(defaultDir(null, "intermediary-segments")), null, null)
       );
     } else {
       this.intermediarySegmentsLocations = intermediarySegmentsLocations;
@@ -172,7 +173,7 @@ public class TaskConfig
     return intermediarySegmentsLocations;
   }
 
-  private String defaultDir(String configParameter, final String defaultVal)
+  private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
       return Paths.get(getBaseDir(), defaultVal).toString();

@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -40,6 +41,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -90,6 +92,8 @@ public class IntermediaryDataManager
   // The overlord is supposed to send a cleanup request as soon as the supervisorTask is finished in parallel indexing,
   // but middleManager or indexer could miss the request. This executor is to automatically clean up unused intermediary
   // partitions.
+  // This can be null until IntermediaryDataManager is started.
+  @Nullable
   private ScheduledExecutorService supervisorTaskChecker;
 
   @Inject
@@ -161,7 +165,7 @@ public class IntermediaryDataManager
               }
               catch (IOException e) {
                 if (exception == null) {
-                  exception = new RuntimeException(e);
+                  exception = new RE(e, "Error while deleting partitions for task[%s]", supervisorTaskId);
                 } else {
                   exception.addSuppressed(e);
                 }
@@ -170,7 +174,7 @@ public class IntermediaryDataManager
           }
 
           if (exception != null) {
-            throw exception;
+            log.warn(exception, "Failed to delete some partitions");
           }
         },
         intermediaryPartitionCleanupPeriodSec,
@@ -194,8 +198,8 @@ public class IntermediaryDataManager
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
    *
-   * This method is only useful for the new Indexer model, and must not be called when tasks are running in the existing
-   * middleManager.
+   * This method is only useful for the new Indexer model. Tasks running in the existing middleManager should use
+   * another method, e.g., LocalDataSegmentPusher, instead of this.
    */
   public void addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentFile)
       throws IOException

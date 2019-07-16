@@ -63,7 +63,7 @@ public class ShuffleResource
   @Produces(MediaType.APPLICATION_OCTET_STREAM)
   public Response getPartition(
       @PathParam("supervisorTaskId") String supervisorTaskId,
-      @QueryParam("dataSource") String dataSource,
+      @QueryParam("dataSource") String dataSource, // dataSource is used in TaskShuffleResourceFilter for authorization
       @QueryParam("startTime") String startTime,
       @QueryParam("endTime") String endTime,
       @QueryParam("partitionId") int partitionId
@@ -101,7 +101,7 @@ public class ShuffleResource
   @Path("/task/{supervisorTaskId}")
   public Response deletePartitions(
       @PathParam("supervisorTaskId") String supervisorTaskId,
-      @QueryParam("dataSource") String dataSource
+      @QueryParam("dataSource") String dataSource // dataSource is used in TaskShuffleResourceFilter for authorization
   )
   {
     try {
