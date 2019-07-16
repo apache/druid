@@ -117,21 +117,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public QueryRunner<Row> mergeResults(final QueryRunner<Row> runner)
   {
-    return new QueryRunner<Row>()
-    {
-      @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-      {
-        if (QueryContexts.isBySegment(queryPlus.getQuery())) {
-          return runner.run(queryPlus, responseContext);
-        }
-
-        final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-        if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
-          return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
-        }
+    return (queryPlus, responseContext) -> {
+      if (QueryContexts.isBySegment(queryPlus.getQuery())) {
         return runner.run(queryPlus, responseContext);
       }
+
+      final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
+      if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
+        return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      }
+      return runner.run(queryPlus, responseContext);
     };
   }
 

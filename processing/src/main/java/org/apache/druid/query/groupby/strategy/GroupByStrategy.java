@@ -75,7 +75,8 @@ public interface GroupByStrategy
   Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, Map<String, Object> responseContext);
 
   /**
-   * See {@link org.apache.druid.query.QueryToolChest#createMergeFn(Query)}.
+   * See {@link org.apache.druid.query.QueryToolChest#createMergeFn(Query)} for details, allows
+   * {@link GroupByQueryQueryToolChest} to delegate implementation to the strategy
    */
   @Nullable
   default CombiningFunction<Row> createMergeFn(Query<Row> query)
@@ -84,7 +85,8 @@ public interface GroupByStrategy
   }
 
   /**
-   * See {@link org.apache.druid.query.QueryToolChest#createOrderingFn(Query)}.
+   * See {@link org.apache.druid.query.QueryToolChest#createOrderingFn(Query)}, allows
+   * {@link GroupByQueryQueryToolChest} to delegate implementation to the strategy
    */
   @Nullable
   default Ordering<Row> createOrderingFn(Query<Row> queryParam)
