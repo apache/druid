@@ -570,7 +570,7 @@ public class DeterminePartitionsJob implements Jobby
       return new CombiningIterable<>(
           Iterables.transform(
               input,
-              input1 -> DimValueCount.fromText(input1)
+              DimValueCount::fromText
           ),
           (o1, o2) -> ComparisonChain.start().compare(o1.dim, o2.dim).compare(o1.value, o2.value).result(),
           (arg1, arg2) -> {
