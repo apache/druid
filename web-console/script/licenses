@@ -107,7 +107,7 @@ checker.init({
         break;
 
       default:
-        throw new Error(`Unknown license '${licenses}'`);
+        throw new Error(`Unknown license '${licenses}' in ${p}`);
     }
 
     const simpleName = name.replace('/', '-');
