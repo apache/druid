@@ -141,7 +141,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   {
     super(lifecycle, serviceEmitter, config);
     try {
-      tmpFile = File.createTempFile("druidMapDB", getClass().getCanonicalName());
+      tmpFile = File.createTempFile("druidMapDB", getClass().getName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
     }
     catch (IOException e) {

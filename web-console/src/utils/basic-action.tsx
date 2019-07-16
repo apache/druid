@@ -30,9 +30,9 @@ export function basicActionsToMenu(basicActions: BasicAction[]) {
   if (!basicActions.length) return null;
   return (
     <Menu>
-      {basicActions.map(action => (
+      {basicActions.map((action, i) => (
         <MenuItem
-          key={action.title}
+          key={i}
           icon={action.icon}
           text={action.title}
           intent={action.intent}
@@ -47,9 +47,9 @@ export function basicActionsToButtons(basicActions: BasicAction[]) {
   if (!basicActions.length) return null;
   return (
     <>
-      {basicActions.map(action => (
+      {basicActions.map((action, i) => (
         <Button
-          key={action.title}
+          key={i}
           icon={action.icon}
           text={action.title}
           intent={action.intent}

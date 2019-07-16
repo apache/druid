@@ -61,7 +61,7 @@ public abstract class SearchStrategy
     } else if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
       return RoaringBitmapDecisionHelper.instance();
     } else {
-      throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getCanonicalName());
+      throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getName());
     }
   }
 

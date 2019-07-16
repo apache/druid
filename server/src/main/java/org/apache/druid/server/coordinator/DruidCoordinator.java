@@ -641,7 +641,7 @@ public class DruidCoordinator
 
     log.info(
         "Done making indexing service helpers [%s]",
-        helpers.stream().map(helper -> helper.getClass().getCanonicalName()).collect(Collectors.toList())
+        helpers.stream().map(helper -> helper.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(helpers);
   }
