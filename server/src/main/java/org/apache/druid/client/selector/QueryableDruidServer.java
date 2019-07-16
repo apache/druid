@@ -45,11 +45,6 @@ public class QueryableDruidServer<T extends QueryRunner>
     return queryRunner;
   }
 
-  public int getWeight()
-  {
-    return queryRunner.getWeight();
-  }
-
   @Override
   public String toString()
   {
