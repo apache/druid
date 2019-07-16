@@ -116,6 +116,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     INDEX_IO = testUtils.getTestIndexIO();
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
   }
+
   public IngestSegmentFirehoseFactoryTimelineTest(
       String name,
       IngestSegmentFirehoseFactory factory,
