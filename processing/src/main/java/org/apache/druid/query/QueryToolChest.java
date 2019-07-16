@@ -23,7 +23,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import com.google.common.collect.Ordering;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
@@ -82,6 +85,25 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
   public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
+
+  /**
+   * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
+   * function is used in {@link ResultMergeQueryRunner} and can be used in additional future merge
+   * implementations
+   */
+  public CombiningFunction<ResultType> createMergeFn(Query<ResultType> query)
+  {
+    throw new UOE("%s doesn't support merge function", query.getClass().getName());
+  }
+
+  /**
+   * Creates an ordering comparator that is used to order results. This ordering function is used in
+   * {@link ResultMergeQueryRunner}
+   */
+  public Ordering<ResultType> createOrderingFn(Query<ResultType> query)
+  {
+    throw new UOE("%s doesn't support ordering function", query.getClass().getName());
+  }
 
   /**
    * Creates a {@link QueryMetrics} object that is used to generate metrics for this specific query type.  This exists

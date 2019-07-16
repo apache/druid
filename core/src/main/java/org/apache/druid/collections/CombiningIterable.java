@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import org.apache.druid.java.util.common.guava.MergeIterable;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -51,16 +50,11 @@ public class CombiningIterable<InType> implements Iterable<InType>
     return create(
         new MergeIterable<InType>(comparator, (Iterable<Iterable<InType>>) in),
         comparator,
-        new BinaryFn<InType, InType, InType>()
-        {
-          @Override
-          public InType apply(InType arg1, InType arg2)
-          {
-            if (arg1 == null) {
-              return arg2;
-            }
-            return arg1;
+        (arg1, arg2) -> {
+          if (arg1 == null) {
+            return arg2;
           }
+          return arg1;
         }
     );
   }
@@ -68,20 +62,20 @@ public class CombiningIterable<InType> implements Iterable<InType>
   public static <InType> CombiningIterable<InType> create(
       Iterable<InType> it,
       Comparator<InType> comparator,
-      BinaryFn<InType, InType, InType> fn
+      CombiningFunction<InType> fn
   )
   {
-    return new CombiningIterable<InType>(it, comparator, fn);
+    return new CombiningIterable<>(it, comparator, fn);
   }
 
   private final Iterable<InType> it;
   private final Comparator<InType> comparator;
-  private final BinaryFn<InType, InType, InType> fn;
+  private final CombiningFunction<InType> fn;
 
   public CombiningIterable(
       Iterable<InType> it,
       Comparator<InType> comparator,
-      BinaryFn<InType, InType, InType> fn
+      CombiningFunction<InType> fn
   )
   {
     this.it = it;

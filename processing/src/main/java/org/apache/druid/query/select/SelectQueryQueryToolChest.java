@@ -28,11 +28,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
@@ -104,29 +104,29 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       QueryRunner<Result<SelectResultValue>> queryRunner
   )
   {
-    return new ResultMergeQueryRunner<Result<SelectResultValue>>(queryRunner)
-    {
-      @Override
-      protected Ordering<Result<SelectResultValue>> makeOrdering(Query<Result<SelectResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((SelectQuery) query).getGranularity(), query.isDescending()
-        );
-      }
+    return new ResultMergeQueryRunner<>(queryRunner, this::createOrderingFn, this::createMergeFn);
+  }
 
-      @Override
-      protected BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>> createMergeFn(
-          Query<Result<SelectResultValue>> input
-      )
-      {
-        SelectQuery query = (SelectQuery) input;
-        return new SelectBinaryFn(
-            query.getGranularity(),
-            query.getPagingSpec(),
-            query.isDescending()
-        );
-      }
-    };
+  @Override
+  public CombiningFunction<Result<SelectResultValue>> createMergeFn(
+      Query<Result<SelectResultValue>> query
+  )
+  {
+    final SelectQuery selectQuery = (SelectQuery) query;
+    return new SelectBinaryFn(
+        selectQuery.getGranularity(),
+        selectQuery.getPagingSpec(),
+        selectQuery.isDescending()
+    );
+  }
+
+  @Override
+  public Ordering<Result<SelectResultValue>> createOrderingFn(Query<Result<SelectResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(
+        query.getGranularity(),
+        query.isDescending()
+    );
   }
 
   @Override

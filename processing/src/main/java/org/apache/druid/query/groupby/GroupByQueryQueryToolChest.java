@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -41,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -130,6 +133,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         return runner.run(queryPlus, responseContext);
       }
     };
+  }
+
+  @Override
+  public CombiningFunction<Row> createMergeFn(Query<Row> query)
+  {
+    return strategySelector.strategize((GroupByQuery) query).createMergeFn(query);
+  }
+
+  @Override
+  public Ordering<Row> createOrderingFn(Query<Row> query)
+  {
+    return strategySelector.strategize((GroupByQuery) query).createOrderingFn(query);
   }
 
   private Sequence<Row> initAndMergeGroupByResults(

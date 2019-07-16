@@ -29,12 +29,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
@@ -99,26 +99,29 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       QueryRunner<Result<SearchResultValue>> runner
   )
   {
-    return new ResultMergeQueryRunner<Result<SearchResultValue>>(runner)
-    {
-      @Override
-      protected Ordering<Result<SearchResultValue>> makeOrdering(Query<Result<SearchResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((SearchQuery) query).getGranularity(),
-            query.isDescending()
-        );
-      }
+    return new ResultMergeQueryRunner<>(
+        runner,
+        this::createOrderingFn,
+        this::createMergeFn
+    );
+  }
 
-      @Override
-      protected BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>> createMergeFn(
-          Query<Result<SearchResultValue>> input
-      )
-      {
-        SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
-      }
-    };
+  @Override
+  public CombiningFunction<Result<SearchResultValue>> createMergeFn(
+      Query<Result<SearchResultValue>> query
+  )
+  {
+    final SearchQuery searchQuery = (SearchQuery) query;
+    return new SearchBinaryFn(searchQuery.getSort(), searchQuery.getGranularity(), searchQuery.getLimit());
+  }
+
+  @Override
+  public Ordering<Result<SearchResultValue>> createOrderingFn(Query<Result<SearchResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(
+        query.getGranularity(),
+        query.isDescending()
+    );
   }
 
   @Override

@@ -135,7 +135,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.openConnections = new AtomicInteger();
   }
 
-  public int getNumOpenConnections()
+  @Override
+  public int getWeight()
   {
     return openConnections.get();
   }

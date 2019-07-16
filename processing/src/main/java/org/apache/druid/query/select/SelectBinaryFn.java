@@ -20,9 +20,9 @@
 package org.apache.druid.query.select;
 
 import com.google.common.collect.Sets;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
@@ -31,8 +31,7 @@ import java.util.Set;
 
 /**
  */
-public class SelectBinaryFn
-    implements BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>>
+public class SelectBinaryFn implements CombiningFunction<Result<SelectResultValue>>
 {
   private final Granularity gran;
   private final PagingSpec pagingSpec;

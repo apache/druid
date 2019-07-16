@@ -27,11 +27,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -113,32 +113,31 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       QueryRunner<Result<TopNResultValue>> runner
   )
   {
-    return new ResultMergeQueryRunner<Result<TopNResultValue>>(runner)
-    {
-      @Override
-      protected Ordering<Result<TopNResultValue>> makeOrdering(Query<Result<TopNResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((TopNQuery) query).getGranularity(), query.isDescending()
-        );
-      }
+    return new ResultMergeQueryRunner<>(runner, this::createOrderingFn, this::createMergeFn);
+  }
 
-      @Override
-      protected BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>> createMergeFn(
-          Query<Result<TopNResultValue>> input
-      )
-      {
-        TopNQuery query = (TopNQuery) input;
-        return new TopNBinaryFn(
-            query.getGranularity(),
-            query.getDimensionSpec(),
-            query.getTopNMetricSpec(),
-            query.getThreshold(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
-        );
-      }
-    };
+  @Override
+  public CombiningFunction<Result<TopNResultValue>> createMergeFn(
+      Query<Result<TopNResultValue>> query
+  )
+  {
+    TopNQuery topNQuery = (TopNQuery) query;
+    return new TopNBinaryFn(
+        topNQuery.getGranularity(),
+        topNQuery.getDimensionSpec(),
+        topNQuery.getTopNMetricSpec(),
+        topNQuery.getThreshold(),
+        topNQuery.getAggregatorSpecs(),
+        topNQuery.getPostAggregatorSpecs()
+    );
+  }
+
+  @Override
+  public Ordering<Result<TopNResultValue>> createOrderingFn(Query<Result<TopNResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(
+        ((TopNQuery) query).getGranularity(), query.isDescending()
+    );
   }
 
   @Override
@@ -582,7 +581,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 BySegmentResultValue<Result<TopNResultValue>> value = (BySegmentResultValue<Result<TopNResultValue>>) input
                     .getValue();
 
-                return new Result<TopNResultValue>(
+                return new Result<>(
                     input.getTimestamp(),
                     new BySegmentTopNResultValue(
                         Lists.transform(

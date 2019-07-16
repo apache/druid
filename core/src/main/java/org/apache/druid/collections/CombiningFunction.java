@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.guava.nary;
+package org.apache.druid.collections;
 
-/**
- */
-public interface BinaryFn<Type1, Type2, OutType>
+@FunctionalInterface
+public interface CombiningFunction<T>
 {
-  OutType apply(Type1 arg1, Type2 arg2);
+  T apply(T arg1, T arg2);
 }

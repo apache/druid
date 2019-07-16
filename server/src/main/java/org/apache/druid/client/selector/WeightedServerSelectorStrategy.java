@@ -28,10 +28,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
+public class WeightedServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final Comparator<QueryableDruidServer> COMPARATOR =
-      Comparator.comparingInt(s -> s.getClient().getNumOpenConnections());
+      Comparator.comparingInt(QueryableDruidServer::getWeight);
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)

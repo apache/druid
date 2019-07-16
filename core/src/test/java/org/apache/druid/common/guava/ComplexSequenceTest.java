@@ -20,12 +20,12 @@
 package org.apache.druid.common.guava;
 
 import com.google.common.primitives.Ints;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -88,20 +88,15 @@ public class ComplexSequenceTest
     return Sequences.concat(Arrays.asList(sequences));
   }
 
-  private final BinaryFn<Integer, Integer, Integer> plus = new BinaryFn<Integer, Integer, Integer>()
-  {
-    @Override
-    public Integer apply(Integer arg1, Integer arg2)
-    {
-      if (arg1 == null) {
-        return arg2;
-      }
-
-      if (arg2 == null) {
-        return arg1;
-      }
-
-      return arg1 + arg2;
+  private final CombiningFunction<Integer> plus = (arg1, arg2) -> {
+    if (arg1 == null) {
+      return arg2;
     }
+
+    if (arg2 == null) {
+      return arg1;
+    }
+
+    return arg1 + arg2;
   };
 }

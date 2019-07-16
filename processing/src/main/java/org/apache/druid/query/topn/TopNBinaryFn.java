@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -36,7 +36,7 @@ import java.util.Map;
 
 /**
  */
-public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>>
+public class TopNBinaryFn implements CombiningFunction<Result<TopNResultValue>>
 {
   private final DimensionSpec dimSpec;
   private final Granularity gran;

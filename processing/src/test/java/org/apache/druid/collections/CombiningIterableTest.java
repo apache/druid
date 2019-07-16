@@ -20,14 +20,12 @@
 package org.apache.druid.collections;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -49,32 +47,20 @@ public class CombiningIterableTest
 
     Iterable<Result<Object>> resultsAfter = CombiningIterable.create(
         resultsBefore,
-        new Comparator<Result<Object>>()
-        {
-          @Override
-          public int compare(Result<Object> r1, Result<Object> r2)
-          {
-            return r1.getTimestamp().compareTo(r2.getTimestamp());
+        (r1, r2) -> r1.getTimestamp().compareTo(r2.getTimestamp()),
+        (arg1, arg2) -> {
+          if (arg1 == null) {
+            return arg2;
           }
-        },
-        new BinaryFn<Result<Object>, Result<Object>, Result<Object>>()
-        {
-          @Override
-          public Result<Object> apply(final Result<Object> arg1, final Result<Object> arg2)
-          {
-            if (arg1 == null) {
-              return arg2;
-            }
 
-            if (arg2 == null) {
-              return arg1;
-            }
-
-            return new Result<Object>(
-                arg1.getTimestamp(),
-                ((Long) arg1.getValue()).longValue() + ((Long) arg2.getValue()).longValue()
-            );
+          if (arg2 == null) {
+            return arg1;
           }
+
+          return new Result<>(
+              arg1.getTimestamp(),
+              ((Long) arg1.getValue()).longValue() + ((Long) arg2.getValue()).longValue()
+          );
         }
     );
 

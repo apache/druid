@@ -21,7 +21,6 @@ package org.apache.druid.collections;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -34,7 +33,7 @@ public class CombiningIterator<InType> implements Iterator<InType>
   public static <InType> CombiningIterator<InType> create(
       Iterator<InType> it,
       Comparator<InType> comparator,
-      BinaryFn<InType, InType, InType> fn
+      CombiningFunction<InType> fn
   )
   {
     return new CombiningIterator<InType>(it, comparator, fn);
@@ -42,12 +41,12 @@ public class CombiningIterator<InType> implements Iterator<InType>
 
   private final PeekingIterator<InType> it;
   private final Comparator<InType> comparator;
-  private final BinaryFn<InType, InType, InType> fn;
+  private final CombiningFunction<InType> fn;
 
   public CombiningIterator(
       Iterator<InType> it,
       Comparator<InType> comparator,
-      BinaryFn<InType, InType, InType> fn
+      CombiningFunction<InType> fn
   )
   {
     this.it = Iterators.peekingIterator(it);

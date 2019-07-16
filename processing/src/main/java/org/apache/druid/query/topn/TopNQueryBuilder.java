@@ -253,6 +253,12 @@ public class TopNQueryBuilder
     return this;
   }
 
+  public TopNQueryBuilder aggregators(AggregatorFactory... aggs)
+  {
+    aggregatorSpecs = Arrays.asList(aggs);
+    return this;
+  }
+
   public TopNQueryBuilder postAggregators(Collection<PostAggregator> p)
   {
     postAggregatorSpecs = new ArrayList<>(p); // defensive copy

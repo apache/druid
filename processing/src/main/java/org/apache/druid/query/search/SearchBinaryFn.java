@@ -21,9 +21,9 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
@@ -32,8 +32,7 @@ import java.util.List;
 
 /**
  */
-public class SearchBinaryFn
-    implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
+public class SearchBinaryFn implements CombiningFunction<Result<SearchResultValue>>
 {
   private final SearchSortSpec searchSortSpec;
   private final Granularity gran;
