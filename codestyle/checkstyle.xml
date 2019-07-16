@@ -319,11 +319,5 @@ codestyle/checkstyle.xml.&#10;"/>
     <module name="LocalFinalVariableName">
       <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
     </module>
-
-    <module name="Regexp">
-      <property name="format" value="getCanonicalName\(\)"/>
-      <property name="illegalPattern" value="true"/>
-      <property name="message" value="Class.getCanonicalName can return null for anonymous types, use Class.getName instead."/>
-    </module>
   </module>
 </module>
