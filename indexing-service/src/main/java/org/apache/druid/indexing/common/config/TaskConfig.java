@@ -65,7 +65,7 @@ public class TaskConfig
   private final Period directoryLockTimeout;
 
   @JsonProperty
-  private final List<StorageLocationConfig> intermediarySegmentsLocations;
+  private final List<StorageLocationConfig> shuffleDataLocations;
 
   @JsonCreator
   public TaskConfig(
@@ -77,7 +77,7 @@ public class TaskConfig
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
-      @JsonProperty("intermediarySegmentsLocations") List<StorageLocationConfig> intermediarySegmentsLocations
+      @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -95,12 +95,12 @@ public class TaskConfig
     this.directoryLockTimeout = directoryLockTimeout == null
                                 ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
                                 : directoryLockTimeout;
-    if (intermediarySegmentsLocations == null) {
-      this.intermediarySegmentsLocations = Collections.singletonList(
+    if (shuffleDataLocations == null) {
+      this.shuffleDataLocations = Collections.singletonList(
           new StorageLocationConfig(new File(defaultDir(null, "intermediary-segments")), null, null)
       );
     } else {
-      this.intermediarySegmentsLocations = intermediarySegmentsLocations;
+      this.shuffleDataLocations = shuffleDataLocations;
     }
   }
 
@@ -168,9 +168,9 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public List<StorageLocationConfig> getIntermediarySegmentsLocations()
+  public List<StorageLocationConfig> getShuffleDataLocations()
   {
-    return intermediarySegmentsLocations;
+    return shuffleDataLocations;
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)

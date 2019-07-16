@@ -78,7 +78,7 @@ public class IntermediaryDataManager
   private final long intermediaryPartitionDiscoveryPeriodSec;
   private final long intermediaryPartitionCleanupPeriodSec;
   private final Period intermediaryPartitionTimeout;
-  private final List<StorageLocation> intermediarySegmentsLocations;
+  private final List<StorageLocation> shuffleDataLocations;
   private final IndexingServiceClient indexingServiceClient;
 
   // supervisorTaskId -> time to check supervisorTask status
@@ -106,8 +106,8 @@ public class IntermediaryDataManager
     this.intermediaryPartitionDiscoveryPeriodSec = workerConfig.getIntermediaryPartitionDiscoveryPeriodSec();
     this.intermediaryPartitionCleanupPeriodSec = workerConfig.getIntermediaryPartitionCleanupPeriodSec();
     this.intermediaryPartitionTimeout = workerConfig.getIntermediaryPartitionTimeout();
-    this.intermediarySegmentsLocations = taskConfig
-        .getIntermediarySegmentsLocations()
+    this.shuffleDataLocations = taskConfig
+        .getShuffleDataLocations()
         .stream()
         .map(config -> new StorageLocation(config.getPath(), config.getMaxSize(), config.getFreeSpacePercent()))
         .collect(Collectors.toList());
@@ -121,7 +121,7 @@ public class IntermediaryDataManager
     // Discover partitions for new supervisorTasks
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
-          for (StorageLocation location : intermediarySegmentsLocations) {
+          for (StorageLocation location : shuffleDataLocations) {
             final File[] dirsPerSupervisorTask = location.getPath().listFiles();
             if (dirsPerSupervisorTask != null) {
               for (File supervisorTaskDir : dirsPerSupervisorTask) {
@@ -206,7 +206,7 @@ public class IntermediaryDataManager
   {
     final Iterator<StorageLocation> iterator = locationIterators.computeIfAbsent(
         supervisorTaskId,
-        k -> Iterators.cycle(intermediarySegmentsLocations)
+        k -> Iterators.cycle(shuffleDataLocations)
     );
 
     StorageLocation location = iterator.next();
@@ -232,7 +232,7 @@ public class IntermediaryDataManager
 
   public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
   {
-    for (StorageLocation location : intermediarySegmentsLocations) {
+    for (StorageLocation location : shuffleDataLocations) {
       final File partitionDir = getPartitionDir(location, supervisorTaskId, interval, partitionId);
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
@@ -246,7 +246,7 @@ public class IntermediaryDataManager
 
   public void deletePartitions(String supervisorTaskId) throws IOException
   {
-    for (StorageLocation location : intermediarySegmentsLocations) {
+    for (StorageLocation location : shuffleDataLocations) {
       final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
       if (supervisorTaskPath.exists()) {
         log.info("Cleaning up [%s]", supervisorTaskPath);
