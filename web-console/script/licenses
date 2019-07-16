@@ -85,7 +85,7 @@ checker.init({
 
     const version = m[2];
     const meta = packages[p];
-    const { publisher, licenses, licenseFile } = meta;
+    let { publisher, licenses, licenseFile } = meta;
     if (!licenses) throw new Error(`Package '${p} does not have a licenses`);
 
     let properLicenseName; // Map the licenses to their proper name
@@ -132,6 +132,28 @@ checker.init({
           console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
         }
       }
+    }
+
+    if (!publisher && hasLicense) {
+      // Extract copyright from license
+      const licenseText = fs.readFileSync(`../${licenseDest}`, 'utf-8');
+      const m = licenseText.match(/(?:^|\n)\s*Copyright(?: (?:\(c\)|©))?(?: 2[0-9]{3}(?:-\w+)?,?)? ([^0-9][^\n]*)\n/m);
+      if (m) {
+        publisher = m[1]
+          .replace(/All rights reserved./i, '')
+          .replace(/[0-9-]{4,9}/, '')
+          .trim();
+      }
+    }
+
+    if (!publisher) {
+      // Hand coded copyrights
+      if (name === 'asap') publisher = 'Contributors'
+      if (name === 'diff-match-patch') publisher = 'Google'
+    }
+
+    if (!publisher) {
+      console.log(`No license for '${name}' ('${licenseDest}')`);
     }
 
     // Make our blob

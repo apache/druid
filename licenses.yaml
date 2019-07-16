@@ -2322,6 +2322,7 @@ name: "@types/dom4"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Microsoft Corporation.
 version: 2.0.1
 license_file_path: licenses/bin/@types-dom4.MIT
 
@@ -2331,6 +2332,7 @@ name: "asap"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Contributors
 version: 2.0.6
 license_file_path: licenses/bin/asap.MIT
 
@@ -2380,6 +2382,7 @@ name: "core-js"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Denis Pushkarev
 version: 1.2.7
 license_file_path: licenses/bin/core-js.MIT
 
@@ -2389,6 +2392,7 @@ name: "core-js"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Denis Pushkarev
 version: 2.6.9
 license_file_path: licenses/bin/core-js.MIT
 
@@ -2398,6 +2402,7 @@ name: "core-js"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Denis Pushkarev
 version: 3.1.4
 license_file_path: licenses/bin/core-js.MIT
 
@@ -2437,6 +2442,7 @@ name: "diff-match-patch"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
+copyright: Google
 version: 1.0.4
 
 ---
@@ -2484,6 +2490,7 @@ name: "fbjs"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc.
 version: 0.8.17
 license_file_path: licenses/bin/fbjs.MIT
 
@@ -2683,6 +2690,7 @@ name: "ms"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Zeit, Inc.
 version: 2.0.0
 license_file_path: licenses/bin/ms.MIT
 
@@ -2702,6 +2710,7 @@ name: "normalize.css"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Nicolas Gallagher and Jonathan Neal
 version: 8.0.1
 license_file_path: licenses/bin/normalize.css.MIT
 
@@ -2731,6 +2740,7 @@ name: "path-to-regexp"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Blake Embrey (hello@blakeembrey.com)
 version: 1.7.0
 license_file_path: licenses/bin/path-to-regexp.MIT
 
@@ -2760,6 +2770,7 @@ name: "prop-types"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc.
 version: 15.7.2
 license_file_path: licenses/bin/prop-types.MIT
 
@@ -2779,6 +2790,7 @@ name: "react-dom"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
 version: 16.8.6
 license_file_path: licenses/bin/react-dom.MIT
 
@@ -2788,6 +2800,7 @@ name: "react-is"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
 version: 16.8.6
 license_file_path: licenses/bin/react-is.MIT
 
@@ -2797,6 +2810,7 @@ name: "react-lifecycles-compat"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc.
 version: 3.0.4
 license_file_path: licenses/bin/react-lifecycles-compat.MIT
 
@@ -2816,6 +2830,7 @@ name: "react-router-dom"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: React Training
 version: 5.0.1
 license_file_path: licenses/bin/react-router-dom.MIT
 
@@ -2825,6 +2840,7 @@ name: "react-router"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: React Training
 version: 5.0.1
 license_file_path: licenses/bin/react-router.MIT
 
@@ -2844,6 +2860,7 @@ name: "react-table"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Tanner Linsley
 version: 6.10.0
 license_file_path: licenses/bin/react-table.MIT
 
@@ -2853,6 +2870,7 @@ name: "react-transition-group"
 license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
+copyright: React Community
 version: 2.9.0
 license_file_path: licenses/bin/react-transition-group.BSD3
 
@@ -2862,6 +2880,7 @@ name: "react"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
 version: 16.8.6
 license_file_path: licenses/bin/react.MIT
 
@@ -2911,6 +2930,7 @@ name: "scheduler"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
 version: 0.13.6
 license_file_path: licenses/bin/scheduler.MIT
 
@@ -3009,6 +3029,7 @@ name: "whatwg-fetch"
 license_category: binary
 module: web-console
 license_name: MIT License
+copyright: GitHub, Inc.
 version: 3.0.0
 license_file_path: licenses/bin/whatwg-fetch.MIT
 # Web console modules end
