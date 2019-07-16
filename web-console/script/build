@@ -30,6 +30,6 @@ echo "Transpiling ReactTable CSS..."
 PATH="./target/node:$PATH" ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
 
 echo "Webpacking everything..."
-PATH="./target/node:$PATH" ./node_modules/.bin/webpack -c webpack.config.js
+PATH="./target/node:$PATH" NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.js
 
 echo "Done! Have a good day."
