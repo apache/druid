@@ -57,7 +57,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * TODO:
+ * This class manages intermediary segments for data shuffle between native parallel index tasks.
+ * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers
+ * and phase 2 tasks read those files via HTTP.
+ *
+ * The directory where segment files are placed is structured as
+ * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/partitionIdOfSegment.
+ *
+ * This class provides interfaces to store, find, and remove segment files.
+ * It also has a self-cleanup mechanism to clean up stale segment files. It periodically checks the last access time
+ * per supervisorTask and removes its all segment files if the supervisorTask is not running anymore.
  */
 @ManageLifecycle
 public class IntermediaryDataManager
@@ -67,10 +76,7 @@ public class IntermediaryDataManager
   private final long intermediaryPartitionDiscoveryPeriodSec;
   private final long intermediaryPartitionCleanupPeriodSec;
   private final Period intermediaryPartitionTimeout;
-
-  // Directory structure: {prefix}/supervisorTaskId/start/end/partitionId
   private final List<StorageLocation> intermediarySegmentsLocations;
-
   private final IndexingServiceClient indexingServiceClient;
 
   // supervisorTaskId -> time to check supervisorTask status

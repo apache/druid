@@ -30,6 +30,12 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
+/**
+ * This resource filter is used for data shuffle between native parallel index tasks. See ShuffleResource for details.
+ *
+ * It currently performs the authorization check for DATASOURCE, but ideally, it should be the authorization check
+ * for task data. This issue should be addressed in the future.
+ */
 public class TaskShuffleResourceFilter extends AbstractResourceFilter
 {
   @Inject
