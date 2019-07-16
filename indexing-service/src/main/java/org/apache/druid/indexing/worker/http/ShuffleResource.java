@@ -88,7 +88,6 @@ public class ShuffleResource
       return Response.ok(
           (StreamingOutput) output -> {
             for (File partitionFile : partitionFiles) {
-              // TODO: check the output format of indexMerger
               try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {
                 ByteStreams.copy(fileInputStream, output);
               }
