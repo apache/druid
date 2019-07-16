@@ -24,8 +24,12 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 /**
  */
@@ -56,6 +60,16 @@ public class SelectorFilter implements Filter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnStrategizer.instance(),
+        factory
+    ).makeMatcher(value);
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
@@ -71,6 +85,12 @@ public class SelectorFilter implements Filter
   public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     return (double) indexSelector.getBitmapIndex(dimension, value).size() / indexSelector.getNumRows();
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
   }
 
   @Override

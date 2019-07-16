@@ -28,6 +28,8 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  * See the companion class Offset, for more context on how this could be useful.  A ReadableOffset should be
  * given to classes (e.g. FloatColumnSelector objects) by something which keeps a reference to the base Offset object
  * and increments it.
+ *
+ * @see org.apache.druid.segment.vector.ReadableVectorOffset, the vectorized version.
  */
 public interface ReadableOffset extends HotLoopCallee
 {

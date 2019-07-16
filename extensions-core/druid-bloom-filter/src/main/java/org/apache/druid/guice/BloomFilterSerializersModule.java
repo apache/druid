@@ -52,7 +52,7 @@ public class BloomFilterSerializersModule extends SimpleModule
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
 
-    ComplexMetrics.registerSerde(BLOOM_FILTER_TYPE_NAME, BloomFilterSerde::new);
+    ComplexMetrics.registerSerde(BLOOM_FILTER_TYPE_NAME, new BloomFilterSerde());
   }
 
   private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>

@@ -20,11 +20,14 @@
 package org.apache.druid.query.aggregation;
 
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
  * Abstract class with functionality to wrap {@link Aggregator}, {@link BufferAggregator} and {@link AggregateCombiner}
@@ -35,19 +38,28 @@ import org.apache.druid.segment.ColumnValueSelector;
 public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValueSelector> extends AggregatorFactory
 {
   @Override
-  public final Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public final Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
-    T selector = selector(metricFactory);
-    Aggregator aggregator = factorize(metricFactory, selector);
+    T selector = selector(columnSelectorFactory);
+    Aggregator aggregator = factorize(columnSelectorFactory, selector);
     return NullHandling.replaceWithDefault() ? aggregator : new NullableAggregator(aggregator, selector);
   }
 
   @Override
-  public final BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public final BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
-    T selector = selector(metricFactory);
-    BufferAggregator aggregator = factorizeBuffered(metricFactory, selector);
+    T selector = selector(columnSelectorFactory);
+    BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
     return NullHandling.replaceWithDefault() ? aggregator : new NullableBufferAggregator(aggregator, selector);
+  }
+
+  @Override
+  public final VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    Preconditions.checkState(canVectorize(), "Cannot vectorize");
+    VectorValueSelector selector = vectorSelector(columnSelectorFactory);
+    VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
+    return NullHandling.replaceWithDefault() ? aggregator : new NullableVectorAggregator(aggregator, selector);
   }
 
   @Override
@@ -70,26 +82,59 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
    *
    * @see ColumnValueSelector
    */
-  protected abstract T selector(ColumnSelectorFactory metricFactory);
+  protected abstract T selector(ColumnSelectorFactory columnSelectorFactory);
+
+  /**
+   * Creates a {@link VectorValueSelector} for the aggregated column.
+   *
+   * @see VectorValueSelector
+   */
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    throw new UnsupportedOperationException("Cannot vectorize");
+  }
 
   /**
    * Creates an {@link Aggregator} to aggregate values from several rows, by using the provided selector.
-   * @param metricFactory metricFactory
-   * @param selector {@link ColumnValueSelector} for the column to aggregate.
+   *
+   * @param columnSelectorFactory metricFactory
+   * @param selector              {@link ColumnValueSelector} for the column to aggregate.
    *
    * @see Aggregator
    */
-  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, T selector);
+  protected abstract Aggregator factorize(ColumnSelectorFactory columnSelectorFactory, T selector);
 
   /**
    * Creates an {@link BufferAggregator} to aggregate values from several rows into a ByteBuffer.
-   * @param metricFactory metricFactory
-   * @param selector {@link ColumnValueSelector} for the column to aggregate.
+   *
+   * @param columnSelectorFactory columnSelectorFactory in case any other columns are needed.
+   * @param selector              {@link ColumnValueSelector} for the column to aggregate.
    *
    * @see BufferAggregator
    */
   protected abstract BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       T selector
   );
+
+  /**
+   * Creates a {@link VectorAggregator} to aggregate values from several rows into a ByteBuffer.
+   *
+   * @param columnSelectorFactory columnSelectorFactory in case any other columns are needed.
+   * @param selector              {@link VectorValueSelector} for the column to aggregate.
+   *
+   * @see BufferAggregator
+   */
+  protected VectorAggregator factorizeVector(
+      // Not used by current aggregators, but here for parity with "factorizeBuffered".
+      @SuppressWarnings("unused") VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    if (!canVectorize()) {
+      throw new UnsupportedOperationException("Cannot vectorize");
+    } else {
+      throw new UnsupportedOperationException("canVectorize returned true but 'factorizeVector' is not implemented");
+    }
+  }
 }

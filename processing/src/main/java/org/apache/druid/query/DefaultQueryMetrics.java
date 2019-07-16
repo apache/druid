@@ -197,6 +197,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void vectorized(final boolean vectorized)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return new DefaultBitmapResultFactory(factory);

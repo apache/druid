@@ -163,6 +163,12 @@ public class IntervalDimFilter implements DimFilter
     return result;
   }
 
+  @Override
+  public String toString()
+  {
+    return convertedFilter.toString();
+  }
+
   private List<Pair<Long, Long>> makeIntervalLongs()
   {
     List<Pair<Long, Long>> intervalLongs = new ArrayList<>();

@@ -45,6 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -97,19 +98,19 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   @Test
   public void testColumnsWithoutNulls()
   {
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1")
     )), ImmutableList.of("2", "5", "8"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim2")
     )), ImmutableList.of("3", "4", "5"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
     )), ImmutableList.of("5", "9"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
@@ -119,35 +120,56 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   @Test
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
-    assertFilterMatches(
-        new ColumnComparisonDimFilter(
-            ImmutableList.of(DefaultDimensionSpec.of("dim6"), DefaultDimensionSpec.of("dim7"))
-        ),
-        ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
-    );
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+        DefaultDimensionSpec.of("dim6"),
+        DefaultDimensionSpec.of("dim7")
+    )), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      // "" is equivalent to null which is equivalent to a missing dimension
+      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+          DefaultDimensionSpec.of("dim1"),
+          DefaultDimensionSpec.of("dim6")
+      )), ImmutableList.of("0"));
+
+      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+          DefaultDimensionSpec.of("dim2"),
+          DefaultDimensionSpec.of("dim6")
+      )), ImmutableList.of("1", "2", "6", "7", "8"));
+
+      assertFilterMatchesSkipVectorize(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
           ),
           ImmutableList.of("0")
       );
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorize(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
           ),
           ImmutableList.of("1", "2", "6", "7", "8")
       );
     } else {
-      assertFilterMatches(
+      // "" is not equivalent to a missing dimension
+      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+          DefaultDimensionSpec.of("dim1"),
+          DefaultDimensionSpec.of("dim6")
+      )), Collections.emptyList());
+
+      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+          DefaultDimensionSpec.of("dim2"),
+          DefaultDimensionSpec.of("dim6")
+      )), ImmutableList.of("1", "6", "7", "8"));
+
+      assertFilterMatchesSkipVectorize(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
           ),
           ImmutableList.of()
       );
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorize(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
           ),
@@ -165,7 +187,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
     LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, true, null, false, true);
 
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
         new ExtractionDimensionSpec("dim0", "dim0", lookupFn),
         new ExtractionDimensionSpec("dim1", "dim1", lookupFn)
     )), ImmutableList.of("2", "5", "7", "8"));

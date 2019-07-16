@@ -25,10 +25,10 @@ import com.google.common.base.Predicate;
 */
 public class FilteringAccumulator<OutType, T> implements Accumulator<OutType, T>
 {
-  private final Predicate<T> pred;
+  private final Predicate<? super T> pred;
   private final Accumulator<OutType, T> accumulator;
 
-  public FilteringAccumulator(Predicate<T> pred, Accumulator<OutType, T> accumulator)
+  public FilteringAccumulator(Predicate<? super T> pred, Accumulator<OutType, T> accumulator)
   {
     this.pred = pred;
     this.accumulator = accumulator;

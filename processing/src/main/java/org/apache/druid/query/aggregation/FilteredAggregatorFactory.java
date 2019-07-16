@@ -25,11 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,7 +44,10 @@ import java.util.Objects;
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
   private final AggregatorFactory delegate;
-  private final DimFilter filter;
+  private final DimFilter dimFilter;
+  private final Filter filter;
+
+  @Nullable
   private final String name;
 
   // Constructor for backwards compat only
@@ -57,22 +62,23 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @JsonCreator
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
-      @JsonProperty("filter") DimFilter filter,
-      @JsonProperty("name") String name
+      @JsonProperty("filter") DimFilter dimFilter,
+      @Nullable @JsonProperty("name") String name
   )
   {
-    Preconditions.checkNotNull(delegate);
-    Preconditions.checkNotNull(filter);
+    Preconditions.checkNotNull(delegate, "aggregator");
+    Preconditions.checkNotNull(dimFilter, "filter");
 
     this.delegate = delegate;
-    this.filter = filter;
+    this.dimFilter = dimFilter;
+    this.filter = dimFilter.toFilter();
     this.name = name;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
+    final ValueMatcher valueMatcher = filter.makeMatcher(columnSelectorFactory);
     return new FilteredAggregator(
         valueMatcher,
         delegate.factorize(columnSelectorFactory)
@@ -82,11 +88,28 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
+    final ValueMatcher valueMatcher = filter.makeMatcher(columnSelectorFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
         delegate.factorizeBuffered(columnSelectorFactory)
     );
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    Preconditions.checkState(canVectorize(), "Cannot vectorize");
+    final VectorValueMatcher valueMatcher = filter.makeVectorMatcher(columnSelectorFactory);
+    return new FilteredVectorAggregator(
+        valueMatcher,
+        delegate.factorizeVector(columnSelectorFactory)
+    );
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return delegate.canVectorize() && filter.canVectorizeMatcher();
   }
 
   @Override
@@ -147,7 +170,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] filterCacheKey = filter.getCacheKey();
+    byte[] filterCacheKey = dimFilter.getCacheKey();
     byte[] aggregatorCacheKey = delegate.getCacheKey();
     return ByteBuffer.allocate(1 + filterCacheKey.length + aggregatorCacheKey.length)
                      .put(AggregatorUtil.FILTERED_AGG_CACHE_TYPE_ID)
@@ -171,8 +194,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    if (filter instanceof IntervalDimFilter) {
-      IntervalDimFilter intervalDimFilter = ((IntervalDimFilter) filter);
+    if (dimFilter instanceof IntervalDimFilter) {
+      IntervalDimFilter intervalDimFilter = ((IntervalDimFilter) dimFilter);
       if (intervalDimFilter.getExtractionFn() != null) {
         // no support for extraction functions right now
         return this;
@@ -238,7 +261,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @JsonProperty
   public DimFilter getFilter()
   {
-    return filter;
+    return dimFilter;
   }
 
   @Override
@@ -248,7 +271,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -256,16 +279,17 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
+    final FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
     return Objects.equals(delegate, that.delegate) &&
-           Objects.equals(filter, that.filter) &&
+           Objects.equals(dimFilter, that.dimFilter) &&
            Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(delegate, filter, name);
+
+    return Objects.hash(delegate, dimFilter, name);
   }
 
   @Override
@@ -273,7 +297,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   {
     return "FilteredAggregatorFactory{" +
            "delegate=" + delegate +
-           ", filter=" + filter +
+           ", dimFilter=" + dimFilter +
            ", name='" + name + '\'' +
            '}';
   }
