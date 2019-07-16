@@ -99,10 +99,9 @@ public final class CollectionUtils
     final Map<K2, V> result = Maps.newHashMapWithExpectedSize(map.size());
     map.forEach((k, v) -> {
       final K2 k2 = keyMapper.apply(k);
-      if (result.containsKey(k2)) {
+      if (result.putIfAbsent(k2, v) != null) {
         throw new ISE("Conflicting key[%s] calculated via keyMapper for original key[%s]", k2, k);
       }
-      result.putIfAbsent(k2, v);
     });
     return result;
   }
