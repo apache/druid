@@ -34,6 +34,8 @@ import java.util.TreeSet;
  */
 public class ListColumnIncluderator implements ColumnIncluderator
 {
+  private static final byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
+
   private final Set<String> columns;
 
   @JsonCreator
@@ -61,7 +63,7 @@ public class ListColumnIncluderator implements ColumnIncluderator
   public byte[] getCacheKey()
   {
     int size = 1;
-    List<byte[]> columns = Lists.newArrayListWithExpectedSize(this.columns.size());
+    final List<byte[]> columns = Lists.newArrayListWithExpectedSize(this.columns.size());
 
     for (String column : this.columns) {
       final byte[] bytes = StringUtils.toUtf8(column);

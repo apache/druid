@@ -240,7 +240,7 @@ exports[`compaction dialog matches snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class="bp3-input-group"
+                class="bp3-input-group suggestible-input"
               >
                 <input
                   class="bp3-input"
@@ -352,7 +352,7 @@ exports[`compaction dialog matches snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-solarized-dark ace_dark"
+                class=" ace_editor ace-tm"
                 id="ace-editor"
                 style="width: 100%; height: 8vh;"
               >
@@ -543,7 +543,7 @@ exports[`compaction dialog matches snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-solarized-dark ace_dark"
+                class=" ace_editor ace-tm"
                 id="ace-editor"
                 style="width: 100%; height: 8vh;"
               >

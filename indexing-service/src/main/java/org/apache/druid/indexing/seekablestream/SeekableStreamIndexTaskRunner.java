@@ -353,7 +353,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Set up FireDepartmentMetrics
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
         task.getDataSchema(),
-        new RealtimeIOConfig(null, null, null),
+        new RealtimeIOConfig(null, null),
         null
     );
     FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();

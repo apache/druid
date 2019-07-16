@@ -239,18 +239,14 @@ public class ResourceFilterTestHelper
                             if (method.getAnnotation(Path.class) != null) {
                               return new Object[]{
                                   StringUtils.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
-                                  input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
-                                                                            ? "POST"
-                                                                            : "DELETE") : "GET",
+                                  httpMethodFromAnnotation(input, method),
                                   injector.getInstance(input),
                                   injector
                               };
                             } else {
                               return new Object[]{
                                   basepath,
-                                  input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
-                                                                            ? "POST"
-                                                                            : "DELETE") : "GET",
+                                  httpMethodFromAnnotation(input, method),
                                   injector.getInstance(input),
                                   injector
                               };
@@ -263,5 +259,14 @@ public class ResourceFilterTestHelper
             )
         )
     );
+  }
+
+  private static String httpMethodFromAnnotation(Class<? extends ResourceFilter> input, Method method)
+  {
+    if (input.getAnnotation(GET.class) != null) {
+      return "GET";
+    } else {
+      return method.getAnnotation(DELETE.class) != null ? "DELETE" : "POST";
+    }
   }
 }

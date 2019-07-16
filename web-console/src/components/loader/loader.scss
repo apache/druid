@@ -32,7 +32,7 @@
     @mixin drive-by($approach, $takeoff) {
       @keyframes drive-by-#{$approach}-#{$takeoff} {
         0% {
-          transform: translate(#{(-100 - $approach*30 + '%')}, 0);
+          transform: translate(#{(-100 - $approach * 30 + '%')}, 0);
           opacity: 0;
         }
 
@@ -47,7 +47,7 @@
         }
 
         100% {
-          transform: translate(#{(100 + $takeoff*30 + '%')}, 0);
+          transform: translate(#{(100 + $takeoff * 30 + '%')}, 0);
           opacity: 0;
         }
       }
@@ -58,7 +58,7 @@
     svg {
       width: 100%;
       height: 80px;
-      fill: #2CEEFB;
+      fill: #2ceefb;
 
       path {
         &.one {

@@ -17,7 +17,7 @@
  */
 
 import { Button, IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 export interface BasicAction {
   icon?: IconName;
@@ -28,9 +28,9 @@ export interface BasicAction {
 
 export function basicActionsToMenu(basicActions: BasicAction[]) {
   if (!basicActions.length) return null;
-  return <Menu>
-    {
-      basicActions.map((action) => (
+  return (
+    <Menu>
+      {basicActions.map(action => (
         <MenuItem
           key={action.title}
           icon={action.icon}
@@ -38,16 +38,16 @@ export function basicActionsToMenu(basicActions: BasicAction[]) {
           intent={action.intent}
           onClick={action.onAction}
         />
-      ))
-    }
-  </Menu>;
+      ))}
+    </Menu>
+  );
 }
 
 export function basicActionsToButtons(basicActions: BasicAction[]) {
   if (!basicActions.length) return null;
-  return <>
-    {
-      basicActions.map((action) => (
+  return (
+    <>
+      {basicActions.map(action => (
         <Button
           key={action.title}
           icon={action.icon}
@@ -55,7 +55,7 @@ export function basicActionsToButtons(basicActions: BasicAction[]) {
           intent={action.intent}
           onClick={action.onAction}
         />
-      ))
-    }
-  </>;
+      ))}
+    </>
+  );
 }

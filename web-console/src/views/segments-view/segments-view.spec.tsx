@@ -17,7 +17,7 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { SegmentsView } from '../segments-view/segments-view';
 
@@ -27,9 +27,10 @@ describe('segments-view', () => {
       <SegmentsView
         datasource={'test'}
         onlyUnavailable={false}
-        goToSql={(initSql: string) => {}}
+        goToQuery={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(segmentsView).toMatchSnapshot();
   });
 });

@@ -434,7 +434,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (databaseSegmentManager.removeSegment(segmentId)) {
       return Response.ok().build();
     }
     return Response.noContent().build();
@@ -538,6 +538,8 @@ public class DataSourcesResource
     Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
+    long totalReplicatedSize = 0;
+
     DateTime minTime = DateTimes.MAX;
     DateTime maxTime = DateTimes.MIN;
     String tier;
@@ -549,11 +551,11 @@ public class DataSourcesResource
         continue;
       }
 
-      if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, new HashSet<>());
-      }
+      tierDistinctSegments.computeIfAbsent(tier, k -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
+      long replicatedSegmentSize = 0;
+
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
         // tier segments stats
         if (!tierDistinctSegments.get(tier).contains(dataSegment.getId())) {
@@ -567,6 +569,8 @@ public class DataSourcesResource
           minTime = DateTimes.min(minTime, dataSegment.getInterval().getStart());
           maxTime = DateTimes.max(maxTime, dataSegment.getInterval().getEnd());
         }
+        totalReplicatedSize += dataSegment.getSize();
+        replicatedSegmentSize += dataSegment.getSize();
       }
 
       // tier stats
@@ -579,10 +583,14 @@ public class DataSourcesResource
 
       long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
       tierStats.put("size", segmentSize + dataSourceSegmentSize);
+
+      long replicatedSize = MapUtils.getLong(tierStats, "replicatedSize", 0L);
+      tierStats.put("replicatedSize", replicatedSize + replicatedSegmentSize);
     }
 
     segments.put("count", totalDistinctSegments.size());
     segments.put("size", totalSegmentSize);
+    segments.put("replicatedSize", totalReplicatedSize);
     segments.put("minTime", minTime);
     segments.put("maxTime", maxTime);
     return retVal;

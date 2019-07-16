@@ -123,7 +123,7 @@ public class DataSourceCompactionConfig
   }
 
   /**
-   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * This method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
    * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}, and
    * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
    * {@link UserCompactTuningConfig}.

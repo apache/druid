@@ -128,13 +128,13 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/latest/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see https://druid.apache.org/docs/latest/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/favicon.png",
       "/console.html",
@@ -386,9 +386,9 @@ public class CliOverlord extends ServerRunnable
 
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
-      // perform no-op authorization for these resources
-      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
-      AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+      // perform no-op authorization/authentication for these resources
+      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
+      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
       final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

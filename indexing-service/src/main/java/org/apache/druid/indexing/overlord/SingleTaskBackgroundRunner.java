@@ -330,13 +330,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {
-          if (queryRunner == null) {
-            queryRunner = taskQueryRunner;
-          } else {
-            log.makeAlert("Found too many query runners for datasource")
-               .addData("dataSource", queryDataSource)
-               .emit();
-          }
+          queryRunner = taskQueryRunner;
         }
       }
     }

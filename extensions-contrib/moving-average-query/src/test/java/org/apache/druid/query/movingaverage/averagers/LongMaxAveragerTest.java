@@ -19,39 +19,36 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 
-import static org.junit.Assert.assertEquals;
-
 public class LongMaxAveragerTest
 {
-
   @Test
   public void testComputeResult()
   {
     BaseAverager<Number, Long> avg = new LongMaxAverager(3, "test", "field", 1);
 
-    assertEquals(Long.MIN_VALUE, (long) avg.computeResult());
+    Assert.assertEquals(Long.MIN_VALUE, (long) avg.computeResult());
 
     avg.addElement(Collections.singletonMap("field", -1000000L), new HashMap<>());
-    assertEquals(-1000000, (long) avg.computeResult());
+    Assert.assertEquals(-1000000, (long) avg.computeResult());
 
     avg.addElement(Collections.singletonMap("field", 1L), new HashMap<>());
-    assertEquals(1, (long) avg.computeResult());
+    Assert.assertEquals(1, (long) avg.computeResult());
 
-    avg.addElement(Collections.singletonMap("field", new Integer(1)), new HashMap<>());
-    assertEquals(1, (long) avg.computeResult());
+    avg.addElement(Collections.singletonMap("field", 1), new HashMap<>());
+    Assert.assertEquals(1, (long) avg.computeResult());
 
     avg.addElement(Collections.singletonMap("field", 5L), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 3L), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2L), new HashMap<>());
-    assertEquals(5, (long) avg.computeResult());
+    Assert.assertEquals(5, (long) avg.computeResult());
 
     avg.skip();
-    assertEquals(3, (long) avg.computeResult());
+    Assert.assertEquals(3, (long) avg.computeResult());
   }
-
 }

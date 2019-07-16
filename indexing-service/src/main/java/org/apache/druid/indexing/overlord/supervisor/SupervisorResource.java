@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -118,6 +119,7 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetAll(
       @QueryParam("full") String full,
+      @QueryParam("state") Boolean state,
       @Context final HttpServletRequest req
   )
   {
@@ -128,20 +130,36 @@ public class SupervisorResource
               manager,
               manager.getSupervisorIds()
           );
+          final boolean includeFull = full != null;
+          final boolean includeState = state != null && state;
 
-          if (full == null) {
-            return Response.ok(authorizedSupervisorIds).build();
-          } else {
-            List<Map<String, ?>> all =
-                authorizedSupervisorIds.stream()
-                                       .map(x -> ImmutableMap.<String, Object>builder()
-                                           .put("id", x)
-                                           .put("spec", manager.getSupervisorSpec(x).get())
-                                           .build()
-                                       )
-                                       .collect(Collectors.toList());
-            return Response.ok(all).build();
+          if (includeFull || includeState) {
+            List<Map<String, ?>> allStates = authorizedSupervisorIds
+                .stream()
+                .map(x -> {
+                  Optional<SupervisorStateManager.State> theState =
+                      manager.getSupervisorState(x);
+                  ImmutableMap.Builder<String, Object> theBuilder = ImmutableMap.builder();
+                  theBuilder.put("id", x);
+                  if (theState.isPresent()) {
+                    theBuilder.put("state", theState.get().getBasicState());
+                    theBuilder.put("detailedState", theState.get());
+                    theBuilder.put("healthy", theState.get().isHealthy());
+                  }
+                  if (includeFull) {
+                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                    if (theSpec.isPresent()) {
+                      theBuilder.put("spec", theSpec.get());
+                    }
+                  }
+                  return theBuilder.build();
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            return Response.ok(allStates).build();
           }
+
+          return Response.ok(authorizedSupervisorIds).build();
         }
     );
   }
@@ -288,27 +306,36 @@ public class SupervisorResource
   @POST
   @Path("/suspendAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response suspendAll()
+  public Response suspendAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(true);
+    return suspendOrResumeAll(req, true);
   }
 
   @POST
   @Path("/resumeAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response resumeAll()
+  public Response resumeAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(false);
+    return suspendOrResumeAll(req, false);
   }
 
   @POST
   @Path("/terminateAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response terminateAll()
+  public Response terminateAll(@Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.stopAndRemoveAllSupervisors();
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.stopAndRemoveSupervisor(supervisorId);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
@@ -455,11 +482,20 @@ public class SupervisorResource
     );
   }
 
-  private Response suspendOrResumeAll(boolean suspend)
+  private Response suspendOrResumeAll(final HttpServletRequest req, final boolean suspend)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.suspendOrResumeAllSupervisors(suspend);
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.suspendOrResumeSupervisor(supervisorId, suspend);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );

@@ -43,6 +43,7 @@ import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -62,9 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.testing.clients.AbstractQueryResourceTestClient.makeRequest;
-import static org.apache.druid.testing.clients.AbstractQueryResourceTestClient.makeRequestWithExpectedStatus;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
@@ -192,7 +190,7 @@ public class ITBasicAuthConfigurationTest
     );
 
     // check that we can access a datasource-permission restricted resource on the broker
-    makeRequest(
+    HttpUtil.makeRequest(
         datasourceOnlyUserClient,
         HttpMethod.GET,
         config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
@@ -200,8 +198,13 @@ public class ITBasicAuthConfigurationTest
     );
 
     // check that we can access a state-permission restricted resource on the broker
-    makeRequest(datasourceWithStateUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
-    makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(
+        datasourceWithStateUserClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/status",
+        null
+    );
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // initial setup is done now, run the system schema response content tests
     final List<Map<String, Object>> adminSegments = jsonMapper.readValue(
@@ -417,14 +420,14 @@ public class ITBasicAuthConfigurationTest
 
     // create 100 users
     for (int i = 0; i < 100; i++) {
-      makeRequest(
+      HttpUtil.makeRequest(
           adminClient,
           HttpMethod.POST,
           config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid" + i,
           null
       );
 
-      makeRequest(
+      HttpUtil.makeRequest(
           adminClient,
           HttpMethod.POST,
           config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid" + i,
@@ -435,14 +438,14 @@ public class ITBasicAuthConfigurationTest
     }
 
     // setup the last of 100 users and check that it works
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid99/credentials",
         jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
     );
 
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid99/roles/druidrole",
@@ -478,16 +481,16 @@ public class ITBasicAuthConfigurationTest
 
   private void testOptionsRequests(HttpClient httpClient)
   {
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
   }
 
   private void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
   {
-    makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
+    HttpUtil.makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
   }
 
   private void testAvaticaQuery(String url)
@@ -537,11 +540,11 @@ public class ITBasicAuthConfigurationTest
 
   private void checkNodeAccess(HttpClient httpClient)
   {
-    makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getIndexerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
   }
 
   private void checkLoadStatus(HttpClient httpClient) throws Exception
@@ -555,7 +558,7 @@ public class ITBasicAuthConfigurationTest
 
   private void checkLoadStatusSingle(HttpClient httpClient, String baseUrl) throws Exception
   {
-    StatusResponseHolder holder = makeRequest(
+    StatusResponseHolder holder = HttpUtil.makeRequest(
         httpClient,
         HttpMethod.GET,
         baseUrl + "/druid-ext/basic-security/authentication/loadStatus",
@@ -567,7 +570,7 @@ public class ITBasicAuthConfigurationTest
     Assert.assertNotNull(loadStatus.get("basic"));
     Assert.assertTrue(loadStatus.get("basic"));
 
-    holder = makeRequest(
+    holder = HttpUtil.makeRequest(
         httpClient,
         HttpMethod.GET,
         baseUrl + "/druid-ext/basic-security/authorization/loadStatus",
@@ -588,7 +591,7 @@ public class ITBasicAuthConfigurationTest
       List<ResourceAction> permissions
   ) throws Exception
   {
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -598,7 +601,7 @@ public class ITBasicAuthConfigurationTest
         ),
         null
     );
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -608,7 +611,7 @@ public class ITBasicAuthConfigurationTest
         ),
         jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate(password, 5000))
     );
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -618,7 +621,7 @@ public class ITBasicAuthConfigurationTest
         ),
         null
     );
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -628,7 +631,7 @@ public class ITBasicAuthConfigurationTest
         ),
         null
     );
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -640,7 +643,7 @@ public class ITBasicAuthConfigurationTest
         null
     );
     byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
-    makeRequest(
+    HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -661,7 +664,7 @@ public class ITBasicAuthConfigurationTest
     Map<String, Object> queryMap = ImmutableMap.of(
         "query", query
     );
-    return makeRequestWithExpectedStatus(
+    return HttpUtil.makeRequestWithExpectedStatus(
         httpClient,
         HttpMethod.POST,
         config.getBrokerUrl() + "/druid/v2/sql",

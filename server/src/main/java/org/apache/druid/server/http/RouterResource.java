@@ -20,7 +20,9 @@
 package org.apache.druid.server.http;
 
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.selector.Server;
+import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.router.TieredBrokerHostSelector;
 
 import javax.ws.rs.GET;
@@ -47,6 +49,7 @@ public class RouterResource
 
   @GET
   @Path("/brokers")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, List<String>> getBrokers()
   {

@@ -30,7 +30,9 @@ import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregat
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.VarianceFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.VarianceSerde;
+import org.apache.druid.query.aggregation.variance.sql.BaseVarianceSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
 
@@ -55,8 +57,14 @@ public class DruidStatsModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType("variance") == null) {
-      ComplexMetrics.registerSerde("variance", new VarianceSerde());
+    if (binder != null) {
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.VarPopSqlAggregator.class);
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.VarSampSqlAggregator.class);
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.VarianceSqlAggregator.class);
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevPopSqlAggregator.class);
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSampSqlAggregator.class);
+      SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSqlAggregator.class);
     }
+    ComplexMetrics.registerSerde("variance", new VarianceSerde());
   }
 }

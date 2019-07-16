@@ -16,11 +16,16 @@
  * limitations under the License.
  */
 
+import 'brace'; // Import Ace editor and all the sub components used in the app
+import 'brace/ext/language_tools';
+import 'brace/theme/solarized_dark';
 import 'es6-shim/es6-shim';
 import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import React from 'react';
+import ReactDOM from 'react-dom';
 
+import './ace-modes/dsql';
+import './ace-modes/hjson';
 import './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 
@@ -43,16 +48,13 @@ if (typeof consoleConfig.title === 'string') {
 }
 
 ReactDOM.render(
-  React.createElement(
-    ConsoleApplication,
-    {
-      hideLegacy: Boolean(consoleConfig.hideLegacy),
-      baseURL: consoleConfig.baseURL,
-      customHeaderName: consoleConfig.customHeaderName,
-      customHeaderValue: consoleConfig.customHeaderValue
-    }
-  ) as any,
-  container
+  React.createElement(ConsoleApplication, {
+    hideLegacy: Boolean(consoleConfig.hideLegacy),
+    baseURL: consoleConfig.baseURL,
+    customHeaderName: consoleConfig.customHeaderName,
+    customHeaderValue: consoleConfig.customHeaderValue,
+  }) as any,
+  container,
 );
 
 // ---------------------------------

@@ -27,8 +27,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -60,7 +60,7 @@ public class SelfDiscoveryTest
 
   private boolean selfDiscovered(String nodeUrl)
   {
-    StatusResponseHolder response = AbstractQueryResourceTestClient.makeRequestWithExpectedStatus(
+    StatusResponseHolder response = HttpUtil.makeRequestWithExpectedStatus(
         httpClient,
         HttpMethod.GET,
         nodeUrl + "/status/selfDiscoveredStatus",

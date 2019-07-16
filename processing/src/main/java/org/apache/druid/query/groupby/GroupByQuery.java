@@ -1077,6 +1077,7 @@ public class GroupByQuery extends BaseQuery<Row>
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
            ", havingSpec=" + havingSpec +
+           ", context=" + getContext() +
            '}';
   }
 

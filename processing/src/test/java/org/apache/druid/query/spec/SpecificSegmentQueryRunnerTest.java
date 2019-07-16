@@ -144,7 +144,7 @@ public class SpecificSegmentQueryRunnerTest
     );
     CountAggregator rows = new CountAggregator();
     rows.aggregate();
-    builder.addMetric("rows", rows);
+    builder.addMetric("rows", rows.get());
     final Result<TimeseriesResultValue> value = builder.build();
 
     final SpecificSegmentQueryRunner queryRunner = new SpecificSegmentQueryRunner(

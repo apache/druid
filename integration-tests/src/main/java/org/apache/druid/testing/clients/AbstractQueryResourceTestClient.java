@@ -23,8 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
@@ -34,18 +32,12 @@ import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.annotation.Nullable;
-import javax.ws.rs.core.MediaType;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
-  private static final Logger LOG = new Logger(AbstractQueryResourceTestClient.class);
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
-
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   final String routerUrl;
@@ -71,8 +63,8 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
           new Request(HttpMethod.POST, new URL(url)).setContent(
               "application/json",
               jsonMapper.writeValueAsBytes(query)
-          ), RESPONSE_HANDLER
-
+          ),
+          StatusResponseHandler.getInstance()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -95,61 +87,4 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     }
   }
 
-  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
-  {
-    return makeRequestWithExpectedStatus(
-        httpClient,
-        method,
-        url,
-        content,
-        HttpResponseStatus.OK
-    );
-  }
-
-  public static StatusResponseHolder makeRequestWithExpectedStatus(
-      HttpClient httpClient,
-      HttpMethod method,
-      String url,
-      @Nullable byte[] content,
-      HttpResponseStatus expectedStatus
-  )
-  {
-    try {
-      Request request = new Request(method, new URL(url));
-      if (content != null) {
-        request.setContent(MediaType.APPLICATION_JSON, content);
-      }
-      int retryCount = 0;
-
-      StatusResponseHolder response;
-
-      while (true) {
-        response = httpClient.go(request, RESPONSE_HANDLER).get();
-
-        if (!response.getStatus().equals(expectedStatus)) {
-          String errMsg = StringUtils.format(
-              "Error while making request to url[%s] status[%s] content[%s]",
-              url,
-              response.getStatus(),
-              response.getContent()
-          );
-          // it can take time for the auth config to propagate, so we retry
-          if (retryCount > 10) {
-            throw new ISE(errMsg);
-          } else {
-            LOG.error(errMsg);
-            LOG.error("retrying in 3000ms, retryCount: " + retryCount);
-            retryCount++;
-            Thread.sleep(3000);
-          }
-        } else {
-          break;
-        }
-      }
-      return response;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 }

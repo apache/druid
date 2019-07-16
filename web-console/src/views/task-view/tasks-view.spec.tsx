@@ -17,7 +17,7 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
 import { TasksView } from './tasks-view';
 
@@ -27,11 +27,12 @@ describe('tasks view', () => {
       <TasksView
         openDialog={'test'}
         taskId={'test'}
-        goToSql={(initSql: string) => null}
-        goToMiddleManager={(middleManager: string) => null}
+        goToQuery={() => null}
+        goToMiddleManager={() => null}
         goToLoadDataView={() => null}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(taskView).toMatchSnapshot();
   });
 });

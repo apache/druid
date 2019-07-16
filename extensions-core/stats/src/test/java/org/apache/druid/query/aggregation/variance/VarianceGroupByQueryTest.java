@@ -45,6 +45,7 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -58,9 +59,22 @@ public class VarianceGroupByQueryTest
   private final String testName;
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
+  public static Collection<Object[]> constructorFeeder()
   {
-    return GroupByQueryRunnerTest.constructorFeeder();
+    // Use GroupByQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
+    // can't vectorize yet.
+    return GroupByQueryRunnerTest.constructorFeeder().stream()
+                                 .filter(constructor -> !((boolean) constructor[4]) /* !vectorize */)
+                                 .map(
+                                     constructor ->
+                                         new Object[]{
+                                             constructor[0],
+                                             constructor[1],
+                                             constructor[2],
+                                             constructor[3]
+                                         }
+                                 )
+                                 .collect(Collectors.toList());
   }
 
   public VarianceGroupByQueryTest(

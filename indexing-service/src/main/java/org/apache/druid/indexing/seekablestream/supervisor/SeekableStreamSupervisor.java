@@ -807,6 +807,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return generateReport(true);
   }
 
+
+  @Override
+  public SupervisorStateManager.State getState()
+  {
+    return stateManager.getSupervisorState();
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
+  }
+
   private SupervisorReport<? extends SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>> generateReport(
       boolean includeOffsets
   )
@@ -2786,7 +2799,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  protected Map<String, Object> createBaseTaskContexts()
+  @VisibleForTesting
+  public Map<String, Object> createBaseTaskContexts()
   {
     final Map<String, Object> contexts = new HashMap<>();
     if (spec.getContext() != null) {
