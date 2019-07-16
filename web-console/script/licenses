@@ -19,93 +19,53 @@
 
 const fs = require('fs');
 const checker = require('license-checker');
-const yaml = require('js-yaml');
 
 const LICENSES_FILE = '../licenses.yaml';
-const LICENSES_FILE_INPUT = './private/licenses_orig.yaml' || LICENSES_FILE;
+const START_MARKER_LINE = '# Web console modules start';
+const END_MARKER_LINE = '# Web console modules end';
 const SEPARATOR = '\n\n---\n\n';
 
-// These are extra licenses for the old console (jquery + friends, underscore)
-const extraFromOldConsole = `
-name: jQuery
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.11.0
-copyright: jQuery Foundation, Inc.
-license_file_path: licenses/src/jquery.MIT
-
----
-
-name: jQuery UI
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.9.2
-copyright: jQuery Foundation and other contributors
-license_file_path: licenses/src/jquery-ui.MIT
-
----
-
-name: demo_table.css and jquery.dataTables.js from DataTables
-license_category: source
-module: web-console
-license_name: BSD-3-Clause License
-version: 1.8.2
-copyright: Allan Jardine.
-license_file_path: licenses/src/datatables.BSD3
-
----
-
-name: sizzle.js by way of jQuery
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.11.0
-copyright: jQuery Foundation and other contributors
-license_file_path: licenses/src/sizzle.MIT
-
----
-
-name: underscore
-license_category: source
-module: web-console
-license_name: MIT License
-version: 1.2.2
-copyright: Jeremy Ashkenas, DocumentCloud
-license_file_path: licenses/src/underscore.MIT
-`.trim().split(SEPARATOR);
-
-function parseDesc(text) {
-  return {
-    text: text,
-    json: yaml.safeLoad(text)
-  };
-}
-
 function injectConsoleLicenses(consoleLicenses) {
-  const text = fs.readFileSync(LICENSES_FILE_INPUT, 'utf-8');
+  const text = fs.readFileSync(LICENSES_FILE, 'utf-8');
   const textLines = text.split('\n');
 
   // Extract the license for the file itself
-  let ownLicense = '';
-  while (textLines.length && textLines[0].startsWith('#')) {
-    ownLicense += textLines[0] + '\n';
-    textLines.shift();
-  }
+  let beforeLines = [];
+  let afterLines = [];
+  let state = 'before';
+  for (let textLine of textLines) {
+    switch (state) {
+      case 'before':
+        beforeLines.push(textLine);
+        if (textLine === START_MARKER_LINE) {
+          state = 'main';
+        }
+        break;
 
-  const modules = textLines
-    .join('\n') // Take the existing licenses
-    .trim() // Remove the extra new lines on the ends
-    .split(SEPARATOR) // Separate
-    .map(parseDesc) // Parse them
-    .filter(p => p.json.module !== 'web-console') // Remove any existing web-console stuff
-    .concat(consoleLicenses.map(parseDesc)) // Add in the modules from the unified console
-    .concat(extraFromOldConsole.map(parseDesc)) // Add in the modules from the old console
-    //.sort((a, b) => String(a.json.module).localeCompare(b.json.module) || String(a.json.name).localeCompare(b.json.name))
+      case 'main':
+        if (textLine === END_MARKER_LINE) {
+          state = 'after';
+          afterLines.push(textLine);
+        }
+        break;
+
+      case 'after':
+        afterLines.push(textLine);
+        break;
+    }
+  }
+  if (state === 'before') throw new Error(`missing starter marker '${START_MARKER_LINE}'`);
+  if (state === 'main') throw new Error(`missing ending marker '${END_MARKER_LINE}'`);
 
   // Write out the new file
-  fs.writeFileSync(LICENSES_FILE, ownLicense + '\n' + modules.map(m => m.text).join(SEPARATOR) + '\n');
+  fs.writeFileSync(
+    LICENSES_FILE,
+    [
+      beforeLines.join('\n'),
+      consoleLicenses.join(SEPARATOR),
+      afterLines.join('\n')
+    ].join('\n')
+  );
 }
 
 checker.init({
@@ -117,7 +77,7 @@ checker.init({
     return;
   }
 
-  const mapped = Object.keys(packages).map(p => {
+  const mapped = Object.keys(packages).sort().map(p => {
     const m = p.match(/^(.+)@(\d+\.\d+\.\d+.*)$/);
     if (!m) throw new Error(`Malformed name@version`);
     const name = m[1];
