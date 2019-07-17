@@ -65,7 +65,7 @@ public class JSONKafkaFlatDataParser implements KafkaLookupDataParser
             )
     );
     this.parser = new DelegateParser(
-        new JSONPathParser(flattenSpec,jsonMapper.copy()),
+        new JSONPathParser(flattenSpec, jsonMapper.copy()),
         keyFieldName,
         valueFieldName
     );

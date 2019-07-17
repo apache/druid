@@ -38,7 +38,6 @@ import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -521,11 +520,12 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testSimpleKVExtractor() {
+  public void testSimpleKVExtractor()
+  {
     MockConsumer kafkaConsumer = getMockConsumer();
     kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", "value0"));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 1L, "key1", "value1"));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 2L, "key2", "value2"));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", "value1"));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", "value2"));
 
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
@@ -558,11 +558,12 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testCustomJsonExtractor() {
+  public void testCustomJsonExtractor()
+  {
     MockConsumer kafkaConsumer = getMockConsumer();
     kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", JSON1));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 1L, "key1", JSON2));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 2L, "key2", JSON3));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", JSON2));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", JSON3));
 
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
@@ -602,11 +603,12 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testJqJsonExtractor() {
+  public void testJqJsonExtractor()
+  {
     MockConsumer kafkaConsumer = getMockConsumer();
     kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", JSON1));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 1L, "key1", JSON2));
-    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC,0, 2L, "key2", JSON3));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", JSON2));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", JSON3));
 
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
@@ -647,13 +649,15 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertEquals("user2@gmail.com_active", factory.get().apply("key2"));
   }
 
-  private void waitForEvents(KafkaLookupExtractorFactory factory, int eventCount) {
+  private void waitForEvents(KafkaLookupExtractorFactory factory, int eventCount)
+  {
     long start = System.currentTimeMillis();
     int timeOutMs = 10_000;
     while (factory.getCompletedEventCount() != eventCount) {
       try {
         Thread.sleep(100);
-      } catch (InterruptedException ingnore) {
+      }
+      catch (InterruptedException ingnore) {
       }
       if (System.currentTimeMillis() > start + timeOutMs) {
         throw new ISE("Took too long to update event");
@@ -661,14 +665,17 @@ public class KafkaLookupExtractorFactoryTest
     }
   }
 
-  private MockConsumer<String, String> getMockConsumer() {
+  private MockConsumer<String, String> getMockConsumer()
+  {
     MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     kafkaConsumer.subscribe(Collections.singletonList(TOPIC));
     TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     kafkaConsumer.rebalance(Arrays.asList(topicPartition));
-    kafkaConsumer.updateBeginningOffsets(new HashMap<TopicPartition, Long>(){{
-      put(topicPartition, 0L);
-    }});
+    kafkaConsumer.updateBeginningOffsets(new HashMap<TopicPartition, Long>() {
+      {
+        put(topicPartition, 0L);
+      }
+    });
     return kafkaConsumer;
   }
 }
