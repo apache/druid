@@ -228,13 +228,15 @@ public class BuildDictJob implements Jobby
 
     private void writeValue(String value, int index, Mapper.Context context) throws IOException, InterruptedException
     {
+      byte[] bytesvalue = value.getBytes(Charset.forName("UTF-8"));
+
       tmpBuf.clear();
-      int size = value.length() + 1;
+      int size = bytesvalue.length + 1;
       if (size >= tmpBuf.capacity()) {
         tmpBuf = ByteBuffer.allocate(countNewSize(tmpBuf.capacity(), size));
       }
       tmpBuf.put(toBytes(index)[3]);
-      tmpBuf.put(StringUtils.toUtf8(value), 0, value.length());
+      tmpBuf.put(bytesvalue, 0, bytesvalue.length);
 
       outputKey.set(tmpBuf.array(), 0, tmpBuf.position());
       sortableKey.init(outputKey);
