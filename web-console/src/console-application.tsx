@@ -25,7 +25,6 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { UrlBaser } from './singletons/url-baser';
 import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import {
@@ -45,9 +44,6 @@ type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
-  baseURL?: string;
-  customHeaderName?: string;
-  customHeaderValue?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -124,14 +120,6 @@ export class ConsoleApplication extends React.PureComponent<
       noSqlMode: false,
       capabilitiesLoading: true,
     };
-
-    if (props.baseURL) {
-      axios.defaults.baseURL = props.baseURL;
-      UrlBaser.baseURL = props.baseURL;
-    }
-    if (props.customHeaderName && props.customHeaderValue) {
-      axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
-    }
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {

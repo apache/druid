@@ -2669,6 +2669,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           <Button
             text="Submit"
+            rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
             onClick={async () => {
               if (['index', 'index_parallel'].includes(deepGet(spec, 'type'))) {
