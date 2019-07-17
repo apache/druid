@@ -247,7 +247,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES,
         1,
-        false
+        false,
+        null
     )));
 
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
@@ -255,7 +256,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES,
         0,
-        true
+        true,
+            null
     )));
   }
 
@@ -288,7 +290,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
-        false
+        false,
+            null
     )
     {
       @Override
@@ -308,6 +311,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartFailsFromTimeout()
   {
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
@@ -320,7 +324,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         1,
-        false
+        false,
+        null
     )
     {
       @Override
@@ -328,12 +333,11 @@ public class KafkaLookupExtractorFactoryTest
       {
         // Lock up
         try {
-          Thread.currentThread().join();
+          Thread.sleep(1000);
         }
-        catch (InterruptedException e) {
-          throw new RuntimeException(e);
+        catch (InterruptedException ignore) {
         }
-        throw new RuntimeException("shouldn't make it here");
+        return kafkaConsumer;
       }
     };
     Assert.assertFalse(factory.start());
@@ -387,7 +391,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
-        false
+        false,
+            null
     )
     {
       @Override
@@ -490,7 +495,8 @@ public class KafkaLookupExtractorFactoryTest
         kafkaTopic,
         kafkaProperties,
         connectTimeout,
-        injective
+        injective,
+        null
     );
     final KafkaLookupExtractorFactory otherFactory = mapper.readValue(
         mapper.writeValueAsString(factory),

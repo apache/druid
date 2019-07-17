@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
+import org.apache.druid.query.lookup.namespace.parsers.ObjectMapperFlatDataParser;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -115,7 +116,7 @@ public class NamespaceLookupExtractorFactoryTest
     final UriExtractionNamespace uriExtractionNamespace = new UriExtractionNamespace(
         temporaryFolder.newFolder().toURI(),
         null, null,
-        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
         null

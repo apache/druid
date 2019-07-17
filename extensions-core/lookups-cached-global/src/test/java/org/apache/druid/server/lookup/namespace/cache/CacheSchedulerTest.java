@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
+import org.apache.druid.query.lookup.namespace.parsers.ObjectMapperFlatDataParser;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
@@ -184,7 +185,7 @@ public class CacheSchedulerTest
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+        new ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
@@ -345,7 +346,7 @@ public class CacheSchedulerTest
     return new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+        new ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(period),
