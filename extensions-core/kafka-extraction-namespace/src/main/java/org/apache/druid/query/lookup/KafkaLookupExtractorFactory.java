@@ -34,7 +34,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.kafka.KafkaLookupDataParser;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -48,6 +50,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -65,6 +68,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(KafkaLookupExtractorFactory.class);
+
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
@@ -72,6 +76,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
   private CacheHandler cacheHandler;
+  private Consumer<String, String> consumer;
 
   private volatile ListenableFuture<?> future = null;
 
@@ -87,13 +92,18 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @JsonProperty
   private final boolean injective;
 
+  @JsonProperty
+  private final KafkaLookupDataParser namespaceParseSpec;
+
   @JsonCreator
   public KafkaLookupExtractorFactory(
       @JacksonInject NamespaceExtractionCacheManager cacheManager,
       @JsonProperty("kafkaTopic") final String kafkaTopic,
       @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
       @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
-      @JsonProperty("injective") boolean injective
+      @JsonProperty("injective") boolean injective,
+      @JsonProperty(value = "namespaceParseSpec", required = false)
+              KafkaLookupDataParser namespaceParseSpec
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
@@ -105,7 +115,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
-    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID();
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
+    this.namespaceParseSpec = namespaceParseSpec;
   }
 
   public KafkaLookupExtractorFactory(
@@ -114,7 +125,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       Map<String, String> kafkaProperties
   )
   {
-    this(cacheManager, kafkaTopic, kafkaProperties, 0, false);
+    this(cacheManager, kafkaTopic, kafkaProperties, 0, false, null);
   }
 
   public String getKafkaTopic()
@@ -143,78 +154,77 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     synchronized (started) {
       if (started.get()) {
         LOG.warn("Already started, not starting again");
-        return true;
+        return started.get();
       }
       if (executorService.isShutdown()) {
         LOG.warn("Already shut down, not starting again");
         return false;
       }
-      verifyKafkaProperties();
 
-      final String topic = getKafkaTopic();
-      LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
       cacheHandler = cacheManager.createCache();
       final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
 
+      consumer = getConsumer();
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final ListenableFuture<?> future = executorService.submit(() -> {
-        final Consumer<String, String> consumer = getConsumer();
-        consumer.subscribe(Collections.singletonList(topic));
-        try {
-          while (!executorService.isShutdown()) {
-            try {
-              if (executorService.isShutdown()) {
-                break;
-              }
-              final ConsumerRecords<String, String> records = consumer.poll(1000);
-              startingReads.countDown();
+      final String topic = getKafkaTopic();
+      LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
 
-              for (final ConsumerRecord<String, String> record : records) {
-                final String key = record.key();
-                final String message = record.value();
-                if (key == null || message == null) {
-                  LOG.error("Bad key/message from topic [%s]: [%s]", topic, record);
-                  continue;
-                }
-                doubleEventCount.incrementAndGet();
-                map.put(key, message);
-                doubleEventCount.incrementAndGet();
-                LOG.trace("Placed key[%s] val[%s]", key, message);
-              }
+      final ListenableFuture<?> future = executorService.submit(() -> {
+        consumer.subscribe(Collections.singletonList(getKafkaTopic()));
+
+        while (!executorService.isShutdown()) {
+          try {
+            if (executorService.isShutdown()) {
+              break;
             }
-            catch (Exception e) {
-              LOG.error(e, "Error reading stream for topic [%s]", topic);
+            final ConsumerRecords<String, String> records = consumer.poll(1000);
+            startingReads.countDown();
+
+            for (final ConsumerRecord<String, String> record : records) {
+              final String message = record.value();
+              final String key = record.key();
+
+              Map<String, String> mapData = getParseMap(key, message);
+              if (mapData == null || mapData.isEmpty()) {
+                LOG.error("Bad key/message from topic [%s], msg: [%s]", topic, message);
+                continue;
+              }
+              doubleEventCount.incrementAndGet();
+              map.putAll(mapData);
+              doubleEventCount.incrementAndGet();
+              LOG.trace("Placed map[%s] val[%s]", mapData, message);
             }
           }
-        }
-        finally {
-          consumer.close();
+          catch (Exception e) {
+            LOG.error(e, "Error reading stream for topic [%s]", topic);
+          }
         }
       });
-      Futures.addCallback(
-          future,
-          new FutureCallback<Object>()
-          {
-            @Override
-            public void onSuccess(Object result)
-            {
-              LOG.debug("Success listening to [%s]", topic);
-            }
 
-            @Override
-            public void onFailure(Throwable t)
+      Futures.addCallback(
+              future,
+            new FutureCallback<Object>()
             {
-              if (t instanceof CancellationException) {
-                LOG.debug("Topic [%s] cancelled", topic);
-              } else {
-                LOG.error(t, "Error in listening to [%s]", topic);
+              @Override
+              public void onSuccess(Object result)
+              {
+                LOG.debug("Success listening to [%s]", topic);
               }
-            }
-          },
-          Execs.directExecutor()
+
+              @Override
+              public void onFailure(Throwable t)
+              {
+                if (t instanceof CancellationException) {
+                  LOG.debug("Topic [%s] cancelled", topic);
+                } else {
+                  LOG.error(t, "Error in listening to [%s]", topic);
+                }
+              }
+            },
+            Execs.directExecutor()
       );
       this.future = future;
       final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -245,6 +255,69 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
+  private Map<String, String> getParseMap(String key, String message)
+  {
+    if (key == null && message == null) {
+      return null;
+    }
+
+    if (namespaceParseSpec == null) {
+      return new HashMap<String, String>()
+      {
+        {
+          put(key, message);
+        }
+      };
+    }
+
+    final Parser<String, String> parser = namespaceParseSpec.getParser();
+    try {
+      return parser.parseToMap(message);
+    }
+    catch (Exception exp) {
+      LOG.error(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
+      return null;
+    }
+  }
+
+  Consumer<String, String> getConsumer()
+  {
+    //Adopted from - https://stackoverflow.com/a/54118010/2586315
+    ClassLoader original = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(null);
+
+    final Properties kafkaProperties = new Properties();
+    kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+
+    kafkaProperties.putAll(getKafkaProperties());
+    if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
+              kafkaProperties.getProperty(ConsumerConfig.GROUP_ID_CONFIG)
+      );
+    }
+    if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+              kafkaProperties.getProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+      );
+    }
+    Preconditions.checkNotNull(
+            kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG),
+            "zookeeper.connect required property"
+    );
+
+    // Enable publish-subscribe
+    kafkaProperties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    kafkaProperties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
+
+    KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(kafkaProperties);
+
+    Thread.currentThread().setContextClassLoader(original);
+    return kafkaConsumer;
+  }
+
   @Override
   public boolean close()
   {
@@ -255,6 +328,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       }
       started.set(false);
       executorService.shutdown();
+
+      if (consumer != null) {
+        consumer.close();
+      }
 
       final ListenableFuture<?> future = this.future;
       if (future != null) {
@@ -352,48 +429,5 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
-  }
-
-  private void verifyKafkaProperties()
-  {
-    if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
-      throw new IAE(
-              "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
-              kafkaProperties.get(ConsumerConfig.GROUP_ID_CONFIG)
-      );
-    }
-    if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
-      throw new IAE(
-              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
-              kafkaProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
-      );
-    }
-    Preconditions.checkNotNull(
-            kafkaProperties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG),
-            "bootstrap.servers required property"
-    );
-  }
-
-  // Overridden in tests
-  Consumer<String, String> getConsumer()
-  {
-    // Workaround for Kafka String Serializer could not be found
-    // Adopted from - https://stackoverflow.com/a/54118010/2586315
-    ClassLoader original = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader(null);
-
-    final Properties properties = new Properties();
-    properties.putAll(kafkaProperties);
-    properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-    properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
-    // Enable publish-subscribe
-    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
-
-    KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(properties);
-
-    Thread.currentThread().setContextClassLoader(original);
-    return kafkaConsumer;
   }
 }

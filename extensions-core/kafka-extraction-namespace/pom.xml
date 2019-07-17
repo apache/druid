@@ -24,7 +24,7 @@
   <groupId>org.apache.druid.extensions</groupId>
   <artifactId>druid-kafka-extraction-namespace</artifactId>
   <name>druid-kafka-extraction-namespace</name>
-  <description>Extension to rename Druid dimension values using Kafka8</description>
+  <description>Extension to rename Druid dimension values using Kafka</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>

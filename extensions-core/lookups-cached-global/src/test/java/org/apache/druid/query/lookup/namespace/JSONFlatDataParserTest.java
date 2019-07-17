@@ -28,6 +28,7 @@ import com.google.common.io.CharSink;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.lookup.namespace.parsers.JSONFlatDataParser;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -90,7 +91,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testSimpleParse() throws Exception
   {
-    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+    final JSONFlatDataParser parser = new JSONFlatDataParser(
         MAPPER,
         "key",
         "val"
@@ -104,7 +105,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testParseWithNullValues() throws Exception
   {
-    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+    final JSONFlatDataParser parser = new JSONFlatDataParser(
         MAPPER,
         "key",
         "otherVal"
@@ -118,7 +119,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testParseWithEmptyValues() throws Exception
   {
-    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+    final JSONFlatDataParser parser = new JSONFlatDataParser(
         MAPPER,
         "key",
         "canBeEmpty"
@@ -132,7 +133,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testFailParseOnKeyMissing() throws Exception
   {
-    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+    final JSONFlatDataParser parser = new JSONFlatDataParser(
         MAPPER,
         "keyWHOOPS",
         "val"
