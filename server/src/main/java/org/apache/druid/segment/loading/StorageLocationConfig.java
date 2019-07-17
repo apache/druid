@@ -46,6 +46,11 @@ public class StorageLocationConfig
     this.maxSize = maxSize == null ? Long.MAX_VALUE : maxSize;
     this.freeSpacePercent = freeSpacePercent;
     Preconditions.checkArgument(this.maxSize > 0, "maxSize[%s] should be positive", this.maxSize);
+    Preconditions.checkArgument(
+        this.freeSpacePercent == null || this.freeSpacePercent >= 0,
+        "freeSpacePercent[%s] should be 0 or a positive double",
+        this.freeSpacePercent
+    );
   }
 
   @JsonProperty

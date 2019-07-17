@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -47,6 +48,9 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
 {
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private IntermediaryDataManager intermediaryDataManager;
 
@@ -63,7 +67,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null))
+        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), 150L, null))
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
@@ -77,10 +81,17 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   }
 
   @Test
-  public void testAddSegment() throws IOException
+  public void testAddSegmentFailure() throws IOException
   {
-    final File segmentFile = generateSegmentFile();
-    final DataSegment segment = newSegment(Intervals.of("2018/2019"), 0);
+    for (int i = 0; i < 15; i++) {
+      File segmentFile = generateSegmentFile();
+      DataSegment segment = newSegment(Intervals.of("2018/2019"), i);
+      intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
+    }
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Can't find location to handle segment");
+    File segmentFile = generateSegmentFile();
+    DataSegment segment = newSegment(Intervals.of("2018/2019"), 16);
     intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
   }
 
@@ -121,6 +132,22 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
     for (int partitionId = 0; partitionId < 5; partitionId++) {
       Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, partitionId).isEmpty());
     }
+  }
+
+  @Test
+  public void testAddRemoveAdd() throws IOException
+  {
+    final String supervisorTaskId = "supervisorTaskId";
+    final Interval interval = Intervals.of("2018/2019");
+    for (int i = 0; i < 15; i++) {
+      File segmentFile = generateSegmentFile();
+      DataSegment segment = newSegment(interval, i);
+      intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
+    }
+    intermediaryDataManager.deletePartitions(supervisorTaskId);
+    File segmentFile = generateSegmentFile();
+    DataSegment segment = newSegment(interval, 16);
+    intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
   }
 
   private File generateSegmentFile() throws IOException

@@ -26,7 +26,7 @@ import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.http.security.TaskShuffleResourceFilter;
+import org.apache.druid.server.http.security.StateResourceFilter;
 import org.joda.time.Interval;
 
 import javax.ws.rs.DELETE;
@@ -44,8 +44,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * HTTP endpoints for shuffle system. The MiddleManager and Indexer use this resource to serve intermediary shuffle
+ * data.
+ *
+ * We use {@link StateResourceFilter} here because it performs an admin-like authorization and
+ * all endpoints here are supposed to be used for only internal communcation.
+ * Another possible alternate could be performing datasource-level authorization as in TaskResourceFilter.
+ * However, datasource information is not available in middleManagers or indexers yet which makes hard to use it.
+ * We could develop a new ResourceFileter in the future if needed.
+ */
 @Path("/druid/worker/v1/shuffle")
-@ResourceFilters(TaskShuffleResourceFilter.class)
+@ResourceFilters(StateResourceFilter.class)
 public class ShuffleResource
 {
   private static final Logger log = new Logger(ShuffleResource.class);
@@ -63,7 +73,6 @@ public class ShuffleResource
   @Produces(MediaType.APPLICATION_OCTET_STREAM)
   public Response getPartition(
       @PathParam("supervisorTaskId") String supervisorTaskId,
-      @QueryParam("dataSource") String dataSource, // dataSource is used in TaskShuffleResourceFilter for authorization
       @QueryParam("startTime") String startTime,
       @QueryParam("endTime") String endTime,
       @QueryParam("partitionId") int partitionId
@@ -99,10 +108,7 @@ public class ShuffleResource
 
   @DELETE
   @Path("/task/{supervisorTaskId}")
-  public Response deletePartitions(
-      @PathParam("supervisorTaskId") String supervisorTaskId,
-      @QueryParam("dataSource") String dataSource // dataSource is used in TaskShuffleResourceFilter for authorization
-  )
+  public Response deletePartitions(@PathParam("supervisorTaskId") String supervisorTaskId)
   {
     try {
       intermediaryDataManager.deletePartitions(supervisorTaskId);

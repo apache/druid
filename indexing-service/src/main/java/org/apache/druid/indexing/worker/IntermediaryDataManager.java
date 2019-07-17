@@ -23,6 +23,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
 import org.apache.druid.guice.ManageLifecycle;
@@ -30,7 +31,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -121,17 +122,27 @@ public class IntermediaryDataManager
     // Discover partitions for new supervisorTasks
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
-          for (StorageLocation location : shuffleDataLocations) {
-            final File[] dirsPerSupervisorTask = location.getPath().listFiles();
-            if (dirsPerSupervisorTask != null) {
-              for (File supervisorTaskDir : dirsPerSupervisorTask) {
-                final String supervisorTaskId = supervisorTaskDir.getName();
-                supervisorTaskCheckTimes.computeIfAbsent(
-                    supervisorTaskId,
-                    k -> DateTimes.nowUtc().plus(intermediaryPartitionTimeout)
-                );
+          try {
+            for (StorageLocation location : shuffleDataLocations) {
+              final MutableInt numDiscovered = new MutableInt(0);
+              final File[] dirsPerSupervisorTask = location.getPath().listFiles();
+              if (dirsPerSupervisorTask != null) {
+                for (File supervisorTaskDir : dirsPerSupervisorTask) {
+                  final String supervisorTaskId = supervisorTaskDir.getName();
+                  supervisorTaskCheckTimes.computeIfAbsent(
+                      supervisorTaskId,
+                      k -> {
+                        numDiscovered.increment();
+                        return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
+                      }
+                  );
+                }
               }
+              log.info("Discovered partitions for [%s] new supervisor tasks", numDiscovered.getValue());
             }
+          }
+          catch (Exception e) {
+            log.warn(e, "Error while discovering supervisorTasks");
           }
         },
         intermediaryPartitionDiscoveryPeriodSec,
@@ -144,37 +155,35 @@ public class IntermediaryDataManager
     // the self-cleanup for when middleManager misses the cleanup request from the overlord.
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
-          final DateTime now = DateTimes.nowUtc();
-          final Set<String> expiredSupervisorTasks = new HashSet<>();
-          for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
-            final String supervisorTaskId = entry.getKey();
-            final DateTime checkTime = entry.getValue();
-            if (checkTime.isAfter(now)) {
-              expiredSupervisorTasks.add(supervisorTaskId);
-            }
-          }
-
-          final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
-          RuntimeException exception = null;
-          for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
-            final String supervisorTaskId = entry.getKey();
-            final TaskStatus status = entry.getValue();
-            if (status.getStatusCode().isComplete()) {
-              try {
-                deletePartitions(supervisorTaskId);
+          try {
+            final DateTime now = DateTimes.nowUtc();
+            final Set<String> expiredSupervisorTasks = new HashSet<>();
+            for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
+              final String supervisorTaskId = entry.getKey();
+              final DateTime checkTime = entry.getValue();
+              if (checkTime.isAfter(now)) {
+                expiredSupervisorTasks.add(supervisorTaskId);
               }
-              catch (IOException e) {
-                if (exception == null) {
-                  exception = new RE(e, "Error while deleting partitions for task[%s]", supervisorTaskId);
-                } else {
-                  exception.addSuppressed(e);
+            }
+
+            log.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
+
+            final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
+            for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
+              final String supervisorTaskId = entry.getKey();
+              final TaskStatus status = entry.getValue();
+              if (status.getStatusCode().isComplete()) {
+                try {
+                  deletePartitions(supervisorTaskId);
+                }
+                catch (IOException e) {
+                  log.warn(e, "Failed to delete partitions for task[%s]", supervisorTaskId);
                 }
               }
             }
           }
-
-          if (exception != null) {
-            log.warn(exception, "Failed to delete some partitions");
+          catch (Exception e) {
+            log.warn(e, "Error while cleaning up partitions for expired supervisors");
           }
         },
         intermediaryPartitionCleanupPeriodSec,
@@ -189,7 +198,6 @@ public class IntermediaryDataManager
     if (supervisorTaskChecker != null) {
       supervisorTaskChecker.shutdownNow();
       supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
-      supervisorTaskChecker = null;
     }
     supervisorTaskCheckTimes.clear();
   }
@@ -198,8 +206,8 @@ public class IntermediaryDataManager
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
    *
-   * This method is only useful for the new Indexer model. Tasks running in the existing middleManager should use
-   * another method, e.g., LocalDataSegmentPusher, instead of this.
+   * This method is only useful for the new Indexer model. Tasks running in the existing middleManager should the static
+   * addSegment method.
    */
   public void addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentFile)
       throws IOException
@@ -208,13 +216,22 @@ public class IntermediaryDataManager
         supervisorTaskId,
         k -> Iterators.cycle(shuffleDataLocations)
     );
+    addSegment(iterator, shuffleDataLocations.size(), supervisorTaskId, subTaskId, segment, segmentFile);
+  }
 
-    StorageLocation location = iterator.next();
-    while (!location.canHandle(segment)) {
-      location = iterator.next();
-    }
-    location.addSegment(segment);
-
+  /**
+   * Iterate through the given storage locations to find one which can handle the given segment.
+   */
+  public static void addSegment(
+      Iterator<StorageLocation> cyclicIterator,
+      int numLocations,
+      String supervisorTaskId,
+      String subTaskId,
+      DataSegment segment,
+      File segmentFile
+  ) throws IOException
+  {
+    final StorageLocation location = findLocationForSegment(cyclicIterator, numLocations, segment);
     final File destFile = new File(
         getPartitionDir(location, supervisorTaskId, segment.getInterval(), segment.getShardSpec().getPartitionNum()),
         subTaskId
@@ -228,6 +245,22 @@ public class IntermediaryDataManager
           destFile.getAbsolutePath()
       );
     }
+    location.addFile(destFile);
+  }
+
+  private static StorageLocation findLocationForSegment(
+      Iterator<StorageLocation> cyclicIterator,
+      int numLocations,
+      DataSegment segment
+  )
+  {
+    for (int i = 0; i < numLocations; i++) {
+      final StorageLocation location = cyclicIterator.next();
+      if (location.canHandle(segment)) {
+        return location;
+      }
+    }
+    throw new ISE("Can't find location to handle segment[%s]", segment);
   }
 
   public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
@@ -250,6 +283,9 @@ public class IntermediaryDataManager
       final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
       if (supervisorTaskPath.exists()) {
         log.info("Cleaning up [%s]", supervisorTaskPath);
+        for (File eachFile : FileUtils.listFiles(supervisorTaskPath, null, true)) {
+          location.removeFile(eachFile);
+        }
         FileUtils.forceDelete(supervisorTaskPath);
       }
     }

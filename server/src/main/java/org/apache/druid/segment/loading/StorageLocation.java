@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
@@ -36,7 +37,7 @@ public class StorageLocation
   private final File path;
   private final long maxSize;
   private final long freeSpaceToKeep;
-  private final Set<DataSegment> segments;
+  private final Set<File> files = new HashSet<>();
 
   private volatile long currSize = 0;
 
@@ -57,8 +58,6 @@ public class StorageLocation
     } else {
       this.freeSpaceToKeep = 0;
     }
-
-    this.segments = new HashSet<>();
   }
 
   public File getPath()
@@ -71,16 +70,46 @@ public class StorageLocation
     return maxSize;
   }
 
-  public synchronized void addSegment(DataSegment segment)
+  /**
+   * Add a new file to this location. If the given file is a directory, sum of all files under the directory is added
+   * to currSize.
+   */
+  public synchronized void addFile(File file)
   {
-    if (segments.add(segment)) {
+    if (files.add(file)) {
+      currSize += FileUtils.sizeOf(file);
+    }
+  }
+
+  /**
+   * Add a new segment file to this location. The segment size is added to currSize instead of the actual length of
+   * the given segmentFile.
+   */
+  public synchronized void addSegment(File segmentFile, DataSegment segment)
+  {
+    if (files.add(segmentFile)) {
       currSize += segment.getSize();
     }
   }
 
-  public synchronized void removeSegment(DataSegment segment)
+  /**
+   * Remove a segment file from this location. If the given file is a directory, sum of all files under the directory
+   * is subtracted from currSize.
+   */
+  public synchronized void removeFile(File file)
   {
-    if (segments.remove(segment)) {
+    if (files.remove(file)) {
+      currSize -= FileUtils.sizeOf(file);
+    }
+  }
+
+  /**
+   * Remove a segment file from this location. The segment size is subtracted from currSize instead of the actual
+   * length of the given segmentFile.
+   */
+  public synchronized void removeSegment(File segmentFile, DataSegment segment)
+  {
+    if (files.remove(segmentFile)) {
       currSize -= segment.getSize();
     }
   }
