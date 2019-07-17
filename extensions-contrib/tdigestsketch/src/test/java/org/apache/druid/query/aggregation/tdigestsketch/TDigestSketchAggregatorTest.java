@@ -73,23 +73,7 @@ public class TDigestSketchAggregatorTest
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
-    TDigestBuildSketchAggregatorFactory factory = new TDigestBuildSketchAggregatorFactory("name", "filedName", 128);
-
-    AggregatorFactory other = objectMapper.readValue(
-        objectMapper.writeValueAsString(factory),
-        AggregatorFactory.class
-    );
-
-    Assert.assertEquals(factory, other);
-  }
-
-  // this is to test Json properties and equals for the combining factory
-  @Test
-  public void serializeDeserializeCombiningFactoryWithFieldName() throws Exception
-  {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
-    TDigestMergeSketchAggregatorFactory factory = new TDigestMergeSketchAggregatorFactory("name", "fieldName", 128);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "filedName", 128);
 
     AggregatorFactory other = objectMapper.readValue(
         objectMapper.writeValueAsString(factory),
@@ -132,7 +116,7 @@ public class TDigestSketchAggregatorTest
             "  \"granularity\": \"ALL\",",
             "  \"dimensions\": [],",
             "  \"aggregations\": [",
-            "    {\"type\": \"mergeTDigestSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
+            "    {\"type\": \"buildTDigestSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
             + "\"compression\": "
             + "200}",
             "  ],",
@@ -237,7 +221,7 @@ public class TDigestSketchAggregatorTest
         String.join(
             "\n",
             "[",
-            "  {\"type\": \"mergeTDigestSketch\", \"name\": \"first_level_merge_sketch\", \"fieldName\": \"sketch\", "
+            "  {\"type\": \"buildTDigestSketch\", \"name\": \"first_level_merge_sketch\", \"fieldName\": \"sketch\", "
             + "\"compression\": "
             + "200}",
             "]"
@@ -253,7 +237,7 @@ public class TDigestSketchAggregatorTest
             "  \"granularity\": \"ALL\",",
             "  \"dimensions\": [],",
             "  \"aggregations\": [",
-            "    {\"type\": \"mergeTDigestSketch\", \"name\": \"second_level_merge_sketch\", \"fieldName\": "
+            "    {\"type\": \"buildTDigestSketch\", \"name\": \"second_level_merge_sketch\", \"fieldName\": "
             + "\"first_level_merge_sketch\", \"compression\": "
             + "200}",
             "  ],",

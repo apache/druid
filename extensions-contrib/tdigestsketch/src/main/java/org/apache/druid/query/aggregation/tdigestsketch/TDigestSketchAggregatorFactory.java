@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -30,9 +31,6 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -55,7 +53,8 @@ import java.util.Objects;
  * when we have to merge intermediate aggregations which Druid needs to do as
  * part of query processing.
  */
-public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
+@JsonTypeName(TDigestSketchAggregatorFactory.TYPE_NAME)
+public class TDigestSketchAggregatorFactory extends AggregatorFactory
 {
 
   // Default compression
@@ -74,7 +73,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   public static final String TYPE_NAME = "buildTDigestSketch";
 
   @JsonCreator
-  public TDigestBuildSketchAggregatorFactory(
+  public TDigestSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
       @Nullable @JsonProperty("compression") final Integer compression
@@ -83,7 +82,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
     this(name, fieldName, compression, AggregatorUtil.TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID);
   }
 
-  TDigestBuildSketchAggregatorFactory(
+  TDigestSketchAggregatorFactory(
       final String name,
       final String fieldName,
       @Nullable final Integer compression,
@@ -109,27 +108,13 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || ValueType.isNumeric(cap.getType())) {
-      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new TDigestBuildSketchAggregator(selector, compression);
-    } else {
-      final ColumnValueSelector<MergingDigest> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new TDigestMergeSketchAggregator(selector, compression);
-    }
+    return new TDigestSketchAggregator(metricFactory.makeColumnValueSelector(fieldName), compression);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
-    if (cap == null || ValueType.isNumeric(cap.getType())) {
-      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new TDigestBuildSketchBufferAggregator(selector, compression);
-    } else {
-      final ColumnValueSelector<MergingDigest> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new TDigestMergeSketchBufferAggregator(selector, compression);
-    }
+    return new TDigestSketchBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), compression);
   }
 
   public static final Comparator<TDigest> COMPARATOR = Comparator.nullsFirst(
@@ -159,7 +144,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new TDigestMergeSketchAggregatorFactory(name, name, compression);
+    return new TDigestSketchAggregatorFactory(name, name, compression);
   }
 
   @Override
@@ -176,7 +161,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new TDigestBuildSketchAggregatorFactory(
+        new TDigestSketchAggregatorFactory(
             fieldName,
             fieldName,
             compression
@@ -243,7 +228,7 @@ public class TDigestBuildSketchAggregatorFactory extends AggregatorFactory
     if (o == null || !getClass().equals(o.getClass())) {
       return false;
     }
-    final TDigestBuildSketchAggregatorFactory that = (TDigestBuildSketchAggregatorFactory) o;
+    final TDigestSketchAggregatorFactory that = (TDigestSketchAggregatorFactory) o;
 
     return Objects.equals(name, that.name) &&
            Objects.equals(fieldName, that.fieldName) &&

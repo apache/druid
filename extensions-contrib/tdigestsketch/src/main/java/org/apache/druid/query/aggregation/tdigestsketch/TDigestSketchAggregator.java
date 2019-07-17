@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
  * One can use this aggregator to build these sketches during query time too, just
  * that it will be slower and more resource intensive.
  */
-public class TDigestBuildSketchAggregator implements Aggregator
+public class TDigestSketchAggregator implements Aggregator
 {
 
   private final ColumnValueSelector selector;
@@ -45,13 +45,13 @@ public class TDigestBuildSketchAggregator implements Aggregator
   private MergingDigest histogram;
 
 
-  public TDigestBuildSketchAggregator(ColumnValueSelector selector, @Nullable Integer compression)
+  public TDigestSketchAggregator(ColumnValueSelector selector, @Nullable Integer compression)
   {
     this.selector = selector;
     if (compression != null) {
       this.histogram = new MergingDigest(compression);
     } else {
-      this.histogram = new MergingDigest(TDigestBuildSketchAggregatorFactory.DEFAULT_COMPRESSION);
+      this.histogram = new MergingDigest(TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION);
     }
   }
 
@@ -61,6 +61,10 @@ public class TDigestBuildSketchAggregator implements Aggregator
     if (selector.getObject() instanceof Number) {
       synchronized (this) {
         histogram.add(((Number) selector.getObject()).doubleValue());
+      }
+    } else if (selector.getObject() instanceof MergingDigest) {
+      synchronized (this) {
+        histogram.add((MergingDigest) selector.getObject());
       }
     } else {
       TDigestSketchUtils.throwExceptionForWrongType(selector);
