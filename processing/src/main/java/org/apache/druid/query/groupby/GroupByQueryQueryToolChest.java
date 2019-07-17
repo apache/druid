@@ -30,9 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -67,12 +65,14 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -131,15 +131,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public CombiningFunction<Row> createMergeFn(Query<Row> query)
+  public BinaryOperator<Row> createMergeFn(Query<Row> query)
   {
     return strategySelector.strategize((GroupByQuery) query).createMergeFn(query);
   }
 
   @Override
-  public Ordering<Row> createOrderingFn(Query<Row> query)
+  public Comparator<Row> createComparator(Query<Row> query)
   {
-    return strategySelector.strategize((GroupByQuery) query).createOrderingFn(query);
+    return strategySelector.strategize((GroupByQuery) query).createComparator(query);
   }
 
   private Sequence<Row> initAndMergeGroupByResults(

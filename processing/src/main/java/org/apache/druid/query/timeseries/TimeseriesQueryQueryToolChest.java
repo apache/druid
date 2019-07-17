@@ -27,9 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -54,10 +52,12 @@ import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -100,7 +100,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
         queryRunner,
-        this::createOrderingFn,
+        this::createComparator,
         this::createMergeFn
     )
     {
@@ -195,23 +195,18 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public CombiningFunction<Result<TimeseriesResultValue>> createMergeFn(
+  public BinaryOperator<Result<TimeseriesResultValue>> createMergeFn(
       Query<Result<TimeseriesResultValue>> query
   )
   {
     TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
-    return new TimeseriesBinaryFn(
-        timeseriesQuery.getGranularity(),
-        timeseriesQuery.getAggregatorSpecs()
-    );
+    return new TimeseriesBinaryFn(timeseriesQuery.getGranularity(), timeseriesQuery.getAggregatorSpecs());
   }
 
   @Override
-  public Ordering<Result<TimeseriesResultValue>> createOrderingFn(Query<Result<TimeseriesResultValue>> query)
+  public Comparator<Result<TimeseriesResultValue>> createComparator(Query<Result<TimeseriesResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(
-        query.getGranularity(), query.isDescending()
-    );
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)

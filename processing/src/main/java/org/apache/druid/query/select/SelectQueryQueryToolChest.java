@@ -26,9 +26,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -52,12 +50,14 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -99,25 +99,18 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public CombiningFunction<Result<SelectResultValue>> createMergeFn(
+  public BinaryOperator<Result<SelectResultValue>> createMergeFn(
       Query<Result<SelectResultValue>> query
   )
   {
     final SelectQuery selectQuery = (SelectQuery) query;
-    return new SelectBinaryFn(
-        selectQuery.getGranularity(),
-        selectQuery.getPagingSpec(),
-        selectQuery.isDescending()
-    );
+    return new SelectBinaryFn(selectQuery.getGranularity(), selectQuery.getPagingSpec(), selectQuery.isDescending());
   }
 
   @Override
-  public Ordering<Result<SelectResultValue>> createOrderingFn(Query<Result<SelectResultValue>> query)
+  public Comparator<Result<SelectResultValue>> createComparator(Query<Result<SelectResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(
-        query.getGranularity(),
-        query.isDescending()
-    );
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override

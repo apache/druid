@@ -55,7 +55,7 @@ import java.util.List;
 
 public class TopNMetricSpecOptimizationsTest
 {
-  private static final List<AggregatorFactory> aggs = Lists.newArrayList(
+  private static final List<AggregatorFactory> AGGS = Lists.newArrayList(
       Iterables.concat(
           QueryRunnerTestHelper.commonDoubleAggregators,
           Lists.newArrayList(
@@ -78,7 +78,7 @@ public class TopNMetricSpecOptimizationsTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(aggs)
+        .aggregators(AGGS)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
@@ -112,7 +112,7 @@ public class TopNMetricSpecOptimizationsTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
-        .aggregators(aggs)
+        .aggregators(AGGS)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
@@ -147,7 +147,7 @@ public class TopNMetricSpecOptimizationsTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
-        .aggregators(aggs)
+        .aggregators(AGGS)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
@@ -183,7 +183,7 @@ public class TopNMetricSpecOptimizationsTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(aggs)
+        .aggregators(AGGS)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
@@ -217,7 +217,7 @@ public class TopNMetricSpecOptimizationsTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(aggs)
+        .aggregators(AGGS)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 

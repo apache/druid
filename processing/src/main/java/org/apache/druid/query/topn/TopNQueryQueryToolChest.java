@@ -25,9 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -52,9 +50,11 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -108,7 +108,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public CombiningFunction<Result<TopNResultValue>> createMergeFn(
+  public BinaryOperator<Result<TopNResultValue>> createMergeFn(
       Query<Result<TopNResultValue>> query
   )
   {
@@ -124,11 +124,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public Ordering<Result<TopNResultValue>> createOrderingFn(Query<Result<TopNResultValue>> query)
+  public Comparator<Result<TopNResultValue>> createComparator(Query<Result<TopNResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(
-        ((TopNQuery) query).getGranularity(), query.isDescending()
-    );
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override

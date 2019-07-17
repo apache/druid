@@ -26,10 +26,8 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -51,9 +49,11 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -94,7 +94,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public CombiningFunction<Result<SearchResultValue>> createMergeFn(
+  public BinaryOperator<Result<SearchResultValue>> createMergeFn(
       Query<Result<SearchResultValue>> query
   )
   {
@@ -103,12 +103,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public Ordering<Result<SearchResultValue>> createOrderingFn(Query<Result<SearchResultValue>> query)
+  public Comparator<Result<SearchResultValue>> createComparator(Query<Result<SearchResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(
-        query.getGranularity(),
-        query.isDescending()
-    );
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override

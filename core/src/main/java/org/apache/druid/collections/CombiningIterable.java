@@ -19,14 +19,16 @@
 
 package org.apache.druid.collections;
 
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class CombiningIterable<InType> implements Iterable<InType>
+public class CombiningIterable<T> implements Iterable<T>
 {
   /**
    * Creates a CombiningIterable around a MergeIterable such that equivalent elements are thrown away
@@ -37,45 +39,40 @@ public class CombiningIterable<InType> implements Iterable<InType>
    *
    * @param in An Iterable of Iterables to be merged
    * @param comparator the Comparator to determine sort and equality
-   * @param <InType> Type of object
+   * @param <T> Type of object
    * @return An Iterable that is the merge of all Iterables from in such that there is only one instance of
    * equivalent objects.
    */
   @SuppressWarnings("unchecked")
-  public static <InType> CombiningIterable<InType> createSplatted(
-      Iterable<? extends Iterable<InType>> in,
-      Comparator<InType> comparator
+  public static <T> CombiningIterable<T> createSplatted(
+      Iterable<? extends Iterable<T>> in,
+      Comparator<T> comparator
   )
   {
     return create(
-        new MergeIterable<InType>(comparator, (Iterable<Iterable<InType>>) in),
+        new MergeIterable<>(comparator, (Iterable<Iterable<T>>) in),
         comparator,
-        (arg1, arg2) -> {
-          if (arg1 == null) {
-            return arg2;
-          }
-          return arg1;
-        }
+        GuavaUtils::firstNonNull
     );
   }
 
-  public static <InType> CombiningIterable<InType> create(
-      Iterable<InType> it,
-      Comparator<InType> comparator,
-      CombiningFunction<InType> fn
+  public static <T> CombiningIterable<T> create(
+      Iterable<T> it,
+      Comparator<T> comparator,
+      BinaryOperator<T> fn
   )
   {
     return new CombiningIterable<>(it, comparator, fn);
   }
 
-  private final Iterable<InType> it;
-  private final Comparator<InType> comparator;
-  private final CombiningFunction<InType> fn;
+  private final Iterable<T> it;
+  private final Comparator<T> comparator;
+  private final BinaryOperator<T> fn;
 
   public CombiningIterable(
-      Iterable<InType> it,
-      Comparator<InType> comparator,
-      CombiningFunction<InType> fn
+      Iterable<T> it,
+      Comparator<T> comparator,
+      BinaryOperator<T> fn
   )
   {
     this.it = it;
@@ -84,7 +81,7 @@ public class CombiningIterable<InType> implements Iterable<InType>
   }
 
   @Override
-  public Iterator<InType> iterator()
+  public Iterator<T> iterator()
   {
     return CombiningIterator.create(it.iterator(), comparator, fn);
   }

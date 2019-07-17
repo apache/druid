@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.topn;
 
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Result;
@@ -33,10 +32,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class TopNBinaryFn implements CombiningFunction<Result<TopNResultValue>>
+public class TopNBinaryFn implements BinaryOperator<Result<TopNResultValue>>
 {
   private final DimensionSpec dimSpec;
   private final Granularity gran;

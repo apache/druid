@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -37,17 +38,17 @@ public class CombiningIterableTest
   public void testMerge()
   {
     List<Result<Object>> resultsBefore = Arrays.asList(
-        new Result<Object>(DateTimes.of("2011-01-01"), 1L),
-        new Result<Object>(DateTimes.of("2011-01-01"), 2L)
+        new Result<>(DateTimes.of("2011-01-01"), 1L),
+        new Result<>(DateTimes.of("2011-01-01"), 2L)
     );
 
     Iterable<Result<Object>> expectedResults = Collections.singletonList(
-        new Result<Object>(DateTimes.of("2011-01-01"), 3L)
+        new Result<>(DateTimes.of("2011-01-01"), 3L)
     );
 
     Iterable<Result<Object>> resultsAfter = CombiningIterable.create(
         resultsBefore,
-        (r1, r2) -> r1.getTimestamp().compareTo(r2.getTimestamp()),
+        Comparator.comparing(Result::getTimestamp),
         (arg1, arg2) -> {
           if (arg1 == null) {
             return arg2;

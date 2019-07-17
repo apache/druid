@@ -25,28 +25,29 @@ import com.google.common.collect.PeekingIterator;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class CombiningIterator<InType> implements Iterator<InType>
+public class CombiningIterator<T> implements Iterator<T>
 {
-  public static <InType> CombiningIterator<InType> create(
-      Iterator<InType> it,
-      Comparator<InType> comparator,
-      CombiningFunction<InType> fn
+  public static <T> CombiningIterator<T> create(
+      Iterator<T> it,
+      Comparator<T> comparator,
+      BinaryOperator<T> fn
   )
   {
-    return new CombiningIterator<InType>(it, comparator, fn);
+    return new CombiningIterator<>(it, comparator, fn);
   }
 
-  private final PeekingIterator<InType> it;
-  private final Comparator<InType> comparator;
-  private final CombiningFunction<InType> fn;
+  private final PeekingIterator<T> it;
+  private final Comparator<T> comparator;
+  private final BinaryOperator<T> fn;
 
   public CombiningIterator(
-      Iterator<InType> it,
-      Comparator<InType> comparator,
-      CombiningFunction<InType> fn
+      Iterator<T> it,
+      Comparator<T> comparator,
+      BinaryOperator<T> fn
   )
   {
     this.it = Iterators.peekingIterator(it);
@@ -61,13 +62,13 @@ public class CombiningIterator<InType> implements Iterator<InType>
   }
 
   @Override
-  public InType next()
+  public T next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    InType res = null;
+    T res = null;
 
     while (hasNext()) {
       if (res == null) {

@@ -19,13 +19,13 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.Ordering;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 
+import java.util.Comparator;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
 /**
@@ -33,17 +33,17 @@ import java.util.function.Function;
 @PublicApi
 public class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
 {
-  private final Function<Query<T>, Ordering<T>> orderingFnGenerator;
-  private final Function<Query<T>, CombiningFunction<T>> mergeFnGenerator;
+  private final Function<Query<T>, Comparator<T>> comparatorGenerator;
+  private final Function<Query<T>, BinaryOperator<T>> mergeFnGenerator;
 
   public ResultMergeQueryRunner(
       QueryRunner<T> baseRunner,
-      Function<Query<T>, Ordering<T>> orderingFnGenerator,
-      Function<Query<T>, CombiningFunction<T>> mergeFnGenerator
+      Function<Query<T>, Comparator<T>> comparatorGenerator,
+      Function<Query<T>, BinaryOperator<T>> mergeFnGenerator
   )
   {
     super(baseRunner);
-    this.orderingFnGenerator = orderingFnGenerator;
+    this.comparatorGenerator = comparatorGenerator;
     this.mergeFnGenerator = mergeFnGenerator;
   }
 
@@ -53,7 +53,7 @@ public class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
     Query<T> query = queryPlus.getQuery();
     return CombiningSequence.create(
         baseRunner.run(queryPlus, context),
-        orderingFnGenerator.apply(query),
+        comparatorGenerator.apply(query),
         mergeFnGenerator.apply(query));
   }
 }

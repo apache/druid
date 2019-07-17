@@ -23,15 +23,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
-import com.google.common.collect.Ordering;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.
@@ -82,7 +82,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *
    * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
    * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
-   * {@link QueryToolChest#createOrderingFn(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
+   * {@link QueryToolChest#createComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
    * toolchest.
    *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
@@ -91,7 +91,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
   {
-    return new ResultMergeQueryRunner<>(runner, this::createOrderingFn, this::createMergeFn);
+    return new ResultMergeQueryRunner<>(runner, this::createComparator, this::createMergeFn);
   }
 
   /**
@@ -99,16 +99,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * function is used in the default {@link ResultMergeQueryRunner} provided by
    * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
    */
-  public CombiningFunction<ResultType> createMergeFn(Query<ResultType> query)
+  public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
   {
     throw new UOE("%s doesn't support merge function", query.getClass().getName());
   }
 
   /**
-   * Creates an ordering comparator that is used to order results. This ordering function is used in the defaul
+   * Creates an ordering comparator that is used to order results. This comparator is used in the defaul
    * {@link ResultMergeQueryRunner} provided by {@link QueryToolChest#mergeResults(QueryRunner)}
    */
-  public Ordering<ResultType> createOrderingFn(Query<ResultType> query)
+  public Comparator<ResultType> createComparator(Query<ResultType> query)
   {
     throw new UOE("%s doesn't support ordering function", query.getClass().getName());
   }

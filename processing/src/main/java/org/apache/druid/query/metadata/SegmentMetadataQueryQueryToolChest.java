@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -67,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -137,7 +137,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
-      private CombiningFunction<SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
+      private BinaryOperator<SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
         return (arg1, arg2) -> mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
       }

@@ -139,6 +139,11 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 30)
 public class CachingClusteredClientBenchmark
 {
+  private static final Logger LOG = new Logger(CachingClusteredClientBenchmark.class);
+  private static final int PROCESSING_BUFFER_SIZE = 10 * 1024 * 1024; // ~10MB
+  private static final String DATA_SOURCE = "ds";
+
+  public static final ObjectMapper JSON_MAPPER;
   @Param({"8"})
   private int numServers;
 
@@ -150,10 +155,6 @@ public class CachingClusteredClientBenchmark
 
   @Param({"all"})
   private String queryGranularity;
-
-  private static final Logger log = new Logger(CachingClusteredClientBenchmark.class);
-  private static final String DATA_SOURCE = "ds";
-  public static final ObjectMapper JSON_MAPPER;
 
   private QueryToolChestWarehouse toolChestWarehouse;
   private QueryRunnerFactoryConglomerate conglomerate;
@@ -197,7 +198,7 @@ public class CachingClusteredClientBenchmark
                                                  .shardSpec(new LinearShardSpec(i))
                                                  .build();
       final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-      log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
+      LOG.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
       final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
       queryableIndexes.put(dataSegment, index);
     }
@@ -213,15 +214,13 @@ public class CachingClusteredClientBenchmark
       @Override
       public int intermediateComputeSizeBytes()
       {
-        return 10 * 1024 * 1024;
+        return PROCESSING_BUFFER_SIZE;
       }
 
       @Override
       public int getNumMergeBuffers()
       {
-        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-        // Two buffers for the broker and one for the queryable
-        return 3;
+        return 1;
       }
 
       @Override
@@ -248,7 +247,7 @@ public class CachingClusteredClientBenchmark
                 new TopNQueryRunnerFactory(
                     new StupidPool<>(
                         "TopNQueryRunnerFactory-bufferPool",
-                        () -> ByteBuffer.allocate(10 * 1024 * 1024)
+                        () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
                     ),
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
@@ -389,7 +388,7 @@ public class CachingClusteredClientBenchmark
         .aggregators(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
         .granularity(Granularity.fromString(queryGranularity))
         .metric("sumLongSequential")
-        .threshold(20480)
+        .threshold(10_000) // we are primarily measuring 'broker' merge time, so collect a significant number of results
         .build();
 
     final List<Result<TopNResultValue>> results = runQuery();
@@ -560,7 +559,7 @@ public class CachingClusteredClientBenchmark
         "server_" + nameSuiffix,
         "127.0.0." + nameSuiffix,
         null,
-        10240L,
+        Long.MAX_VALUE,
         ServerType.HISTORICAL,
         "default",
         0

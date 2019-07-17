@@ -20,7 +20,6 @@
 package org.apache.druid.common.guava;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -32,9 +31,23 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BinaryOperator;
 
 public class ComplexSequenceTest
 {
+  // Integer::sum with more nulls
+  private static final BinaryOperator<Integer> PLUS_NULLABLE = (arg1, arg2) -> {
+    if (arg1 == null) {
+      return arg2;
+    }
+
+    if (arg2 == null) {
+      return arg1;
+    }
+
+    return arg1 + arg2;
+  };
+
   @Test
   public void testComplexSequence()
   {
@@ -80,23 +93,11 @@ public class ComplexSequenceTest
 
   private Sequence<Integer> combine(Sequence<Integer> sequence)
   {
-    return CombiningSequence.create(sequence, Comparators.alwaysEqual(), plus);
+    return CombiningSequence.create(sequence, Comparators.alwaysEqual(), PLUS_NULLABLE);
   }
 
   private Sequence<Integer> concat(Sequence<Integer>... sequences)
   {
     return Sequences.concat(Arrays.asList(sequences));
   }
-
-  private final CombiningFunction<Integer> plus = (arg1, arg2) -> {
-    if (arg1 == null) {
-      return arg2;
-    }
-
-    if (arg2 == null) {
-      return arg1;
-    }
-
-    return arg1 + arg2;
-  };
 }

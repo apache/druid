@@ -28,12 +28,13 @@ import org.junit.Test;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
+import java.util.function.BinaryOperator;
 
 public class CombiningIteratorTest
 {
   private CombiningIterator<String> testingIterator;
   private Comparator<String> comparator;
-  private CombiningFunction<String> combiningFunction;
+  private BinaryOperator<String> combiningFunction;
   private PeekingIterator<String> peekIterator;
 
   @Before
@@ -41,7 +42,7 @@ public class CombiningIteratorTest
   {
     peekIterator = EasyMock.createMock(PeekingIterator.class);
     comparator = EasyMock.createMock(Comparator.class);
-    combiningFunction = EasyMock.createMock(CombiningFunction.class);
+    combiningFunction = EasyMock.createMock(BinaryOperator.class);
     testingIterator = CombiningIterator.create(peekIterator, comparator, combiningFunction);
   }
 

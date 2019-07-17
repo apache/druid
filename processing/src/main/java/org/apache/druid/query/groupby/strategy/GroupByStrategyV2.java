@@ -26,11 +26,9 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.data.input.MapBasedRow;
@@ -76,9 +74,11 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 public class GroupByStrategyV2 implements GroupByStrategy
@@ -214,13 +214,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Ordering<Row> createOrderingFn(Query<Row> queryParam)
+  public Comparator<Row> createComparator(Query<Row> queryParam)
   {
     return ((GroupByQuery) queryParam).getRowOrdering(true);
   }
 
   @Override
-  public CombiningFunction<Row> createMergeFn(Query<Row> queryParam)
+  public BinaryOperator<Row> createMergeFn(Query<Row> queryParam)
   {
     return new GroupByBinaryFnV2((GroupByQuery) queryParam);
   }
@@ -236,7 +236,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // involve materialization)
     final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<>(
         baseRunner,
-        this::createOrderingFn,
+        this::createComparator,
         this::createMergeFn
     );
 

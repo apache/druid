@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.Maps;
-import org.apache.druid.collections.CombiningFunction;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -30,8 +29,9 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.joda.time.DateTime;
 
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
-public class GroupByBinaryFnV2 implements CombiningFunction<Row>
+public class GroupByBinaryFnV2 implements BinaryOperator<Row>
 {
   private final GroupByQuery query;
 

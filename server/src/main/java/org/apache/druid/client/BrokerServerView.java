@@ -108,7 +108,7 @@ public class BrokerServerView implements TimelineServerView
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
 
-    this.segmentFilter = metadataAndSegment -> {
+    this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
       if (segmentWatcherConfig.getWatchedTiers() != null
           && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
         return false;
