@@ -33,11 +33,16 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NoopAggregator;
 import org.apache.druid.query.aggregation.NoopBufferAggregator;
+import org.apache.druid.query.aggregation.NoopVectorAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.cardinality.HyperLogLogCollectorAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -121,6 +126,23 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     }
 
     throw new IAE("Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject);
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
+  {
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (capabilities == null || capabilities.getType() != ValueType.COMPLEX) {
+      return NoopVectorAggregator.instance();
+    } else {
+      return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
+    }
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return true;
   }
 
   @Override

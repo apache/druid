@@ -173,6 +173,7 @@ Return a list of all user names.
 Return the name and role information of the user with name {userName}
 
 Example output:
+
 ```json
 {
   "name": "druid2",
@@ -183,9 +184,11 @@ Example output:
 ```
 
 This API supports the following flags:
+
 - `?full`: The response will also include the full information for each role currently assigned to the user.
 
 Example output:
+
 ```json
 {
   "name": "druid2",
@@ -268,6 +271,7 @@ Return a list of all role names.
 Return name and permissions for the role named {roleName}.
 
 Example output:
+
 ```json
 {
   "name": "druidRole2",
@@ -299,6 +303,7 @@ This API supports the following flags:
 - `?simplifyPermissions`: The permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field. The `users` field will be null when `?full` is not specified.
 
 Example output:
+
 ```json
 {
   "name": "druidRole2",

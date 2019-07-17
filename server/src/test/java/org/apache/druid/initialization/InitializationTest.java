@@ -90,7 +90,7 @@ public class InitializationTest
       @Override
       public String apply(@Nullable DruidModule input)
       {
-        return input.getClass().getCanonicalName();
+        return input.getClass().getName();
       }
     };
 
@@ -107,8 +107,7 @@ public class InitializationTest
 
     Assert.assertTrue(
         "modules contains TestDruidModule",
-        Collections2.transform(modules, fnClassName)
-                    .contains("org.apache.druid.initialization.InitializationTest.TestDruidModule")
+        Collections2.transform(modules, fnClassName).contains(TestDruidModule.class.getName())
     );
   }
 

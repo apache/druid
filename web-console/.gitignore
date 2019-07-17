@@ -2,6 +2,7 @@ node/
 node_modules/
 resources/
 public/
+private/
 lib/*.css
 coverage/
 

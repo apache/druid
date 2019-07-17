@@ -20,7 +20,6 @@
 package org.apache.druid.query.timeseries;
 
 import org.apache.druid.query.Result;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.joda.time.DateTime;
 
 import java.util.HashMap;
@@ -41,15 +40,15 @@ public class TimeseriesResultBuilder
     this.timestamp = timestamp;
   }
 
-  public TimeseriesResultBuilder addMetric(String name, Aggregator aggregator)
+  public TimeseriesResultBuilder addMetric(String name, Object value)
   {
-    metricValues.put(name, aggregator.get());
+    metricValues.put(name, value);
     return this;
   }
 
   public Result<TimeseriesResultValue> build()
   {
-    return new Result<TimeseriesResultValue>(
+    return new Result<>(
         timestamp,
         new TimeseriesResultValue(metricValues)
     );

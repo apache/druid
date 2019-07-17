@@ -21,14 +21,11 @@ const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const ALWAYS_BABEL = false;
+
 const { version } = require('./package.json');
 
-function friendlyErrorFormatter(e, colors) {
-  //const messageColor = error.severity === "warning" ? colors.bold.yellow : colors.bold.red;
-  // return (
-  //   "Does not compute.... " +
-  //   messageColor(Object.keys(error).map(key => `${key}: ${error[key]}`))
-  // );
+function friendlyErrorFormatter(e) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
 
@@ -42,8 +39,11 @@ module.exports = (env) => {
     secure: false
   };
 
+  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  console.log(`Webpack running in ${mode} mode`);
   return {
-    mode: process.env.NODE_ENV || 'development',
+    mode: mode,
+    devtool: 'hidden-source-map',
     entry: {
       'web-console': './src/entry.ts'
     },
@@ -97,6 +97,12 @@ module.exports = (env) => {
           ]
         },
         {
+          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
+          use: {
+            loader: 'babel-loader'
+          }
+        },
+        {
           test: /\.s?css$/,
           use: [
             {loader: 'style-loader'}, // creates style nodes from JS strings
@@ -116,6 +122,9 @@ module.exports = (env) => {
           ]
         }
       ]
+    },
+    performance: {
+      hints: false
     },
     plugins: [
       // new BundleAnalyzerPlugin()

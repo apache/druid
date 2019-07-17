@@ -65,8 +65,8 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     } else {
       throw new IAE(
           "Unknown class type: %s  expected %s",
-          mutableBitmap.getClass().getCanonicalName(),
-          WrappedBitSetBitmap.class.getCanonicalName()
+          mutableBitmap.getClass().getName(),
+          WrappedBitSetBitmap.class.getName()
       );
     }
   }
@@ -79,8 +79,8 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     } else {
       throw new IAE(
           "Unknown class type: %s  expected %s",
-          mutableBitmap.getClass().getCanonicalName(),
-          WrappedBitSetBitmap.class.getCanonicalName()
+          mutableBitmap.getClass().getName(),
+          WrappedBitSetBitmap.class.getName()
       );
     }
   }
@@ -93,8 +93,8 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     } else {
       throw new IAE(
           "Unknown class type: %s  expected %s",
-          mutableBitmap.getClass().getCanonicalName(),
-          WrappedBitSetBitmap.class.getCanonicalName()
+          mutableBitmap.getClass().getName(),
+          WrappedBitSetBitmap.class.getName()
       );
     }
   }

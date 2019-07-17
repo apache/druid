@@ -27,6 +27,7 @@ import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -73,15 +74,17 @@ public class ExpressionAggregationBenchmark
   @Param({"1000000"})
   private int rowsPerSegment;
 
-  private SegmentGenerator segmentGenerator;
   private QueryableIndex index;
   private JavaScriptAggregatorFactory javaScriptAggregatorFactory;
   private DoubleSumAggregatorFactory expressionAggregatorFactory;
   private ByteBuffer aggregationBuffer = ByteBuffer.allocate(Double.BYTES);
+  private Closer closer;
 
   @Setup(Level.Trial)
   public void setup()
   {
+    this.closer = Closer.create();
+
     final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
         ImmutableList.of(
             BenchmarkColumnSchema.makeNormal("x", ValueType.FLOAT, false, 1, 0d, 0d, 10000d, false),
@@ -99,8 +102,10 @@ public class ExpressionAggregationBenchmark
                                                .shardSpec(new LinearShardSpec(0))
                                                .build();
 
-    this.segmentGenerator = new SegmentGenerator();
-    this.index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+    this.index = closer.register(
+        segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment)
+    );
     this.javaScriptAggregatorFactory = new JavaScriptAggregatorFactory(
         "name",
         ImmutableList.of("x", "y"),
@@ -120,15 +125,7 @@ public class ExpressionAggregationBenchmark
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    if (index != null) {
-      index.close();
-      index = null;
-    }
-
-    if (segmentGenerator != null) {
-      segmentGenerator.close();
-      segmentGenerator = null;
-    }
+    closer.close();
   }
 
   @Benchmark
