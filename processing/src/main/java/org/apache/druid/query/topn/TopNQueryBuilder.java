@@ -265,6 +265,12 @@ public class TopNQueryBuilder
     return this;
   }
 
+  public TopNQueryBuilder postAggregators(PostAggregator... postAggs)
+  {
+    postAggregatorSpecs = Arrays.asList(postAggs);
+    return this;
+  }
+
   public TopNQueryBuilder context(Map<String, Object> c)
   {
     context = c;

@@ -23,11 +23,9 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -117,11 +115,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
                                                                 .dimension("bigdim")
                                                                 .metric("count")
                                                                 .threshold(1)
-                                                                .aggregators(
-                                                                    ImmutableList.<AggregatorFactory>of(
-                                                                        new CountAggregatorFactory("count")
-                                                                    )
-                                                                );
+                                                                .aggregators(new CountAggregatorFactory("count"));
 
     Assert.assertEquals(
         Optional.absent(),
@@ -145,11 +139,9 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.aggregators(
-                ImmutableList.of(
-                    new CountAggregatorFactory("count"),
-                    new LongSumAggregatorFactory("longSum", "a"),
-                    new DoubleSumAggregatorFactory("doubleSum", "b")
-                )
+                new CountAggregatorFactory("count"),
+                new LongSumAggregatorFactory("longSum", "a"),
+                new DoubleSumAggregatorFactory("doubleSum", "b")
             ).build()
         )
     );
@@ -161,11 +153,9 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.aggregators(
-                ImmutableList.of(
-                    new CountAggregatorFactory("count"),
-                    new LongSumAggregatorFactory("longSum", "a"),
-                    new DoubleSumAggregatorFactory("doubleSum", "b")
-                )
+                new CountAggregatorFactory("count"),
+                new LongSumAggregatorFactory("longSum", "a"),
+                new DoubleSumAggregatorFactory("doubleSum", "b")
             ).build()
         )
     );

@@ -33,7 +33,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -61,7 +60,7 @@ public class DefaultQueryMetricsTest
         ))
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();

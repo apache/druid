@@ -941,7 +941,7 @@ public class CachingClusteredClientTest
                 .dimension("a")
                 .metric("b")
                 .threshold(3)
-                .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("b")))
+                .aggregators(new CountAggregatorFactory("b"))
                 .build(),
             sequences
         )
