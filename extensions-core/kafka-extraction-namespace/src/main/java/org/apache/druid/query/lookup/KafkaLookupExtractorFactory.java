@@ -165,7 +165,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
 
-      consumer = getConsumer();
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
@@ -173,7 +172,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
 
       final ListenableFuture<?> future = executorService.submit(() -> {
-        consumer.subscribe(Collections.singletonList(getKafkaTopic()));
+        consumer = getConsumer();
 
         while (!executorService.isShutdown()) {
           try {
@@ -313,6 +312,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     kafkaProperties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
 
     KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(kafkaProperties);
+
+    kafkaConsumer.subscribe(Collections.singletonList(getKafkaTopic()));
 
     Thread.currentThread().setContextClassLoader(original);
     return kafkaConsumer;
