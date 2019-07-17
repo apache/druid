@@ -102,6 +102,7 @@ public class QueryRunnerTestHelper
   public static final String PLACEMENT_DIMENSION = "placement";
   public static final String PLACEMENTISH_DIMENSION = "placementish";
   public static final String PARTIAL_NULL_DIMENSION = "partial_null_column";
+
   public static final List<String> DIMENSIONS = Lists.newArrayList(
       MARKET_DIMENSION,
       QUALITY_DIMENSION,
@@ -187,7 +188,6 @@ public class QueryRunnerTestHelper
           new ConstantPostAggregator(null, 1)
       )
   );
-
 
   public static final List<AggregatorFactory> COMMON_DOUBLE_AGGREGATORS = Arrays.asList(
       ROWS_COUNT,
