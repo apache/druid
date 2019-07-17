@@ -17,26 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+@EverythingIsNonnullByDefault
+package org.apache.druid.utils;
 
-/**
- */
-public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
-{
-  public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
-  {
-    super(partitionHolder);
-  }
-
-  @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
-  }
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;

@@ -20,13 +20,14 @@
 package org.apache.druid.server.coordinator.rules;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
@@ -38,12 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class BroadcastDistributionRuleTest
 {
@@ -241,56 +238,50 @@ public class BroadcastDistributionRuleTest
         true
     );
 
-    druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                holdersOfLargeSegments.get(0),
-                holderOfSmallSegment,
-                holdersOfLargeSegments2.get(0)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            holdersOfLargeSegments.get(0),
+            holderOfSmallSegment,
+            holdersOfLargeSegments2.get(0)
+        )
+        .addTier(
             DruidServer.DEFAULT_TIER,
-            Stream.of(
-                holdersOfLargeSegments.get(1),
-                holdersOfLargeSegments.get(2),
-                holdersOfLargeSegments2.get(1)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            holdersOfLargeSegments.get(1),
+            holdersOfLargeSegments.get(2),
+            holdersOfLargeSegments2.get(1)
         )
-    );
+        .build();
 
-    secondCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    secondCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "tier1",
-            Stream.of(
-                activeServer,
-                decommissioningServer1,
-                decommissioningServer2
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            activeServer,
+            decommissioningServer1,
+            decommissioningServer2
         )
-    );
+        .build();
   }
 
   @Test
   public void testBroadcastToSingleDataSource()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+    final ForeverBroadcastDistributionRule rule =
+        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
@@ -310,6 +301,19 @@ public class BroadcastDistributionRuleTest
     Assert.assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
   }
 
+  private static DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
+      DruidCluster druidCluster,
+      DataSegment... usedSegments
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withUsedSegmentsInTest(usedSegments)
+        .build();
+  }
+
   /**
    * Servers:
    * name             | segments
@@ -326,19 +330,17 @@ public class BroadcastDistributionRuleTest
   @Test
   public void testBroadcastDecommissioning()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+    final ForeverBroadcastDistributionRule rule =
+        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(secondCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            secondCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1)
+        ),
         smallSegment
     );
 
@@ -359,18 +361,15 @@ public class BroadcastDistributionRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
@@ -397,18 +396,15 @@ public class BroadcastDistributionRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
