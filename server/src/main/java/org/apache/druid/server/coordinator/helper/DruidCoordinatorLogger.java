@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -214,14 +215,14 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
           );
         });
 
-    coordinator.getSegmentAvailability().object2LongEntrySet().forEach(
-        (final Object2LongMap.Entry<String> entry) -> {
+    coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().object2IntEntrySet().forEach(
+        (final Object2IntMap.Entry<String> entry) -> {
           final String dataSource = entry.getKey();
-          final long count = entry.getLongValue();
+          final int numUnavailableUsedSegmentsInDataSource = entry.getIntValue();
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
-                  "segment/unavailable/count", count
+                  "segment/unavailable/count", numUnavailableUsedSegmentsInDataSource
               )
           );
         }
@@ -247,7 +248,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "compact/task/count",
-            stats.getGlobalStat("compactTaskCount")
+            stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
         )
     );
 
@@ -264,7 +265,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
 
     // Emit segment metrics
     final Stream<DataSegment> allSegments = params
-        .getDataSources()
+        .getUsedSegmentsTimelinesPerDataSource()
         .values()
         .stream()
         .flatMap(timeline -> timeline.getAllTimelineEntries().values().stream())

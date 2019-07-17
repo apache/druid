@@ -349,8 +349,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUriPrefix().toString());
     Assert.assertEquals("a.b.c", namespace.getFileRegex());
@@ -367,8 +367,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());

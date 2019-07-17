@@ -17,26 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.server.coordinator;
 
-/**
- */
-public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
+import org.apache.druid.java.util.common.DateTimes;
+
+public class CoordinatorRuntimeParamsTestHelpers
 {
-  public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
+  public static DruidCoordinatorRuntimeParams.Builder newBuilder()
   {
-    super(partitionHolder);
+    return DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withStartTimeNanos(System.nanoTime())
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"));
   }
 
-  @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
+  public static DruidCoordinatorRuntimeParams.Builder newBuilder(DruidCluster druidCluster)
   {
-    throw new UnsupportedOperationException();
+    return newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster));
   }
 
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
+  private CoordinatorRuntimeParamsTestHelpers()
   {
-    throw new UnsupportedOperationException();
   }
 }

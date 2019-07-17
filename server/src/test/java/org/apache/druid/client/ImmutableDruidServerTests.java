@@ -17,26 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.client;
 
-/**
- */
-public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
+import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
+
+import java.util.Collection;
+
+public final class ImmutableDruidServerTests
 {
-  public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
+
+  public static void expectSegments(ImmutableDruidServer mockServer, Collection<DataSegment> segments)
   {
-    super(partitionHolder);
+    EasyMock.expect(mockServer.iterateAllSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(mockServer.getNumSegments()).andReturn(segments.size()).anyTimes();
   }
 
-  @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
+  private ImmutableDruidServerTests()
   {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
   }
 }
