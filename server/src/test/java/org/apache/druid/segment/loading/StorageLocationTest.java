@@ -71,25 +71,25 @@ public class StorageLocationTest
 
     final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
 
-    loc.addSegment(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.addSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail -= 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.addSegment(new File("test2"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.addSegmentDir(new File("test2"), makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.addSegment(new File("test3"), secondSegment);
+    loc.addSegmentDir(new File("test3"), secondSegment);
     expectedAvail -= 23;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegment(new File("test4"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("test4"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail += 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegment(new File("test5"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("test5"), makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegment(new File("test6"), secondSegment);
+    loc.removeSegmentDir(new File("test6"), secondSegment);
     expectedAvail += 23;
     verifyLoc(expectedAvail, loc);
   }
