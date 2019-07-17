@@ -81,7 +81,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
                     (String) lookupNameExpr.getLiteralValue(),
                     false,
                     null,
-                    false,
+                    null,
                     true
                 )
             );

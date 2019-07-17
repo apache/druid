@@ -19,40 +19,36 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 
-import static org.junit.Assert.assertEquals;
-
 public class DoubleMeanAveragerTest
 {
-
   @Test
   public void testComputeResult()
   {
     BaseAverager<Number, Double> avg = new DoubleMeanAverager(3, "test", "field", 1);
 
-    assertEquals(0.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(0.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    assertEquals(1.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(1.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    assertEquals(2.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
 
-    avg.addElement(Collections.singletonMap("field", new Integer(0)), new HashMap<>());
-    assertEquals(2.0, avg.computeResult(), 0.0);
+    avg.addElement(Collections.singletonMap("field", 0), new HashMap<>());
+    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
-    assertEquals(2.0, avg.computeResult(), 0.0);
+    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.skip();
-    assertEquals(4.0 / 3, avg.computeResult(), 0.0);
-
+    Assert.assertEquals(4.0 / 3, avg.computeResult(), 0.0);
   }
-
 }

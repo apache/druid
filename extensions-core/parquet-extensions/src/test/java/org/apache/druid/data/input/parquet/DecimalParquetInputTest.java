@@ -19,11 +19,10 @@
 
 package org.apache.druid.data.input.parquet;
 
-import avro.shaded.com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Job;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,8 +30,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class DecimalParquetInputTest extends BaseParquetInputTest
@@ -47,12 +44,10 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   }
 
   private final String parserType;
-  private final Job job;
 
   public DecimalParquetInputTest(String parserType) throws IOException
   {
     this.parserType = parserType;
-    this.job = Job.getInstance(new Configuration());
   }
 
   @Test
@@ -68,9 +63,9 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         true
     );
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("1.0", rows.get(0).getDimension("fixed_len_dec").get(0));
-    assertEquals(new BigDecimal("1.0"), rows.get(0).getMetric("metric1"));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("1.0", rows.get(0).getDimension("fixed_len_dec").get(0));
+    Assert.assertEquals(new BigDecimal("1.0"), rows.get(0).getMetric("metric1"));
   }
 
   @Test
@@ -86,9 +81,9 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         true
     );
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("100", rows.get(0).getDimension("i32_dec").get(0));
-    assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("100", rows.get(0).getDimension("i32_dec").get(0));
+    Assert.assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
   }
 
   @Test
@@ -104,8 +99,8 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         true
     );
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("100", rows.get(0).getDimension("i64_dec").get(0));
-    assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("100", rows.get(0).getDimension("i64_dec").get(0));
+    Assert.assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
   }
 }

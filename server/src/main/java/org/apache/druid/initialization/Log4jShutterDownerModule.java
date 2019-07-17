@@ -51,16 +51,16 @@ public class Log4jShutterDownerModule implements Module
       }
       // Reflection to try and allow non Log4j2 stuff to run. This acts as a gateway to stop errors in the next few lines
       // In log4j api
-      final Class<?> logManagerClazz = Class.forName("org.apache.logging.log4j.LogManager", false, loader);
+      Class.forName("org.apache.logging.log4j.LogManager", false, loader);
       // In log4j core
-      final Class<?> callbackRegistryClazz = Class.forName("org.apache.logging.log4j.core.util.ShutdownCallbackRegistry", false, loader);
+      Class.forName("org.apache.logging.log4j.core.util.ShutdownCallbackRegistry", false, loader);
 
       final LoggerContextFactory contextFactory = LogManager.getFactory();
       if (!(contextFactory instanceof Log4jContextFactory)) {
         log.warn(
             "Expected [%s] found [%s]. Unknown class for context factory. Not logging shutdown",
-            Log4jContextFactory.class.getCanonicalName(),
-            contextFactory.getClass().getCanonicalName()
+            Log4jContextFactory.class.getName(),
+            contextFactory.getClass().getName()
         );
         return;
       }
@@ -68,8 +68,8 @@ public class Log4jShutterDownerModule implements Module
       if (!(registry instanceof Log4jShutdown)) {
         log.warn(
             "Shutdown callback registry expected class [%s] found [%s]. Skipping shutdown registry",
-            Log4jShutdown.class.getCanonicalName(),
-            registry.getClass().getCanonicalName()
+            Log4jShutdown.class.getName(),
+            registry.getClass().getName()
         );
         return;
       }

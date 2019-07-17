@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.OracleSqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.SqlRexContext;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
@@ -64,8 +65,10 @@ public class DruidConvertletTable implements SqlRexConvertletTable
           .add(SqlStdOperatorTable.SYMMETRIC_NOT_BETWEEN)
           .add(SqlStdOperatorTable.ITEM)
           .add(SqlStdOperatorTable.TIMESTAMP_ADD)
+          .add(SqlStdOperatorTable.TIMESTAMP_DIFF)
           .add(SqlStdOperatorTable.UNION)
           .add(SqlStdOperatorTable.UNION_ALL)
+          .add(OracleSqlOperatorTable.NVL)
           .build();
 
   private final Map<SqlOperator, SqlRexConvertlet> table;

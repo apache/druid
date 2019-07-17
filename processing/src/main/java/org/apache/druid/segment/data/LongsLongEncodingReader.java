@@ -50,6 +50,19 @@ public class LongsLongEncodingReader implements CompressionFactory.LongEncodingR
   }
 
   @Override
+  public void read(final long[] out, final int outPosition, final int startIndex, final int length)
+  {
+    final int oldPosition = buffer.position();
+    try {
+      buffer.position(oldPosition + startIndex);
+      buffer.get(out, outPosition, length);
+    }
+    finally {
+      buffer.position(oldPosition);
+    }
+  }
+
+  @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
     return new LongsLongEncodingReader(buffer.duplicate());

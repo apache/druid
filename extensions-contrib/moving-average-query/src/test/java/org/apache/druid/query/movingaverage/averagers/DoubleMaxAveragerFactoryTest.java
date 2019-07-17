@@ -19,20 +19,16 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertThat;
-
 
 public class DoubleMaxAveragerFactoryTest
 {
-
   @Test
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new DoubleMaxAveragerFactory("test", 5, 1, "field");
-    assertThat(fac.createAverager(), instanceOf(DoubleMaxAverager.class));
+    Assert.assertThat(fac.createAverager(), CoreMatchers.instanceOf(DoubleMaxAverager.class));
   }
-
 }

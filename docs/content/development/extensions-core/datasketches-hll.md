@@ -24,7 +24,7 @@ title: "DataSketches HLL Sketch module"
 
 # DataSketches HLL Sketch module
 
-This module provides Apache Druid (incubating) aggregators for distinct counting based on HLL sketch from [datasketches](http://datasketches.github.io/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregator to produce a union of sketch columns in the same row. 
+This module provides Apache Druid (incubating) aggregators for distinct counting based on HLL sketch from [datasketches](https://datasketches.github.io/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregator to produce a union of sketch columns in the same row.
 You can use the HLL sketch aggregator on columns of any identifiers. It will return estimated cardinality of the column.
 
 To use this aggregator, make sure you [include](../../operations/including-extensions.html) the extension in your config file:
@@ -41,7 +41,8 @@ druid.extensions.loadList=["druid-datasketches"]
   "name" : <output name>,
   "fieldName" : <metric name>,
   "lgK" : <size and accuracy parameter>,
-  "tgtHllType" : <target HLL type>
+  "tgtHllType" : <target HLL type>,
+  "round": <false | true>
  }
 ```
 
@@ -51,7 +52,8 @@ druid.extensions.loadList=["druid-datasketches"]
   "name" : <output name>,
   "fieldName" : <metric name>,
   "lgK" : <size and accuracy parameter>,
-  "tgtHllType" : <target HLL type>
+  "tgtHllType" : <target HLL type>,
+  "round": <false | true>
  }
 ```
 
@@ -62,6 +64,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |fieldName|A String for the name of the input field.|yes|
 |lgK|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be a power of 2 from 4 to 21 inclusively.|no, defaults to 12|
 |tgtHllType|The type of the target HLL sketch. Must be "HLL&lowbar;4", "HLL&lowbar;6" or "HLL&lowbar;8" |no, defaults to "HLL&lowbar;4"|
+|round|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to false|
 
 ### Post Aggregators
 

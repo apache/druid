@@ -24,7 +24,7 @@ layout: toc
 ## Getting Started
   * [Design](/docs/VERSION/design/index.html)
     * [What is Druid?](/docs/VERSION/design/index.html#what-is-druid)
-    * [When should I use Druid](/docs/VERSION/design/index.html#when-to-use-druid)
+    * [When should I use Druid?](/docs/VERSION/design/index.html#when-to-use-druid)
     * [Architecture](/docs/VERSION/design/index.html#architecture)
     * [Datasources & Segments](/docs/VERSION/design/index.html#datasources-and-segments)
     * [Query processing](/docs/VERSION/design/index.html#query-processing)
@@ -32,7 +32,7 @@ layout: toc
     * [Ingestion overview](/docs/VERSION/ingestion/index.html)
   * [Getting Started](/docs/VERSION/operations/getting-started.html)
     * [Single-server Quickstart](/docs/VERSION/tutorials/index.html)
-      * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
+      * [Tutorial: Loading a file from local disk](/docs/VERSION/tutorials/tutorial-batch.html)
       * [Tutorial: Loading stream data from Apache Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
       * [Tutorial: Loading a file using Apache Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
       * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
@@ -44,8 +44,11 @@ layout: toc
         * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
         * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
         * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html)
-        * [Tutorial: Transforming input data](/docs/VERSION/tutorials/tutorial-transform-spec.html)
+        * [Tutorial: Transforming input data](/docs/VERSION/tutorials/tutorial-transform-spec.html)    
     * [Clustering](/docs/VERSION/tutorials/cluster.html)
+    * Further examples
+      * [Single-server deployment](/docs/VERSION/operations/single-server.html)
+      * [Clustered deployment](/docs/VERSION/tutorials/cluster.html#fresh-deployment)
 
 ## Data Ingestion
   * [Ingestion overview](/docs/VERSION/ingestion/index.html)
@@ -104,14 +107,17 @@ layout: toc
   * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
-  * [Processes and Servers](/docs/VERSION/design/processes.html)
-    * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Overlord](/docs/VERSION/design/overlord.html)
-    * [Broker](/docs/VERSION/design/broker.html)
-    * [Historical](/docs/VERSION/design/historical.html)
-    * [MiddleManager](/docs/VERSION/design/middlemanager.html)
-      * [Peons](/docs/VERSION/design/peons.html)
-    * [Router](/docs/VERSION/development/router.html) (optional; experimental)
+  * [Servers and Processes](/docs/VERSION/design/processes.html)
+    * Master server
+      * [Coordinator](/docs/VERSION/design/coordinator.html)
+      * [Overlord](/docs/VERSION/design/overlord.html)
+    * Query server
+      * [Broker](/docs/VERSION/design/broker.html)
+      * [Router](/docs/VERSION/development/router.html) (optional; experimental)
+    * Data server
+      * [Historical](/docs/VERSION/design/historical.html)
+      * [MiddleManager](/docs/VERSION/design/middlemanager.html)
+        * [Peons](/docs/VERSION/design/peons.html)    
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
@@ -126,20 +132,18 @@ layout: toc
   * [Metrics and Monitoring](/docs/VERSION/operations/metrics.html)
   * [Alerts](/docs/VERSION/operations/alerts.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
-  * [HTTP Compression](/docs/VERSION/operations/http-compression.html)
-  * [Basic Cluster Tuning](/docs/VERSION/operations/basic-cluster-tuning.html)
-  * Examples
-      * [Single-server Deployment Examples](/docs/VERSION/operations/single-server.html)
-      * [Clustered Deployment Example](/docs/VERSION/operations/example-cluster.html)
-  * [Recommendations](/docs/VERSION/operations/recommendations.html)
-    * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
+  * [HTTP Compression](/docs/VERSION/operations/http-compression.html)  
   * [API Reference](/docs/VERSION/operations/api-reference.html)
       * [Coordinator](/docs/VERSION/operations/api-reference.html#coordinator)
       * [Overlord](/docs/VERSION/operations/api-reference.html#overlord)
       * [MiddleManager](/docs/VERSION/operations/api-reference.html#middlemanager)
       * [Peon](/docs/VERSION/operations/api-reference.html#peon)
       * [Broker](/docs/VERSION/operations/api-reference.html#broker)
-      * [Historical](/docs/VERSION/operations/api-reference.html#historical)  
+      * [Historical](/docs/VERSION/operations/api-reference.html#historical)
+  * Tuning and Recommendations
+    * [Basic Cluster Tuning](/docs/VERSION/operations/basic-cluster-tuning.html)  
+    * [General Recommendations](/docs/VERSION/operations/recommendations.html)
+    * [JVM Best Practices](/docs/VERSION/configuration/index.html#jvm-configuration-best-practices)        
   * Tools
     * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
     * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
@@ -150,8 +154,7 @@ layout: toc
 
 ## Configuration
   * [Configuration Reference](/docs/VERSION/configuration/index.html)
-  * [Recommended Configuration File Organization](/docs/VERSION/configuration/index.html#recommended-configuration-file-organization)
-  * [JVM Configuration Best Practices](/docs/VERSION/configuration/index.html#jvm-configuration-best-practices)
+  * [Recommended Configuration File Organization](/docs/VERSION/configuration/index.html#recommended-configuration-file-organization)  
   * [Common Configuration](/docs/VERSION/configuration/index.html#common-configurations)
   * Processes
     * [Coordinator](/docs/VERSION/configuration/index.html#coordinator)

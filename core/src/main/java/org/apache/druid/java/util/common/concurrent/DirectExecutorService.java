@@ -19,10 +19,9 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-
 import com.google.common.util.concurrent.AbstractListeningExecutorService;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;

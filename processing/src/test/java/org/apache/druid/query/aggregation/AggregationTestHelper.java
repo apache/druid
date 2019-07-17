@@ -194,15 +194,13 @@ public class AggregationTestHelper implements Closeable
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-        configSupplier
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-            configSupplier
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new SelectQueryEngine(
         ),

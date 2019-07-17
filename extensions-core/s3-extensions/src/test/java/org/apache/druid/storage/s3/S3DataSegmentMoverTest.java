@@ -261,9 +261,7 @@ public class S3DataSegmentMoverTest
     @Override
     public PutObjectResult putObject(String bucketName, String key, File file)
     {
-      if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, new HashSet<>());
-      }
+      storage.putIfAbsent(bucketName, new HashSet<>());
       storage.get(bucketName).add(key);
       return new PutObjectResult();
     }

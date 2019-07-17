@@ -22,6 +22,8 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.math.expr.Expr;
@@ -36,7 +38,7 @@ import java.util.Objects;
 public class ExpressionDimFilter implements DimFilter
 {
   private final String expression;
-  private final Expr parsed;
+  private final Supplier<Expr> parsed;
 
   @JsonCreator
   public ExpressionDimFilter(
@@ -45,7 +47,7 @@ public class ExpressionDimFilter implements DimFilter
   )
   {
     this.expression = expression;
-    this.parsed = Parser.parse(expression, macroTable);
+    this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
   @JsonProperty
@@ -75,7 +77,7 @@ public class ExpressionDimFilter implements DimFilter
   @Override
   public HashSet<String> getRequiredColumns()
   {
-    return Sets.newHashSet(Parser.findRequiredBindings(parsed));
+    return Sets.newHashSet(parsed.get().analyzeInputs().getRequiredColumns());
   }
 
   @Override

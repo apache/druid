@@ -81,7 +81,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public int getCardinality()
   {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

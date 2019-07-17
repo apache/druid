@@ -65,6 +65,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
+  public Optional<SupervisorStateManager.State> getSupervisorState(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
+  }
+
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -98,26 +104,6 @@ public class SupervisorManager
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       return possiblySuspendOrResumeSupervisorInternal(id, suspend);
-    }
-  }
-
-  public void stopAndRemoveAllSupervisors()
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblyStopAndRemoveSupervisorInternal(id, true));
-    }
-  }
-
-  public void suspendOrResumeAllSupervisors(boolean suspend)
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblySuspendOrResumeSupervisorInternal(id, suspend));
     }
   }
 
@@ -181,6 +167,12 @@ public class SupervisorManager
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
+  }
+
+  public Optional<Boolean> isSupervisorHealthy(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
   }
 
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)

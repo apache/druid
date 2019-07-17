@@ -114,9 +114,7 @@ public class CompactionTask extends AbstractTask
   private final DimensionsSpec dimensionsSpec;
   @Nullable
   private final AggregatorFactory[] metricsSpec;
-  @Deprecated
   @Nullable
-  private final Boolean keepSegmentGranularity;
   private final Granularity segmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
@@ -159,7 +157,6 @@ public class CompactionTask extends AbstractTask
       @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensions,
       @Nullable @JsonProperty("dimensionsSpec") final DimensionsSpec dimensionsSpec,
       @Nullable @JsonProperty("metricsSpec") final AggregatorFactory[] metricsSpec,
-      @Nullable @JsonProperty("keepSegmentGranularity") @Deprecated final Boolean keepSegmentGranularity,
       @Nullable @JsonProperty("segmentGranularity") final Granularity segmentGranularity,
       @Nullable @JsonProperty("targetCompactionSizeBytes") final Long targetCompactionSizeBytes,
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
@@ -181,19 +178,10 @@ public class CompactionTask extends AbstractTask
       throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
     }
 
-    if ((keepSegmentGranularity != null && keepSegmentGranularity) && segmentGranularity != null) {
-      throw new IAE("keepSegmentGranularity and segmentGranularity can't be used together");
-    }
-
-    if (keepSegmentGranularity != null) {
-      log.warn("keepSegmentGranularity is deprecated. Set a proper segmentGranularity instead");
-    }
-
     this.interval = interval;
     this.segments = segments;
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
-    this.keepSegmentGranularity = keepSegmentGranularity;
     this.segmentGranularity = segmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
@@ -221,26 +209,21 @@ public class CompactionTask extends AbstractTask
   }
 
   @JsonProperty
+  @Nullable
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
   }
 
   @JsonProperty
+  @Nullable
   public AggregatorFactory[] getMetricsSpec()
   {
     return metricsSpec;
   }
 
   @JsonProperty
-  @Deprecated
   @Nullable
-  public Boolean isKeepSegmentGranularity()
-  {
-    return keepSegmentGranularity;
-  }
-
-  @JsonProperty
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
@@ -296,7 +279,6 @@ public class CompactionTask extends AbstractTask
           partitionConfigurationManager,
           dimensionsSpec,
           metricsSpec,
-          keepSegmentGranularity,
           segmentGranularity,
           jsonMapper,
           coordinatorClient,
@@ -359,7 +341,6 @@ public class CompactionTask extends AbstractTask
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
-      @Nullable final Boolean keepSegmentGranularity,
       @Nullable final Granularity segmentGranularity,
       final ObjectMapper jsonMapper,
       final CoordinatorClient coordinatorClient,
@@ -390,25 +371,37 @@ public class CompactionTask extends AbstractTask
     );
 
     if (segmentGranularity == null) {
-      if (keepSegmentGranularity != null && !keepSegmentGranularity) {
-        // all granularity
+      // original granularity
+      final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
+          Comparators.intervalsByStartThenEnd()
+      );
+      //noinspection ConstantConditions
+      queryableIndexAndSegments.forEach(
+          p -> intervalToSegments.computeIfAbsent(p.rhs.getInterval(), k -> new ArrayList<>())
+                                 .add(p)
+      );
+
+      final List<IndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
+      for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
+        final Interval interval = entry.getKey();
+        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
-            segmentProvider.interval,
-            queryableIndexAndSegments,
+            interval,
+            segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            Granularities.ALL,
+            GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity(),
             jsonMapper
         );
 
-        return Collections.singletonList(
+        specs.add(
             new IndexIngestionSpec(
                 dataSchema,
                 createIoConfig(
                     toolbox,
                     dataSchema,
-                    segmentProvider.interval,
+                    interval,
                     coordinatorClient,
                     segmentLoaderFactory,
                     retryPolicyFactory
@@ -416,80 +409,35 @@ public class CompactionTask extends AbstractTask
                 compactionTuningConfig
             )
         );
-      } else {
-        // original granularity
-        final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
-            Comparators.intervalsByStartThenEnd()
-        );
-        //noinspection ConstantConditions
-        queryableIndexAndSegments.forEach(
-            p -> intervalToSegments.computeIfAbsent(p.rhs.getInterval(), k -> new ArrayList<>())
-                                   .add(p)
-        );
-
-        final List<IndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
-        for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
-          final Interval interval = entry.getKey();
-          final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
-          final DataSchema dataSchema = createDataSchema(
-              segmentProvider.dataSource,
-              interval,
-              segmentsToCompact,
-              dimensionsSpec,
-              metricsSpec,
-              GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity(),
-              jsonMapper
-          );
-
-          specs.add(
-              new IndexIngestionSpec(
-                  dataSchema,
-                  createIoConfig(
-                      toolbox,
-                      dataSchema,
-                      interval,
-                      coordinatorClient,
-                      segmentLoaderFactory,
-                      retryPolicyFactory
-                  ),
-                  compactionTuningConfig
-              )
-          );
-        }
-
-        return specs;
       }
+
+      return specs;
     } else {
-      if (keepSegmentGranularity != null && keepSegmentGranularity) {
-        // error
-        throw new ISE("segmentGranularity[%s] and keepSegmentGranularity can't be used together", segmentGranularity);
-      } else {
-        // given segment granularity
-        final DataSchema dataSchema = createDataSchema(
-            segmentProvider.dataSource,
-            segmentProvider.interval,
-            queryableIndexAndSegments,
-            dimensionsSpec,
-            metricsSpec,
-            segmentGranularity,
-            jsonMapper
-        );
+      // given segment granularity
+      final DataSchema dataSchema = createDataSchema(
+          segmentProvider.dataSource,
+          segmentProvider.interval,
+          queryableIndexAndSegments,
+          dimensionsSpec,
+          metricsSpec,
+          segmentGranularity,
+          jsonMapper
+      );
 
-        return Collections.singletonList(
-            new IndexIngestionSpec(
-                dataSchema,
-                createIoConfig(
-                    toolbox,
-                    dataSchema,
-                    segmentProvider.interval,
-                    coordinatorClient,
-                    segmentLoaderFactory,
-                    retryPolicyFactory
-                ),
-                compactionTuningConfig
-            )
-        );
-      }
+      return Collections.singletonList(
+          new IndexIngestionSpec(
+              dataSchema,
+              createIoConfig(
+                  toolbox,
+                  dataSchema,
+                  segmentProvider.interval,
+                  coordinatorClient,
+                  segmentLoaderFactory,
+                  retryPolicyFactory
+              ),
+              compactionTuningConfig
+          )
+      );
     }
   }
 
@@ -944,8 +892,6 @@ public class CompactionTask extends AbstractTask
     @Nullable
     private AggregatorFactory[] metricsSpec;
     @Nullable
-    private Boolean keepSegmentGranularity;
-    @Nullable
     private Granularity segmentGranularity;
     @Nullable
     private Long targetCompactionSizeBytes;
@@ -999,12 +945,6 @@ public class CompactionTask extends AbstractTask
       return this;
     }
 
-    public Builder keepSegmentGranularity(boolean keepSegmentGranularity)
-    {
-      this.keepSegmentGranularity = keepSegmentGranularity;
-      return this;
-    }
-
     public Builder segmentGranularity(Granularity segmentGranularity)
     {
       this.segmentGranularity = segmentGranularity;
@@ -1040,7 +980,6 @@ public class CompactionTask extends AbstractTask
           null,
           dimensionsSpec,
           metricsSpec,
-          keepSegmentGranularity,
           segmentGranularity,
           targetCompactionSizeBytes,
           tuningConfig,

@@ -25,12 +25,12 @@ import com.google.common.base.Predicate;
 */
 public class FilteringYieldingAccumulator<OutType, T> extends YieldingAccumulator<OutType, T>
 {
-  private final Predicate<T> pred;
+  private final Predicate<? super T> pred;
   private final YieldingAccumulator<OutType, T> accumulator;
 
   private volatile boolean didSomething = false;
 
-  public FilteringYieldingAccumulator(Predicate<T> pred, YieldingAccumulator<OutType, T> accumulator)
+  public FilteringYieldingAccumulator(Predicate<? super T> pred, YieldingAccumulator<OutType, T> accumulator)
   {
     this.pred = pred;
     this.accumulator = accumulator;

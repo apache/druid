@@ -45,6 +45,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
       @JsonProperty("basePersistDirectory") @Nullable File basePersistDirectory,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
@@ -67,6 +68,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
+        indexSpecForIntermediatePersists,
         true,
         reportParseExceptions,
         handoffConditionTimeout,

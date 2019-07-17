@@ -807,7 +807,7 @@ public class QueryGranularityTest
   public void testDeadLock() throws Exception
   {
     final URL[] urls = ((URLClassLoader) Granularity.class.getClassLoader()).getURLs();
-    final String className = Granularity.class.getCanonicalName();
+    final String className = Granularity.class.getName();
     for (int i = 0; i < 1000; ++i) {
       final ClassLoader loader = new URLClassLoader(urls, null);
       Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));

@@ -38,19 +38,21 @@ import javax.annotation.Nullable;
  */
 class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 {
+  private final IncrementalIndexStorageAdapter adapter;
   private final IncrementalIndex<?> index;
   private final VirtualColumns virtualColumns;
   private final boolean descending;
   private final IncrementalIndexRowHolder rowHolder;
 
   IncrementalIndexColumnSelectorFactory(
-      IncrementalIndex<?> index,
+      IncrementalIndexStorageAdapter adapter,
       VirtualColumns virtualColumns,
       boolean descending,
       IncrementalIndexRowHolder rowHolder
   )
   {
-    this.index = index;
+    this.adapter = adapter;
+    this.index = adapter.index;
     this.virtualColumns = virtualColumns;
     this.descending = descending;
     this.rowHolder = rowHolder;
@@ -126,6 +128,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.getColumnCapabilities(columnName);
     }
 
-    return index.getCapabilities(columnName);
+    // Use adapter.getColumnCapabilities instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
+    return adapter.getColumnCapabilities(columnName);
   }
 }

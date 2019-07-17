@@ -90,7 +90,7 @@ public class InitializationTest
       @Override
       public String apply(@Nullable DruidModule input)
       {
-        return input.getClass().getCanonicalName();
+        return input.getClass().getName();
       }
     };
 
@@ -107,8 +107,7 @@ public class InitializationTest
 
     Assert.assertTrue(
         "modules contains TestDruidModule",
-        Collections2.transform(modules, fnClassName)
-                    .contains("org.apache.druid.initialization.InitializationTest.TestDruidModule")
+        Collections2.transform(modules, fnClassName).contains(TestDruidModule.class.getName())
     );
   }
 
@@ -258,11 +257,9 @@ public class InitializationTest
       }
     };
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
-    final File druid_kafka_eight = new File(extensionsDir, "druid-kafka-eight");
     mysql_metadata_storage.mkdir();
-    druid_kafka_eight.mkdir();
 
-    final File[] expectedFileList = new File[]{druid_kafka_eight, mysql_metadata_storage};
+    final File[] expectedFileList = new File[]{mysql_metadata_storage};
     final File[] actualFileList = Initialization.getExtensionFilesToLoad(config);
     Arrays.sort(actualFileList);
     Assert.assertArrayEquals(expectedFileList, actualFileList);
@@ -284,7 +281,7 @@ public class InitializationTest
       @Override
       public LinkedHashSet<String> getLoadList()
       {
-        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", "druid-kafka-eight", absolutePathExtension.getAbsolutePath()));
+        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", absolutePathExtension.getAbsolutePath()));
       }
 
       @Override
@@ -294,14 +291,12 @@ public class InitializationTest
       }
     };
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
-    final File druid_kafka_eight = new File(extensionsDir, "druid-kafka-eight");
     final File random_extension = new File(extensionsDir, "random-extensions");
 
     mysql_metadata_storage.mkdir();
-    druid_kafka_eight.mkdir();
     random_extension.mkdir();
 
-    final File[] expectedFileList = new File[]{mysql_metadata_storage, druid_kafka_eight, absolutePathExtension};
+    final File[] expectedFileList = new File[]{mysql_metadata_storage, absolutePathExtension};
     final File[] actualFileList = Initialization.getExtensionFilesToLoad(config);
     Assert.assertArrayEquals(expectedFileList, actualFileList);
   }
@@ -319,7 +314,7 @@ public class InitializationTest
       @Override
       public LinkedHashSet<String> getLoadList()
       {
-        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", "druid-kafka-eight"));
+        return Sets.newLinkedHashSet(ImmutableList.of("mysql-metadata-storage"));
       }
 
       @Override
@@ -328,9 +323,7 @@ public class InitializationTest
         return extensionsDir.getAbsolutePath();
       }
     };
-    final File druid_kafka_eight = new File(extensionsDir, "druid-kafka-eight");
     final File random_extension = new File(extensionsDir, "random-extensions");
-    druid_kafka_eight.mkdir();
     random_extension.mkdir();
     Initialization.getExtensionFilesToLoad(config);
   }

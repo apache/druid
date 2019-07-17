@@ -30,7 +30,11 @@ import java.nio.DoubleBuffer;
 public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseDoubleBuffers;
+
+  // The number of rows in this column.
   private final int totalSize;
+
+  // The number of doubles per buffer.
   private final int sizePer;
 
   public BlockLayoutColumnarDoublesSupplier(
@@ -80,7 +84,9 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** doubleBuffer's position must be 0 */
+    /**
+     * doubleBuffer's position must be 0
+     */
     DoubleBuffer doubleBuffer;
 
     @Override
@@ -101,6 +107,63 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
       }
 
       return doubleBuffer.get(bufferIndex);
+    }
+
+    @Override
+    public void get(final double[] out, final int start, final int length)
+    {
+      // division + remainder is optimized by the compiler so keep those together
+      int bufferNum = start / sizePer;
+      int bufferIndex = start % sizePer;
+
+      int p = 0;
+
+      while (p < length) {
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int limit = Math.min(length - p, sizePer - bufferIndex);
+        final int oldPosition = doubleBuffer.position();
+        try {
+          doubleBuffer.position(bufferIndex);
+          doubleBuffer.get(out, p, limit);
+        }
+        finally {
+          doubleBuffer.position(oldPosition);
+        }
+        p += limit;
+        bufferNum++;
+        bufferIndex = 0;
+      }
+    }
+
+    @Override
+    public void get(final double[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        int bufferNum = indexes[p] / sizePer;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int indexOffset = bufferNum * sizePer;
+
+        int i = p;
+        for (; i < length; i++) {
+          int index = indexes[i] - indexOffset;
+          if (index >= sizePer) {
+            break;
+          }
+
+          out[i] = doubleBuffer.get(index);
+        }
+
+        assert i > p;
+        p = i;
+      }
     }
 
     protected void loadBuffer(int bufferNum)

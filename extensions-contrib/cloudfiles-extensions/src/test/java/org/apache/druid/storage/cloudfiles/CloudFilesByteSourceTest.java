@@ -19,19 +19,17 @@
 
 package org.apache.druid.storage.cloudfiles;
 
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.jclouds.io.Payload;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import static org.easymock.EasyMock.expect;
-import static org.junit.Assert.assertEquals;
-
 public class CloudFilesByteSourceTest extends EasyMockSupport
 {
-
   @Test
   public void openStreamTest() throws IOException
   {
@@ -42,15 +40,15 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
     Payload payload = createMock(Payload.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
-    expect(cloudFilesObject.getPayload()).andReturn(payload);
-    expect(payload.openStream()).andReturn(stream);
+    EasyMock.expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
+    EasyMock.expect(cloudFilesObject.getPayload()).andReturn(payload);
+    EasyMock.expect(payload.openStream()).andReturn(stream);
     payload.close();
 
     replayAll();
 
     CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
-    assertEquals(stream, byteSource.openStream());
+    Assert.assertEquals(stream, byteSource.openStream());
     byteSource.closeStream();
 
     verifyAll();
@@ -66,9 +64,9 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
     Payload payload = createMock(Payload.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
-    expect(cloudFilesObject.getPayload()).andReturn(payload);
-    expect(payload.openStream()).andThrow(new IOException()).andReturn(stream);
+    EasyMock.expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
+    EasyMock.expect(cloudFilesObject.getPayload()).andReturn(payload);
+    EasyMock.expect(payload.openStream()).andThrow(new IOException()).andReturn(stream);
     payload.close();
 
     replayAll();
@@ -78,13 +76,12 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
       byteSource.openStream();
     }
     catch (Exception e) {
-      assertEquals("Recoverable exception", e.getMessage());
+      Assert.assertEquals("Recoverable exception", e.getMessage());
     }
 
-    assertEquals(stream, byteSource.openStream());
+    Assert.assertEquals(stream, byteSource.openStream());
     byteSource.closeStream();
 
     verifyAll();
   }
-
 }

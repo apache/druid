@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -34,12 +37,17 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class HllSketchAggregatorTest
 {
+  private static final boolean ROUND = true;
+
   private final AggregationTestHelper helper;
 
   @Rule
@@ -57,7 +65,7 @@ public class HllSketchAggregatorTest
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[] {config});
+      constructors.add(new Object[]{config});
     }
     return constructors;
   }
@@ -67,38 +75,16 @@ public class HllSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
-        String.join("\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMdd\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"dim\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"dim\", \"sketch\"]",
-            "  }",
-            "}"),
-        String.join("\n",
-            "[",
-            "  {\"type\": \"HLLSketchMerge\", \"name\": \"sketch\", \"fieldName\": \"sketch\"}",
-            "]"),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim"),
+            Arrays.asList("timestamp", "dim", "multiDim", "sketch")
+        ),
+        buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND),
         0, // minTimestamp
         Granularities.NONE,
         200, // maxRowCount
-        String.join("\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"HLLSketchMerge\", \"name\": \"sketch\", \"fieldName\": \"sketch\"}",
-            "  ],",
-            "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
-            "}"));
+        buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
+    );
     List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
@@ -110,38 +96,16 @@ public class HllSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        String.join("\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMdd\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"dim\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"dim\", \"id\"]",
-            "  }",
-            "}"),
-        String.join("\n",
-            "[",
-            "  {\"type\": \"HLLSketchBuild\", \"name\": \"sketch\", \"fieldName\": \"id\"}",
-            "]"),
+        buildParserJson(
+            Collections.singletonList("dim"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
+        buildAggregatorJson("HLLSketchBuild", "id", !ROUND),
         0, // minTimestamp
         Granularities.NONE,
         200, // maxRowCount
-        String.join("\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"HLLSketchMerge\", \"name\": \"sketch\", \"fieldName\": \"sketch\"}",
-            "  ],",
-            "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
-            "}"));
+        buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
+    );
     List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
@@ -153,39 +117,170 @@ public class HllSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
-        String.join("\n",
-            "{",
-            "  \"type\": \"string\",",
-            "  \"parseSpec\": {",
-            "    \"format\": \"tsv\",",
-            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMdd\"},",
-            "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"dim\", \"id\"],",
-            "      \"dimensionExclusions\": [],",
-            "      \"spatialDimensions\": []",
-            "    },",
-            "    \"columns\": [\"timestamp\", \"dim\", \"id\"]",
-            "  }",
-            "}"),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim", "id"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
         "[]",
         0, // minTimestamp
         Granularities.NONE,
         200, // maxRowCount
-        String.join("\n",
-            "{",
-            "  \"queryType\": \"groupBy\",",
-            "  \"dataSource\": \"test_datasource\",",
-            "  \"granularity\": \"ALL\",",
-            "  \"dimensions\": [],",
-            "  \"aggregations\": [",
-            "    {\"type\": \"HLLSketchBuild\", \"name\": \"sketch\", \"fieldName\": \"id\"}",
-            "  ],",
-            "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
-            "}"));
+        buildGroupByQueryJson("HLLSketchBuild", "id", !ROUND)
+    );
     List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(200, (double) row.getMetric("sketch"), 0.1);
   }
 
+  @Test
+  public void buildSketchesAtQueryTimeMultiValue() throws Exception
+  {
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim", "id"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
+        "[]",
+        0, // minTimestamp
+        Granularities.NONE,
+        200, // maxRowCount
+        buildGroupByQueryJson("HLLSketchBuild", "multiDim", !ROUND)
+    );
+    List<Row> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Row row = results.get(0);
+    Assert.assertEquals(14, (double) row.getMetric("sketch"), 0.1);
+  }
+
+  @Test
+  public void roundBuildSketch() throws Exception
+  {
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim", "id"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
+        "[]",
+        0, // minTimestamp
+        Granularities.NONE,
+        200, // maxRowCount
+        buildGroupByQueryJson("HLLSketchBuild", "id", ROUND)
+    );
+    List<Row> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Row row = results.get(0);
+    Assert.assertEquals(200L, (long) row.getMetric("sketch"));
+  }
+
+  @Test
+  public void roundMergeSketch() throws Exception
+  {
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim"),
+            Arrays.asList("timestamp", "dim", "multiDim", "sketch")
+        ),
+        buildAggregatorJson("HLLSketchMerge", "sketch", ROUND),
+        0, // minTimestamp
+        Granularities.NONE,
+        200, // maxRowCount
+        buildGroupByQueryJson("HLLSketchMerge", "sketch", ROUND)
+    );
+    List<Row> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Row row = results.get(0);
+    Assert.assertEquals(200L, (long) row.getMetric("sketch"));
+  }
+
+  private static String buildParserJson(List<String> dimensions, List<String> columns)
+  {
+    Map<String, Object> timestampSpec = ImmutableMap.of(
+        "column", "timestamp",
+        "format", "yyyyMMdd"
+    );
+    Map<String, Object> dimensionsSpec = ImmutableMap.of(
+        "dimensions", dimensions,
+        "dimensionExclusions", Collections.emptyList(),
+        "spatialDimensions", Collections.emptyList()
+    );
+    Map<String, Object> parseSpec = ImmutableMap.of(
+        "format", "tsv",
+        "timestampSpec", timestampSpec,
+        "dimensionsSpec", dimensionsSpec,
+        "columns", columns,
+        "listDelimiter", ","
+    );
+    Map<String, Object> object = ImmutableMap.of(
+        "type", "string",
+        "parseSpec", parseSpec
+    );
+    return toJson(object);
+  }
+
+  private static String toJson(Object object)
+  {
+    final String json;
+    try {
+      ObjectMapper objectMapper = new ObjectMapper();
+      json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    return json;
+  }
+
+  private static String buildAggregatorJson(
+      String aggregationType,
+      String aggregationFieldName,
+      boolean aggregationRound
+  )
+  {
+    Map<String, Object> aggregator = buildAggregatorObject(
+        aggregationType,
+        aggregationFieldName,
+        aggregationRound
+    );
+    return toJson(Collections.singletonList(aggregator));
+  }
+
+  private static Map<String, Object> buildAggregatorObject(
+      String aggregationType,
+      String aggregationFieldName,
+      boolean aggregationRound
+  )
+  {
+    return ImmutableMap.of(
+        "type", aggregationType,
+        "name", "sketch",
+        "fieldName", aggregationFieldName,
+        "round", aggregationRound
+    );
+  }
+
+  private static String buildGroupByQueryJson(
+      String aggregationType,
+      String aggregationFieldName,
+      boolean aggregationRound
+  )
+  {
+    Map<String, Object> aggregation = buildAggregatorObject(
+        aggregationType,
+        aggregationFieldName,
+        aggregationRound
+    );
+    Map<String, Object> object = new ImmutableMap.Builder<String, Object>()
+        .put("queryType", "groupBy")
+        .put("dataSource", "test_dataSource")
+        .put("granularity", "ALL")
+        .put("dimensions", Collections.emptyList())
+        .put("aggregations", Collections.singletonList(aggregation))
+        .put("intervals", Collections.singletonList("2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z"))
+        .build();
+    return toJson(object);
+  }
 }

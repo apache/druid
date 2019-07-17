@@ -166,7 +166,6 @@ public class OrcStructConverter
         fieldIndexCache.put(fields.get(i), i);
       }
     }
-    WritableComparable wc = struct.getFieldValue(fieldName);
 
     int fieldIndex = fieldIndexCache.getOrDefault(fieldName, -1);
 

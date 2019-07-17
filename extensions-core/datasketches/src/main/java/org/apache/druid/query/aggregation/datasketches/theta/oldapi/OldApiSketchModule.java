@@ -44,29 +44,12 @@ public class OldApiSketchModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(SKETCH_BUILD) == null) {
-      ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(SET_SKETCH) == null) {
-      ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(SKETCH_MERGE) == null) {
-      ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH) == null) {
-      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH_MERGE_AGG) == null) {
-      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH_BUILD_AGG) == null) {
-      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
+    ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 
   @Override

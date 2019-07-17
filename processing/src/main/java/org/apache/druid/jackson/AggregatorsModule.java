@@ -22,7 +22,6 @@ package org.apache.druid.jackson;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -74,20 +73,9 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
-
-    if (ComplexMetrics.getSerdeForType("preComputedHyperUnique") == null) {
-      ComplexMetrics.registerSerde(
-          "preComputedHyperUnique",
-          new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault())
-      );
-    }
-
-    if (ComplexMetrics.getSerdeForType("serializablePairLongString") == null) {
-      ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde());
+    ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
