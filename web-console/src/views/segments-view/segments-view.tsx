@@ -281,7 +281,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           allSegments: result,
-          segments: result ? result.slice(0, 50) : null,
+          segments: result ? result.slice(0, SegmentsView.PAGE_SIZE) : null,
           segmentsLoading: loading,
           segmentsError: error,
         });
@@ -569,7 +569,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
           },
         ]}
-        defaultPageSize={50}
+        defaultPageSize={SegmentsView.PAGE_SIZE}
       />
     );
   }
