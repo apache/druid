@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -621,12 +622,7 @@ public class TaskQueue
 
   public Map<String, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = totalSuccessfulTaskCount.entrySet()
-                                                      .stream()
-                                                      .collect(Collectors.toMap(
-                                                          Map.Entry::getKey,
-                                                          e -> e.getValue().get()
-                                                      ));
+    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
     prevTotalSuccessfulTaskCount = total;
     return delta;
@@ -634,12 +630,7 @@ public class TaskQueue
 
   public Map<String, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = totalFailedTaskCount.entrySet()
-                                                  .stream()
-                                                  .collect(Collectors.toMap(
-                                                      Map.Entry::getKey,
-                                                      e -> e.getValue().get()
-                                                  ));
+    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
     prevTotalFailedTaskCount = total;
     return delta;
