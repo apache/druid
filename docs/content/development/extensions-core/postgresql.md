@@ -69,6 +69,7 @@ To use this Apache Druid (incubating) extension, make sure to [include](../../op
   ```
 
 ## Configuration
+
 In most cases, the configuration options map directly to the [postgres jdbc connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
 
 |Property|Description|Default|Required|
@@ -86,6 +87,7 @@ In most cases, the configuration options map directly to the [postgres jdbc conn
 | `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
 
 ### PostgreSQL Firehose
+
 The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/firehose.html#SqlFirehose) which can be used to ingest data into Druid from a PostgreSQL database.
 
 ```json

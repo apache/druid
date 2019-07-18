@@ -110,6 +110,7 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 
 
 ### MySQL Firehose
+
 The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/firehose.html#SqlFirehose) which can be used to ingest data into Druid from a MySQL database.
 
 ```json

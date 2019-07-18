@@ -146,11 +146,12 @@ and timestamp column to create a 'transform spec', so uses either `string` or `m
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
 If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
-This firehose works with `map` typed parsers, see the extensions for more details examples.
+This firehose works with `map` typed parsers. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:
  * [MySQL Metadata Store](../development/extensions-core/mysql.html).
  * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.html).
+
 
 ```json
 {
@@ -178,12 +179,13 @@ Requires one of the following extensions:
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.||Yes|
 
-### Database
+#### Database
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
 |connectorConfig|Specify the database connection properties via `connectURI`, `user` and `password`||Yes|
+
 
 ### InlineFirehose
 
