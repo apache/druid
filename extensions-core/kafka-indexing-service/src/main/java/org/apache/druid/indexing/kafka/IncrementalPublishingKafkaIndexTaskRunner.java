@@ -40,6 +40,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
 
@@ -55,7 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Kafka indexing task runner supporting incremental segments publishing
@@ -166,12 +166,10 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     }
 
     if (doReset) {
-      sendResetRequestAndWait(resetPartitions.entrySet()
-                                             .stream()
-                                             .collect(Collectors.toMap(x -> StreamPartition.of(
-                                                 x.getKey().topic(),
-                                                 x.getKey().partition()
-                                             ), Map.Entry::getValue)), taskToolbox);
+      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
+          streamPartition.topic(),
+          streamPartition.partition()
+      )), taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());
       pollRetryLock.lockInterruptibly();

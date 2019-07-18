@@ -84,7 +84,7 @@ public class NumberedOverwritingPartitionChunk<T> implements PartitionChunk<T>
       final NumberedOverwritingPartitionChunk<T> that = (NumberedOverwritingPartitionChunk<T>) o;
       return Integer.compare(chunkId, that.chunkId);
     } else {
-      throw new IAE("Cannot compare against [%s]", o.getClass().getCanonicalName());
+      throw new IAE("Cannot compare against [%s]", o.getClass().getName());
     }
   }
 

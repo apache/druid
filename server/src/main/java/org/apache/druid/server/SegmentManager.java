@@ -33,12 +33,11 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
@@ -116,8 +115,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceSizes()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getTotalSegmentSize()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
   /**
@@ -128,8 +126,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceCounts()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getNumSegments()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
   public boolean isSegmentCached(final DataSegment segment)

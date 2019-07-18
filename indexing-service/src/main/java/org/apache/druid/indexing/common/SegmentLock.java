@@ -186,7 +186,7 @@ public class SegmentLock implements TaskLock
         return interval.overlaps(request.getInterval());
       }
     } else {
-      throw new ISE("Unknown request type[%s]", request.getClass().getCanonicalName());
+      throw new ISE("Unknown request type[%s]", request.getClass().getName());
     }
   }
 
