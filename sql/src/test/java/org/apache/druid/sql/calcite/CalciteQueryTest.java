@@ -5811,10 +5811,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo4\n"
           + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
           + "AND EXTRACT(MICROSECOND FROM __time) = 946723\n"
+          + "AND EXTRACT(MILLISECOND FROM __time) = 695\n"
           + "AND EXTRACT(ISODOW FROM __time) = 6\n"
           + "AND EXTRACT(ISOYEAR FROM __time) = 2000\n"
+          + "AND EXTRACT(DECADE FROM __time) = 200\n"
           + "AND EXTRACT(CENTURY FROM __time) = 21\n"
-          + "AND EXTRACT(MILLISECOND FROM __time) = 695\n",
+          + "AND EXTRACT(MILLENNIUM FROM __time) = 2\n",
 
         TIMESERIES_CONTEXT_DEFAULT,
         ImmutableList.of(
@@ -5825,20 +5827,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           .virtualColumns(
             expressionVirtualColumn("v0", "timestamp_extract(\"__time\",'YEAR','UTC')", ValueType.LONG),
             expressionVirtualColumn("v1", "timestamp_extract(\"__time\",'MICROSECOND','UTC')", ValueType.LONG),
-            expressionVirtualColumn("v2", "timestamp_extract(\"__time\",'ISODOW','UTC')", ValueType.LONG),
-            expressionVirtualColumn("v3", "timestamp_extract(\"__time\",'ISOYEAR','UTC')", ValueType.LONG),
-            expressionVirtualColumn("v4", "timestamp_extract(\"__time\",'CENTURY','UTC')", ValueType.LONG),
-            expressionVirtualColumn("v5", "timestamp_extract(\"__time\",'MILLISECOND','UTC')", ValueType.LONG)
+            expressionVirtualColumn("v2", "timestamp_extract(\"__time\",'MILLISECOND','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v3", "timestamp_extract(\"__time\",'ISODOW','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v4", "timestamp_extract(\"__time\",'ISOYEAR','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v5", "timestamp_extract(\"__time\",'DECADE','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v6", "timestamp_extract(\"__time\",'CENTURY','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v7", "timestamp_extract(\"__time\",'MILLENNIUM','UTC')", ValueType.LONG)
             )
           .aggregators(aggregators(new CountAggregatorFactory("a0")))
           .filters(
             and(
               selector("v0", "2000", null),
               selector("v1", "946723", null),
-              selector("v2", "6", null),
-              selector("v3", "2000", null),
-              selector("v4", "21", null),
-              selector("v5", "695", null)
+              selector("v2", "695", null),
+              selector("v3", "6", null),
+              selector("v4", "2000", null),
+              selector("v5", "200", null),
+              selector("v6", "21", null),
+              selector("v7", "2", null)
             )
           )
           .context(TIMESERIES_CONTEXT_DEFAULT)

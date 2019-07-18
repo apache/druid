@@ -54,7 +54,9 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
           .put(TimeUnitRange.QUARTER, TimestampExtractExprMacro.Unit.QUARTER)
           .put(TimeUnitRange.YEAR, TimestampExtractExprMacro.Unit.YEAR)
           .put(TimeUnitRange.ISOYEAR, TimestampExtractExprMacro.Unit.ISOYEAR)
+          .put(TimeUnitRange.DECADE, TimestampExtractExprMacro.Unit.DECADE)
           .put(TimeUnitRange.CENTURY, TimestampExtractExprMacro.Unit.CENTURY)
+          .put(TimeUnitRange.MILLENNIUM, TimestampExtractExprMacro.Unit.MILLENNIUM)
           .build();
 
   @Override

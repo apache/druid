@@ -51,7 +51,9 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     QUARTER,
     YEAR,
     ISOYEAR,
-    CENTURY
+    DECADE,
+    CENTURY,
+    MILLENNIUM
   }
 
   @Override
@@ -137,8 +139,15 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
             return ExprEval.of(dateTime.year().get());
           case ISOYEAR:
             return ExprEval.of(dateTime.year().get());
+          case DECADE:
+            // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
+            return ExprEval.of(dateTime.year().get() / 10);
           case CENTURY:
             return ExprEval.of(dateTime.centuryOfEra().get() + 1);
+          case MILLENNIUM:
+            // Years in the 1900s are in the second millennium. The third millennium started January 1, 2001.
+            // See https://www.postgresql.org/docs/10/functions-datetime.html
+            return ExprEval.of(Math.round(Math.ceil(dateTime.year().get())));
           default:
             throw new ISE("Unhandled unit[%s]", unit);
         }
