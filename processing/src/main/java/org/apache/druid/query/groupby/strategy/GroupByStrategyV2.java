@@ -388,6 +388,16 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Sequence<Row> queryResult
   )
   {
+    // How it works?
+    // First we accumulate the result of top level query aka queryResult arg inside a Grouper#1 object.
+    // Next for each subtotalSpec
+    //   If subtotalSpec is a prefix of top level dims then we iterate on rows in Grouper#1 object which are still
+    //   sorted by subtotalSpec, stream merge them and return.
+    //
+    //   If subtotalSpec is not a prefix of top level dims then we create a Grouper#2 object filled with rows from
+    //   Grouper#1 object with only dims from subtotalSpec. Then we iterate on rows in Grouper#2 object which are
+    //   of course sorted by subtotalSpec, stream merge them and return.
+
     // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
     // or an exceptions is thrown. The objects are closed in their reverse order.
     final List<Closeable> closeOnExit = new ArrayList<>();
