@@ -37,6 +37,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -84,7 +86,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1035,7 +1036,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
+      ResponseContext context = DefaultResponseContext.empty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
@@ -1089,7 +1090,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
+      ResponseContext context = DefaultResponseContext.empty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
@@ -1150,7 +1151,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
+      ResponseContext context = DefaultResponseContext.empty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
 
       List<Map<String, Object>> expected =

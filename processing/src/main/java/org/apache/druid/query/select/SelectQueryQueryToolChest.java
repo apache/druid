@@ -43,6 +43,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.timeline.LogicalSegment;
@@ -338,7 +339,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           @Override
           public Sequence<Result<SelectResultValue>> run(
               QueryPlus<Result<SelectResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             SelectQuery selectQuery = (SelectQuery) queryPlus.getQuery();

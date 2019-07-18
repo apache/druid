@@ -17,34 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.context;
 
-
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.context.ResponseContext;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
+ *
  */
-public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
+public class DefaultResponseContext extends ResponseContext
 {
-  private final QueryRunner<T> baseRunner;
-
-  public BySegmentSkippingQueryRunner(
-      QueryRunner<T> baseRunner
-  )
+  public static DefaultResponseContext empty()
   {
-    this.baseRunner = baseRunner;
+    return new DefaultResponseContext();
   }
+
+  private final HashMap<String, Object> delegate = new HashMap<>();
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
+  protected Map<String, Object> getDelegate()
   {
-    if (QueryContexts.isBySegment(queryPlus.getQuery())) {
-      return baseRunner.run(queryPlus, responseContext);
-    }
-
-    return doRun(baseRunner, queryPlus, responseContext);
+    return delegate;
   }
-
-  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, ResponseContext context);
 }

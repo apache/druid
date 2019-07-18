@@ -56,6 +56,7 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -101,7 +102,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -554,7 +554,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    return theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    return theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
   }
 
   @Benchmark
@@ -610,7 +610,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -631,7 +631,7 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), new HashMap<>());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -655,7 +655,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }

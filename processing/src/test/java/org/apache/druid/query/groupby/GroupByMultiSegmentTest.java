@@ -54,6 +54,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -342,7 +344,7 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -427,7 +429,7 @@ public class GroupByMultiSegmentTest
       {
         return new QueryRunner<T>() {
           @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {
             return delegate.run(queryPlus, responseContext);
           }

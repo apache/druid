@@ -89,7 +89,7 @@ public class BrokerQueryResource extends QueryResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final ResponseContext context = createContext(req.getContentType(), pretty != null);
+    final QueryResponseContext context = createContext(req.getContentType(), pretty != null);
     try {
       Query<?> query = context.getObjectMapper().readValue(in, Query.class);
       return context.ok(

@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -54,7 +55,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     return queryResult.toList();
   }
 

@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -36,8 +38,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -119,7 +119,7 @@ public class ChainedExecutionQueryRunnerTest
          runners
         )
     );
-    Map<String, Object> context = ImmutableMap.of();
+    ResponseContext context = DefaultResponseContext.empty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
@@ -244,7 +244,7 @@ public class ChainedExecutionQueryRunnerTest
             runners
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
@@ -327,7 +327,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, Map<String, Object> responseContext)
+    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, ResponseContext responseContext)
     {
       // do a lot of work
       synchronized (this) {

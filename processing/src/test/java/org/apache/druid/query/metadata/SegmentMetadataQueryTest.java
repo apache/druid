@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -284,7 +285,7 @@ public class SegmentMetadataQueryTest
   @SuppressWarnings("unchecked")
   public void testSegmentMetadataQuery()
   {
-    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), new HashMap<>()).toList();
+    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), DefaultResponseContext.empty()).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
@@ -351,7 +352,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -419,7 +420,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -487,7 +488,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -616,7 +617,7 @@ public class SegmentMetadataQueryTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -674,7 +675,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -736,7 +737,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -794,7 +795,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -852,7 +853,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), new HashMap<>()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -891,7 +892,7 @@ public class SegmentMetadataQueryTest
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
             QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of("bySegment", true))),
-            new HashMap<>()
+            DefaultResponseContext.empty()
         ),
         "failed SegmentMetadata bySegment query"
     );

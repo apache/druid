@@ -49,6 +49,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -66,9 +68,7 @@ import org.junit.runners.Parameterized;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -394,7 +394,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
-                  Map<String, Object> context = new HashMap<String, Object>();
+                  ResponseContext context = DefaultResponseContext.empty();
                   List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
@@ -427,7 +427,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {

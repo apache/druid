@@ -42,6 +42,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -66,7 +67,6 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -83,6 +83,7 @@ public class QueryResource implements QueryCountStatsProvider
 
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
+  public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String HEADER_ETAG = "ETag";
 
@@ -168,7 +169,7 @@ public class QueryResource implements QueryCountStatsProvider
       acceptHeader = req.getContentType();
     }
 
-    final ResponseContext context = createContext(acceptHeader, pretty != null);
+    final QueryResponseContext context = createContext(acceptHeader, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
@@ -189,10 +190,10 @@ public class QueryResource implements QueryCountStatsProvider
 
       final QueryLifecycle.QueryResponse queryResponse = queryLifecycle.execute();
       final Sequence<?> results = queryResponse.getResults();
-      final Map<String, Object> responseContext = queryResponse.getResponseContext();
+      final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(HEADER_ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.CTX_HEADER_ETAG))) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -245,9 +246,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(HEADER_ETAG) != null) {
-          builder.header(HEADER_ETAG, responseContext.get(HEADER_ETAG));
-          responseContext.remove(HEADER_ETAG);
+        if (responseContext.get(ResponseContext.CTX_HEADER_ETAG) != null) {
+          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.CTX_HEADER_ETAG));
+          responseContext.remove(ResponseContext.CTX_HEADER_ETAG);
         }
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
@@ -262,7 +263,7 @@ public class QueryResource implements QueryCountStatsProvider
         }
 
         return builder
-            .header("X-Druid-Response-Context", responseCtxString)
+            .header(HEADER_RESPONSE_CONTEXT, responseCtxString)
             .build();
       }
       catch (Exception e) {
@@ -305,7 +306,7 @@ public class QueryResource implements QueryCountStatsProvider
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
-      final ResponseContext context
+      final QueryResponseContext context
   ) throws IOException
   {
     Query baseQuery = getMapperForRequest(req.getContentType()).readValue(in, Query.class);
@@ -337,12 +338,12 @@ public class QueryResource implements QueryCountStatsProvider
     return mapper.copy().registerModule(new SimpleModule().addSerializer(DateTime.class, new DateTimeSerializer()));
   }
 
-  protected ResponseContext createContext(String requestType, boolean pretty)
+  protected QueryResponseContext createContext(String requestType, boolean pretty)
   {
     boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) ||
                       APPLICATION_SMILE.equals(requestType);
     String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
-    return new ResponseContext(
+    return new QueryResponseContext(
         contentType,
         isSmile ? smileMapper : jsonMapper,
         isSmile ? serializeDateTimeAsLongSmileMapper : serializeDateTimeAsLongJsonMapper,
@@ -350,14 +351,14 @@ public class QueryResource implements QueryCountStatsProvider
     );
   }
 
-  protected static class ResponseContext
+  protected static class QueryResponseContext
   {
     private final String contentType;
     private final ObjectMapper inputMapper;
     private final ObjectMapper serializeDateTimeAsLongInputMapper;
     private final boolean isPretty;
 
-    ResponseContext(
+    QueryResponseContext(
         String contentType,
         ObjectMapper inputMapper,
         ObjectMapper serializeDateTimeAsLongInputMapper,

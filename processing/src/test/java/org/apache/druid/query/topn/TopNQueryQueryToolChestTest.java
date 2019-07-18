@@ -51,6 +51,8 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -272,19 +274,19 @@ public class TopNQueryQueryToolChestTest
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
           QueryPlus.wrap(query1),
-          ImmutableMap.of()
+          DefaultResponseContext.empty()
       );
       Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query2), ImmutableMap.of());
+          .run(QueryPlus.wrap(query2), DefaultResponseContext.empty());
       Assert.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query3), ImmutableMap.of());
+          .run(QueryPlus.wrap(query3), DefaultResponseContext.empty());
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }
@@ -563,7 +565,7 @@ public class TopNQueryQueryToolChestTest
     @Override
     public Sequence<Result<TopNResultValue>> run(
         QueryPlus<Result<TopNResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       this.query = (TopNQuery) queryPlus.getQuery();

@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -52,7 +53,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
 
 public class MapVirtualColumnGroupByTest
@@ -141,7 +141,7 @@ public class MapVirtualColumnGroupByTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
   }
 
   @Test
@@ -162,7 +162,7 @@ public class MapVirtualColumnGroupByTest
         null
     );
 
-    final List<Row> result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    final List<Row> result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
     final List<Row> expected = ImmutableList.of(
         new MapBasedRow(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

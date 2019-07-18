@@ -40,6 +40,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -53,7 +54,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -87,7 +87,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
       final QueryRunner modifiedRunner = new QueryRunner()
       {
         @Override
-        public Sequence run(QueryPlus queryPlus, Map responseContext)
+        public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
           QueryRunner<Row> newRunner = factory.mergeRunners(

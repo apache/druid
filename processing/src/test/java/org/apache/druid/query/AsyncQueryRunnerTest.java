@@ -24,12 +24,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,7 +61,7 @@ public class AsyncQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         try {
           latch.await();
@@ -78,7 +79,7 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
-    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
+    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     latch.countDown();
     Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
@@ -89,7 +90,7 @@ public class AsyncQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         try {
           Thread.sleep(Long.MAX_VALUE);
@@ -109,7 +110,7 @@ public class AsyncQueryRunnerTest
 
     Sequence lazy = asyncRunner.run(
         QueryPlus.wrap(query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))),
-        Collections.EMPTY_MAP
+        DefaultResponseContext.empty()
     );
 
     try {
@@ -133,7 +134,7 @@ public class AsyncQueryRunnerTest
 
     AsyncQueryRunner asyncRunner = new AsyncQueryRunner<>(baseRunner, executor, mock);
 
-    asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
+    asyncRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     EasyMock.verify(mock);
   }
 }

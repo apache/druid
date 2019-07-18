@@ -46,6 +46,8 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -86,7 +88,7 @@ import java.util.stream.StreamSupport;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryRunnerTest
 {
-  public static final Map<String, Object> CONTEXT = ImmutableMap.of();
+  public static final ResponseContext CONTEXT = DefaultResponseContext.empty();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -1630,7 +1632,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }
@@ -1674,7 +1676,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }
@@ -1718,7 +1720,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }

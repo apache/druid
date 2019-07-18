@@ -34,15 +34,15 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class TimeSeriesUnionQueryRunnerTest
@@ -114,7 +114,7 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<>();
+    ResponseContext context = DefaultResponseContext.empty();
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     assertExpectedResults(expectedResults, results);
@@ -178,7 +178,7 @@ public class TimeSeriesUnionQueryRunnerTest
               @Override
               public Sequence<Result<TimeseriesResultValue>> run(
                   QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-                  Map<String, Object> responseContext
+                  ResponseContext responseContext
               )
               {
                 if (queryPlus.getQuery().getDataSource().equals(new TableDataSource("ds1"))) {
@@ -219,7 +219,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results =
-        mergingrunner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+        mergingrunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
 
     assertExpectedResults(expectedResults, results);
 

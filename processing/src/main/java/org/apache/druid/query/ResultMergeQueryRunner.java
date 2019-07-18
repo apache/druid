@@ -24,8 +24,7 @@ import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
  */
@@ -40,7 +39,7 @@ public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRu
   }
 
   @Override
-  public Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, Map<String, Object> context)
+  public Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, ResponseContext context)
   {
     Query<T> query = queryPlus.getQuery();
     return CombiningSequence.create(baseRunner.run(queryPlus, context), makeOrdering(query), createMergeFn(query));

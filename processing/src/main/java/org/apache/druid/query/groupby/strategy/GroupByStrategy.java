@@ -25,12 +25,12 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.segment.StorageAdapter;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public interface GroupByStrategy
@@ -67,7 +67,7 @@ public interface GroupByStrategy
       GroupByQueryQueryToolChest toolChest
   );
 
-  Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, Map<String, Object> responseContext);
+  Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, ResponseContext responseContext);
 
   Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query);
 

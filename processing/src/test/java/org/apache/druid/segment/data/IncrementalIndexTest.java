@@ -51,6 +51,8 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -80,10 +82,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -442,7 +442,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -597,7 +597,7 @@ public class IncrementalIndexTest
                         factory.createRunner(incrementalIndexSegment),
                         factory.getToolchest()
                     );
-                    Map<String, Object> context = new HashMap<String, Object>();
+                    ResponseContext context = DefaultResponseContext.empty();
                     Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
                     Double[] results = sequence.accumulate(
@@ -653,7 +653,7 @@ public class IncrementalIndexTest
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {

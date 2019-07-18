@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.QueryableIndex;
@@ -63,7 +64,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -151,7 +151,7 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole)
   {
-    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, new HashMap<>());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, DefaultResponseContext.empty());
     final Row lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
     blackhole.consume(lastRow);
   }

@@ -42,6 +42,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
@@ -67,7 +69,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -161,7 +162,7 @@ public class SchemalessTestSimpleTest
         )
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap();
+    ResponseContext context = DefaultResponseContext.empty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -238,7 +239,7 @@ public class SchemalessTestSimpleTest
 
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
+      ResponseContext context = DefaultResponseContext.empty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -268,7 +269,7 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -294,7 +295,7 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 }

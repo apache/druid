@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,7 +115,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(multiEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        DefaultResponseContext.empty()
     );
 
     int count = 0;
@@ -154,7 +155,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        DefaultResponseContext.empty()
     );
 
     int count = 0;
@@ -195,7 +196,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        DefaultResponseContext.empty()
     );
 
     int count = 0;

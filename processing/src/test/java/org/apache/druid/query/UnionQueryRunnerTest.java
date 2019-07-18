@@ -23,12 +23,12 @@ import com.google.common.collect.Iterables;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class UnionQueryRunnerTest
 {
@@ -38,7 +38,7 @@ public class UnionQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         // verify that table datasource is passed to baseQueryRunner
         Assert.assertTrue(queryPlus.getQuery().getDataSource() instanceof TableDataSource);
@@ -68,7 +68,7 @@ public class UnionQueryRunnerTest
                     .intervals("2014-01-01T00:00:00Z/2015-01-01T00:00:00Z")
                     .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                     .build();
-    Map<String, Object> responseContext = new HashMap<>();
+    ResponseContext responseContext = DefaultResponseContext.empty();
     Sequence<?> result = runner.run(QueryPlus.wrap(q), responseContext);
     List res = result.toList();
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);

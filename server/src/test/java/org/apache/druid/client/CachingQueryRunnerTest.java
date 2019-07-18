@@ -56,6 +56,8 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -74,7 +76,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -290,7 +291,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return resultSeq;
           }
@@ -319,7 +320,7 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     Sequence res = runner.run(QueryPlus.wrap(query), context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
@@ -378,7 +379,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return Sequences.empty();
           }
@@ -400,7 +401,7 @@ public class CachingQueryRunnerTest
         }
 
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }

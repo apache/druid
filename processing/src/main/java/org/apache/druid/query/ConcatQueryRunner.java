@@ -22,8 +22,7 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
 */
@@ -37,7 +36,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     return Sequences.concat(
         Sequences.map(

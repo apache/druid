@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -41,7 +42,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -123,7 +123,7 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    List result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

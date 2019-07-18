@@ -38,6 +38,8 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -50,7 +52,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,7 +85,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(QueryPlus<Row> query, Map<String, Object> responseContext)
+  public Sequence<Row> run(QueryPlus<Row> query, ResponseContext responseContext)
   {
 
     MovingAverageQuery maq = (MovingAverageQuery) query.getQuery();
@@ -125,7 +126,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
                                                  .setContext(maq.getContext());
       GroupByQuery gbq = builder.build();
 
-      HashMap<String, Object> gbqResponse = new HashMap<>();
+      ResponseContext gbqResponse = DefaultResponseContext.empty();
       gbqResponse.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
       gbqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
@@ -163,7 +164,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           0,
           maq.getContext()
       );
-      HashMap<String, Object> tsqResponse = new HashMap<>();
+      ResponseContext tsqResponse = DefaultResponseContext.empty();
       tsqResponse.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
       tsqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 

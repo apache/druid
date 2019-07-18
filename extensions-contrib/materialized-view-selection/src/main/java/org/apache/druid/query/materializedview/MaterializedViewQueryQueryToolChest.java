@@ -30,8 +30,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 public class MaterializedViewQueryQueryToolChest extends QueryToolChest 
 {
@@ -51,7 +50,7 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   {
     return new QueryRunner() {
       @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext) 
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         Query realQuery = getRealQuery(queryPlus.getQuery());
         return warehouse.getToolChest(realQuery).mergeResults(runner).run(queryPlus.withQuery(realQuery), responseContext);
@@ -91,7 +90,7 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   {
     return new QueryRunner() {
       @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         Query realQuery = getRealQuery(queryPlus.getQuery());
         QueryToolChest realQueryToolChest = warehouse.getToolChest(realQuery);

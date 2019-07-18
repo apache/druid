@@ -39,6 +39,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.filter.SpatialDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -59,7 +60,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -584,7 +584,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -638,7 +638,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -727,7 +727,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

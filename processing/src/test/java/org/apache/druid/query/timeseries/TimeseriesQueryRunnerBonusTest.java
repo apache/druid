@@ -34,6 +34,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -45,7 +47,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -129,7 +130,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .aggregators(new CountAggregatorFactory("rows"))
                                   .descending(descending)
                                   .build();
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
     return runner.run(QueryPlus.wrap(query), context).toList();
   }
 

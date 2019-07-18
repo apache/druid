@@ -55,6 +55,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -93,10 +95,8 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class provides general utility to test any druid aggregation implementation given raw data,
@@ -633,7 +633,7 @@ public class AggregationTestHelper implements Closeable
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    return baseRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
   }
 
   public QueryRunner<Row> makeStringSerdeQueryRunner(
@@ -645,10 +645,10 @@ public class AggregationTestHelper implements Closeable
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, new HashMap<>());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, DefaultResponseContext.empty());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()

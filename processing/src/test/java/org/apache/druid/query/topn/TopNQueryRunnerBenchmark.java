@@ -31,6 +31,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
@@ -58,7 +60,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   private static final String marketDimension = "market";
   private static final SegmentId segmentId = SegmentId.dummy("testSegment");
 
-  private static final HashMap<String, Object> context = new HashMap<String, Object>();
+  private static final ResponseContext context = DefaultResponseContext.empty();
 
   private static final TopNQuery query = new TopNQueryBuilder()
       .dataSource(QueryRunnerTestHelper.dataSource)

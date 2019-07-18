@@ -65,6 +65,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -253,10 +255,10 @@ public class TopNQueryRunnerTest
       TopNQuery query
   )
   {
-    return runWithMerge(query, ImmutableMap.of());
+    return runWithMerge(query, DefaultResponseContext.empty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, Map<String, Object> context)
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
@@ -1319,10 +1321,10 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    Sequence<Result<TopNResultValue>> results = runWithMerge(
-        query,
-        specialContext
-    );
+
+    final DefaultResponseContext responseContext = DefaultResponseContext.empty();
+    responseContext.putAll(specialContext);
+    Sequence<Result<TopNResultValue>> results = runWithMerge(query, responseContext);
     List<Result<BySegmentTopNResultValue>> resultList = results
         .map((Result<TopNResultValue> input) -> {
           // Stupid type erasure
@@ -4165,7 +4167,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
   }
 
   @Test
@@ -4204,7 +4206,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
   }
 
 
@@ -4321,10 +4323,10 @@ public class TopNQueryRunnerTest
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query)
   {
-    return runWithPreMergeAndMerge(query, ImmutableMap.of());
+    return runWithPreMergeAndMerge(query, DefaultResponseContext.empty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, Map<String, Object> context)
+  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

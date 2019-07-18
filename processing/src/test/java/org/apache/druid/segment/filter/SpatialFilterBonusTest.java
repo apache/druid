@@ -40,6 +40,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.SpatialDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -68,7 +70,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -516,7 +517,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
+      ResponseContext context = DefaultResponseContext.empty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
@@ -604,7 +605,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
+      ResponseContext context = DefaultResponseContext.empty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
@@ -698,7 +699,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
+      ResponseContext context = DefaultResponseContext.empty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {

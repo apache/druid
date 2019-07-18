@@ -52,6 +52,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -417,7 +418,7 @@ public class TimeCompareBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndexTopN(Blackhole blackhole)
   {
-    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), new HashMap<>());
+    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), DefaultResponseContext.empty());
     List<Result<TopNResultValue>> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -430,7 +431,7 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TimeseriesResultValue>> queryResult = timeseriesRunner.run(
         QueryPlus.wrap(timeseriesQuery),
-        new HashMap<>()
+        DefaultResponseContext.empty()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
     blackhole.consume(results);

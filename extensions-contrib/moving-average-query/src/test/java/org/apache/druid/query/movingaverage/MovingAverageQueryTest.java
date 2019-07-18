@@ -59,6 +59,8 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -80,7 +82,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -364,7 +365,7 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final Map<String, Object> responseContext = new HashMap<>();
+    final ResponseContext responseContext = DefaultResponseContext.empty();
 
     defineMocks();
 

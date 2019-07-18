@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -447,7 +448,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           @Override
           public Sequence<Result<TopNResultValue>> run(
               QueryPlus<Result<TopNResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
@@ -487,7 +488,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       @Override
       public Sequence<Result<TopNResultValue>> run(
-          final QueryPlus<Result<TopNResultValue>> queryPlus, final Map<String, Object> responseContext
+          final QueryPlus<Result<TopNResultValue>> queryPlus, final ResponseContext responseContext
       )
       {
         // thresholdRunner.run throws ISE if query is not TopNQuery
@@ -555,7 +556,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     @Override
     public Sequence<Result<TopNResultValue>> run(
         QueryPlus<Result<TopNResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<TopNResultValue>> input = queryPlus.getQuery();

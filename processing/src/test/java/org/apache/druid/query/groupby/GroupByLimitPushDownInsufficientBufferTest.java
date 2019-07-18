@@ -57,6 +57,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -450,7 +452,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
             new QueryRunner<Row>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -485,7 +487,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -536,7 +538,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
             new QueryRunner<Row>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -579,7 +581,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -689,7 +691,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         return new QueryRunner<T>()
         {
           @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {
             return delegate.run(queryPlus, responseContext);
           }

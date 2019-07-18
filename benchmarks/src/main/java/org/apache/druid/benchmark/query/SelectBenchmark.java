@@ -44,6 +44,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.select.EventHolder;
 import org.apache.druid.query.select.PagingSpec;
@@ -261,7 +262,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
     return queryResult.toList();
   }
 
@@ -368,7 +369,7 @@ public class SelectBenchmark
 
     boolean done = false;
     while (!done) {
-      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), new HashMap<>());
+      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), DefaultResponseContext.empty());
       List<Result<SelectResultValue>> results = queryResult.toList();
       
       SelectResultValue result = results.get(0).getValue();

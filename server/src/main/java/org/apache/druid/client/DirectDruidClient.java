@@ -51,6 +51,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResource;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -67,8 +70,6 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -83,7 +84,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
   public static final String QUERY_FAIL_TIME = "queryFailTime";
-  public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
 
@@ -101,15 +101,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   /**
    * Removes the magical fields added by {@link #makeResponseContextForQuery()}.
    */
-  public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
+  public static void removeMagicResponseContextFields(ResponseContext responseContext)
   {
-    responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
+    responseContext.remove(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED);
   }
 
-  public static ConcurrentMap<String, Object> makeResponseContextForQuery()
+  public static ResponseContext makeResponseContextForQuery()
   {
-    final ConcurrentMap<String, Object> responseContext = new ConcurrentHashMap<>();
-    responseContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+    final ResponseContext responseContext = ConcurrentResponseContext.empty();
+    responseContext.put(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
     return responseContext;
   }
 
@@ -141,7 +141,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
     final Query<T> query = queryPlus.getQuery();
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
@@ -158,7 +158,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long requestStartTimeNs = System.nanoTime();
       final long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
-      final AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
+      final AtomicLong totalBytesGathered = (AtomicLong) context.get(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED);
       final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, 0);
       final boolean usingBackpressure = maxQueuedBytes > 0;
 
@@ -229,7 +229,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final boolean continueReading;
           try {
-            final String responseContext = response.headers().get("X-Druid-Response-Context");
+            final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
             // context may be null in case of error or query timeout
             if (responseContext != null) {
               context.putAll(

@@ -32,6 +32,8 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -48,7 +50,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -240,7 +241,7 @@ public class FixedBucketsHistogramTopNQueryTest
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    ResponseContext context = DefaultResponseContext.empty();
 
     List<Result<TopNResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
