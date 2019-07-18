@@ -123,6 +123,11 @@ public class Logger
     log.error(StringUtils.nonStrictFormat(message, formatArgs), t);
   }
 
+  public void assertionError(String message, Object... formatArgs)
+  {
+    log.error("ASSERTION_ERROR: " + message, formatArgs);
+  }
+
   public void wtf(String message, Object... formatArgs)
   {
     log.error(StringUtils.nonStrictFormat("WTF?!: " + message, formatArgs), new Exception());

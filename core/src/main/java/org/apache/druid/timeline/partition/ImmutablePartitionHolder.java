@@ -37,7 +37,7 @@ public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends Parti
   }
 
   @Override
-  public void add(PartitionChunk<T> tPartitionChunk)
+  public boolean add(PartitionChunk<T> tPartitionChunk)
   {
     throw new UnsupportedOperationException();
   }

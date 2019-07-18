@@ -123,6 +123,8 @@ public class ImmutableDruidDataSource
   @Override
   public boolean equals(Object o)
   {
+    // Note: this method is not well-defined. It should instead just throw UnsupportedOperationsException.
+    // See https://github.com/apache/incubator-druid/issues/7858.
     if (this == o) {
       return true;
     }
@@ -146,6 +148,8 @@ public class ImmutableDruidDataSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, properties, idToSegments);
+    // Note: this method is not well-defined. It should instead just throw UnsupportedOperationsException.
+    // See https://github.com/apache/incubator-druid/issues/7858.
+    return Objects.hash(name, properties);
   }
 }

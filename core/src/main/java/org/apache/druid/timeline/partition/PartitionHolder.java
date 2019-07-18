@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.google.common.collect.Iterables;
 import org.apache.druid.timeline.Overshadowable;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -60,6 +61,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     overshadowableManager.addChunk(chunk);
   }
 
+  @Nullable
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
     return overshadowableManager.removeChunk(chunk);

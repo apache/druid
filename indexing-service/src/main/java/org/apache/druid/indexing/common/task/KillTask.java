@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.client.indexing.ClientKillQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -43,6 +44,9 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
+ * The client representation of this task is {@link ClientKillQuery}.
+ * JSON serialization fields of this class must correspond to those of {@link
+ * ClientKillQuery}, except for "id" and "context" fields.
  */
 public class KillTask extends AbstractFixedIntervalTask
 {

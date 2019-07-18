@@ -24,7 +24,12 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * org.apache.druid.indexing.common.task.Task representation for clients
+ * org.apache.druid.indexing.common.task.Task representations for clients. The magic conversion happens right
+ * at the moment of making a REST query: {@link HttpIndexingServiceClient#runTask} serializes ClientTaskQuery
+ * objects and org.apache.druid.indexing.overlord.http.OverlordResource.taskPost() deserializes
+ * org.apache.druid.indexing.common.task.Task objects from the same bytes. Therefore JSON serialization fields of
+ * ClientTaskQuery objects must match with those of the corresponding
+ * org.apache.druid.indexing.common.task.Task objects.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
