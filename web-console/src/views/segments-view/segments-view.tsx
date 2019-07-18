@@ -184,8 +184,15 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `  ("start" || '/' || "end") AS "interval",`,
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
-            `WHERE ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
+            `WHERE`,
           ];
+          if (whereParts.length) {
+            queryParts.push(whereParts.join(' AND ') + 'AND');
+          }
+          queryParts.push(
+            ` ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
+          );
+
           if (whereParts.length) {
             queryParts.push('AND ' + whereParts.join(' AND '));
           }
