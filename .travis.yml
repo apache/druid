@@ -43,7 +43,13 @@ matrix:
       # Strict compilation requires more than 2 GB
       script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile spotbugs:check -B --fail-at-end
 
-    # packaging check
+      # analyze dependencies
+    - env:
+        - NAME="analyze dependencies"
+      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
+      script: MAVEN_OPTS='-Xmx3000m' mvn dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true
+
+      # packaging check
     - env:
         - NAME="packaging check"
       before_install:
