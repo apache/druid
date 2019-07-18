@@ -44,6 +44,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
@@ -378,22 +379,26 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   Consumer<String, String> getConsumer()
   {
     // Workaround for Kafka String Serializer could not be found
-    // Adopted from - https://stackoverflow.com/a/54118010/2586315
-    ClassLoader original = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader(null);
+    // Adopted from org.apache.druid.indexing.kafka.KafkaRecordSupplier#getKafkaConsumer
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    final Properties properties = getConsumerProperties();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      return new KafkaConsumer<>(properties, new StringDeserializer(), new StringDeserializer());
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
 
+  @Nonnull
+  private Properties getConsumerProperties()
+  {
     final Properties properties = new Properties();
     properties.putAll(kafkaProperties);
-    properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-    properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
     // Enable publish-subscribe
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
-
-    KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(properties);
-
-    Thread.currentThread().setContextClassLoader(original);
-    return kafkaConsumer;
+    return properties;
   }
 }
