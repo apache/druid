@@ -139,6 +139,9 @@ public class IntermediaryDataManager
           try {
             deleteExpiredSuprevisorTaskPartitionsIfNotRunning();
           }
+          catch (InterruptedException e) {
+            log.error(e, "Error while cleaning up partitions for expired supervisors");
+          }
           catch (Exception e) {
             log.warn(e, "Error while cleaning up partitions for expired supervisors");
           }
@@ -187,7 +190,7 @@ public class IntermediaryDataManager
    * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
    * the self-cleanup for when the cleanup request is missing.
    */
-  private void deleteExpiredSuprevisorTaskPartitionsIfNotRunning()
+  private void deleteExpiredSuprevisorTaskPartitionsIfNotRunning() throws InterruptedException
   {
     final DateTime now = DateTimes.nowUtc();
     final Set<String> expiredSupervisorTasks = new HashSet<>();

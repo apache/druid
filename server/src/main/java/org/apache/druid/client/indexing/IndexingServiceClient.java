@@ -56,7 +56,7 @@ public interface IndexingServiceClient
 
   TaskStatusResponse getTaskStatus(String taskId);
 
-  Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds);
+  Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException;
 
   @Nullable
   TaskStatusPlus getLastCompleteTask();

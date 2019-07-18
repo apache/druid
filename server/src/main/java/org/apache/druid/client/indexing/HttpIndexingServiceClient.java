@@ -271,7 +271,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
+  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
@@ -286,7 +286,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           }
       );
     }
-    catch (IOException | InterruptedException e) {
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
