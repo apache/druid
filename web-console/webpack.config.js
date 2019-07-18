@@ -32,30 +32,30 @@ function friendlyErrorFormatter(e, colors) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
 
-module.exports = (env) => {
-  let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
+module.exports = env => {
+  let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
   if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
   if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
 
   const proxyTarget = {
     target: druidUrl,
-    secure: false
+    secure: false,
   };
 
   return {
     mode: process.env.NODE_ENV || 'development',
     entry: {
-      'web-console': './src/entry.ts'
+      'web-console': './src/entry.ts',
     },
     output: {
       path: path.resolve(__dirname, './public'),
       filename: `[name]-${version}.js`,
       chunkFilename: `[name]-${version}.js`,
-      publicPath: '/public'
+      publicPath: '/public',
     },
     target: 'web',
     resolve: {
-      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css']
+      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css'],
     },
     devServer: {
       publicPath: '/public',
@@ -65,8 +65,8 @@ module.exports = (env) => {
       proxy: {
         '/status': proxyTarget,
         '/druid': proxyTarget,
-        '/proxy': proxyTarget
-      }
+        '/proxy': proxyTarget,
+      },
     },
     module: {
       rules: [
@@ -79,10 +79,10 @@ module.exports = (env) => {
               options: {
                 configFile: 'tslint.json',
                 emitErrors: true,
-                fix: false // Set this to true to auto fix errors
-              }
-            }
-          ]
+                fix: false, // Set this to true to auto fix errors
+              },
+            },
+          ],
         },
         {
           test: /\.tsx?$/,
@@ -91,34 +91,34 @@ module.exports = (env) => {
             {
               loader: 'ts-loader',
               options: {
-                errorFormatter: friendlyErrorFormatter
-              }
-            }
-          ]
+                errorFormatter: friendlyErrorFormatter,
+              },
+            },
+          ],
         },
         {
           test: /\.s?css$/,
           use: [
-            {loader: 'style-loader'}, // creates style nodes from JS strings
-            {loader: 'css-loader'}, // translates CSS into CommonJS
+            { loader: 'style-loader' }, // creates style nodes from JS strings
+            { loader: 'css-loader' }, // translates CSS into CommonJS
             {
               loader: 'postcss-loader',
               options: {
                 ident: 'postcss',
                 plugins: () => [
                   postcssPresetEnv({
-                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1']
-                  })
-                ]
-              }
+                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1'],
+                  }),
+                ],
+              },
             },
-            {loader: 'sass-loader'} // compiles Sass to CSS, using Node Sass by default
-          ]
-        }
-      ]
+            { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
+          ],
+        },
+      ],
     },
     plugins: [
       // new BundleAnalyzerPlugin()
-    ]
+    ],
   };
 };

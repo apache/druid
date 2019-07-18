@@ -25,19 +25,23 @@ export interface QueryStateInt<R> {
 }
 
 export interface QueryManagerOptions<Q, R> {
-  processQuery: (query: Q) => Promise<R>;
+  processQuery: (query: Q, setIntermediateQuery: (intermediateQuery: any) => void) => Promise<R>;
   onStateChange?: (queryResolve: QueryStateInt<R>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
 }
 
 export class QueryManager<Q, R> {
-  private processQuery: (query: Q) => Promise<R>;
+  private processQuery: (
+    query: Q,
+    setIntermediateQuery: (intermediateQuery: any) => void,
+  ) => Promise<R>;
   private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
 
   private terminated = false;
   private nextQuery: Q | undefined;
   private lastQuery: Q | undefined;
+  private lastIntermediateQuery: any;
   private actuallyLoading = false;
   private state: QueryStateInt<R> = {
     result: null,
@@ -78,7 +82,9 @@ export class QueryManager<Q, R> {
     const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
-    this.processQuery(this.lastQuery).then(
+    this.processQuery(this.lastQuery, (intermediateQuery: any) => {
+      this.lastIntermediateQuery = intermediateQuery;
+    }).then(
       result => {
         if (this.currentQueryId !== myQueryId) return;
         this.actuallyLoading = false;
@@ -134,6 +140,10 @@ export class QueryManager<Q, R> {
 
   public getLastQuery(): Q | undefined {
     return this.lastQuery;
+  }
+
+  public getLastIntermediateQuery(): any {
+    return this.lastIntermediateQuery;
   }
 
   public getState(): QueryStateInt<R> {

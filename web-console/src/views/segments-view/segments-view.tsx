@@ -127,52 +127,10 @@ interface SegmentQueryResultRow {
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
+  static PAGE_SIZE = 25;
+
   private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
   private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
-
-  static toSQL(query: SegmentsQuery) {
-    const totalQuerySize = (query.page + 1) * query.pageSize;
-
-    let queryParts = [
-      `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
-      `FROM sys.segments`,
-    ];
-
-    const whereParts = query.filtered
-      .map((f: Filter) => {
-        if (f.id.startsWith('is_')) {
-          if (f.value === 'all') return null;
-          return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
-        } else {
-          return sqlQueryCustomTableFilter(f);
-        }
-      })
-      .filter(Boolean);
-
-    if (whereParts.length) {
-      queryParts.push('WHERE ' + whereParts.join(' AND '));
-    }
-
-    if (query.sorted.length) {
-      queryParts.push(
-        'ORDER BY ' +
-          query.sorted
-            .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-            .join(', '),
-      );
-    }
-
-    queryParts.push(`LIMIT ${totalQuerySize}`);
-
-    if (query.groupByInterval) {
-      queryParts = [
-        `SELECT ("start" || '/' || "end") AS "interval", * FROM sys.segments`,
-        `WHERE ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT  ${totalQuerySize})`,
-        `LIMIT ${totalQuerySize * 1000}`,
-      ];
-    }
-    return queryParts.join('\n');
-  }
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -205,8 +163,54 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
-      processQuery: async (query: SegmentsQuery) => {
-        const results: any[] = (await queryDruidSql({ query: SegmentsView.toSQL(query) })).slice(
+      processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
+        const totalQuerySize = (query.page + 1) * query.pageSize;
+
+        const whereParts = query.filtered
+          .map((f: Filter) => {
+            if (f.id.startsWith('is_')) {
+              if (f.value === 'all') return null;
+              return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
+            } else {
+              return sqlQueryCustomTableFilter(f);
+            }
+          })
+          .filter(Boolean);
+
+        let queryParts: string[];
+        if (query.groupByInterval) {
+          queryParts = [
+            `SELECT`,
+            `  ("start" || '/' || "end") AS "interval",`,
+            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `FROM sys.segments`,
+            `WHERE ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
+            `LIMIT ${totalQuerySize * 1000}`,
+          ];
+        } else {
+          queryParts = [
+            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `FROM sys.segments`,
+          ];
+
+          if (whereParts.length) {
+            queryParts.push('WHERE ' + whereParts.join(' AND '));
+          }
+
+          if (query.sorted.length) {
+            queryParts.push(
+              'ORDER BY ' +
+                query.sorted
+                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .join(', '),
+            );
+          }
+
+          queryParts.push(`LIMIT ${totalQuerySize}`);
+        }
+        const sqlQuery = queryParts.join('\n');
+        setIntermediateQuery(sqlQuery);
+        const results: any[] = (await queryDruidSql({ query: sqlQuery })).slice(
           query.page * query.pageSize,
         );
         results.forEach(result => {
@@ -597,7 +601,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     } = this.state;
     const { goToQuery, noSqlMode } = this.props;
     const { groupByInterval } = this.state;
-    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastQuery();
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
 
     return (
       <>
@@ -618,7 +622,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 disabled={!lastSegmentsQuery}
                 onClick={() => {
                   if (!lastSegmentsQuery) return;
-                  goToQuery(SegmentsView.toSQL(lastSegmentsQuery));
+                  goToQuery(lastSegmentsQuery);
                 }}
               />
             )}
