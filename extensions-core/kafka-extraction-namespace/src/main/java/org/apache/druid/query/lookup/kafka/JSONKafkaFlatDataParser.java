@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathParser;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
-import org.apache.druid.query.lookup.namespace.parsers.DelegateParser;
+import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 
 import java.util.Objects;
 
@@ -64,7 +64,7 @@ public class JSONKafkaFlatDataParser implements KafkaLookupDataParser
                     new JSONPathFieldSpec(JSONPathFieldType.ROOT, valueFieldName, valueFieldName)
             )
     );
-    this.parser = new DelegateParser(
+    this.parser = new UriExtractionNamespace.DelegateParser(
         new JSONPathParser(flattenSpec, jsonMapper.copy()),
         keyFieldName,
         valueFieldName

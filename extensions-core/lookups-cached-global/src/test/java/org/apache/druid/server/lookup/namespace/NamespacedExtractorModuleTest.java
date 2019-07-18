@@ -29,7 +29,6 @@ import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
-import org.apache.druid.query.lookup.namespace.parsers.ObjectMapperFlatDataParser;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -102,7 +101,7 @@ public class NamespacedExtractorModuleTest
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new ObjectMapperFlatDataParser(
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
@@ -125,7 +124,7 @@ public class NamespacedExtractorModuleTest
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new ObjectMapperFlatDataParser(UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
         new Period(0),
         null
     );
@@ -146,7 +145,7 @@ public class NamespacedExtractorModuleTest
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new ObjectMapperFlatDataParser(
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
@@ -167,7 +166,7 @@ public class NamespacedExtractorModuleTest
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new ObjectMapperFlatDataParser(
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),

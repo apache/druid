@@ -32,11 +32,6 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.lookup.namespace.parsers.CSVFlatDataParser;
-import org.apache.druid.query.lookup.namespace.parsers.FlatDataParser;
-import org.apache.druid.query.lookup.namespace.parsers.JSONFlatDataParser;
-import org.apache.druid.query.lookup.namespace.parsers.ObjectMapperFlatDataParser;
-import org.apache.druid.query.lookup.namespace.parsers.TSVFlatDataParser;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -68,7 +63,7 @@ public class UriExtractionNamespaceTest
                 )
             )
         )
-    ).registerSubtypes(UriExtractionNamespace.class, FlatDataParser.class);
+    ).registerSubtypes(UriExtractionNamespace.class, UriExtractionNamespace.FlatDataParser.class);
 
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     mapper.setAnnotationIntrospectors(
@@ -87,7 +82,7 @@ public class UriExtractionNamespaceTest
   @Test
   public void testCSV()
   {
-    CSVFlatDataParser parser = new CSVFlatDataParser(
+    UriExtractionNamespace.CSVFlatDataParser parser = new UriExtractionNamespace.CSVFlatDataParser(
         ImmutableList.of(
             "col1",
             "col2",
@@ -100,7 +95,7 @@ public class UriExtractionNamespaceTest
   @Test(expected = IllegalArgumentException.class)
   public void testBadCSV()
   {
-    CSVFlatDataParser parser = new CSVFlatDataParser(
+    UriExtractionNamespace.CSVFlatDataParser parser = new UriExtractionNamespace.CSVFlatDataParser(
         ImmutableList.of(
             "col1",
             "col2",
@@ -113,7 +108,7 @@ public class UriExtractionNamespaceTest
   @Test(expected = NullPointerException.class)
   public void testBadCSV2()
   {
-    CSVFlatDataParser parser = new CSVFlatDataParser(
+    UriExtractionNamespace.CSVFlatDataParser parser = new UriExtractionNamespace.CSVFlatDataParser(
         ImmutableList.of(
             "col1",
             "col2",
@@ -126,7 +121,7 @@ public class UriExtractionNamespaceTest
   @Test
   public void testTSV()
   {
-    TSVFlatDataParser parser = new TSVFlatDataParser(
+    UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "|",
         null, "col2",
@@ -138,7 +133,7 @@ public class UriExtractionNamespaceTest
   @Test
   public void testWithListDelimiterTSV()
   {
-    TSVFlatDataParser parser = new TSVFlatDataParser(
+    UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "\\u0001",
         "\\u0002", "col2",
@@ -150,7 +145,7 @@ public class UriExtractionNamespaceTest
   @Test(expected = IllegalArgumentException.class)
   public void testBadTSV()
   {
-    TSVFlatDataParser parser = new TSVFlatDataParser(
+    UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3fdsfds"),
         ",",
         null, "col2",
@@ -164,7 +159,7 @@ public class UriExtractionNamespaceTest
   @Test(expected = NullPointerException.class)
   public void testBadTSV2()
   {
-    TSVFlatDataParser parser = new TSVFlatDataParser(
+    UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         ",",
         null, "col2",
@@ -179,7 +174,7 @@ public class UriExtractionNamespaceTest
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         new ObjectMapper(),
         keyField,
         valueField
@@ -203,7 +198,7 @@ public class UriExtractionNamespaceTest
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         new ObjectMapper(),
         keyField,
         valueField
@@ -226,7 +221,7 @@ public class UriExtractionNamespaceTest
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         registerTypes(new ObjectMapper()),
         null,
         valueField
@@ -249,7 +244,7 @@ public class UriExtractionNamespaceTest
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         registerTypes(new ObjectMapper()),
         keyField,
         null
@@ -272,7 +267,7 @@ public class UriExtractionNamespaceTest
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         registerTypes(new ObjectMapper()),
         "",
         ""
@@ -293,7 +288,7 @@ public class UriExtractionNamespaceTest
   @Test
   public void testObjectMapperFlatDataParser()
   {
-    ObjectMapperFlatDataParser parser = new ObjectMapperFlatDataParser(
+    UriExtractionNamespace.ObjectMapperFlatDataParser parser = new UriExtractionNamespace.ObjectMapperFlatDataParser(
         registerTypes(new ObjectMapper())
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("{\"B\":\"C\"}"));
@@ -303,22 +298,22 @@ public class UriExtractionNamespaceTest
   public void testSimpleJSONSerDe() throws IOException
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
-    for (FlatDataParser parser : ImmutableList.of(
-        new CSVFlatDataParser(
+    for (UriExtractionNamespace.FlatDataParser parser : ImmutableList.of(
+        new UriExtractionNamespace.CSVFlatDataParser(
             ImmutableList.of(
                 "col1",
                 "col2",
                 "col3"
             ), "col2", "col3"
         ),
-        new ObjectMapperFlatDataParser(mapper),
-        new JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new UriExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
+        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
     )) {
       final String str = mapper.writeValueAsString(parser);
-      final FlatDataParser parser2 = mapper.readValue(
+      final UriExtractionNamespace.FlatDataParser parser2 = mapper.readValue(
           str,
-          FlatDataParser.class
+          UriExtractionNamespace.FlatDataParser.class
       );
       Assert.assertEquals(str, mapper.writeValueAsString(parser2));
     }
@@ -328,17 +323,17 @@ public class UriExtractionNamespaceTest
   public void testSimpleToString()
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
-    for (FlatDataParser parser : ImmutableList.of(
-        new CSVFlatDataParser(
+    for (UriExtractionNamespace.FlatDataParser parser : ImmutableList.of(
+        new UriExtractionNamespace.CSVFlatDataParser(
             ImmutableList.of(
                 "col1",
                 "col2",
                 "col3"
             ), "col2", "col3"
         ),
-        new ObjectMapperFlatDataParser(mapper),
-        new JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new UriExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
+        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
     )) {
       Assert.assertFalse(parser.toString().contains("@"));
     }
@@ -354,8 +349,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUriPrefix().toString());
     Assert.assertEquals("a.b.c", namespace.getFileRegex());
@@ -372,8 +367,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
@@ -396,7 +391,7 @@ public class UriExtractionNamespaceTest
     final String valueField = "valueField";
     final int n = 341879;
     final String nString = StringUtils.format("%d", n);
-    JSONFlatDataParser parser = new JSONFlatDataParser(
+    UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         new ObjectMapper(),
         keyField,
         valueField
@@ -458,7 +453,7 @@ public class UriExtractionNamespaceTest
   @Test
   public void testSimpleJsonNumeric()
   {
-    final ObjectMapperFlatDataParser parser = new ObjectMapperFlatDataParser(
+    final UriExtractionNamespace.ObjectMapperFlatDataParser parser = new UriExtractionNamespace.ObjectMapperFlatDataParser(
         registerTypes(new DefaultObjectMapper())
     );
     final int n = 341879;

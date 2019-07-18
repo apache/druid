@@ -30,8 +30,6 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
-import org.apache.druid.query.lookup.namespace.parsers.JSONFlatDataParser;
-import org.apache.druid.query.lookup.namespace.parsers.ObjectMapperFlatDataParser;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.CacheSchedulerTest;
@@ -292,7 +290,7 @@ public class UriCacheGeneratorTest
     namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new ObjectMapperFlatDataParser(
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
@@ -345,7 +343,7 @@ public class UriCacheGeneratorTest
       UriExtractionNamespace namespace = new UriExtractionNamespace(
           tmpFile.toURI(),
           null, null,
-          new ObjectMapperFlatDataParser(
+          new UriExtractionNamespace.ObjectMapperFlatDataParser(
               UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
           new Period(0),
@@ -507,7 +505,7 @@ public class UriCacheGeneratorTest
             new URI("file://tmp/I_DONT_REALLY_EXIST" + UUID.randomUUID()),
             null,
             null,
-            new JSONFlatDataParser(
+            new UriExtractionNamespace.JSONFlatDataParser(
                 new DefaultObjectMapper(),
                 "key",
                 "val"
