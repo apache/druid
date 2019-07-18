@@ -6410,6 +6410,11 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
+        .setPostAggregatorSpecs(
+            Collections.singletonList(
+                new FieldAccessPostAggregator("idxPostAgg","idx")
+            )
+        )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setSubtotalsSpec(ImmutableList.of(
             ImmutableList.of("alias2"),
@@ -6426,6 +6431,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            135L,
+            "idxPostAgg",
             135L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6435,6 +6442,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            118L,
+            "idxPostAgg",
             118L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6444,6 +6453,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            158L,
+            "idxPostAgg",
             158L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6453,6 +6464,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            120L,
+            "idxPostAgg",
             120L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6462,6 +6475,8 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "idx",
+            2870L,
+            "idxPostAgg",
             2870L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6471,6 +6486,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            121L,
+            "idxPostAgg",
             121L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6480,6 +6497,8 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "idx",
+            2900L,
+            "idxPostAgg",
             2900L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6489,6 +6508,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            78L,
+            "idxPostAgg",
             78L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6498,6 +6519,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            119L,
+            "idxPostAgg",
             119L
         ),
 
@@ -6508,6 +6531,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            147L,
+            "idxPostAgg",
             147L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6517,6 +6542,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            112L,
+            "idxPostAgg",
             112L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6526,6 +6553,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            166L,
+            "idxPostAgg",
             166L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6535,6 +6564,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            113L,
+            "idxPostAgg",
             113L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6544,6 +6575,8 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "idx",
+            2447L,
+            "idxPostAgg",
             2447L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6553,6 +6586,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            114L,
+            "idxPostAgg",
             114L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6562,6 +6597,8 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "idx",
+            2505L,
+            "idxPostAgg",
             2505L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6571,6 +6608,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            97L,
+            "idxPostAgg",
             97L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6580,6 +6619,8 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
+            126L,
+            "idxPostAgg",
             126L
         ),
 
@@ -6590,6 +6631,8 @@ public class GroupByQueryRunnerTest
             "rows",
             9L,
             "idx",
+            1102L,
+            "idxPostAgg",
             1102L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6599,6 +6642,8 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
+            2836L,
+            "idxPostAgg",
             2836L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6608,6 +6653,8 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
+            2681L,
+            "idxPostAgg",
             2681L
         ),
 
@@ -6618,6 +6665,8 @@ public class GroupByQueryRunnerTest
             "rows",
             9L,
             "idx",
+            1120L,
+            "idxPostAgg",
             1120L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6627,6 +6676,8 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
+            2514L,
+            "idxPostAgg",
             2514L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6636,6 +6687,8 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
+            2193L,
+            "idxPostAgg",
             2193L
         ),
 
@@ -6644,6 +6697,8 @@ public class GroupByQueryRunnerTest
             "rows",
             13L,
             "idx",
+            6619L,
+            "idxPostAgg",
             6619L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6651,6 +6706,8 @@ public class GroupByQueryRunnerTest
             "rows",
             13L,
             "idx",
+            5827L,
+            "idxPostAgg",
             5827L
         )
     );
