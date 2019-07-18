@@ -29,7 +29,7 @@ One can log in to TeamCity either via credentials or as a guest to check static 
 ### Becoming a Project Administrator
 Druid committers shall obtain a status of a [Druid project](
 https://teamcity.jetbrains.com/project.html?projectId=OpenSourceProjects_Druid)
-administrator. First, the Druid committer needs to log in teamcity.jetbrains.com using his Github account.
+administrator. First, the Druid committer needs to log in teamcity.jetbrains.com using their Github account.
 Then, somebody who is already a project administrator needs to do the following:
 
  1. Follow the "Administration" link in the top-right corner of the page

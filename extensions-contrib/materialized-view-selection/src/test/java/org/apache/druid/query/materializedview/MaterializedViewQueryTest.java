@@ -40,7 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 
 public class MaterializedViewQueryTest
 {
@@ -80,7 +79,7 @@ public class MaterializedViewQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
     String json = jsonMapper.writeValueAsString(query);

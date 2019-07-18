@@ -1495,9 +1495,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(ImmutableList.of(
-                    expressionPostAgg("p0", "substring(\"d0\", 1, -1)")
-                ))
+                .postAggregators(expressionPostAgg("p0", "substring(\"d0\", 1, -1)"))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1532,10 +1530,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(ImmutableList.of(
+                .postAggregators(
                     expressionPostAgg("p0", "substring(\"d0\", 1, -1)"),
                     expressionPostAgg("p1", "strlen(\"d0\")")
-                ))
+                )
                 .metric(new NumericTopNMetricSpec("p1"))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -2542,15 +2540,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("p0")))
-                .aggregators(aggregators(
+                .aggregators(
                     new FloatMinAggregatorFactory("a0", "m1"),
                     new FloatMaxAggregatorFactory("a1", "m1")
-                ))
-                .postAggregators(
-                    ImmutableList.of(
-                        expressionPostAgg("p0", "(\"a0\" + \"a1\")")
-                    )
                 )
+                .postAggregators(expressionPostAgg("p0", "(\"a0\" + \"a1\")"))
                 .threshold(3)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -4650,7 +4644,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
                 .metric(new NumericTopNMetricSpec("a0"))
                 .threshold(2)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -4717,7 +4711,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
                 .metric(new NumericTopNMetricSpec("a0"))
                 .threshold(2)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -7582,24 +7576,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT))
                 .filters("dim2", "a")
-                .aggregators(aggregators(
+                .aggregators(
                     new DoubleSumAggregatorFactory("a0:sum", "m2"),
                     new CountAggregatorFactory("a0:count"),
                     new DoubleSumAggregatorFactory("a1", "m1"),
                     new DoubleSumAggregatorFactory("a2", "m2")
-                ))
+                )
                 .postAggregators(
-                    ImmutableList.of(
-                        new ArithmeticPostAggregator(
-                            "a0",
-                            "quotient",
-                            ImmutableList.of(
-                                new FieldAccessPostAggregator(null, "a0:sum"),
-                                new FieldAccessPostAggregator(null, "a0:count")
-                            )
-                        ),
-                        expressionPostAgg("p0", "(\"a1\" + \"a2\")")
-                    )
+                    new ArithmeticPostAggregator(
+                        "a0",
+                        "quotient",
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator(null, "a0:sum"),
+                            new FieldAccessPostAggregator(null, "a0:count")
+                        )
+                    ),
+                    expressionPostAgg("p0", "(\"a1\" + \"a2\")")
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)

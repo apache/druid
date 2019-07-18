@@ -59,8 +59,12 @@ POST /druid/indexer/v1/worker
 GET /druid/indexer/v1/workers
 GET /druid/coordinator/v1/loadqueue?simple
 GET /druid/coordinator/v1/config
-GET /druid/coordinator/v1/metadata/datasources?includeDisabled
+GET /druid/coordinator/v1/metadata/datasources?includeUnused
 GET /druid/coordinator/v1/rules
 GET /druid/coordinator/v1/config/compaction
 GET /druid/coordinator/v1/tiers
 ```
+
+## Updating the list of license files
+
+From the web-console directory run `script/licenses`
