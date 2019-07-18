@@ -33,7 +33,7 @@ import './query-input.scss';
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
-export interface QueryInputProps extends React.Props<any> {
+export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
@@ -71,7 +71,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       );
 
       langTools.addCompleter({
-        getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
           callback(null, completions);
         },
       });
@@ -103,7 +103,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     );
 
     const keywordCompleter = {
-      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
         return callback(null, keywordList);
       },
     };
@@ -137,7 +137,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     });
 
     langTools.addCompleter({
-      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
         callback(null, functionList);
       },
       getDocTooltip: (item: any) => {
@@ -185,8 +185,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         <ResizeSensor onResize={this.handleAceContainerResize}>
           <div className="ace-container">
             <AceEditor
-              key={runeMode ? 'hjson' : 'sql'}
-              mode={runeMode ? 'hjson' : 'sql'}
+              mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
               name="ace-editor"
               onChange={onQueryStringChange}

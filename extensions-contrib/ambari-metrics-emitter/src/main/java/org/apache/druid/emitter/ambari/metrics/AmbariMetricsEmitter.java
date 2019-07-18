@@ -193,9 +193,6 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
       }
       catch (Exception e) {
         log.error(e, e.getMessage());
-        if (e instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
-        }
       }
 
     }

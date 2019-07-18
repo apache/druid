@@ -19,19 +19,17 @@
 
 package org.apache.druid.storage.cloudfiles;
 
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.jclouds.io.Payload;
 import org.jclouds.openstack.swift.v1.domain.SwiftObject;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.easymock.EasyMock.expect;
-import static org.junit.Assert.assertEquals;
 
 public class CloudFilesObjectApiProxyTest extends EasyMockSupport
 {
-
   @Test
   public void getTest()
   {
@@ -44,21 +42,20 @@ public class CloudFilesObjectApiProxyTest extends EasyMockSupport
     SwiftObject swiftObject = createMock(SwiftObject.class);
     Payload payload = createMock(Payload.class);
 
-    expect(cloudFilesApi.getObjectApi(region, container)).andReturn(objectApi);
-    expect(objectApi.get(path)).andReturn(swiftObject);
-    expect(swiftObject.getPayload()).andReturn(payload);
+    EasyMock.expect(cloudFilesApi.getObjectApi(region, container)).andReturn(objectApi);
+    EasyMock.expect(objectApi.get(path)).andReturn(swiftObject);
+    EasyMock.expect(swiftObject.getPayload()).andReturn(payload);
 
     replayAll();
 
     CloudFilesObjectApiProxy cfoApiProxy = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     CloudFilesObject cloudFilesObject = cfoApiProxy.get(path, 0);
 
-    assertEquals(cloudFilesObject.getPayload(), payload);
-    assertEquals(cloudFilesObject.getRegion(), region);
-    assertEquals(cloudFilesObject.getContainer(), container);
-    assertEquals(cloudFilesObject.getPath(), path);
+    Assert.assertEquals(cloudFilesObject.getPayload(), payload);
+    Assert.assertEquals(cloudFilesObject.getRegion(), region);
+    Assert.assertEquals(cloudFilesObject.getContainer(), container);
+    Assert.assertEquals(cloudFilesObject.getPath(), path);
 
     verifyAll();
   }
-
 }

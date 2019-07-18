@@ -47,11 +47,11 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
       <Dialog className="table-action-dialog" isOpen={isOpen} onClose={onClose} title={title}>
         <div className={Classes.DIALOG_BODY}>
           <div className="side-bar">
-            {sideButtonMetadata.map((d: SideButtonMetaData) => (
+            {sideButtonMetadata.map((d, i) => (
               <Button
                 className="tab-button"
                 icon={<Icon icon={d.icon} iconSize={20} />}
-                key={d.text}
+                key={i}
                 text={d.text}
                 intent={d.active ? Intent.PRIMARY : Intent.NONE}
                 minimal={!d.active}

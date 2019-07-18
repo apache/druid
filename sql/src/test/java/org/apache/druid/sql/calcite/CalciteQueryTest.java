@@ -557,12 +557,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectStar() throws Exception
   {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
     testQuery(
         "EXPLAIN PLAN FOR SELECT * FROM druid.foo",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
             }
         )
     );
@@ -1173,6 +1176,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHavingOnApproximateCountDistinct() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
         ImmutableList.of(
@@ -1321,6 +1327,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testColumnComparison() throws Exception
   {
+    // Cannot vectorize due to expression filter.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - 1 = dim1 GROUP BY dim1, m1",
         ImmutableList.of(
@@ -1686,6 +1695,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByCaseWhen() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  CASE EXTRACT(DAY FROM __time)\n"
@@ -1736,6 +1748,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByCaseWhenOfTripleAnd() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  CASE WHEN m1 > 1 AND m1 < 5 AND cnt = 1 THEN 'x' ELSE NULL END,"
@@ -1855,6 +1870,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
+
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
 
     testQuery(
         "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY COALESCE(dim2, dim1)\n",
@@ -2033,6 +2051,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // This query should actually return [0, null] rather than an empty result set, but it doesn't.
     // This test just "documents" the current behavior.
 
+    // Cannot vectorize due to "longMax" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar'",
         ImmutableList.of(
@@ -2055,6 +2076,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithFilterMatchingNothingWithGroupByLiteral() throws Exception
   {
+    // Cannot vectorize due to "longMax" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar' GROUP BY 'dummy'",
         ImmutableList.of(
@@ -2126,6 +2150,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountNullableExpression() throws Exception
   {
+    // Cannot vectorize due to expression filter.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(CASE WHEN dim2 = 'abc' THEN 'yes' WHEN dim2 = 'def' THEN 'yes' END) FROM druid.foo",
         ImmutableList.of(
@@ -2229,6 +2256,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainCountStarOnView() throws Exception
   {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
     final String explanation =
         "DruidQueryRel(query=[{"
         + "\"queryType\":\"timeseries\","
@@ -2241,7 +2271,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
         + "\"postAggregations\":[],"
         + "\"limit\":2147483647,"
-        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"}}]"
+        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"}}]"
         + ", signature=[{a0:LONG}])\n";
 
     testQuery(
@@ -2405,6 +2435,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnStringAsNumber() throws Exception
   {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE "
         + "dim1 = 10 OR "
@@ -2443,6 +2476,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSimpleAggregations() throws Exception
   {
+    // Cannot vectorize due to "longMax" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2) FROM druid.foo",
         ImmutableList.of(
@@ -2532,6 +2568,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Use PlannerConfig to disable topN, so this query becomes a groupBy.
 
+    // Cannot vectorize due to "floatMin", "floatMax" aggregators.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
@@ -2574,6 +2613,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByWithSortOnPostAggregationNoTopNContext() throws Exception
   {
     // Use context to disable topN, so this query becomes a groupBy.
+
+    // Cannot vectorize due to "floatMin", "floatMax" aggregators.
+    cannotVectorize();
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -2621,6 +2663,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations() throws Exception
   {
+    // Cannot vectorize due to "cardinality", "longMax" aggregators.
+    cannotVectorize();
+
     testQuery(
         "SELECT "
         + "SUM(case dim1 when 'abc' then cnt end), "
@@ -2792,6 +2837,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionAggregations() throws Exception
   {
+    // Cannot vectorize due to "doubleMax" aggregator.
+    cannotVectorize();
+
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testQuery(
@@ -2830,6 +2878,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGrouping() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  FLOOR(m1 / 2) * 2,\n"
@@ -2876,6 +2927,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingUsingCastToLong() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  CAST(m1 AS BIGINT) / 2 * 2,\n"
@@ -2924,6 +2978,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionFilteringAndGroupingOnStringCastToNumber() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  FLOOR(CAST(dim1 AS FLOAT) / 2) * 2,\n"
@@ -3612,6 +3669,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumOfString() throws Exception
   {
+    // Cannot vectorize due to expressions in aggregators.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -3639,6 +3699,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumOfExtractionFn() throws Exception
   {
+    // Cannot vectorize due to expressions in aggregators.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUM(CAST(SUBSTRING(dim1, 1, 10) AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -3666,6 +3729,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
@@ -3745,6 +3811,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithStrlenFilter() throws Exception
   {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
     testQuery(
         "SELECT distinct dim1 FROM druid.foo "
         + "WHERE CHARACTER_LENGTH(dim1) = 3 OR CAST(CHARACTER_LENGTH(dim1) AS varchar) = 3",
@@ -3915,6 +3984,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinct() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUM(cnt), COUNT(distinct dim2), COUNT(distinct unique_dim1) FROM druid.foo",
         ImmutableList.of(
@@ -3947,6 +4019,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfCaseWhen() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "COUNT(DISTINCT CASE WHEN m1 >= 4 THEN m1 END),\n"
@@ -4039,6 +4114,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
 
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
@@ -4125,6 +4203,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinct() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -4202,6 +4283,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNestedGroupBy() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "    FLOOR(__time to hour) AS __time,\n"
@@ -4320,10 +4404,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainDoubleNestedGroupBy() throws Exception
   {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
     final String explanation =
-        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"longSum\",\"name\":\"a0\",\"fieldName\":\"cnt\",\"expression\":null},{\"type\":\"count\",\"name\":\"a1\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"}}], signature=[{a0:LONG, a1:LONG}])\n"
-        + "  DruidOuterQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[{\"type\":\"longSum\",\"name\":\"a0\",\"fieldName\":\"cnt\",\"expression\":null}],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], signature=[{d0:STRING, a0:LONG}])\n"
-        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d1\",\"outputType\":\"STRING\"}],\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], signature=[{d0:STRING, d1:STRING, a0:LONG}])\n";
+        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"longSum\",\"name\":\"a0\",\"fieldName\":\"cnt\",\"expression\":null},{\"type\":\"count\",\"name\":\"a1\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"}}], signature=[{a0:LONG, a1:LONG}])\n"
+        + "  DruidOuterQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[{\"type\":\"longSum\",\"name\":\"a0\",\"fieldName\":\"cnt\",\"expression\":null}],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], signature=[{d0:STRING, a0:LONG}])\n"
+        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d1\",\"outputType\":\"STRING\"}],\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], signature=[{d0:STRING, d1:STRING, a0:LONG}])\n";
 
     testQuery(
         "EXPLAIN PLAN FOR SELECT SUM(cnt), COUNT(*) FROM (\n"
@@ -4390,6 +4477,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinMaxAvgDailyCountWithLimit() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT * FROM ("
         + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACT(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
@@ -4457,6 +4547,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testAvgDailyCountDistinct() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  AVG(u)\n"
@@ -4716,6 +4809,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctOfSemiJoinResult() throws Exception
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM (\n"
@@ -4790,10 +4886,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
   {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
     final String explanation =
-        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"}}], signature=[{a0:LONG}])\n"
-        + "  DruidSemiJoin(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], leftExpressions=[[SUBSTRING($3, 1, 1)]], rightKeys=[[0]])\n"
-        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], signature=[{d0:STRING}])\n";
+        "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"}}], signature=[{a0:LONG}])\n"
+        + "  DruidSemiJoin(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], leftExpressions=[[SUBSTRING($3, 1, 1)]], rightKeys=[[0]])\n"
+        + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n";
 
     testQuery(
         "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
@@ -5086,6 +5185,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctArithmetic() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -5130,6 +5232,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfSubstring() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(DISTINCT SUBSTRING(dim1, 1, 1)) FROM druid.foo WHERE dim1 <> ''",
         ImmutableList.of(
@@ -5169,6 +5274,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Test a couple different syntax variants of TRIM.
 
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(DISTINCT TRIM(BOTH ' ' FROM dim1)) FROM druid.foo WHERE TRIM(dim1) <> ''",
         ImmutableList.of(
@@ -5203,6 +5311,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Like FLOOR(__time TO QUARTER) but silly.
 
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER) AS quarter, COUNT(*)\n"
         + "FROM foo\n"
@@ -5231,6 +5342,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRegexpExtract() throws Exception
   {
+    // Cannot vectorize due to extractionFn in dimension spec.
+    cannotVectorize();
+
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
     testQuery(
         "SELECT DISTINCT\n"
@@ -5610,6 +5724,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnTimeExtract() throws Exception
   {
+    // Cannot vectorize due to expression filter.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
@@ -5642,6 +5759,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnTimeExtractWithMultipleDays() throws Exception
   {
+    // Cannot vectorize due to expression filters.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
@@ -5701,6 +5821,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloor() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_NO_SUBQUERIES, // Sanity check; this simple query should work with subqueries disabled.
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
@@ -5730,6 +5853,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorWithOrderBy() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
         ImmutableList.of(
@@ -5781,6 +5907,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT floor(__time TO year), dim2, COUNT(*)"
         + " FROM druid.foo"
@@ -5856,6 +5985,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByStringLength() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT CHARACTER_LENGTH(dim1), COUNT(*) FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1)",
         ImmutableList.of(
@@ -5881,6 +6013,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterAndGroupByLookup() throws Exception
   {
+    // Cannot vectorize due to extraction dimension specs.
+    cannotVectorize();
+
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
     final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
         null,
@@ -5935,6 +6070,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfLookup() throws Exception
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
         null,
         "lookyloo",
@@ -6142,6 +6280,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimeShift() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIME_SHIFT(__time, 'P1D', -1), 'P1M') AS gran,\n"
@@ -6190,6 +6331,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimestampAdd() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
@@ -6440,6 +6584,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesDescending() throws Exception
   {
+    // Cannot vectorize due to descending order.
+    cannotVectorize();
+
     testQuery(
         "SELECT gran, SUM(cnt) FROM (\n"
         + "  SELECT floor(__time TO month) AS gran,\n"
@@ -6467,6 +6614,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractYear() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  EXTRACT(YEAR FROM __time) AS \"year\",\n"
@@ -6513,6 +6663,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFormatYearAndMonth() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "  TIME_FORMAt(__time, 'yyyy MM') AS \"year\",\n"
@@ -6559,6 +6712,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractFloorTime() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT\n"
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
@@ -6591,6 +6747,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractFloorTimeLosAngeles() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
@@ -6712,6 +6871,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByTimeAndOtherDimension() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
@@ -7016,6 +7178,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy() throws Exception
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -7087,6 +7252,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUsingSubqueryWithExtractionFns() throws Exception
   {
+    // Cannot vectorize due to extraction dimension specs.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, COUNT(*) FROM druid.foo "
         + "WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')"
@@ -7353,6 +7521,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPostAggWithTimeseries() throws Exception
   {
+    // Cannot vectorize due to descending order.
+    cannotVectorize();
+
     testQuery(
         "SELECT "
         + "  FLOOR(__time TO YEAR), "
@@ -7446,7 +7617,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testConcat() throws Exception
   {
     testQuery(
-        "SELECT CONCAt(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
+        "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -7621,6 +7792,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{6L, 4L}
         )
     );
+
+    // Cannot vectorize next test due to "cardinality" aggregator.
+    cannotVectorize();
 
     // semi-join requires time condition on both left and right query
     testQuery(
@@ -7889,8 +8063,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v3", "div((\"__time\" - 946684683000),60000)", ValueType.LONG),
                     expressionVirtualColumn("v4", "div((\"__time\" - 946684743000),1000)", ValueType.LONG),
                     expressionVirtualColumn("v5", "subtract_months(\"__time\",941414400000,'UTC')", ValueType.LONG),
-                    expressionVirtualColumn("v6", "div(subtract_months(\"__time\",846806400000,'UTC'),12)", ValueType.LONG),
-                    expressionVirtualColumn("v7", "div(subtract_months(\"__time\",844128000000,'UTC'),3)", ValueType.LONG),
+                    expressionVirtualColumn(
+                        "v6",
+                        "div(subtract_months(\"__time\",846806400000,'UTC'),12)",
+                        ValueType.LONG
+                    ),
+                    expressionVirtualColumn(
+                        "v7",
+                        "div(subtract_months(\"__time\",844128000000,'UTC'),3)",
+                        ValueType.LONG
+                    ),
                     expressionVirtualColumn("v8", "div(div((\"__time\" - 907200000000),1000),604800)", ValueType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8")
@@ -7945,4 +8127,916 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testNvlColumns() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"foo", 3L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"bfoo", 2L},
+          new Object[]{"afoo", 1L},
+          new Object[]{"cfoo", 1L},
+          new Object[]{"dfoo", 1L},
+          new Object[]{"foo", 1L}
+      );
+    }
+    testQuery(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringGroupByWithFilter() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo where concat(dim3, 'foo') = 'bfoo' GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setDimFilter(selector("v0", "bfoo", null))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"bfoo", 2L},
+            new Object[]{"afoo", 1L},
+            new Object[]{"cfoo", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringScan() throws Exception
+  {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"foo\"]" : "[null]";
+    testQuery(
+        "SELECT concat(dim3, 'foo') FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"afoo\",\"bfoo\"]"},
+            new Object[]{"[\"bfoo\",\"cfoo\"]"},
+            new Object[]{"[\"dfoo\"]"},
+            new Object[]{"[\"foo\"]"},
+            new Object[]{nullVal},
+            new Object[]{nullVal}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringSelfConcatScan() throws Exception
+  {
+    final String nullVal = NullHandling.replaceWithDefault() ? "[\"-lol-\"]" : "[null]";
+    testQuery(
+        "SELECT concat(dim3, '-lol-', dim3) FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'-lol-',\"dim3\")", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a-lol-a\",\"a-lol-b\",\"b-lol-a\",\"b-lol-b\"]"},
+            new Object[]{"[\"b-lol-b\",\"b-lol-c\",\"c-lol-b\",\"c-lol-c\"]"},
+            new Object[]{"[\"d-lol-d\"]"},
+            new Object[]{"[\"-lol-\"]"},
+            new Object[]{nullVal},
+            new Object[]{nullVal}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringWorksLikeStringScanWithFilter() throws Exception
+  {
+    testQuery(
+        "SELECT concat(dim3, 'foo') FROM druid.numfoo where concat(dim3, 'foo') = 'bfoo'",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .filters(selector("v0", "bfoo", null))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"afoo\",\"bfoo\"]"},
+            new Object[]{"[\"bfoo\",\"cfoo\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectConstantArrayExpressionFromTable() throws Exception
+  {
+    testQuery(
+        "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.STRING))
+                .columns("dim1", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"1\",\"2\"]", ""}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectNonConstantArrayExpressionFromTable() throws Exception
+  {
+    testQuery(
+        "SELECT ARRAY[CONCAT(dim1, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING))
+                .columns("dim1", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"word\",\"up\"]", ""},
+            new Object[]{"[\"10.1word\",\"up\"]", "10.1"},
+            new Object[]{"[\"2word\",\"up\"]", "2"},
+            new Object[]{"[\"1word\",\"up\"]", "1"},
+            new Object[]{"[\"defword\",\"up\"]", "def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectNonConstantArrayExpressionFromTableFailForMultival() throws Exception
+  {
+    // without expression output type inference to prevent this, the automatic translation will try to turn this into
+    //
+    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+    //
+    // This error message will get better in the future. The error without translation would be:
+    //
+    //    org.apache.druid.java.util.common.RE: Unhandled array constructor element type [STRING_ARRAY]
+
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Unhandled map function output type [STRING_ARRAY]");
+    testQuery(
+        "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_overlap(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterNonConstant() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_overlap(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringContainsFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("array_contains(\"dim3\",array('a','b'))"))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringSlice() throws Exception
+  {
+    testQuery(
+        "SELECT MV_SLICE(dim3, 1) FROM druid.numfoo",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "array_slice(\"dim3\",1)", ValueType.STRING))
+                .columns(ImmutableList.of("v0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"b\"]"},
+            new Object[]{"[\"c\"]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"},
+            new Object[]{"[]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringLength() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1, MV_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim1", "_d0", ValueType.STRING),
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "v0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 2, 1L},
+            new Object[]{"10.1", 2, 1L},
+            new Object[]{"1", 1, 1L},
+            new Object[]{"2", 1, 1L},
+            new Object[]{"abc", 1, 1L},
+            new Object[]{"def", 1, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringAppend() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_APPEND(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_append(\"dim3\",'foo')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrepend() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo", 6L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_PREPEND('foo', dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_prepend('foo',\"dim3\")", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrependAppend() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 3L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"foo,null", "null,foo", 2L},
+          new Object[]{"foo,", ",foo", 1L},
+          new Object[]{"foo,a,b", "a,b,foo", 1L},
+          new Object[]{"foo,b,c", "b,c,foo", 1L},
+          new Object[]{"foo,d", "d,foo", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_TO_STRING(MV_PREPEND('foo', dim3), ','), MV_TO_STRING(MV_APPEND(dim3, 'foo'), ','), SUM(cnt) FROM druid.numfoo GROUP BY 1,2 ORDER BY 3 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_to_string(array_prepend('foo',\"dim3\"),',')", ValueType.STRING),
+                            expressionVirtualColumn("v1", "array_to_string(array_append(\"dim3\",'foo'),',')", ValueType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringConcat() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"", 6L},
+          new Object[]{"b", 4L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null, 4L},
+          new Object[]{"b", 4L},
+          new Object[]{"", 2L},
+          new Object[]{"a", 2L},
+          new Object[]{"c", 2L},
+          new Object[]{"d", 2L}
+      );
+    }
+    testQuery(
+        "SELECT MV_CONCAT(dim3, dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_concat(\"dim3\",\"dim3\")", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOffset() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset(\"dim3\",1)", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{"b", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOrdinal() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{"b", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOffsetOf() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset_of(\"dim3\",'b')", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? -1 : null, 4L},
+            new Object[]{0, 1L},
+            new Object[]{1, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOrdinalOf() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal_of(\"dim3\",'b')", ValueType.LONG))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? -1 : null, 4L},
+            new Object[]{1, 1L},
+            new Object[]{2, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringToString() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"", 3L},
+          new Object[]{"a,b", 1L},
+          new Object[]{"b,c", 1L},
+          new Object[]{"d", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null, 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a,b", 1L},
+          new Object[]{"b,c", 1L},
+          new Object[]{"d", 1L}
+      );
+    }
+    testQuery(
+        "SELECT MV_TO_STRING(dim3, ','), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_to_string(\"dim3\",',')", ValueType.STRING))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testMultiValueStringToStringToMultiValueString() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (NullHandling.replaceWithDefault()) {
+      results = ImmutableList.of(
+          new Object[]{"d", 7L},
+          new Object[]{"", 3L},
+          new Object[]{"b", 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{"d", 5L},
+          new Object[]{null, 2L},
+          new Object[]{"b", 2L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"c", 1L}
+      );
+    }
+    testQuery(
+        "SELECT STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','), SUM(cnt) FROM druid.numfoo WHERE MV_LENGTH(dim3) > 0 GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG),
+                            expressionVirtualColumn(
+                                "v1",
+                                "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimFilter(bound("v0", "0", null, true, false, null, StringComparators.NUMERIC))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "v1", ValueType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
 }

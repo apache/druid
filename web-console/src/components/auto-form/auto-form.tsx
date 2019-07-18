@@ -16,31 +16,16 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  FormGroup,
-  HTMLSelect,
-  Icon,
-  InputGroup,
-  Menu,
-  MenuItem,
-  NumericInput,
-  Popover,
-  Position,
-} from '@blueprintjs/core';
+import { FormGroup, HTMLSelect, Icon, NumericInput, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
 import { JSONInput } from '../json-input/json-input';
+import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
 
 import './auto-form.scss';
-
-export interface SuggestionGroup {
-  group: string;
-  suggestions: string[];
-}
 
 export interface Field<T> {
   name: string;
@@ -55,7 +40,7 @@ export interface Field<T> {
   min?: number;
 }
 
-export interface AutoFormProps<T> extends React.Props<any> {
+export interface AutoFormProps<T> {
   fields: Field<T>[];
   model: T | null;
   onChange: (newModel: T) => void;
@@ -64,13 +49,13 @@ export interface AutoFormProps<T> extends React.Props<any> {
   large?: boolean;
 }
 
-export interface AutoFormState<T> {
+export interface AutoFormState {
   jsonInputsValidity: any;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
   AutoFormProps<T>,
-  AutoFormState<T>
+  AutoFormState
 > {
   static makeLabelName(label: string): string {
     let newLabel = label
@@ -159,42 +144,11 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
     const { model, large } = this.props;
 
-    const suggestionsMenu = field.suggestions ? (
-      <Menu>
-        {field.suggestions.map(suggestion => {
-          if (typeof suggestion === 'string') {
-            return (
-              <MenuItem
-                key={suggestion}
-                text={suggestion}
-                onClick={() => this.fieldChange(field, suggestion)}
-              />
-            );
-          } else {
-            return (
-              <MenuItem key={suggestion.group} text={suggestion.group}>
-                {suggestion.suggestions.map(suggestion => (
-                  <MenuItem
-                    key={suggestion}
-                    text={suggestion}
-                    onClick={() => this.fieldChange(field, suggestion)}
-                  />
-                ))}
-              </MenuItem>
-            );
-          }
-        })}
-      </Menu>
-    ) : (
-      undefined
-    );
-
     const modalValue = deepGet(model as any, field.name);
     return (
-      <InputGroup
+      <SuggestibleInput
         value={modalValue != null ? modalValue : field.defaultValue || ''}
-        onChange={(e: any) => {
-          let v = e.target.value;
+        onValueChange={v => {
           if (sanitize) v = sanitize(v);
           this.fieldChange(field, v);
         }}
@@ -202,13 +156,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (modalValue === '') this.fieldChange(field, undefined);
         }}
         placeholder={field.placeholder}
-        rightElement={
-          suggestionsMenu && (
-            <Popover content={suggestionsMenu} position={Position.BOTTOM_RIGHT} autoFocus={false}>
-              <Button icon={IconNames.CARET_DOWN} minimal />
-            </Popover>
-          )
-        }
+        suggestions={field.suggestions}
         large={large}
         disabled={field.disabled}
       />

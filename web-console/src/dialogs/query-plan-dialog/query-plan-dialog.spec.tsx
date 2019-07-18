@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { QueryPlanDialog } from './query-plan-dialog';
 
@@ -30,7 +30,7 @@ describe('query plan dialog', () => {
         onClose={() => null}
       />
     );
-    const { container } = render(queryPlanDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(queryPlanDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

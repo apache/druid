@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ParseDataTable } from './parse-data-table';
 
@@ -35,6 +35,7 @@ describe('parse data table', () => {
 
     const parseDataTable = (
       <ParseDataTable
+        openModal={() => null}
         sampleData={sampleData}
         columnFilter=""
         canFlatten={false}

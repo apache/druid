@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
 
@@ -38,7 +38,7 @@ describe('lookup edit dialog', () => {
       />
     );
 
-    const { container } = render(lookupEditDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(lookupEditDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

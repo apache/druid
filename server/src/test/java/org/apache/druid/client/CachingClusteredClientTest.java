@@ -2198,7 +2198,8 @@ public class CachingClusteredClientTest
       serverExpectationList.add(serverExpectations);
       for (int j = 0; j < numChunks; ++j) {
         DruidServer lastServer = servers[random.nextInt(servers.length)];
-        serverExpectations.computeIfAbsent(lastServer, server -> new ServerExpectations(lastServer, makeMock(mocks, QueryRunner.class)));
+        serverExpectations
+            .computeIfAbsent(lastServer, server -> new ServerExpectations(server, makeMock(mocks, QueryRunner.class)));
 
         DataSegment mockSegment = makeMock(mocks, DataSegment.class);
         ServerExpectation<Object> expectation = new ServerExpectation<>(

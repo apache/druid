@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
 
-export interface ClearableInputProps extends React.Props<any> {
+export interface ClearableInputProps {
   className?: string;
   value: string;
   onChange: (value: string) => void;

@@ -22,7 +22,7 @@ import React from 'react';
 
 import './action-icon.scss';
 
-export interface ActionIconProps extends React.Props<any> {
+export interface ActionIconProps {
   className?: string;
   icon: IconName;
   onClick?: () => void;

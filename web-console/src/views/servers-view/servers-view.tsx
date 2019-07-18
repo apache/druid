@@ -24,7 +24,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
@@ -34,9 +34,9 @@ import {
   lookupBy,
   queryDruidSql,
   QueryManager,
-  TableColumnSelectionHandler,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './servers-view.scss';
@@ -74,8 +74,8 @@ function formatQueues(
   return queueParts.join(', ') || 'Empty load/drop queues';
 }
 
-export interface ServersViewProps extends React.Props<any> {
-  middleManager: string | null;
+export interface ServersViewProps {
+  middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
   noSqlMode: boolean;
@@ -90,6 +90,8 @@ export interface ServersViewState {
 
   middleManagerDisableWorkerHost: string | null;
   middleManagerEnableWorkerHost: string | null;
+
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 interface ServerQueryResultRow {
@@ -131,27 +133,33 @@ interface ServerResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
-  private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
-  private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private serverQueryManager: QueryManager<boolean, ServerResultRow[]>;
 
-  constructor(props: ServersViewProps, context: any) {
-    super(props, context);
-    this.state = {
-      serversLoading: true,
-      servers: null,
-      serversError: null,
-      serverFilter: [],
-      groupServersBy: null,
+  // Ranking
+  //   coordinator => 7
+  //   overlord => 6
+  //   router => 5
+  //   broker => 4
+  //   historical => 3
+  //   middle_manager => 2
+  //   peon => 1
 
-      middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null,
-    };
-
-    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
-  }
+  static SERVER_SQL = `SELECT
+  "server", "server_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  (
+    CASE "server_type"
+    WHEN 'coordinator' THEN 7
+    WHEN 'overlord' THEN 6
+    WHEN 'router' THEN 5
+    WHEN 'broker' THEN 4
+    WHEN 'historical' THEN 3
+    WHEN 'middle_manager' THEN 2
+    WHEN 'peon' THEN 1
+    ELSE 0
+    END
+  ) AS "rank"
+FROM sys.servers
+ORDER BY "rank" DESC, "server" DESC`;
 
   static async getServers(): Promise<ServerQueryResultRow[]> {
     const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
@@ -170,13 +178,28 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
     });
   }
 
-  componentDidMount(): void {
-    const { noSqlMode } = this.props;
+  constructor(props: ServersViewProps, context: any) {
+    super(props, context);
+    this.state = {
+      serversLoading: true,
+      servers: null,
+      serversError: null,
+      serverFilter: [],
+      groupServersBy: null,
+
+      middleManagerDisableWorkerHost: null,
+      middleManagerEnableWorkerHost: null,
+
+      hiddenColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
+      ),
+    };
+
     this.serverQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async noSqlMode => {
         let servers: ServerQueryResultRow[];
         if (!noSqlMode) {
-          servers = await queryDruidSql({ query });
+          servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
         } else {
           servers = await ServersView.getServers();
         }
@@ -227,32 +250,11 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
         });
       },
     });
+  }
 
-    // Ranking
-    //   coordinator => 7
-    //   overlord => 6
-    //   router => 5
-    //   broker => 4
-    //   historical => 3
-    //   middle_manager => 2
-    //   peon => 1
-
-    this.serverQueryManager.runQuery(`SELECT
-  "server", "server_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
-  (
-    CASE "server_type"
-    WHEN 'coordinator' THEN 7
-    WHEN 'overlord' THEN 6
-    WHEN 'router' THEN 5
-    WHEN 'broker' THEN 4
-    WHEN 'historical' THEN 3
-    WHEN 'middle_manager' THEN 2
-    WHEN 'peon' THEN 1
-    ELSE 0
-    END
-  ) AS "rank"
-FROM sys.servers
-ORDER BY "rank" DESC, "server" DESC`);
+  componentDidMount(): void {
+    const { noSqlMode } = this.props;
+    this.serverQueryManager.runQuery(noSqlMode);
   }
 
   componentWillUnmount(): void {
@@ -260,8 +262,14 @@ ORDER BY "rank" DESC, "server" DESC`);
   }
 
   renderServersTable() {
-    const { servers, serversLoading, serversError, serverFilter, groupServersBy } = this.state;
-    const { serverTableColumnSelectionHandler } = this;
+    const {
+      servers,
+      serversLoading,
+      serversError,
+      serverFilter,
+      groupServersBy,
+      hiddenColumns,
+    } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -283,7 +291,7 @@ ORDER BY "rank" DESC, "server" DESC`);
         }
         filterable
         filtered={serverFilter}
-        onFilteredChange={(filtered, column) => {
+        onFilteredChange={filtered => {
           this.setState({ serverFilter: filtered });
         }}
         pivotBy={groupServersBy ? [groupServersBy] : []}
@@ -293,8 +301,8 @@ ORDER BY "rank" DESC, "server" DESC`);
             Header: 'Server',
             accessor: 'server',
             width: 300,
-            Aggregated: row => '',
-            show: serverTableColumnSelectionHandler.showColumn('Server'),
+            Aggregated: () => '',
+            show: hiddenColumns.exists('Server'),
           },
           {
             Header: 'Type',
@@ -312,7 +320,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                 </a>
               );
             },
-            show: serverTableColumnSelectionHandler.showColumn('Type'),
+            show: hiddenColumns.exists('Type'),
           },
           {
             Header: 'Tier',
@@ -329,13 +337,13 @@ ORDER BY "rank" DESC, "server" DESC`);
                 </a>
               );
             },
-            show: serverTableColumnSelectionHandler.showColumn('Tier'),
+            show: hiddenColumns.exists('Tier'),
           },
           {
             Header: 'Host',
             accessor: 'host',
             Aggregated: () => '',
-            show: serverTableColumnSelectionHandler.showColumn('Host'),
+            show: hiddenColumns.exists('Host'),
           },
           {
             Header: 'Port',
@@ -351,7 +359,7 @@ ORDER BY "rank" DESC, "server" DESC`);
               return ports.join(', ') || 'No port';
             },
             Aggregated: () => '',
-            show: serverTableColumnSelectionHandler.showColumn('Port'),
+            show: hiddenColumns.exists('Port'),
           },
           {
             Header: 'Curr size',
@@ -370,7 +378,7 @@ ORDER BY "rank" DESC, "server" DESC`);
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: serverTableColumnSelectionHandler.showColumn('Curr size'),
+            show: hiddenColumns.exists('Curr size'),
           },
           {
             Header: 'Max size',
@@ -389,7 +397,7 @@ ORDER BY "rank" DESC, "server" DESC`);
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
-            show: serverTableColumnSelectionHandler.showColumn('Max size'),
+            show: hiddenColumns.exists('Max size'),
           },
           {
             Header: 'Usage',
@@ -447,7 +455,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                   return '';
               }
             },
-            show: serverTableColumnSelectionHandler.showColumn('Usage'),
+            show: hiddenColumns.exists('Usage'),
           },
           {
             Header: 'Detail',
@@ -509,7 +517,7 @@ ORDER BY "rank" DESC, "server" DESC`);
                 segmentsToDropSize,
               );
             },
-            show: serverTableColumnSelectionHandler.showColumn('Detail'),
+            show: hiddenColumns.exists('Detail'),
           },
           {
             Header: ActionCell.COLUMN_LABEL,
@@ -523,7 +531,7 @@ ORDER BY "rank" DESC, "server" DESC`);
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: serverTableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
           },
         ]}
       />
@@ -552,27 +560,26 @@ ORDER BY "rank" DESC, "server" DESC`);
 
   renderDisableWorkerAction() {
     const { middleManagerDisableWorkerHost } = this.state;
+    if (!middleManagerDisableWorkerHost) return;
 
     return (
       <AsyncActionDialog
-        action={
-          middleManagerDisableWorkerHost
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/worker/${middleManagerDisableWorkerHost}/disable`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Disable worker"
         successText="Worker has been disabled"
         failText="Could not disable worker"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ middleManagerDisableWorkerHost: null });
-          if (success) this.serverQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.serverQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to disable worker '${middleManagerDisableWorkerHost}'?`}</p>
@@ -582,27 +589,26 @@ ORDER BY "rank" DESC, "server" DESC`);
 
   renderEnableWorkerAction() {
     const { middleManagerEnableWorkerHost } = this.state;
+    if (!middleManagerEnableWorkerHost) return;
 
     return (
       <AsyncActionDialog
-        action={
-          middleManagerEnableWorkerHost
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/indexer/v1/worker/${middleManagerEnableWorkerHost}/enable`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Enable worker"
         successText="Worker has been enabled"
         failText="Could not enable worker"
         intent={Intent.PRIMARY}
-        onClose={success => {
+        onClose={() => {
           this.setState({ middleManagerEnableWorkerHost: null });
-          if (success) this.serverQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.serverQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to enable worker '${middleManagerEnableWorkerHost}'?`}</p>
@@ -612,8 +618,7 @@ ORDER BY "rank" DESC, "server" DESC`);
 
   render() {
     const { goToQuery, noSqlMode } = this.props;
-    const { groupServersBy } = this.state;
-    const { serverTableColumnSelectionHandler } = this;
+    const { groupServersBy, hiddenColumns } = this.state;
 
     return (
       <div className="servers-view app-view">
@@ -639,22 +644,21 @@ ORDER BY "rank" DESC, "server" DESC`);
               Tier
             </Button>
           </ButtonGroup>
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.serverQueryManager.rerunLastQuery()}
+          <RefreshButton
+            onRefresh={auto => this.serverQueryManager.rerunLastQuery(auto)}
+            localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
           />
           {!noSqlMode && (
             <Button
               icon={IconNames.APPLICATION}
               text="Go to SQL"
-              onClick={() => goToQuery(this.serverQueryManager.getLastQuery())}
+              onClick={() => goToQuery(ServersView.SERVER_SQL)}
             />
           )}
           <TableColumnSelector
             columns={serverTableColumns}
-            onChange={column => serverTableColumnSelectionHandler.changeTableColumnSelector(column)}
-            tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
+            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
         {this.renderServersTable()}

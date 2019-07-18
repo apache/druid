@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TableActionDialog } from './table-action-dialog';
 
@@ -30,7 +30,7 @@ describe('table action dialog', () => {
         isOpen
       />
     );
-    const { container } = render(tableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(tableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -81,8 +81,6 @@ public class MomentSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    if (ComplexMetrics.getSerdeForType(MomentSketchAggregatorFactory.TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(MomentSketchAggregatorFactory.TYPE_NAME, new MomentSketchComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(MomentSketchAggregatorFactory.TYPE_NAME, new MomentSketchComplexMetricSerde());
   }
 }

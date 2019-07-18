@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
-import { Rule, RuleEditor } from './rule-editor';
+import { RuleEditor } from './rule-editor';
 
 describe('rule editor', () => {
   it('matches snapshot', () => {
@@ -27,7 +27,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{ type: 'loadForever' }}
         tiers={['test', 'test', 'test']}
-        onChange={(newRule: Rule) => null}
+        onChange={() => null}
         onDelete={() => null}
         moveUp={null}
         moveDown={null}

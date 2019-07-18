@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { AutoForm } from './auto-form';
 
@@ -35,7 +35,7 @@ describe('auto-form snapshot', () => {
           { name: 'testSeven', type: 'json' },
         ]}
         model={String}
-        onChange={(newModel: Record<string, any>) => {}}
+        onChange={() => {}}
       />
     );
     const { container } = render(autoForm);

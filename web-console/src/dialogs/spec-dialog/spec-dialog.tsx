@@ -22,7 +22,7 @@ import AceEditor from 'react-ace';
 
 import './spec-dialog.scss';
 
-export interface SpecDialogProps extends React.Props<any> {
+export interface SpecDialogProps {
   onSubmit: (spec: JSON) => void;
   onClose: () => void;
   title: string;
@@ -84,10 +84,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
           value={spec}
           width="100%"
           setOptions={{
-            enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
             showLineNumbers: true,
-            enableSnippets: true,
             tabSize: 2,
           }}
           style={{}}

@@ -87,7 +87,6 @@ This page documents all of the configuration properties for each Druid service t
         * [Segment Discovery](#segment-discovery)
   * [Caching](#cache-configuration)
   * [General Query Configuration](#general-query-configuration)
-  * [Realtime processes (Deprecated)](#realtime-processes)
 
 ## Recommended Configuration File Organization
 
@@ -493,7 +492,7 @@ To use graphite as emitter set `druid.emitter=graphite`. For configuration detai
 
 ### Metadata Storage
 
-These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html), [Overlord](../design/overlord.html) and [Realtime Processes](../design/realtime.html).
+These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html) and [Overlord](../design/overlord.html).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -603,6 +602,7 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 |--------|-----------|-------|
 |`druid.indexer.logs.s3Bucket`|S3 bucket name.|none|
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
+|`druid.indexer.logs.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. If the task logs bucket is the same as the deep storage (S3) bucket, then the value of this property will need to be set to true if druid.storage.disableAcl has been set to true.|false|
 
 #### Azure Blob Store Task Logs
 Store task logs in Azure Blob Store.
@@ -1672,7 +1672,3 @@ Supported query contexts:
 |`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
 |`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
 
-
-## Realtime processes
-
-Configuration for the deprecated realtime process can be found [here](../configuration/realtime.html).

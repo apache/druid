@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -87,7 +85,6 @@ import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryConfig;
 import org.apache.druid.query.select.SelectQueryEngine;
 import org.apache.druid.query.select.SelectQueryQueryToolChest;
 import org.apache.druid.query.select.SelectQueryRunnerFactory;
@@ -218,9 +215,6 @@ public class CalciteTests
   );
 
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
-      new SelectQueryConfig(true)
-  );
 
   private static final Injector INJECTOR = Guice.createInjector(
       (Module) binder -> {

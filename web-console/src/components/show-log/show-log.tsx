@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea } from '@blueprintjs/core';
+import { Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
@@ -35,7 +35,7 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
-export interface ShowLogProps extends React.Props<any> {
+export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;

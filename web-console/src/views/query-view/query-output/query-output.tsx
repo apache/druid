@@ -24,7 +24,7 @@ import { HeaderRows } from '../../../utils';
 
 import './query-output.scss';
 
-export interface QueryOutputProps extends React.Props<any> {
+export interface QueryOutputProps {
   loading: boolean;
   result: HeaderRows | null;
   error: string | null;

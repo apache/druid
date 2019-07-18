@@ -20,7 +20,7 @@ import React from 'react';
 
 import './center-message.scss';
 
-export interface CenterMessageProps extends React.Props<any> {}
+export interface CenterMessageProps {}
 
 export class CenterMessage extends React.PureComponent<CenterMessageProps> {
   render() {

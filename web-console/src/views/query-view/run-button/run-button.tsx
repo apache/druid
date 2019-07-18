@@ -43,7 +43,7 @@ import {
 } from '../../../utils/query-context';
 import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
-export interface RunButtonProps extends React.Props<any> {
+export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;

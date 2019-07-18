@@ -34,7 +34,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class ClientInfoResourceTestClient
@@ -54,7 +53,7 @@ public class ClientInfoResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.brokerUrl = config.getBrokerUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   private String getBrokerURL()

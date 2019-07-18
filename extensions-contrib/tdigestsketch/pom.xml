@@ -29,7 +29,7 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.druid.extensions.contrib</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-tdigestsketch</artifactId>
   <name>tdigestsketch</name>
   <description>Druid extension for generating tdigest backed sketches</description>

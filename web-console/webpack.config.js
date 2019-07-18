@@ -21,7 +21,13 @@ const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const ALWAYS_BABEL = false;
+
 const { version } = require('./package.json');
+
+function friendlyErrorFormatter(e) {
+  return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
+}
 
 module.exports = (env) => {
   let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
@@ -33,8 +39,11 @@ module.exports = (env) => {
     secure: false
   };
 
+  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  console.log(`Webpack running in ${mode} mode`);
   return {
-    mode: process.env.NODE_ENV || 'development',
+    mode: mode,
+    devtool: 'hidden-source-map',
     entry: {
       'web-console': './src/entry.ts'
     },
@@ -77,8 +86,21 @@ module.exports = (env) => {
         },
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: 'ts-loader',
+              options: {
+                errorFormatter: friendlyErrorFormatter
+              }
+            }
+          ]
+        },
+        {
+          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
+          use: {
+            loader: 'babel-loader'
+          }
         },
         {
           test: /\.s?css$/,
@@ -100,6 +122,9 @@ module.exports = (env) => {
           ]
         }
       ]
+    },
+    performance: {
+      hints: false
     },
     plugins: [
       // new BundleAnalyzerPlugin()

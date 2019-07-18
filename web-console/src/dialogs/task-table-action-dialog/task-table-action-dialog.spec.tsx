@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TaskTableActionDialog } from './task-table-action-dialog';
 
@@ -33,7 +33,7 @@ describe('task table action dialog', () => {
         isOpen
       />
     );
-    const { container } = render(taskTableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(taskTableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

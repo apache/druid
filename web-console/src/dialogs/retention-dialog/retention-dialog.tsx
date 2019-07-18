@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { Rule, RuleEditor } from '../../components';
+import { RuleEditor } from '../../components';
 import { QueryManager } from '../../utils';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
@@ -37,7 +37,7 @@ export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number):
   return newItems;
 }
 
-export interface RetentionDialogProps extends React.Props<any> {
+export interface RetentionDialogProps {
   datasource: string;
   rules: any[];
   tiers: string[];
@@ -64,23 +64,23 @@ export class RetentionDialog extends React.PureComponent<
       currentRules: props.rules,
       historyRecords: [],
     };
-  }
 
-  componentDidMount() {
-    const { datasource } = this.props;
     this.historyQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async datasource => {
         const historyResp = await axios(`/druid/coordinator/v1/rules/${datasource}/history`);
         return historyResp.data;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result }) => {
         this.setState({
           historyRecords: result,
         });
       },
     });
+  }
 
-    this.historyQueryManager.runQuery(`dummy`);
+  componentDidMount() {
+    const { datasource } = this.props;
+    this.historyQueryManager.runQuery(datasource);
   }
 
   private save = (comment: string) => {
@@ -106,7 +106,7 @@ export class RetentionDialog extends React.PureComponent<
   onDeleteRule = (index: number) => {
     const { currentRules } = this.state;
 
-    const newRules = (currentRules || []).filter((r, i) => i !== index);
+    const newRules = (currentRules || []).filter((_r, i) => i !== index);
 
     this.setState({
       currentRules: newRules,

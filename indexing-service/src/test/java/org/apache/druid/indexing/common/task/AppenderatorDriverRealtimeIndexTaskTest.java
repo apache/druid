@@ -1404,7 +1404,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new TestFirehoseFactory(),
-        null,
         null
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
@@ -1412,6 +1411,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         maxRowsPerSegment,
         maxTotalRows,
+        null,
         null,
         null,
         null,

@@ -34,27 +34,31 @@ const readDoc = async () => {
     if (functionMatch) {
       functionDocs.push({
         syntax: functionMatch[1],
-        description: functionMatch[2]
-      })
+        description: functionMatch[2],
+      });
     }
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|(.*)\|(.*)\|$/);
     if (dataTypeMatch) {
       dataTypeDocs.push({
         syntax: dataTypeMatch[1],
-        description: dataTypeMatch[4] || `Druid runtime type: ${dataTypeMatch[2]}`
-      })
+        description: dataTypeMatch[4] || `Druid runtime type: ${dataTypeMatch[2]}`,
+      });
     }
   }
 
   // Make sure there are at least 10 functions for sanity
   if (functionDocs.length < 10) {
-    throw new Error(`Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length})`);
+    throw new Error(
+      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length})`,
+    );
   }
 
   // Make sure there are at least 5 data types for sanity
   if (dataTypeDocs.length < 10) {
-    throw new Error(`Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`);
+    throw new Error(
+      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`,
+    );
   }
 
   const content = `/*

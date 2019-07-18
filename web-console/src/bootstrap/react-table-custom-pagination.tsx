@@ -21,7 +21,7 @@ import React from 'react';
 
 import './react-table-custom-pagination.scss';
 
-interface ReactTableCustomPaginationProps extends React.Props<any> {
+interface ReactTableCustomPaginationProps {
   pages: number;
   page: number;
   showPageSizeOptions: boolean;

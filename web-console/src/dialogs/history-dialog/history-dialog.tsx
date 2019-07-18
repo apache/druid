@@ -24,7 +24,7 @@ import { JSONCollapse } from '../../components';
 import './history-dialog.scss';
 
 interface HistoryDialogProps extends IDialogProps {
-  historyRecords: any;
+  historyRecords: any[];
 }
 
 interface HistoryDialogState {}
@@ -45,13 +45,13 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps, Histo
         <>
           <span className="history-dialog-title">History</span>
           <div className="history-record-entries">
-            {historyRecords.map((record: any) => {
+            {historyRecords.map((record, i) => {
               const auditInfo = record.auditInfo;
               const auditTime = record.auditTime;
               const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
 
               return (
-                <div key={record.auditTime} className="history-record-entry">
+                <div key={i} className="history-record-entry">
                   <Card>
                     <div className="history-record-title">
                       <span className="history-record-title-change">Change</span>

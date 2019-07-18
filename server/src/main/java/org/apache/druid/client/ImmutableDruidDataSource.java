@@ -176,5 +176,4 @@ public class ImmutableDruidDataSource
 
     return this.idToSegments.equals(that.idToSegments);
   }
-
 }

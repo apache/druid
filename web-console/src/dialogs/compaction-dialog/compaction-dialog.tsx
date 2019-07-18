@@ -23,7 +23,7 @@ import { AutoForm } from '../../components';
 
 import './compaction-dialog.scss';
 
-export interface CompactionDialogProps extends React.Props<any> {
+export interface CompactionDialogProps {
   onClose: () => void;
   onSave: (config: any) => void;
   onDelete: () => void;

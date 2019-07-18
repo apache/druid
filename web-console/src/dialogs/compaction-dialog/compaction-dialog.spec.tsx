@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { CompactionDialog } from './compaction-dialog';
 
@@ -26,13 +26,13 @@ describe('compaction dialog', () => {
     const compactionDialog = (
       <CompactionDialog
         onClose={() => null}
-        onSave={(config: any) => null}
+        onSave={() => null}
         onDelete={() => null}
         datasource={'test'}
         configData={'test'}
       />
     );
-    const { container } = render(compactionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

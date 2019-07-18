@@ -100,17 +100,14 @@ public interface ApplyFunction
           }
         }
 
-        switch (elementType) {
-          case STRING:
-            stringsOut[i] = evaluated.asString();
-            break;
-          case LONG:
-            longsOut[i] = evaluated.asLong();
-            break;
-          case DOUBLE:
-            doublesOut[i] = evaluated.asDouble();
-            break;
-        }
+        Function.ArrayConstructorFunction.setArrayOutputElement(
+            stringsOut,
+            longsOut,
+            doublesOut,
+            elementType,
+            i,
+            evaluated
+        );
       }
 
       switch (elementType) {
@@ -257,6 +254,9 @@ public interface ApplyFunction
       for (int i = 0; i < bindings.getLength(); i++) {
         ExprEval evaluated = lambdaExpr.eval(bindings.accumulateWithIndex(i, accumulator));
         accumulator = evaluated.value();
+      }
+      if (accumulator instanceof Boolean) {
+        return ExprEval.of((boolean) accumulator, ExprType.LONG);
       }
       return ExprEval.bestEffortOf(accumulator);
     }
@@ -470,7 +470,7 @@ public interface ApplyFunction
 
       final Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.bestEffortOf(false);
+        return ExprEval.of(false, ExprType.LONG);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
@@ -519,7 +519,7 @@ public interface ApplyFunction
     {
       boolean anyMatch = Arrays.stream(values)
                                .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.bestEffortOf(anyMatch);
+      return ExprEval.of(anyMatch, ExprType.LONG);
     }
   }
 
@@ -542,7 +542,7 @@ public interface ApplyFunction
     {
       boolean allMatch = Arrays.stream(values)
                                .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.bestEffortOf(allMatch);
+      return ExprEval.of(allMatch, ExprType.LONG);
     }
   }
 

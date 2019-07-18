@@ -69,9 +69,20 @@ public class SelectorFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"), "dim6", "2017-07-25")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of(), "dim6", "2017-07-25")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""), "dim6", "2017-05-25")).get(0),
+      PARSER.parseBatch(ImmutableMap.of(
+          "dim0",
+          "0",
+          "dim1",
+          "",
+          "dim2",
+          ImmutableList.of("a", "b"),
+          "dim6",
+          "2017-07-25"
+      )).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of(), "dim6", "2017-07-25"))
+            .get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""), "dim6", "2017-05-25"))
+            .get(0),
       PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
       PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
       PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
@@ -107,10 +118,24 @@ public class SelectorFilterTest extends BaseFilterTest
   @Test
   public void testWithTimeExtractionFnNull()
   {
-    assertFilterMatches(new SelectorDimFilter("dim0", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of());
-    assertFilterMatches(new SelectorDimFilter("dim6", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("3", "4", "5"));
-    assertFilterMatches(new SelectorDimFilter("dim6", "2017-07", new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("0", "1"));
-    assertFilterMatches(new SelectorDimFilter("dim6", "2017-05", new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("2"));
+    assertFilterMatches(
+        new SelectorDimFilter("dim0", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)),
+        ImmutableList.of()
+    );
+    assertFilterMatches(
+        new SelectorDimFilter("dim6", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)),
+        ImmutableList.of("3", "4", "5")
+    );
+    assertFilterMatches(new SelectorDimFilter(
+        "dim6",
+        "2017-07",
+        new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
+    ), ImmutableList.of("0", "1"));
+    assertFilterMatches(new SelectorDimFilter(
+        "dim6",
+        "2017-05",
+        new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
+    ), ImmutableList.of("2"));
   }
 
   @Test
@@ -187,8 +212,11 @@ public class SelectorFilterTest extends BaseFilterTest
   @Test
   public void testExpressionVirtualColumn()
   {
-    assertFilterMatches(new SelectorDimFilter("expr", "1.1", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new SelectorDimFilter("expr", "1.2", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(
+        new SelectorDimFilter("expr", "1.1", null),
+        ImmutableList.of("0", "1", "2", "3", "4", "5")
+    );
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("expr", "1.2", null), ImmutableList.of());
   }
 
   @Test
@@ -213,10 +241,16 @@ public class SelectorFilterTest extends BaseFilterTest
     assertFilterMatches(new SelectorDimFilter("dim2", "UNKNOWN", lookupFn), ImmutableList.of("0", "1", "2", "4", "5"));
 
     assertFilterMatches(new SelectorDimFilter("dim3", "HELLO", lookupFn), ImmutableList.of());
-    assertFilterMatches(new SelectorDimFilter("dim3", "UNKNOWN", lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(
+        new SelectorDimFilter("dim3", "UNKNOWN", lookupFn),
+        ImmutableList.of("0", "1", "2", "3", "4", "5")
+    );
 
     assertFilterMatches(new SelectorDimFilter("dim4", "HELLO", lookupFn), ImmutableList.of());
-    assertFilterMatches(new SelectorDimFilter("dim4", "UNKNOWN", lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(
+        new SelectorDimFilter("dim4", "UNKNOWN", lookupFn),
+        ImmutableList.of("0", "1", "2", "3", "4", "5")
+    );
 
     final Map<String, String> stringMap2 = ImmutableMap.of(
         "2", "5"
@@ -299,7 +333,10 @@ public class SelectorFilterTest extends BaseFilterTest
 
     // tests that ExtractionDimFilter (identical to SelectorDimFilter now) optimize() with lookup works
     // remove these when ExtractionDimFilter is removed.
-    assertFilterMatches(new ExtractionDimFilter("dim1", "UNKNOWN", lookupFn, null), ImmutableList.of("0", "1", "2", "5"));
+    assertFilterMatches(
+        new ExtractionDimFilter("dim1", "UNKNOWN", lookupFn, null),
+        ImmutableList.of("0", "1", "2", "5")
+    );
     assertFilterMatches(new ExtractionDimFilter("dim0", "5", lookupFn2, null), ImmutableList.of("2", "5"));
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(

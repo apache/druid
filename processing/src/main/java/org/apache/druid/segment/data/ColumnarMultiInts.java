@@ -27,6 +27,16 @@ import java.io.Closeable;
  */
 public interface ColumnarMultiInts extends Indexed<IndexedInts>, Closeable
 {
+  /**
+   * Returns the values at a given row index. The IndexedInts object may potentially be reused, so callers should
+   * not keep references to it.
+   */
   @Override
   IndexedInts get(int index);
+
+  /**
+   * Returns the values at a given row index. The IndexedInts object will not be reused. This method may be less
+   * efficient than plain "get".
+   */
+  IndexedInts getUnshared(int index);
 }

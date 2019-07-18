@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { HistoryDialog } from './history-dialog';
 
@@ -32,7 +32,7 @@ describe('history dialog', () => {
         isOpen
       />
     );
-    const { container } = render(historyDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+    render(historyDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

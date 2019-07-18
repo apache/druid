@@ -18,7 +18,7 @@
 
 import React from 'react';
 
-export interface ExternalLinkProps extends React.Props<any> {
+export interface ExternalLinkProps {
   href: string;
 }
 

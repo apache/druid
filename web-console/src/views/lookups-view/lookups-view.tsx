@@ -16,23 +16,18 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Popover, Position } from '@blueprintjs/core';
+import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import classNames from 'classnames';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { ActionCell, TableColumnSelector, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
-import {
-  getDruidErrorMessage,
-  LocalStorageKeys,
-  QueryManager,
-  TableColumnSelectionHandler,
-} from '../../utils';
-import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
+import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
+import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './lookups-view.scss';
 
@@ -40,7 +35,7 @@ const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', Action
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
 
-export interface LookupsViewProps extends React.Props<any> {}
+export interface LookupsViewProps {}
 
 export interface LookupsViewState {
   lookups: {}[] | null;
@@ -57,11 +52,12 @@ export interface LookupsViewState {
 
   deleteLookupName: string | null;
   deleteLookupTier: string | null;
+
+  hiddenColumns: LocalStorageBackedArray<string>;
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
-  private lookupsGetQueryManager: QueryManager<string, { lookupEntries: any[]; tiers: string[] }>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+  private lookupsQueryManager: QueryManager<null, { lookupEntries: any[]; tiers: string[] }>;
 
   constructor(props: LookupsViewProps, context: any) {
     super(props, context);
@@ -80,16 +76,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
       deleteLookupTier: null,
       deleteLookupName: null,
-    };
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
-      () => this.setState({}),
-    );
-  }
 
-  componentDidMount(): void {
-    this.lookupsGetQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      hiddenColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
+      ),
+    };
+
+    this.lookupsQueryManager = new QueryManager({
+      processQuery: async () => {
         const tiersResp = await axios.get('/druid/coordinator/v1/lookups/config?discover=true');
         const tiers =
           tiersResp.data && tiersResp.data.length > 0 ? tiersResp.data : [DEFAULT_LOOKUP_TIER];
@@ -124,18 +118,20 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         });
       },
     });
+  }
 
-    this.lookupsGetQueryManager.runQuery('dummy');
+  componentDidMount(): void {
+    this.lookupsQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
-    this.lookupsGetQueryManager.terminate();
+    this.lookupsQueryManager.terminate();
   }
 
   private async initializeLookup() {
     try {
       await axios.post(`/druid/coordinator/v1/lookups/config`, {});
-      this.lookupsGetQueryManager.rerunLastQuery();
+      this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
@@ -211,7 +207,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       this.setState({
         lookupEditDialogOpen: false,
       });
-      this.lookupsGetQueryManager.rerunLastQuery();
+      this.lookupsQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
@@ -239,25 +235,24 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
+    if (!deleteLookupTier) return;
 
     return (
       <AsyncActionDialog
-        action={
-          deleteLookupTier
-            ? async () => {
-                await axios.delete(
-                  `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
-                );
-              }
-            : null
-        }
+        action={async () => {
+          await axios.delete(
+            `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
+          );
+        }}
         confirmButtonText="Delete lookup"
         successText="Lookup was deleted"
         failText="Could not delete lookup"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ deleteLookupTier: null, deleteLookupName: null });
-          if (success) this.lookupsGetQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.lookupsQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to delete the lookup '${deleteLookupName}'?`}</p>
@@ -266,8 +261,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   renderLookupsTable() {
-    const { lookups, loadingLookups, lookupsError, lookupsUninitialized } = this.state;
-    const { tableColumnSelectionHandler } = this;
+    const {
+      lookups,
+      loadingLookups,
+      lookupsError,
+      lookupsUninitialized,
+      hiddenColumns,
+    } = this.state;
 
     if (lookupsUninitialized) {
       return (
@@ -294,36 +294,36 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             {
               Header: 'Lookup name',
               id: 'lookup_name',
-              accessor: (row: any) => row.id,
+              accessor: 'id',
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Lookup name'),
+              show: hiddenColumns.exists('Lookup name'),
             },
             {
               Header: 'Tier',
               id: 'tier',
-              accessor: (row: any) => row.tier,
+              accessor: 'tier',
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Tier'),
+              show: hiddenColumns.exists('Tier'),
             },
             {
               Header: 'Type',
               id: 'type',
-              accessor: (row: any) => row.spec.type,
+              accessor: 'spec.type',
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Type'),
+              show: hiddenColumns.exists('Type'),
             },
             {
               Header: 'Version',
               id: 'version',
-              accessor: (row: any) => row.version,
+              accessor: 'version',
               filterable: true,
-              show: tableColumnSelectionHandler.showColumn('Version'),
+              show: hiddenColumns.exists('Version'),
             },
             {
               Header: ActionCell.COLUMN_LABEL,
               id: ActionCell.COLUMN_ID,
               width: ActionCell.COLUMN_WIDTH,
-              accessor: row => ({ id: row.id, tier: row.tier }),
+              accessor: (row: any) => ({ id: row.id, tier: row.tier }),
               filterable: false,
               Cell: (row: any) => {
                 const lookupId = row.value.id;
@@ -331,7 +331,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
                 return <ActionCell actions={lookupActions} />;
               },
-              show: tableColumnSelectionHandler.showColumn(ActionCell.COLUMN_LABEL),
+              show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}
@@ -368,16 +368,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   render() {
-    const { lookupsError } = this.state;
-    const { tableColumnSelectionHandler } = this;
+    const { lookupsError, hiddenColumns } = this.state;
 
     return (
       <div className="lookups-view app-view">
         <ViewControlBar label="Lookups">
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
+          <RefreshButton
+            onRefresh={() => this.lookupsQueryManager.rerunLastQuery()}
+            localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}
           />
           {!lookupsError && (
             <Button
@@ -388,8 +386,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           )}
           <TableColumnSelector
             columns={tableColumns}
-            onChange={column => tableColumnSelectionHandler.changeTableColumnSelector(column)}
-            tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
         {this.renderLookupsTable()}

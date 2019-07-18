@@ -27,6 +27,12 @@ export const LocalStorageKeys = {
   QUERY_KEY: 'druid-console-query' as 'druid-console-query',
   TASKS_VIEW_PANE_SIZE: 'tasks-view-pane-size' as 'tasks-view-pane-size',
   QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as 'query-view-pane-size',
+  TASKS_REFRESH_RATE: 'task-refresh-rate' as 'task-refresh-rate',
+  DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as 'datasources-refresh-rate',
+  SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as 'segments-refresh-rate',
+  SERVERS_REFRESH_RATE: 'servers-refresh-rate' as 'servers-refresh-rate',
+  SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate',
+  LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as 'lookups-refresh-rate',
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 

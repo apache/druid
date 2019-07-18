@@ -19,10 +19,12 @@
 import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import { sum } from 'd3-array';
 import React from 'react';
 
 import { UrlBaser } from '../../singletons/url-baser';
-import { getHeadProp, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
+import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
+import { deepGet } from '../../utils/object-change';
 
 import './home-view.scss';
 
@@ -35,7 +37,7 @@ export interface CardOptions {
   error?: string | null;
 }
 
-export interface HomeViewProps extends React.Props<any> {
+export interface HomeViewProps {
   noSqlMode: boolean;
 }
 
@@ -50,6 +52,7 @@ export interface HomeViewState {
 
   segmentCountLoading: boolean;
   segmentCount: number;
+  unavailableSegmentCount: number;
   segmentCountError: string | null;
 
   supervisorCountLoading: boolean;
@@ -77,12 +80,12 @@ export interface HomeViewState {
 }
 
 export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> {
-  private statusQueryManager: QueryManager<string, any>;
-  private datasourceQueryManager: QueryManager<string, any>;
-  private segmentQueryManager: QueryManager<string, any>;
-  private supervisorQueryManager: QueryManager<string, any>;
-  private taskQueryManager: QueryManager<string, any>;
-  private serverQueryManager: QueryManager<string, any>;
+  private statusQueryManager: QueryManager<null, any>;
+  private datasourceQueryManager: QueryManager<boolean, any>;
+  private segmentQueryManager: QueryManager<boolean, any>;
+  private supervisorQueryManager: QueryManager<null, any>;
+  private taskQueryManager: QueryManager<boolean, any>;
+  private serverQueryManager: QueryManager<boolean, any>;
 
   constructor(props: HomeViewProps, context: any) {
     super(props, context);
@@ -97,6 +100,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
 
       segmentCountLoading: false,
       segmentCount: 0,
+      unavailableSegmentCount: 0,
       segmentCountError: null,
 
       supervisorCountLoading: false,
@@ -122,13 +126,9 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       peonCount: 0,
       serverCountError: null,
     };
-  }
-
-  componentDidMount(): void {
-    const { noSqlMode } = this.props;
 
     this.statusQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async () => {
         const statusResp = await axios.get('/status');
         return statusResp.data;
       },
@@ -141,15 +141,13 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       },
     });
 
-    this.statusQueryManager.runQuery(`dummy`);
-
-    // -------------------------
-
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async noSqlMode => {
         let datasources: string[];
         if (!noSqlMode) {
-          datasources = await queryDruidSql({ query });
+          datasources = await queryDruidSql({
+            query: `SELECT datasource FROM sys.segments GROUP BY 1`,
+          });
         } else {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources');
           datasources = datasourcesResp.data;
@@ -165,45 +163,45 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       },
     });
 
-    this.datasourceQueryManager.runQuery(`SELECT datasource FROM sys.segments GROUP BY 1`);
-
-    // -------------------------
-
     this.segmentQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async noSqlMode => {
         if (noSqlMode) {
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
-          const unavailableSegmentNum = Object.keys(loadstatus).reduce((sum, key) => {
-            return sum + loadstatus[key];
-          }, 0);
+          const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
           const datasourcesMetaResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const datasourcesMeta = datasourcesMetaResp.data;
-          const availableSegmentNum = datasourcesMeta.reduce((sum: number, curr: any) => {
-            return sum + curr.properties.segments.count;
-          }, 0);
+          const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
+            deepGet(curr, 'properties.segments.count'),
+          );
 
-          return availableSegmentNum + unavailableSegmentNum;
+          return {
+            count: availableSegmentNum + unavailableSegmentNum,
+            unavailable: unavailableSegmentNum,
+          };
         } else {
-          const segments = await queryDruidSql({ query });
-          return getHeadProp(segments, 'count') || 0;
+          const segments = await queryDruidSql({
+            query: `SELECT
+  COUNT(*) as "count",
+  COUNT(*) FILTER (WHERE is_available = 0) as "unavailable"
+FROM sys.segments`,
+          });
+          return segments.length === 1 ? segments[0] : null;
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           segmentCountLoading: loading,
-          segmentCount: result,
+          segmentCount: result ? result.count : 0,
+          unavailableSegmentCount: result ? result.unavailable : 0,
           segmentCountError: error,
         });
       },
     });
 
-    this.segmentQueryManager.runQuery(`SELECT COUNT(*) as "count" FROM sys.segments`);
-
-    // -------------------------
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async () => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
         const data = resp.data;
         const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
@@ -223,12 +221,8 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       },
     });
 
-    this.supervisorQueryManager.runQuery('dummy');
-
-    // -------------------------
-
     this.taskQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async noSqlMode => {
         if (noSqlMode) {
           const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
@@ -243,7 +237,11 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
           };
         } else {
           const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
-            query,
+            query: `SELECT
+  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
+  COUNT (*) AS "count"
+FROM sys.tasks
+GROUP BY 1`,
           });
           return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
         }
@@ -261,16 +259,8 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       },
     });
 
-    this.taskQueryManager.runQuery(`SELECT
-  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
-  COUNT (*) AS "count"
-FROM sys.tasks
-GROUP BY 1`);
-
-    // -------------------------
-
     this.serverQueryManager = new QueryManager({
-      processQuery: async query => {
+      processQuery: async noSqlMode => {
         if (noSqlMode) {
           const serversResp = await axios.get('/druid/coordinator/v1/servers?simple');
           const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
@@ -283,7 +273,9 @@ GROUP BY 1`);
           const serverCountsFromQuery: {
             server_type: string;
             count: number;
-          }[] = await queryDruidSql({ query });
+          }[] = await queryDruidSql({
+            query: `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+          });
           return lookupBy(serverCountsFromQuery, x => x.server_type, x => x.count);
         }
       },
@@ -301,10 +293,17 @@ GROUP BY 1`);
         });
       },
     });
+  }
 
-    this.serverQueryManager.runQuery(
-      `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
-    );
+  componentDidMount(): void {
+    const { noSqlMode } = this.props;
+
+    this.statusQueryManager.runQuery(null);
+    this.datasourceQueryManager.runQuery(noSqlMode);
+    this.segmentQueryManager.runQuery(noSqlMode);
+    this.supervisorQueryManager.runQuery(null);
+    this.taskQueryManager.runQuery(noSqlMode);
+    this.serverQueryManager.runQuery(noSqlMode);
   }
 
   componentWillUnmount(): void {
@@ -362,7 +361,14 @@ GROUP BY 1`);
           icon: IconNames.STACKED_CHART,
           title: 'Segments',
           loading: state.segmentCountLoading,
-          content: pluralIfNeeded(state.segmentCount, 'segment'),
+          content: (
+            <>
+              <p>{pluralIfNeeded(state.segmentCount, 'segment')}</p>
+              {Boolean(state.unavailableSegmentCount) && (
+                <p>{pluralIfNeeded(state.unavailableSegmentCount, 'unavailable segment')}</p>
+              )}
+            </>
+          ),
           error: state.datasourceCountError,
         })}
         {this.renderCard({

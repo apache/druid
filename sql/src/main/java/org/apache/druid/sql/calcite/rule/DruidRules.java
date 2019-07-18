@@ -137,7 +137,7 @@ public class DruidRules
 
   public abstract static class DruidOuterQueryRule extends RelOptRule
   {
-    public static RelOptRule AGGREGATE = new DruidOuterQueryRule(
+    public static final RelOptRule AGGREGATE = new DruidOuterQueryRule(
         operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())),
         "AGGREGATE"
     )
@@ -159,7 +159,7 @@ public class DruidRules
       }
     };
 
-    public static RelOptRule FILTER_AGGREGATE = new DruidOuterQueryRule(
+    public static final RelOptRule FILTER_AGGREGATE = new DruidOuterQueryRule(
         operand(Aggregate.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
         "FILTER_AGGREGATE"
     )
@@ -183,7 +183,7 @@ public class DruidRules
       }
     };
 
-    public static RelOptRule FILTER_PROJECT_AGGREGATE = new DruidOuterQueryRule(
+    public static final RelOptRule FILTER_PROJECT_AGGREGATE = new DruidOuterQueryRule(
         operand(
             Aggregate.class,
             operand(Project.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))
@@ -212,7 +212,7 @@ public class DruidRules
       }
     };
 
-    public static RelOptRule PROJECT_AGGREGATE = new DruidOuterQueryRule(
+    public static final RelOptRule PROJECT_AGGREGATE = new DruidOuterQueryRule(
         operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
         "PROJECT_AGGREGATE"
     )
@@ -236,7 +236,7 @@ public class DruidRules
       }
     };
 
-    public static RelOptRule AGGREGATE_SORT_PROJECT = new DruidOuterQueryRule(
+    public static final RelOptRule AGGREGATE_SORT_PROJECT = new DruidOuterQueryRule(
         operand(
             Project.class,
             operand(Sort.class, operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))

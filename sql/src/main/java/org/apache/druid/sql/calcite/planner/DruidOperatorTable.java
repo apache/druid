@@ -46,6 +46,15 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayLengthOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
@@ -58,6 +67,10 @@ import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringAppendOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringConcatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringPrependOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringSliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -69,10 +82,12 @@ import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.StringToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TextcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeArithmeticOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
@@ -172,6 +187,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
           .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
           .add(new TimeExtractOperatorConversion())
+          .add(new TimeCeilOperatorConversion())
           .add(new TimeFloorOperatorConversion())
           .add(new TimeFormatOperatorConversion())
           .add(new TimeParseOperatorConversion())
@@ -203,6 +219,30 @@ public class DruidOperatorTable implements SqlOperatorTable
           // value coercion operators
           .add(new CastOperatorConversion())
           .add(new ReinterpretOperatorConversion())
+          // array and multi-value string operators
+          .add(new ArrayConstructorOperatorConversion())
+          .add(new ArrayContainsOperatorConversion())
+          .add(new ArrayOverlapOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayContainsOperatorConversion(), "MV_CONTAINS"))
+          .add(new AliasedOperatorConversion(new ArrayOverlapOperatorConversion(), "MV_OVERLAP"))
+          .add(new ArrayLengthOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayLengthOperatorConversion(), "MV_LENGTH"))
+          .add(new ArrayOffsetOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOperatorConversion(), "MV_OFFSET"))
+          .add(new ArrayOrdinalOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOperatorConversion(), "MV_ORDINAL"))
+          .add(new ArrayOffsetOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOfOperatorConversion(), "MV_OFFSET_OF"))
+          .add(new ArrayOrdinalOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOfOperatorConversion(), "MV_ORDINAL_OF"))
+          .add(new ArrayToStringOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayToStringOperatorConversion(), "MV_TO_STRING"))
+          // multi-value string operators
+          .add(new MultiValueStringAppendOperatorConversion())
+          .add(new MultiValueStringConcatOperatorConversion())
+          .add(new MultiValueStringPrependOperatorConversion())
+          .add(new MultiValueStringSliceOperatorConversion())
+          .add(new StringToMultiValueStringOperatorConversion())
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

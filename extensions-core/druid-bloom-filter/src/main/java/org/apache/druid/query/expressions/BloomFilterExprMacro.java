@@ -34,7 +34,7 @@ import java.util.List;
 
 public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static String FN_NAME = "bloom_filter_test";
+  public static final String FN_NAME = "bloom_filter_test";
 
   @Override
   public String name()
