@@ -6412,7 +6412,7 @@ public class GroupByQueryRunnerTest
         )
         .setPostAggregatorSpecs(
             Collections.singletonList(
-                new FieldAccessPostAggregator("idxPostAgg","idx")
+                new FieldAccessPostAggregator("idxPostAgg", "idx")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
