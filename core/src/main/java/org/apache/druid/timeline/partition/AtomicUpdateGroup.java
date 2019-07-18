@@ -52,16 +52,18 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
 
   public void add(PartitionChunk<T> chunk)
   {
-    final PartitionChunk<T> existing = replaceChunkWith(chunk);
-    if (existing == null) {
-      if (isFull()) {
-        throw new IAE("Can't add more chunk[%s] to atomicUpdateGroup[%s]", chunk, chunks);
-      }
-      if (!isSameAtomicUpdateGroup(chunks.get(0), chunk)) {
-        throw new IAE("Can't add chunk[%s] to a different atomicUpdateGroup[%s]", chunk, chunks);
-      }
-      chunks.add(chunk);
+    if (isFull()) {
+      throw new IAE("Can't add more chunk[%s] to atomicUpdateGroup[%s]", chunk, chunks);
     }
+    if (!isEmpty() && !isSameAtomicUpdateGroup(chunks.get(0), chunk)) {
+      throw new IAE("Can't add chunk[%s] to a different atomicUpdateGroup[%s]", chunk, chunks);
+    }
+    for (PartitionChunk<T> existing : chunks) {
+      if (existing.equals(chunk)) {
+        return;
+      }
+    }
+    chunks.add(chunk);
   }
 
   public void remove(PartitionChunk<T> chunk)
@@ -96,19 +98,6 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   public PartitionChunk<T> findChunk(int partitionId)
   {
     return chunks.stream().filter(chunk -> chunk.getChunkNumber() == partitionId).findFirst().orElse(null);
-  }
-
-  @Nullable
-  public PartitionChunk<T> replaceChunkWith(PartitionChunk<T> newChunk)
-  {
-    PartitionChunk<T> oldChunk = null;
-    for (int i = 0; i < chunks.size(); i++) {
-      if (newChunk.getChunkNumber() == chunks.get(i).getChunkNumber()) {
-        oldChunk = chunks.set(i, newChunk);
-        break;
-      }
-    }
-    return oldChunk;
   }
 
   @Override

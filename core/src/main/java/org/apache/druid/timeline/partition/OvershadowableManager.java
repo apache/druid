@@ -224,9 +224,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * Handles addition of the atomicUpdateGroup to the given state
    */
-  private void transitionStandbyGroupIfFull(AtomicUpdateGroup<T> aug, State newStateOfAug)
+  private void transitionStandbyGroupIfFull(AtomicUpdateGroup<T> aug, State stateOfAug)
   {
-    if (newStateOfAug == State.STANDBY) {
+    if (stateOfAug == State.STANDBY) {
       // A standby atomicUpdateGroup becomes visible when its all segments are available.
       if (aug.isFull()) {
         // A visible atomicUpdateGroup becomes overshadowed when a fully available standby atomicUpdateGroup becomes
@@ -253,17 +253,23 @@ class OvershadowableManager<T extends Overshadowable<T>>
     transitionStandbyGroupIfFull(aug, state);
   }
 
-  public void addChunk(PartitionChunk<T> chunk)
+  public boolean addChunk(PartitionChunk<T> chunk)
   {
     // Sanity check. ExistingChunk should be usually null.
     final PartitionChunk<T> existingChunk = knownPartitionChunks.put(chunk.getChunkNumber(), chunk);
-    if (existingChunk != null && !existingChunk.equals(chunk)) {
-      throw new ISE(
-          "existingChunk[%s] is different from newChunk[%s] for partitionId[%d]",
-          existingChunk,
-          chunk,
-          chunk.getChunkNumber()
-      );
+    if (existingChunk != null) {
+      if (!existingChunk.equals(chunk)) {
+        throw new ISE(
+            "existingChunk[%s] is different from newChunk[%s] for partitionId[%d]",
+            existingChunk,
+            chunk,
+            chunk.getChunkNumber()
+        );
+      } else {
+        // A new chunk of the same major version and partitionId can be added in segment handoff
+        // from stream ingestion tasks to historicals
+        return false;
+      }
     }
 
     // Find atomicUpdateGroup of the new chunk
@@ -281,22 +287,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
         atomicUpdateGroup = findAtomicUpdateGroupWith(chunk, State.VISIBLE);
 
         if (atomicUpdateGroup != null) {
-          // A new chunk of the same major version and partitionId can be added in segment handoff
-          // from stream ingestion tasks to historicals
-          final PartitionChunk<T> existing = atomicUpdateGroup.replaceChunkWith(chunk);
-          if (existing == null) {
-            throw new ISE(
-                "Can't add a new partitionChunk[%s] to a visible atomicUpdateGroup[%s]",
-                chunk,
-                atomicUpdateGroup
-            );
-          } else if (!chunk.equals(existing)) {
-            throw new ISE(
-                "WTH? a new partitionChunk[%s] has the same partitionId but different from existing chunk[%s]",
-                chunk,
-                existing
-            );
-          }
+          atomicUpdateGroup.add(chunk);
         } else {
           final AtomicUpdateGroup<T> newAtomicUpdateGroup = new AtomicUpdateGroup<>(chunk);
 
@@ -315,6 +306,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
         }
       }
     }
+    return true;
   }
 
   /**

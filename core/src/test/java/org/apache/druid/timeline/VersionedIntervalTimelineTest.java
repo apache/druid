@@ -454,7 +454,7 @@ public class VersionedIntervalTimelineTest
 
     assertValues(
         Collections.singletonList(
-            createExpected("2011-01-01/2011-01-10", "2", 3)
+            createExpected("2011-01-01/2011-01-10", "2", 2)
         ),
         timeline.lookup(Intervals.of("2011-01-01/2011-01-10"))
     );
