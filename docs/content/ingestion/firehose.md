@@ -120,8 +120,8 @@ The below configurations can optionally be used for tuning the Firehose performa
 
 This Firehose can be used to read the data from existing druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
 This Firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
-This firehose is a bit strange, in that the `parser` is effectively ignored other than to collect the list of dimensions
-and timestamp column to create a 'transform spec', so uses either `string` or `map` typed parsers. A sample ingest Firehose spec is shown below:
+This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification.
+ A sample ingest Firehose spec is shown below:
 
 ```json
 {
@@ -146,7 +146,7 @@ and timestamp column to create a 'transform spec', so uses either `string` or `m
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
 If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
-This firehose works with `map` typed parsers. See the extension documentation for more detailed ingestion examples.
+This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:
  * [MySQL Metadata Store](../development/extensions-core/mysql.html).

@@ -97,7 +97,6 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
     "dataSchema": {
       "dataSource": "some_datasource",
       "parser": {
-        "type" : "map",
         "parseSpec": {
           "format": "timeAndDims",
           "dimensionsSpec": {

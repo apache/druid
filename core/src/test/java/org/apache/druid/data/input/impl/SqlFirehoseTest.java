@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,12 +46,15 @@ import java.util.stream.Collectors;
 
 public class SqlFirehoseTest
 {
+  private static final TypeReference<Map<String, Object>> TYPE_REF = new TypeReference<Map<String, Object>>()
+  {
+  };
+  private static File TEST_DIR;
   private List<Map<String, Object>> inputs;
   private List<FileInputStream> fileList;
-
-  private MapInputRowParser parser = null;
+  private MapInputRowParser parser;
   private ObjectMapper objectMapper;
-  private static File TEST_DIR;
+
 
   @Before
   public void setup() throws IOException
@@ -97,13 +101,49 @@ public class SqlFirehoseTest
     for (Map<String, Object> map : inputs) {
       expectedResults.add(map.get("x"));
     }
-    final List<JsonIterator> lineIterators = fileList.stream()
-                                                     .map(s -> new JsonIterator(new TypeReference<Map<String, Object>>()
-                                                     {
-                                                     }, s, closeable, objectMapper))
-                                                     .collect(Collectors.toList());
+    final List<JsonIterator<Map<String, Object>>> lineIterators =
+        fileList.stream()
+                .map(s -> new JsonIterator<Map<String, Object>>(TYPE_REF, s, closeable, objectMapper))
+                .collect(Collectors.toList());
 
     try (final SqlFirehose firehose = new SqlFirehose(lineIterators.iterator(), parser, closeable)) {
+      final List<Object> results = new ArrayList<>();
+
+      while (firehose.hasMore()) {
+        final InputRow inputRow = firehose.nextRow();
+        if (inputRow == null) {
+          results.add(null);
+        } else {
+          results.add(inputRow.getDimension("x").get(0));
+        }
+      }
+
+      Assert.assertEquals(expectedResults, results);
+    }
+  }
+
+  @Test
+  public void testFirehoseStringParser() throws Exception
+  {
+    final TestCloseable closeable = new TestCloseable();
+    List<Object> expectedResults = new ArrayList<>();
+    for (Map<String, Object> map : inputs) {
+      expectedResults.add(map.get("x"));
+    }
+
+    final List<JsonIterator<Map<String, Object>>> lineIterators =
+        fileList.stream()
+                .map(s -> new JsonIterator<Map<String, Object>>(TYPE_REF, s, closeable, objectMapper))
+                .collect(Collectors.toList());
+
+    final InputRowParser stringParser = new StringInputRowParser(
+        new TimeAndDimsParseSpec(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+        ),
+        Charset.defaultCharset().name()
+    );
+    try (final SqlFirehose firehose = new SqlFirehose(lineIterators.iterator(), stringParser, closeable)) {
       final List<Object> results = new ArrayList<>();
 
       while (firehose.hasMore()) {
@@ -131,9 +171,12 @@ public class SqlFirehoseTest
       jg.close();
     }
 
-    final JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator(new TypeReference<Map<String, Object>>()
-    {
-    }, new FileInputStream(file), closeable, objectMapper);
+    final JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator<>(
+        TYPE_REF,
+        new FileInputStream(file),
+        closeable,
+        objectMapper
+    );
 
     final SqlFirehose firehose = new SqlFirehose(
         ImmutableList.of(jsonIterator).iterator(),

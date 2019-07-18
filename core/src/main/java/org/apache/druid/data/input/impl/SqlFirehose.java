@@ -23,7 +23,6 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -35,18 +34,18 @@ import java.util.Map;
 public class SqlFirehose implements Firehose
 {
   private final Iterator<JsonIterator<Map<String, Object>>> resultIterator;
-  private final InputRowParser parser;
+  private final MapInputRowParser parser;
   private final Closeable closer;
   private JsonIterator<Map<String, Object>> lineIterator = null;
 
   public SqlFirehose(
-      Iterator lineIterators,
-      InputRowParser<Map<String, Object>> parser,
+      Iterator<JsonIterator<Map<String, Object>>> lineIterators,
+      InputRowParser parser,
       Closeable closer
   )
   {
     this.resultIterator = lineIterators;
-    this.parser = parser;
+    this.parser = new MapInputRowParser(parser.getParseSpec());
     this.closer = closer;
   }
 
@@ -64,18 +63,17 @@ public class SqlFirehose implements Firehose
   @Override
   public InputRow nextRow()
   {
-    Map<String, Object> mapToParse = lineIterator.next();
-    return (InputRow) Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator());
+    final Map<String, Object> mapToParse = lineIterator.next();
+    return Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator());
   }
 
-  private JsonIterator getNextLineIterator()
+  private JsonIterator<Map<String, Object>> getNextLineIterator()
   {
     if (lineIterator != null) {
       lineIterator = null;
     }
 
-    final JsonIterator iterator = resultIterator.next();
-    return iterator;
+    return resultIterator.next();
   }
 
   @Override
@@ -87,11 +85,9 @@ public class SqlFirehose implements Firehose
   @Override
   public void close() throws IOException
   {
-    Closer firehoseCloser = Closer.create();
     if (lineIterator != null) {
-      firehoseCloser.register(lineIterator);
+      lineIterator.close();
     }
-    firehoseCloser.register(closer);
-    firehoseCloser.close();
+    closer.close();
   }
 }
