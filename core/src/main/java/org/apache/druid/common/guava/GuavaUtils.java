@@ -70,7 +70,7 @@ public class GuavaUtils
    * null.
    */
   @Nullable
-  public static <T> T firstNonNull(T arg1, T arg2)
+  public static <T> T firstNonNull(@Nullable T arg1, @Nullable T arg2)
   {
     if (arg1 == null) {
       return arg2;

@@ -214,7 +214,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Comparator<Row> createComparator(Query<Row> queryParam)
+  public Comparator<Row> createResultComparator(Query<Row> queryParam)
   {
     return ((GroupByQuery) queryParam).getRowOrdering(true);
   }
@@ -236,7 +236,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // involve materialization)
     final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<>(
         baseRunner,
-        this::createComparator,
+        this::createResultComparator,
         this::createMergeFn
     );
 

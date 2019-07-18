@@ -82,7 +82,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *
    * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
    * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
-   * {@link QueryToolChest#createComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
+   * {@link QueryToolChest#createResultComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
    * toolchest.
    *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
@@ -91,7 +91,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
   {
-    return new ResultMergeQueryRunner<>(runner, this::createComparator, this::createMergeFn);
+    return new ResultMergeQueryRunner<>(runner, this::createResultComparator, this::createMergeFn);
   }
 
   /**
@@ -101,16 +101,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't support merge function", query.getClass().getName());
+    throw new UOE("%s doesn't provide a merge function", query.getClass().getName());
   }
 
   /**
-   * Creates an ordering comparator that is used to order results. This comparator is used in the defaul
+   * Creates an ordering comparator that is used to order results. This comparator is used in the default
    * {@link ResultMergeQueryRunner} provided by {@link QueryToolChest#mergeResults(QueryRunner)}
    */
-  public Comparator<ResultType> createComparator(Query<ResultType> query)
+  public Comparator<ResultType> createResultComparator(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't support ordering function", query.getClass().getName());
+    throw new UOE("%s doesn't provide a result comparator", query.getClass().getName());
   }
 
   /**

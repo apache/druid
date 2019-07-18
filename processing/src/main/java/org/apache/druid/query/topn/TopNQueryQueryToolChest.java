@@ -124,7 +124,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public Comparator<Result<TopNResultValue>> createComparator(Query<Result<TopNResultValue>> query)
+  public Comparator<Result<TopNResultValue>> createResultComparator(Query<Result<TopNResultValue>> query)
   {
     return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }

@@ -100,7 +100,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
         queryRunner,
-        this::createComparator,
+        this::createResultComparator,
         this::createMergeFn
     )
     {
@@ -204,7 +204,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public Comparator<Result<TimeseriesResultValue>> createComparator(Query<Result<TimeseriesResultValue>> query)
+  public Comparator<Result<TimeseriesResultValue>> createResultComparator(Query<Result<TimeseriesResultValue>> query)
   {
     return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }

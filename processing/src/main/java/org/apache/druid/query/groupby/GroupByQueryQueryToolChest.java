@@ -137,9 +137,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public Comparator<Row> createComparator(Query<Row> query)
+  public Comparator<Row> createResultComparator(Query<Row> query)
   {
-    return strategySelector.strategize((GroupByQuery) query).createComparator(query);
+    return strategySelector.strategize((GroupByQuery) query).createResultComparator(query);
   }
 
   private Sequence<Row> initAndMergeGroupByResults(

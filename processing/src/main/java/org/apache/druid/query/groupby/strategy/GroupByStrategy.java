@@ -85,13 +85,13 @@ public interface GroupByStrategy
   }
 
   /**
-   * See {@link org.apache.druid.query.QueryToolChest#createComparator(Query)}, allows
+   * See {@link org.apache.druid.query.QueryToolChest#createResultComparator(Query)}, allows
    * {@link GroupByQueryQueryToolChest} to delegate implementation to the strategy
    */
   @Nullable
-  default Comparator<Row> createComparator(Query<Row> queryParam)
+  default Comparator<Row> createResultComparator(Query<Row> queryParam)
   {
-    throw new UOE("%s doesn't provide a comparator", this.getClass().getName());
+    throw new UOE("%s doesn't provide a result comparator", this.getClass().getName());
   }
 
   Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query);
