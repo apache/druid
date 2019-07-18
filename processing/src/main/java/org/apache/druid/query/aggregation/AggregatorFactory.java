@@ -28,6 +28,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -211,6 +212,26 @@ public abstract class AggregatorFactory implements Cacheable
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
+
+  /**
+   * Does BufferAggregator support handling of varying ByteBuffer sizes by overriding
+   * {@link BufferAggregator#aggregate(ByteBuffer, int, int)}
+   * @return
+   */
+  public boolean isDynamicallyResizable()
+  {
+    return getMinIntermediateSize() < getMaxIntermediateSize();
+  }
+
+  /**
+   * Start size of ByteBuffer to be used with BufferAggregator.
+   * @return
+   */
+  public int getMinIntermediateSize()
+  {
+    return getMaxIntermediateSize();
+  }
+
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.

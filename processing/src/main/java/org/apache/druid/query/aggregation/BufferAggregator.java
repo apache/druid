@@ -20,6 +20,8 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.memory.BufferHolder;
+import org.apache.druid.memory.MemoryAllocator;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -209,4 +211,52 @@ public interface BufferAggregator extends HotLoopCallee
     return false;
   }
 
+  /**
+   * Returns false if aggregation requires a bigger buffer than capacity arg or true.
+   * Return status must be used exclusively to signal "low memory in buffer" condition and
+   * nothing else.
+   */
+  default boolean aggregate(ByteBuffer buff, int position, int capacity)
+  {
+    aggregate(buff, position);
+    return true;
+  }
+
+  // Following methods are equivalent of old methods with same name except they provide access to capacity
+  // of ByteBuffer which is assumed to be AggregatorFactory.getMaxIntermediateSize() by older methods.
+
+  default void init(ByteBuffer buff, int position, int capacity)
+  {
+    init(buff, position);
+  }
+
+  default void relocate(ByteBuffer oldBuff, int oldPosition, int oldCapacity, ByteBuffer newwBuff, int newwPosition, int newwCapacity)
+  {
+    relocate(oldPosition, newwPosition, oldBuff, newwBuff);
+  }
+
+  default Object get(ByteBuffer buff, int position, int capacity)
+  {
+    return get(buff, position);
+  }
+
+  default float getFloat(ByteBuffer buff, int position, int capacity)
+  {
+    return getFloat(buff, position);
+  }
+
+  default double getDouble(ByteBuffer buff, int position, int capacity)
+  {
+    return getDouble(buff, position);
+  }
+
+  default long getLong(ByteBuffer buff, int position, int capacity)
+  {
+    return getLong(buff, position);
+  }
+
+  default boolean isNull(ByteBuffer buff, int position, int capacity)
+  {
+    return isNull(buff, position);
+  }
 }

@@ -263,20 +263,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected BufferAggregator[] getAggsForRow(int rowOffset)
-  {
-    return getAggs();
-  }
-
-  @Override
-  protected Object getAggVal(BufferAggregator agg, int rowOffset, int aggPosition)
-  {
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
-    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
-    return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggPosition]);
-  }
-
-  @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];

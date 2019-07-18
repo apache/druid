@@ -489,10 +489,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public abstract int getLastRowIndex();
 
-  protected abstract AggregatorType[] getAggsForRow(int rowOffset);
-
-  protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
-
   protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
 
   protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
@@ -1029,9 +1025,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                 theVals.put(dimensionName, rowVals);
               }
 
-              AggregatorType[] aggs = getAggsForRow(rowOffset);
-              for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
+              for (int i = 0; i < metrics.length; ++i) {
+                theVals.put(metrics[i].getName(), getMetricObjectValue(rowOffset, i));
               }
 
               if (postAggs != null) {
