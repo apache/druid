@@ -487,12 +487,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                       subtotalQuery,
                       subtotalSpec,
                       Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
-                          subtotalQuery.withAggregatorSpecs(
-                              Lists.transform(
-                                  queryWithoutSubtotalsSpec.getAggregatorSpecs(),
-                                  (agg) -> agg.getCombiningFactory()
-                              )
-                          ),
+                          subtotalQuery,
                           GroupByRowProcessor.getRowsFromGrouper(
                               queryWithoutSubtotalsSpec,
                               subtotalSpec,
