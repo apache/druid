@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
@@ -29,18 +31,18 @@ import java.util.Set;
 
 /**
 */
-class StorageLocation
+public class StorageLocation
 {
   private static final Logger log = new Logger(StorageLocation.class);
 
   private final File path;
   private final long maxSize;
   private final long freeSpaceToKeep;
-  private final Set<DataSegment> segments;
+  private final Set<File> files = new HashSet<>();
 
   private volatile long currSize = 0;
 
-  StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
+  public StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
   {
     this.path = path;
     this.maxSize = maxSize;
@@ -57,35 +59,62 @@ class StorageLocation
     } else {
       this.freeSpaceToKeep = 0;
     }
-
-    this.segments = new HashSet<>();
   }
 
-  File getPath()
+  public File getPath()
   {
     return path;
   }
 
-  long getMaxSize()
+  public long getMaxSize()
   {
     return maxSize;
   }
 
-  synchronized void addSegment(DataSegment segment)
+  /**
+   * Add a new file to this location. The given file argument must be a file rather than directory.
+   */
+  public synchronized void addFile(File file)
   {
-    if (segments.add(segment)) {
+    if (file.isDirectory()) {
+      throw new ISE("[%s] must be a file. Use a");
+    }
+    if (files.add(file)) {
+      currSize += FileUtils.sizeOf(file);
+    }
+  }
+
+  /**
+   * Add a new segment dir to this location. The segment size is added to currSize.
+   */
+  public synchronized void addSegmentDir(File segmentDir, DataSegment segment)
+  {
+    if (files.add(segmentDir)) {
       currSize += segment.getSize();
     }
   }
 
-  synchronized void removeSegment(DataSegment segment)
+  /**
+   * Remove a segment file from this location. The given file argument must be a file rather than directory.
+   */
+  public synchronized void removeFile(File file)
   {
-    if (segments.remove(segment)) {
+    if (files.remove(file)) {
+      currSize -= FileUtils.sizeOf(file);
+    }
+  }
+
+  /**
+   * Remove a segment dir from this location. The segment size is subtracted from currSize.
+   */
+  public synchronized void removeSegmentDir(File segmentDir, DataSegment segment)
+  {
+    if (files.remove(segmentDir)) {
       currSize -= segment.getSize();
     }
   }
 
-  boolean canHandle(DataSegment segment)
+  public boolean canHandle(DataSegment segment)
   {
     if (available() < segment.getSize()) {
       log.warn(
@@ -114,7 +143,7 @@ class StorageLocation
     return true;
   }
 
-  synchronized long available()
+  public synchronized long available()
   {
     return maxSize - currSize;
   }

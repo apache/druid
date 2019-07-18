@@ -2747,6 +2747,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         true,
         null,
+        null,
         null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
