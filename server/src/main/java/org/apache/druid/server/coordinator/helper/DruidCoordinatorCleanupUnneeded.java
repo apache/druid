@@ -43,22 +43,19 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     CoordinatorStats stats = new CoordinatorStats();
-    Set<DataSegment> availableSegments = params.getAvailableSegments();
+    Set<DataSegment> usedSegments = params.getUsedSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Drop segments that no longer exist in the available segments configuration, *if* it has been populated. (It's
-    // also filled atomically, so if there are any segments at all, we should have all of them.)
-    //
-    // Note that if the metadata store has not been polled yet, "getAvailableSegments" would throw an error since
-    // "availableSegments" is null. But this won't happen, since the earlier helper "DruidCoordinatorSegmentInfoLoader"
-    // would have canceled the run.
+    // Unload segments that are no longer marked as used from historical servers, *if* the usedSegments collection has
+    // been populated. Used segments must be already populated because otherwise the earlier helper
+    // DruidCoordinatorUsedSegmentsLoader would have canceled the Coordinator's run.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
           for (DataSegment segment : dataSource.getSegments()) {
-            if (!availableSegments.contains(segment)) {
+            if (!usedSegments.contains(segment)) {
               LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
               if (!queuePeon.getSegmentsToDrop().contains(segment)) {

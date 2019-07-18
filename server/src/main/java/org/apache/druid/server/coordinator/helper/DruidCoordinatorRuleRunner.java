@@ -19,9 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -36,7 +34,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -44,7 +41,7 @@ import java.util.Set;
 public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
-  private static int MAX_MISSING_RULES = 10;
+  private static final int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -83,34 +80,28 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // find available segments which are not overshadowed by other segments in DB
-    // only those would need to be loaded/dropped
-    // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    // If metadata store hasn't been polled yet, use empty overshadowed list
-    final DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
-    Set<SegmentId> overshadowed = ImmutableSet.of();
-    if (dataSourcesSnapshot != null) {
-      overshadowed = Optional
-          .ofNullable(dataSourcesSnapshot.getOvershadowedSegments())
-          .orElse(ImmutableSet.of());
-    }
+    // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
+    // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
+    // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
+    Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutAvailableSegments()
+        .buildFromExistingWithoutSegmentsMetadata()
         .withReplicationManager(replicatorThrottler)
         .build();
 
-    // Run through all matched rules for available segments
+    // Run through all matched rules for used segments
     DateTime now = DateTimes.nowUtc();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : params.getAvailableSegments()) {
+    for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
         continue;

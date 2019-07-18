@@ -35,13 +35,13 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ExpressionPostAggregator implements PostAggregator
 {
@@ -187,12 +187,7 @@ public class ExpressionPostAggregator implements PostAggregator
         expression,
         ordering,
         macroTable,
-        aggregators.entrySet().stream().collect(
-            Collectors.toMap(
-                entry -> entry.getKey(),
-                entry -> entry.getValue()::finalizeComputation
-            )
-        ),
+        CollectionUtils.mapValues(aggregators, aggregatorFactory -> obj -> aggregatorFactory.finalizeComputation(obj)),
         parsed,
         dependentFields
     );
