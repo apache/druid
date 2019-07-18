@@ -196,7 +196,7 @@ public class Projection
 
     // We don't really have a way to cast complex type. So might as well not do anything and return.
     final ValueType columnValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
-    if (expression.isDirectColumnAccess() && columnValueType == ValueType.COMPLEX) {
+    if (columnValueType == ValueType.COMPLEX) {
       return true;
     }
 
