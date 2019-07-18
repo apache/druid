@@ -185,8 +185,21 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
             `WHERE ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
-            `LIMIT ${totalQuerySize * 1000}`,
           ];
+          if (whereParts.length) {
+            queryParts.push('AND ' + whereParts.join(' AND '));
+          }
+
+          if (query.sorted.length) {
+            queryParts.push(
+              'ORDER BY ' +
+                query.sorted
+                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .join(', '),
+            );
+          }
+
+          queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
         } else {
           queryParts = [
             `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
