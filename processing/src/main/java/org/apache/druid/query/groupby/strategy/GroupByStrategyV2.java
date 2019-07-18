@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -38,6 +39,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -56,6 +58,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -142,7 +145,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     if (!willMergeRunners) {
       final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1) +
-                                         (query.getSubtotalsSpec() != null ? 1 : 0);
+                                         numMergeBuffersForSubtotalsSpec(query);
 
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
@@ -390,23 +393,29 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final List<Closeable> closeOnExit = new ArrayList<>();
 
     try {
-      GroupByQuery queryWithoutSubtotalsSpec = query.withSubtotalsSpec(null).withDimFilter(null);
+      GroupByQuery queryWithoutSubtotalsSpec = query
+          .withDimensionSpecs(query.getDimensions().stream().map(
+              dimSpec -> new DefaultDimensionSpec(
+                  dimSpec.getOutputName(),
+                  dimSpec.getOutputName(),
+                  dimSpec.getOutputType()
+              )).collect(Collectors.toList())
+          )
+          .withAggregatorSpecs(
+              query.getAggregatorSpecs()
+                   .stream()
+                   .map(AggregatorFactory::getCombiningFactory)
+                   .collect(Collectors.toList())
+          )
+          .withLimitSpec(null)
+          .withSubtotalsSpec(null)
+          .withDimFilter(null);
+
       List<List<String>> subtotals = query.getSubtotalsSpec();
 
       Supplier<Grouper> grouperSupplier = Suppliers.memoize(
           () -> GroupByRowProcessor.createGrouper(
-              queryWithoutSubtotalsSpec.withAggregatorSpecs(
-                  Lists.transform(queryWithoutSubtotalsSpec.getAggregatorSpecs(), (agg) -> agg.getCombiningFactory())
-              ).withDimensionSpecs(
-                  Lists.transform(
-                      queryWithoutSubtotalsSpec.getDimensions(),
-                      (dimSpec) -> new DefaultDimensionSpec(
-                          dimSpec.getOutputName(),
-                          dimSpec.getOutputName(),
-                          dimSpec.getOutputType()
-                      )
-                  )
-              ),
+              queryWithoutSubtotalsSpec,
               queryResult,
               GroupByQueryHelper.rowSignatureFor(queryWithoutSubtotalsSpec),
               configSupplier.get(),
@@ -419,36 +428,86 @@ public class GroupByStrategyV2 implements GroupByStrategy
               false
           )
       );
+
+
       List<Sequence<Row>> subtotalsResults = new ArrayList<>(subtotals.size());
 
       Map<String, DimensionSpec> queryDimensionSpecs = new HashMap(queryWithoutSubtotalsSpec.getDimensions().size());
+      List<String> queryDimNames = new ArrayList(queryWithoutSubtotalsSpec.getDimensions().size());
+
       for (DimensionSpec dimSpec : queryWithoutSubtotalsSpec.getDimensions()) {
         queryDimensionSpecs.put(dimSpec.getOutputName(), dimSpec);
+        queryDimNames.add(dimSpec.getOutputName());
       }
 
       for (List<String> subtotalSpec : subtotals) {
         GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec.withDimensionSpecs(
             subtotalSpec.stream()
-                        .map(s -> new DefaultDimensionSpec(s, s, queryDimensionSpecs.get(s).getOutputType()))
+                        .map(queryDimensionSpecs::get)
                         .collect(Collectors.toList())
         );
 
-        subtotalsResults.add(applyPostProcessing(
-            mergeResults(new QueryRunner<Row>()
-            {
-              @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+        if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
+          subtotalsResults.add(applyPostProcessing(
+              mergeResults(new QueryRunner<Row>()
               {
-                return GroupByRowProcessor.getRowsFromGrouper(
-                    queryWithoutSubtotalsSpec,
-                    subtotalSpec,
-                    grouperSupplier
-                );
-              }
-            }, subtotalQuery, null),
-            subtotalQuery
-                             )
-        );
+                @Override
+                public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+                {
+                  return GroupByRowProcessor.getRowsFromGrouper(
+                      queryWithoutSubtotalsSpec,
+                      subtotalSpec,
+                      grouperSupplier
+                  );
+                }
+              }, subtotalQuery, null),
+              subtotalQuery
+                               )
+          );
+        } else {
+          subtotalsResults.add(applyPostProcessing(
+              mergeResults(new QueryRunner<Row>()
+              {
+                @Override
+                public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+                {
+                  List<Closeable> closeables = new ArrayList<>();
+
+                  Sequence<Row> result = GroupByRowProcessor.getRowsFromGrouper(
+                      subtotalQuery,
+                      subtotalSpec,
+                      Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
+                          subtotalQuery.withAggregatorSpecs(
+                              Lists.transform(
+                                  queryWithoutSubtotalsSpec.getAggregatorSpecs(),
+                                  (agg) -> agg.getCombiningFactory()
+                              )
+                          ),
+                          GroupByRowProcessor.getRowsFromGrouper(
+                              queryWithoutSubtotalsSpec,
+                              subtotalSpec,
+                              grouperSupplier
+                          ),
+                          GroupByQueryHelper.rowSignatureFor(subtotalQuery),
+                          configSupplier.get(),
+                          resource,
+                          spillMapper,
+                          processingConfig.getTmpDir(),
+                          processingConfig.intermediateComputeSizeBytes(),
+                          closeables,
+                          false,
+                          false
+                                        )
+                      )
+                  );
+
+                  return Sequences.withBaggage(result, () -> Lists.reverse(closeables).forEach(closeable -> CloseQuietly.close(closeable)));
+                }
+              }, subtotalQuery, null),
+              subtotalQuery
+                               )
+          );
+        }
       }
 
       return Sequences.withBaggage(
@@ -460,6 +519,24 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable));
       throw ex;
     }
+  }
+
+  private int numMergeBuffersForSubtotalsSpec(GroupByQuery query)
+  {
+    List<List<String>> subtotalSpecs = query.getSubtotalsSpec();
+    if (subtotalSpecs == null) {
+      return 0;
+    }
+
+    List<String> queryDimOutputNames = query.getDimensions().stream().map(DimensionSpec::getOutputName).collect(
+        Collectors.toList());
+    for (List<String> subtotalSpec : subtotalSpecs) {
+      if (!Utils.isPrefix(subtotalSpec, queryDimOutputNames)) {
+        return 2;
+      }
+    }
+
+    return 1;
   }
 
   @Override

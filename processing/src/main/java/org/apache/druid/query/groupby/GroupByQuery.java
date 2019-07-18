@@ -220,28 +220,20 @@ public class GroupByQuery extends BaseQuery<Row>
       List<DimensionSpec> dimensions
   )
   {
-    // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
-    // For example if we had {D1, D2, D3} in dimensions spec then
-    // {D2}, {D1, D2}, {D1, D3}, {D2, D3} etc are valid in subtotalsSpec while
-    // {D2, D1} is not as it is not in same order.
-    // {D4} is not as its not a subset.
-    // This restriction as enforced because implementation does sort merge on the results of top-level query
-    // results and expects that ordering of events does not change when dimension columns are removed from
-    // results of top level query.
+    // if subtotalsSpec exists then validate that all are subsets of dimensions spec.
     if (subtotalsSpec != null) {
       for (List<String> subtotalSpec : subtotalsSpec) {
-        int i = 0;
         for (String s : subtotalSpec) {
           boolean found = false;
-          for (; i < dimensions.size(); i++) {
-            if (s.equals(dimensions.get(i).getOutputName())) {
+          for (DimensionSpec ds : dimensions) {
+            if (s.equals(ds.getOutputName())) {
               found = true;
               break;
             }
           }
           if (!found) {
             throw new IAE(
-                "Subtotal spec %s is either not a subset or items are in different order than in dimensions.",
+                "Subtotal spec %s is either not a subset of top level dimensions.",
                 subtotalSpec
             );
           }
@@ -902,7 +894,6 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder setLimitSpec(LimitSpec limitSpec)
     {
-      Preconditions.checkNotNull(limitSpec);
       ensureFluentLimitsNotSet();
       this.limitSpec = limitSpec;
       this.postProcessingFn = null;
