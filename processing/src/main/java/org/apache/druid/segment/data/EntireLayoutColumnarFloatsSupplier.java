@@ -20,7 +20,6 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -56,21 +55,6 @@ public class EntireLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloa
     public float get(int index)
     {
       return buffer.get(buffer.position() + index);
-    }
-
-    @Override
-    public void fill(int index, float[] toFill)
-    {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            StringUtils.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
-      }
-      for (int i = 0; i < toFill.length; i++) {
-        toFill[i] = get(index + i);
-      }
     }
 
     @Override

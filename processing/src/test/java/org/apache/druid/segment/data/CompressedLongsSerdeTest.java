@@ -167,7 +167,7 @@ public class CompressedLongsSerdeTest
   private void tryFill(ColumnarLongs indexed, long[] vals, final int startIndex, final int size)
   {
     long[] filled = new long[size];
-    indexed.fill(startIndex, filled);
+    indexed.get(filled, startIndex, size);
 
     for (int i = startIndex; i < filled.length; i++) {
       Assert.assertEquals(vals[i + startIndex], filled[i]);

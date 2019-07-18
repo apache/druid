@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
@@ -34,9 +35,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
@@ -47,6 +51,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelector
 import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -54,7 +59,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -69,6 +73,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 public class GroupByQueryEngineV2
 {
@@ -108,15 +113,6 @@ public class GroupByQueryEngineV2
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
-    final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        Filters.toFilter(query.getDimFilter()),
-        intervals.get(0),
-        query.getVirtualColumns(),
-        query.getGranularity(),
-        false,
-        null
-    );
-
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
@@ -127,6 +123,59 @@ public class GroupByQueryEngineV2
                                     ? null
                                     : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+    final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+
+    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+        VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
+    );
+
+    final Sequence<Row> result;
+
+    if (doVectorize) {
+      result = VectorGroupByEngine.process(
+          query,
+          storageAdapter,
+          bufferHolder.get(),
+          fudgeTimestamp,
+          filter,
+          interval,
+          querySpecificConfig
+      );
+    } else {
+      result = processNonVectorized(
+          query,
+          storageAdapter,
+          bufferHolder.get(),
+          fudgeTimestamp,
+          querySpecificConfig,
+          filter,
+          interval
+      );
+    }
+
+    return result.withBaggage(bufferHolder);
+  }
+
+  private static Sequence<Row> processNonVectorized(
+      final GroupByQuery query,
+      final StorageAdapter storageAdapter,
+      final ByteBuffer processingBuffer,
+      @Nullable final DateTime fudgeTimestamp,
+      final GroupByQueryConfig querySpecificConfig,
+      @Nullable final Filter filter,
+      final Interval interval
+  )
+  {
+    final Sequence<Cursor> cursors = storageAdapter.makeCursors(
+        filter,
+        interval,
+        query.getVirtualColumns(),
+        query.getGranularity(),
+        false,
+        null
+    );
+
     return cursors.flatMap(
         cursor -> new BaseSequence<>(
             new BaseSequence.IteratorMaker<Row, GroupByEngineIterator<?>>()
@@ -135,57 +184,42 @@ public class GroupByQueryEngineV2
               public GroupByEngineIterator make()
               {
                 final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-                final boolean allSingleValueDims = query
-                    .getDimensions()
-                    .stream()
-                    .allMatch(dimension -> {
-                      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(
-                          dimension.getDimension()
-                      );
-                      return columnCapabilities != null && !columnCapabilities.hasMultipleValues();
-                    });
-
-                ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
+                final ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
                     .createColumnSelectorPluses(
                         STRATEGY_FACTORY,
                         query.getDimensions(),
                         columnSelectorFactory
                     );
-                GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
-                final ByteBuffer buffer = bufferHolder.get();
+                final GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
-                // Check if array-based aggregation is applicable
-                final boolean useArrayAggregation = isArrayAggregateApplicable(
+                final int cardinalityForArrayAggregation = getCardinalityForArrayAggregation(
                     querySpecificConfig,
                     query,
-                    dims,
                     storageAdapter,
-                    query.getVirtualColumns(),
-                    buffer
+                    processingBuffer
                 );
 
-                if (useArrayAggregation) {
+                if (cardinalityForArrayAggregation >= 0) {
                   return new ArrayAggregateIterator(
                       query,
                       querySpecificConfig,
                       cursor,
-                      buffer,
+                      processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      allSingleValueDims,
-                      // There must be 0 or 1 dimension if isArrayAggregateApplicable() is true
-                      dims.length == 0 ? 1 : storageAdapter.getDimensionCardinality(dims[0].getName())
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions()),
+                      cardinalityForArrayAggregation
                   );
                 } else {
                   return new HashAggregateIterator(
                       query,
                       querySpecificConfig,
                       cursor,
-                      buffer,
+                      processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      allSingleValueDims
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions())
                   );
                 }
               }
@@ -197,65 +231,91 @@ public class GroupByQueryEngineV2
               }
             }
         )
-    ).withBaggage(bufferHolder);
+    );
   }
 
-  private static boolean isArrayAggregateApplicable(
+  /**
+   * Returns the cardinality of array needed to do array-based aggregation, or -1 if array-based aggregation
+   * is impossible.
+   */
+  public static int getCardinalityForArrayAggregation(
       GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
-      GroupByColumnSelectorPlus[] dims,
       StorageAdapter storageAdapter,
-      VirtualColumns virtualColumns,
       ByteBuffer buffer
   )
   {
     if (querySpecificConfig.isForceHashAggregation()) {
-      return false;
+      return -1;
     }
 
+    final List<DimensionSpec> dimensions = query.getDimensions();
     final ColumnCapabilities columnCapabilities;
     final int cardinality;
 
     // Find cardinality
-    if (dims.length == 0) {
+    if (dimensions.isEmpty()) {
       columnCapabilities = null;
       cardinality = 1;
-    } else if (dims.length == 1) {
+    } else if (dimensions.size() == 1) {
       // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
       // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
       // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
       // real columns).
-      if (virtualColumns.exists(dims[0].getName())) {
-        return false;
+      if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
+        return -1;
       }
 
-      columnCapabilities = storageAdapter.getColumnCapabilities(dims[0].getName());
-      cardinality = storageAdapter.getDimensionCardinality(dims[0].getName());
+      final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
+      columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
+      cardinality = storageAdapter.getDimensionCardinality(columnName);
     } else {
       // Cannot use array-based aggregation with more than one dimension.
-      return false;
+      return -1;
     }
 
-    // Choose array-based aggregation if the grouping key is a single string dimension of a
-    // known cardinality
-    if ((columnCapabilities == null || columnCapabilities.getType().equals(ValueType.STRING))
-        && cardinality > 0) {
-      final AggregatorFactory[] aggregatorFactories = query
-          .getAggregatorSpecs()
-          .toArray(new AggregatorFactory[0]);
+    // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
+    if (columnCapabilities != null && columnCapabilities.getType().equals(ValueType.STRING) && cardinality > 0) {
+      final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
       final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
           cardinality,
           aggregatorFactories
       );
 
       // Check that all keys and aggregated values can be contained in the buffer
-      return requiredBufferCapacity <= buffer.capacity();
+      return requiredBufferCapacity <= buffer.capacity() ? cardinality : -1;
     } else {
-      return false;
+      return -1;
     }
   }
 
-  private static class GroupByStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
+  /**
+   * Checks whether all "dimensions" are either single-valued or nonexistent (which is just as good as single-valued,
+   * since their selectors will show up as full of nulls).
+   */
+  public static boolean isAllSingleValueDims(
+      final Function<String, ColumnCapabilities> capabilitiesFunction,
+      final List<DimensionSpec> dimensions
+  )
+  {
+    return dimensions
+        .stream()
+        .allMatch(
+            dimension -> {
+              if (dimension.mustDecorate()) {
+                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+                // To be safe, we must return false here.
+                return false;
+              }
+
+              // Now check column capabilities.
+              final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
+              return columnCapabilities == null || !columnCapabilities.hasMultipleValues();
+            });
+  }
+
+  private static class GroupByStrategyFactory
+      implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
   {
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -311,7 +371,7 @@ public class GroupByQueryEngineV2
         final GroupByQueryConfig querySpecificConfig,
         final Cursor cursor,
         final ByteBuffer buffer,
-        final DateTime fudgeTimestamp,
+        @Nullable final DateTime fudgeTimestamp,
         final GroupByColumnSelectorPlus[] dims,
         final boolean allSingleValueDims
     )
@@ -340,8 +400,7 @@ public class GroupByQueryEngineV2
       }
 
       return new CloseableGrouperIterator<>(
-          grouper,
-          false,
+          grouper.iterator(false),
           entry -> {
             Map<String, Object> theMap = Maps.newLinkedHashMap();
 
@@ -448,7 +507,7 @@ public class GroupByQueryEngineV2
         GroupByQueryConfig querySpecificConfig,
         Cursor cursor,
         ByteBuffer buffer,
-        DateTime fudgeTimestamp,
+        @Nullable DateTime fudgeTimestamp,
         GroupByColumnSelectorPlus[] dims,
         boolean allSingleValueDims
     )
@@ -467,9 +526,10 @@ public class GroupByQueryEngineV2
       return new BufferHashGrouper<>(
           Suppliers.ofInstance(buffer),
           keySerde,
-          cursor.getColumnSelectorFactory(),
-          query.getAggregatorSpecs()
-               .toArray(new AggregatorFactory[0]),
+          AggregatorAdapters.factorizeBuffered(
+              cursor.getColumnSelectorFactory(),
+              query.getAggregatorSpecs()
+          ),
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets(),
@@ -600,7 +660,7 @@ public class GroupByQueryEngineV2
         GroupByQueryConfig querySpecificConfig,
         Cursor cursor,
         ByteBuffer buffer,
-        DateTime fudgeTimestamp,
+        @Nullable DateTime fudgeTimestamp,
         GroupByColumnSelectorPlus[] dims,
         boolean allSingleValueDims,
         int cardinality
@@ -622,9 +682,7 @@ public class GroupByQueryEngineV2
     {
       return new BufferArrayGrouper(
           Suppliers.ofInstance(buffer),
-          cursor.getColumnSelectorFactory(),
-          query.getAggregatorSpecs()
-               .toArray(new AggregatorFactory[0]),
+          AggregatorAdapters.factorizeBuffered(cursor.getColumnSelectorFactory(), query.getAggregatorSpecs()),
           cardinality
       );
     }
@@ -698,7 +756,7 @@ public class GroupByQueryEngineV2
     protected void putToMap(Integer key, Map<String, Object> map)
     {
       if (dim != null) {
-        if (key != -1) {
+        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
           map.put(
               dim.getOutputName(),
               ((DimensionSelector) dim.getSelector()).lookupName(key)
@@ -710,7 +768,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static void convertRowTypesToOutputTypes(List<DimensionSpec> dimensionSpecs, Map<String, Object> rowMap)
+  public static void convertRowTypesToOutputTypes(List<DimensionSpec> dimensionSpecs, Map<String, Object> rowMap)
   {
     for (DimensionSpec dimSpec : dimensionSpecs) {
       final ValueType outputType = dimSpec.getOutputType();

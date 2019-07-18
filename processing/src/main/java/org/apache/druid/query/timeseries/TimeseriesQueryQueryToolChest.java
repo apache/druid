@@ -227,7 +227,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
     TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      bob.addMetric(aggregatorNames[i], aggregators[i]);
+      bob.addMetric(aggregatorNames[i], aggregators[i].get());
       aggregators[i].close();
     }
     return bob.build();

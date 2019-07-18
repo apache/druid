@@ -322,6 +322,15 @@ public class QueryRunnerTestHelper
     };
   }
 
+  /**
+   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory)} is vectorizable.
+   */
+  public static boolean isTestRunnerVectorizable(QueryRunner runner)
+  {
+    final String runnerName = runner.toString();
+    return !("rtIndex".equals(runnerName) || "noRollupRtIndex".equals(runnerName));
+  }
+
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )

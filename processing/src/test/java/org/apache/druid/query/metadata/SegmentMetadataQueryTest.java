@@ -212,7 +212,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1,
                 preferedSize1,
                 1,
                 "preferred",
@@ -253,7 +253,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap2,
                 placementSize2,
                 1,
                 null,
@@ -299,7 +299,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 0,
                 null,
@@ -367,7 +367,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 1,
                 null,
@@ -435,7 +435,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 1,
                 null,
@@ -504,7 +504,7 @@ public class SegmentMetadataQueryTest
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
-        false,
+        !mmap1 || !mmap2,
         size1 + size2,
         1,
         "preferred",
@@ -525,7 +525,7 @@ public class SegmentMetadataQueryTest
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
-        false,
+        !mmap1 || !mmap2,
         size1 + size2,
         3,
         "spot",
@@ -546,7 +546,7 @@ public class SegmentMetadataQueryTest
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
-        false,
+        !mmap1 || !mmap2,
         size1 + size2,
         9,
         "automotive",
@@ -632,7 +632,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 0,
                 null,
@@ -694,7 +694,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 0,
                 null,
@@ -752,7 +752,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 0,
                 null,
@@ -810,7 +810,7 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap1 || !mmap2,
                 0,
                 0,
                 null,

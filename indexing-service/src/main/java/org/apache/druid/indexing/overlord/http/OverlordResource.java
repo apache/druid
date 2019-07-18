@@ -720,7 +720,7 @@ public class OverlordResource
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
                   taskRunner,
-                  taskRunner.getClass().getCanonicalName()
+                  taskRunner.getClass().getName()
               );
               return Response.serverError()
                              .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))

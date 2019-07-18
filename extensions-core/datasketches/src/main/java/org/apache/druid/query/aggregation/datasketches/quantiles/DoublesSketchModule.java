@@ -74,6 +74,6 @@ public class DoublesSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(DOUBLES_SKETCH, DoublesSketchComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
   }
 }

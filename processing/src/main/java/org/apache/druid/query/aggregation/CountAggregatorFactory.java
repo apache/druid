@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -59,9 +60,21 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
+  {
+    return new CountVectorAggregator();
+  }
+
+  @Override
   public Comparator getComparator()
   {
     return CountAggregator.COMPARATOR;
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return true;
   }
 
   @Override

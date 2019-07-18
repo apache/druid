@@ -94,7 +94,7 @@ public class DataSourceMetadataQueryRunnerFactory
     {
       Query<Result<DataSourceMetadataResultValue>> query = input.getQuery();
       if (!(query instanceof DataSourceMetadataQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", query.getClass().getCanonicalName(), DataSourceMetadataQuery.class);
+        throw new ISE("Got a [%s] which isn't a %s", query.getClass().getName(), DataSourceMetadataQuery.class);
       }
 
       final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;
