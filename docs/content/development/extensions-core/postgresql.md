@@ -85,3 +85,69 @@ In most cases, the configuration options map directly to the [postgres jdbc conn
 | `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
 | `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
 
+### PostgreSQL Firehose
+The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/firehose.html#SqlFirehose) which can be used to ingest data into Druid from a PostgreSQL database.
+
+```json
+{
+  "type": "index",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "some_datasource",
+      "parser": {
+        "type" : "map",
+        "parseSpec": {
+          "format": "timeAndDims",
+          "dimensionsSpec": {
+            "dimensionExclusions": [],
+            "dimensions": [
+              "dim1",
+              "dim2",
+              "dim3"
+            ]
+          },
+          "timestampSpec": {
+            "format": "auto",
+            "column": "ts"
+          }
+        }
+      },
+      "metricsSpec": [],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": {
+          "type": "none"
+        },
+        "rollup": false,
+        "intervals": null
+      },
+      "transformSpec": {
+        "filter": null,
+        "transforms": []
+      }
+    },
+    "ioConfig": {
+      "type": "index",
+      "firehose": {
+        "type": "sql",
+        "database": {
+          "type": "postgresql",
+          "connectorConfig": {
+            "connectURI": "jdbc:postgresql://some-rds-host.us-west-1.rds.amazonaws.com:5432/druid",
+            "user": "admin",
+            "password": "secret"
+          }
+        },
+        "sqls": [
+          "SELECT * FROM some_table"
+        ]
+      }
+    },
+    "tuningconfig": {
+      "type": "index",
+      "maxNumSubTasks": 1
+    }
+  }
+}
+```
