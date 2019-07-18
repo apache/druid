@@ -123,23 +123,7 @@ public class IntermediaryDataManager
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
           try {
-            for (StorageLocation location : shuffleDataLocations) {
-              final MutableInt numDiscovered = new MutableInt(0);
-              final File[] dirsPerSupervisorTask = location.getPath().listFiles();
-              if (dirsPerSupervisorTask != null) {
-                for (File supervisorTaskDir : dirsPerSupervisorTask) {
-                  final String supervisorTaskId = supervisorTaskDir.getName();
-                  supervisorTaskCheckTimes.computeIfAbsent(
-                      supervisorTaskId,
-                      k -> {
-                        numDiscovered.increment();
-                        return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
-                      }
-                  );
-                }
-              }
-              log.info("Discovered partitions for [%s] new supervisor tasks", numDiscovered.getValue());
-            }
+            discoverSupervisorTaskPartitions();
           }
           catch (Exception e) {
             log.warn(e, "Error while discovering supervisorTasks");
@@ -149,38 +133,11 @@ public class IntermediaryDataManager
         intermediaryPartitionDiscoveryPeriodSec,
         TimeUnit.SECONDS
     );
-    // Check supervisorTask status if its partitions have not been accessed in timeout.
-    // Delete partitions if the supervisorTask is already finished.
-    // Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
-    // the self-cleanup for when middleManager misses the cleanup request from the overlord.
+
     supervisorTaskChecker.scheduleAtFixedRate(
         () -> {
           try {
-            final DateTime now = DateTimes.nowUtc();
-            final Set<String> expiredSupervisorTasks = new HashSet<>();
-            for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
-              final String supervisorTaskId = entry.getKey();
-              final DateTime checkTime = entry.getValue();
-              if (checkTime.isAfter(now)) {
-                expiredSupervisorTasks.add(supervisorTaskId);
-              }
-            }
-
-            log.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
-
-            final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
-            for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
-              final String supervisorTaskId = entry.getKey();
-              final TaskStatus status = entry.getValue();
-              if (status.getStatusCode().isComplete()) {
-                try {
-                  deletePartitions(supervisorTaskId);
-                }
-                catch (IOException e) {
-                  log.warn(e, "Failed to delete partitions for task[%s]", supervisorTaskId);
-                }
-              }
-            }
+            deleteExpiredSuprevisorTaskPartitionsIfNotRunning();
           }
           catch (Exception e) {
             log.warn(e, "Error while cleaning up partitions for expired supervisors");
@@ -202,6 +159,67 @@ public class IntermediaryDataManager
     supervisorTaskCheckTimes.clear();
   }
 
+  private void discoverSupervisorTaskPartitions()
+  {
+    for (StorageLocation location : shuffleDataLocations) {
+      final MutableInt numDiscovered = new MutableInt(0);
+      final File[] dirsPerSupervisorTask = location.getPath().listFiles();
+      if (dirsPerSupervisorTask != null) {
+        for (File supervisorTaskDir : dirsPerSupervisorTask) {
+          final String supervisorTaskId = supervisorTaskDir.getName();
+          supervisorTaskCheckTimes.computeIfAbsent(
+              supervisorTaskId,
+              k -> {
+                numDiscovered.increment();
+                return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
+              }
+          );
+        }
+      }
+      log.info("Discovered partitions for [%s] new supervisor tasks", numDiscovered.getValue());
+    }
+  }
+
+  /**
+   * Check supervisorTask status if its partitions have not been accessed in timeout and
+   * delete all partitions for the supervisorTask if it is already finished.
+   *
+   * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
+   * the self-cleanup for when the cleanup request is missing.
+   */
+  private void deleteExpiredSuprevisorTaskPartitionsIfNotRunning()
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final Set<String> expiredSupervisorTasks = new HashSet<>();
+    for (Entry<String, DateTime> entry : supervisorTaskCheckTimes.entrySet()) {
+      final String supervisorTaskId = entry.getKey();
+      final DateTime checkTime = entry.getValue();
+      if (checkTime.isAfter(now)) {
+        expiredSupervisorTasks.add(supervisorTaskId);
+      }
+    }
+
+    log.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
+
+    final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
+    for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
+      final String supervisorTaskId = entry.getKey();
+      final TaskStatus status = entry.getValue();
+      if (status.getStatusCode().isComplete()) {
+        // If it's finished, clean up all partitions for the supervisor task.
+        try {
+          deletePartitions(supervisorTaskId);
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to delete partitions for task[%s]", supervisorTaskId);
+        }
+      } else {
+        // If it's still running, update last access time.
+        supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
+      }
+    }
+  }
+
   /**
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
@@ -217,6 +235,35 @@ public class IntermediaryDataManager
         k -> Iterators.cycle(shuffleDataLocations)
     );
     addSegment(iterator, shuffleDataLocations.size(), supervisorTaskId, subTaskId, segment, segmentFile);
+  }
+
+  public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
+  {
+    for (StorageLocation location : shuffleDataLocations) {
+      final File partitionDir = getPartitionDir(location, supervisorTaskId, interval, partitionId);
+      if (partitionDir.exists()) {
+        supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
+        final File[] segmentFiles = partitionDir.listFiles();
+        return segmentFiles == null ? Collections.emptyList() : Arrays.asList(segmentFiles);
+      }
+    }
+
+    return Collections.emptyList();
+  }
+
+  public void deletePartitions(String supervisorTaskId) throws IOException
+  {
+    for (StorageLocation location : shuffleDataLocations) {
+      final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
+      if (supervisorTaskPath.exists()) {
+        log.info("Cleaning up [%s]", supervisorTaskPath);
+        for (File eachFile : FileUtils.listFiles(supervisorTaskPath, null, true)) {
+          location.removeFile(eachFile);
+        }
+        FileUtils.forceDelete(supervisorTaskPath);
+      }
+    }
+    supervisorTaskCheckTimes.remove(supervisorTaskId);
   }
 
   /**
@@ -261,35 +308,6 @@ public class IntermediaryDataManager
       }
     }
     throw new ISE("Can't find location to handle segment[%s]", segment);
-  }
-
-  public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
-  {
-    for (StorageLocation location : shuffleDataLocations) {
-      final File partitionDir = getPartitionDir(location, supervisorTaskId, interval, partitionId);
-      if (partitionDir.exists()) {
-        supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
-        final File[] segmentFiles = partitionDir.listFiles();
-        return segmentFiles == null ? Collections.emptyList() : Arrays.asList(segmentFiles);
-      }
-    }
-
-    return Collections.emptyList();
-  }
-
-  public void deletePartitions(String supervisorTaskId) throws IOException
-  {
-    for (StorageLocation location : shuffleDataLocations) {
-      final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
-      if (supervisorTaskPath.exists()) {
-        log.info("Cleaning up [%s]", supervisorTaskPath);
-        for (File eachFile : FileUtils.listFiles(supervisorTaskPath, null, true)) {
-          location.removeFile(eachFile);
-        }
-        FileUtils.forceDelete(supervisorTaskPath);
-      }
-    }
-    supervisorTaskCheckTimes.remove(supervisorTaskId);
   }
 
   private static File getPartitionDir(
