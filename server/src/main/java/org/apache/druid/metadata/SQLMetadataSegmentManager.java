@@ -65,7 +65,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -951,7 +950,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
     );
 
-
+    if (segments == null) {
+      log.wtf("Observed 'null' when polling segments from the db, aborting snapshot update.");
+      return;
+    }
 
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
     // segments are marked as used or unused directly (via markAs...() methods in MetadataSegmentManager), the
@@ -963,16 +965,15 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     // effect of a segment mark call reflected in MetadataResource API calls.
 
     ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
-    if (segments == null || segments.isEmpty()) {
+    if (segments.isEmpty()) {
       log.info("No segments found in the database!");
-      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(Collections.emptyList(), dataSourceProperties);
     } else {
       log.info("Polled and found %,d segments in the database", segments.size());
-      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
-          Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-          dataSourceProperties
-      );
     }
+    dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+        Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+        dataSourceProperties
+    );
   }
 
   private static ImmutableMap<String, String> createDefaultDataSourceProperties()
