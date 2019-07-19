@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * The implementation of {@link ResponseContext} with a HashMap as a delegate
  */
 public class DefaultResponseContext extends ResponseContext
 {

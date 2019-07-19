@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *
+ * The implementation of {@link ResponseContext} with a {@link ConcurrentHashMap} as a delegate
  */
 public class ConcurrentResponseContext extends ResponseContext
 {

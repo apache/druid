@@ -27,7 +27,9 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- *
+ * The context for storing and passing data between chains of {@link org.apache.druid.query.QueryRunner}s.
+ * The context is also transferred between Druid nodes with all the data it contains.
+ * All the keys associated with data inside the context should be stored here.
  */
 public abstract class ResponseContext
 {
