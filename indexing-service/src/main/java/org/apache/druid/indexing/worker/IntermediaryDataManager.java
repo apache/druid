@@ -301,6 +301,7 @@ public class IntermediaryDataManager
           }
         }
         catch (Exception e) {
+          // Print only log here to try other locations as well.
           log.warn(e, "Failed to write segmentFile at [%s]", destFile);
           location.removeFile(segmentFile);
         }
