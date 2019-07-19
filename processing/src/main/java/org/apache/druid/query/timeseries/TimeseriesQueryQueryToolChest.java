@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,7 +34,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
@@ -54,10 +52,12 @@ import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -99,7 +99,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
-        queryRunner)
+        queryRunner,
+        this::createResultComparator,
+        this::createMergeFn
+    )
     {
       @Override
       public Sequence<Result<TimeseriesResultValue>> doRun(
@@ -119,26 +122,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           return result.limit(limit);
         }
         return result;
-      }
-
-      @Override
-      protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((TimeseriesQuery) query).getGranularity(), query.isDescending()
-        );
-      }
-
-      @Override
-      protected BinaryFn<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> createMergeFn(
-          Query<Result<TimeseriesResultValue>> input
-      )
-      {
-        TimeseriesQuery query = (TimeseriesQuery) input;
-        return new TimeseriesBinaryFn(
-            query.getGranularity(),
-            query.getAggregatorSpecs()
-        );
       }
     };
 
@@ -209,6 +192,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         return finalSequence;
       }
     };
+  }
+
+  @Override
+  public BinaryOperator<Result<TimeseriesResultValue>> createMergeFn(
+      Query<Result<TimeseriesResultValue>> query
+  )
+  {
+    TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+    return new TimeseriesBinaryFn(timeseriesQuery.getGranularity(), timeseriesQuery.getAggregatorSpecs());
+  }
+
+  @Override
+  public Comparator<Result<TimeseriesResultValue>> createResultComparator(Query<Result<TimeseriesResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)

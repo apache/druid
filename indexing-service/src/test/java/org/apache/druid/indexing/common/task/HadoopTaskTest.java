@@ -109,6 +109,7 @@ public class HadoopTaskTest
         ImmutableList.of("something:hadoop:1"),
         false,
         null,
+        null,
         null
     )).once();
     EasyMock.replay(toolbox);

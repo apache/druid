@@ -31,7 +31,8 @@ public class GuavaUtils
 {
 
   /**
-   * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started value)
+   * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started
+   * value)
    */
   @Nullable
   public static Long tryParseLong(@Nullable String string)
@@ -61,5 +62,19 @@ public class GuavaUtils
     }
 
     return null;
+  }
+
+  /**
+   * If first argument is not null, return it, else return the other argument. Sort of like
+   * {@link com.google.common.base.Objects#firstNonNull(Object, Object)} except will not explode if both arguments are
+   * null.
+   */
+  @Nullable
+  public static <T> T firstNonNull(@Nullable T arg1, @Nullable T arg2)
+  {
+    if (arg1 == null) {
+      return arg2;
+    }
+    return arg1;
   }
 }
