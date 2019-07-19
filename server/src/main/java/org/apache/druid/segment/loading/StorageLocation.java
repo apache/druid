@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
@@ -72,29 +72,6 @@ public class StorageLocation
   }
 
   /**
-   * Add a new file to this location. The given file argument must be a file rather than directory.
-   */
-  public synchronized void addFile(File file)
-  {
-    if (file.isDirectory()) {
-      throw new ISE("[%s] must be a file. Use a");
-    }
-    if (files.add(file)) {
-      currSize += FileUtils.sizeOf(file);
-    }
-  }
-
-  /**
-   * Add a new segment dir to this location. The segment size is added to currSize.
-   */
-  public synchronized void addSegmentDir(File segmentDir, DataSegment segment)
-  {
-    if (files.add(segmentDir)) {
-      currSize += segment.getSize();
-    }
-  }
-
-  /**
    * Remove a segment file from this location. The given file argument must be a file rather than directory.
    */
   public synchronized void removeFile(File file)
@@ -114,23 +91,53 @@ public class StorageLocation
     }
   }
 
-  public boolean canHandle(DataSegment segment)
+  /**
+   * Reserves space to store the given segment. The segment size is added to currSize.
+   * Returns true if it succeeds to add the given file.
+   */
+  public synchronized boolean reserve(File segmentDir, DataSegment segment)
   {
-    if (available() < segment.getSize()) {
+    return reserve(segmentDir, segment.getId().toString(), segment.getSize());
+  }
+
+  /**
+   * Reserves space to store the given segment. Returns true if it succeeds to add the given file.
+   */
+  public synchronized boolean reserve(File segmentFileToAdd, String segmentId, long segmentSize)
+  {
+    if (files.contains(segmentFileToAdd)) {
+      return false;
+    }
+    if (canHandle(segmentId, segmentSize)) {
+      files.add(segmentFileToAdd);
+      currSize += segmentSize;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * This method is available for only unit tests. Production code must use {@link #reserve} instead.
+   */
+  @VisibleForTesting
+  boolean canHandle(String segmentId, long segmentSize)
+  {
+    if (available() < segmentSize) {
       log.warn(
           "Segment[%s:%,d] too large for storage[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
-          segment.getId(), segment.getSize(), getPath(), available()
+          segmentId, segmentSize, getPath(), available()
       );
       return false;
     }
 
     if (freeSpaceToKeep > 0) {
       long currFreeSpace = path.getFreeSpace();
-      if ((freeSpaceToKeep + segment.getSize()) > currFreeSpace) {
+      if ((freeSpaceToKeep + segmentSize) > currFreeSpace) {
         log.warn(
             "Segment[%s:%,d] too large for storage[%s:%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
-            segment.getId(),
-            segment.getSize(),
+            segmentId,
+            segmentSize,
             getPath(),
             available(),
             freeSpaceToKeep,
