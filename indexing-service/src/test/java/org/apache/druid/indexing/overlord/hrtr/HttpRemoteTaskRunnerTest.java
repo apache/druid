@@ -89,6 +89,8 @@ public class HttpRemoteTaskRunnerTest
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
+            .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
@@ -180,6 +182,8 @@ public class HttpRemoteTaskRunnerTest
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
+            .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     Task task1 = NoopTask.create("task-id-1", 0);
@@ -269,6 +273,8 @@ public class HttpRemoteTaskRunnerTest
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -422,6 +428,8 @@ public class HttpRemoteTaskRunnerTest
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -599,6 +607,8 @@ public class HttpRemoteTaskRunnerTest
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
+            .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
@@ -772,6 +782,8 @@ public class HttpRemoteTaskRunnerTest
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -1207,6 +1219,8 @@ public class HttpRemoteTaskRunnerTest
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
