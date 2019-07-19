@@ -34,7 +34,7 @@
 
   .ReactTable {
     position: absolute;
-    top: $view-control-bar-height + $standard-padding;
+    top: 50%; //$view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
 

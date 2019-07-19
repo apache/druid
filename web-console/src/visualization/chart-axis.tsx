@@ -17,7 +17,7 @@
  */
 
 import * as d3 from 'd3';
-import * as React from 'react';
+import React from 'react';
 
 interface ChartAxisProps extends React.Props<any> {
   transform: string;

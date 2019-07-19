@@ -18,7 +18,7 @@
 
 import * as d3 from 'd3';
 import { AxisScale } from 'd3';
-import * as React from 'react';
+import React from 'react';
 
 import { BarChartMargin, BarUnitData } from '../components/segment-timeline/segment-timeline';
 

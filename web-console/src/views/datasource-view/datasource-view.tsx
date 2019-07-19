@@ -865,6 +865,11 @@ GROUP BY 1`;
             label="Show disabled"
             onChange={() => this.toggleDisabled(showDisabled)}
           />
+          <Switch
+            checked={showChart}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showChart: !showChart })}
+          />
           <TableColumnSelector
             columns={noSqlMode ? tableColumnsNoSql : tableColumns}
             onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}

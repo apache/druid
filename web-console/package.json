@@ -51,11 +51,13 @@
   "dependencies": {
     "@blueprintjs/core": "^3.17.1",
     "@blueprintjs/icons": "^3.9.1",
+    "@types/d3": "^5.7.2",
     "axios": "^0.19.0",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.2.0",
     "core-js": "^3.1.4",
+    "d3": "^5.9.7",
     "d3-array": "^2.2.0",
     "druid-console": "^0.0.2",
     "file-saver": "^2.0.2",

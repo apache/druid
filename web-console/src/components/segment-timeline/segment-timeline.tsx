@@ -17,9 +17,9 @@
  */
 
 import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import d3 from 'd3';
+import * as d3 from 'd3';
 import { AxisScale } from 'd3';
-import * as React from 'react';
+import React from 'react';
 
 import { formatBytes, queryDruidSql, QueryManager } from '../../utils/index';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
