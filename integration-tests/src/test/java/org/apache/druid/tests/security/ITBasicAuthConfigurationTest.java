@@ -56,7 +56,6 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -96,7 +95,7 @@ public class ITBasicAuthConfigurationTest
       "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
 
   private static final String SYS_SCHEMA_SERVERS_QUERY =
-      "SELECT * FROM sys.servers";
+      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
 
   private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
       "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";
@@ -114,7 +113,6 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
@@ -620,7 +618,7 @@ public class ITBasicAuthConfigurationTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
         if (!response.getStatus().equals(expectedStatus)) {

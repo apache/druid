@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -122,6 +123,9 @@ public class DruidRexExecutor implements RexExecutor
           }
 
           literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
+        } else if (sqlTypeName == SqlTypeName.ARRAY) {
+          assert exprResult.isArray();
+          literal = rexBuilder.makeLiteral(Arrays.asList(exprResult.asArray()), constExp.getType(), true);
         } else {
           literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
         }

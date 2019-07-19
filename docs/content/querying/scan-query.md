@@ -59,7 +59,7 @@ The following are the main parameters for Scan queries:
 |resultFormat|How the results are represented: list, compactedList or valueVector. Currently only `list` and `compactedList` are supported. Default is `list`|no|
 |filter|See [Filters](../querying/filters.html)|no|
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
-|batchSize|How many rows buffered before return to client. Default is `20480`|no|
+|batchSize|The maximum number of rows buffered before being returned to the client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
 |order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the `__time` column is included in the `columns` field and the requirements outlined in the [time ordering](#time-ordering) section are met.|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
@@ -188,9 +188,9 @@ the query context (see the Query Context Properties section).
 The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
 In legacy mode you can expect the following behavior changes:
 
-- The __time column is returned as "timestamp" rather than "__time". This will take precedence over any other column
-you may have that is named "timestamp".
-- The __time column is included in the list of columns even if you do not specifically ask for it.
+- The `__time` column is returned as `"timestamp"` rather than `"__time"`. This will take precedence over any other column
+you may have that is named `"timestamp"`.
+- The `__time` column is included in the list of columns even if you do not specifically ask for it.
 - Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
 
 Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting

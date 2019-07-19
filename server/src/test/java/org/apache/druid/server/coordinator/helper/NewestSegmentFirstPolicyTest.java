@@ -35,8 +35,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,26 +43,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-@RunWith(Parameterized.class)
 public class NewestSegmentFirstPolicyTest
 {
   private static final String DATA_SOURCE = "dataSource";
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
-  @Parameterized.Parameters(name = "keepSegmentGranularity = {0}")
-  public static Iterable<Object[]> constructorFeeder()
-  {
-    return ImmutableList.of(new Object[]{false}, new Object[]{true});
-  }
-
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
-  private final boolean keepSegmentGranularity;
-
-  public NewestSegmentFirstPolicyTest(boolean keepSegmentGranularity)
-  {
-    this.keepSegmentGranularity = keepSegmentGranularity;
-  }
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -640,10 +625,7 @@ public class NewestSegmentFirstPolicyTest
       SegmentGenerateSpec... specs
   )
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        String.CASE_INSENSITIVE_ORDER
-    );
-
+    List<DataSegment> segments = new ArrayList<>();
     final String version = DateTimes.nowUtc().toString();
 
     final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
@@ -674,18 +656,14 @@ public class NewestSegmentFirstPolicyTest
               0,
               spec.segmentSize
           );
-          timeline.add(
-              segmentInterval,
-              version,
-              shardSpec.createChunk(segment)
-          );
+          segments.add(segment);
         }
 
         remaininInterval = SegmentCompactorUtil.removeIntervalFromEnd(remaininInterval, segmentInterval);
       }
     }
 
-    return timeline;
+    return VersionedIntervalTimeline.forSegments(segments);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
@@ -696,7 +674,6 @@ public class NewestSegmentFirstPolicyTest
   {
     return new DataSourceCompactionConfig(
         DATA_SOURCE,
-        keepSegmentGranularity,
         0,
         targetCompactionSizeBytes,
         targetCompactionSizeBytes,

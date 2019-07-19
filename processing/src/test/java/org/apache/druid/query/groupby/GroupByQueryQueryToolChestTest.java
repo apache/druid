@@ -19,15 +19,26 @@
 
 package org.apache.druid.query.groupby;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -46,10 +57,14 @@ import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class GroupByQueryQueryToolChestTest
@@ -483,4 +498,143 @@ public class GroupByQueryQueryToolChestTest
     ));
   }
 
+  @Test
+  public void testCacheStrategy() throws Exception
+  {
+    doTestCacheStrategy(ValueType.STRING, "val1");
+    doTestCacheStrategy(ValueType.FLOAT, 2.1f);
+    doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
+    doTestCacheStrategy(ValueType.LONG, 2L);
+  }
+
+  private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
+  {
+    switch (valueType) {
+      case LONG:
+        return new LongLastAggregatorFactory("complexMetric", "test");
+      case DOUBLE:
+        return new DoubleLastAggregatorFactory("complexMetric", "test");
+      case FLOAT:
+        return new FloatLastAggregatorFactory("complexMetric", "test");
+      case STRING:
+        return new StringLastAggregatorFactory("complexMetric", "test", null);
+      default:
+        throw new IllegalArgumentException("bad valueType: " + valueType);
+    }
+  }
+
+  private SerializablePair getIntermediateComplexValue(final ValueType valueType, final Object dimValue)
+  {
+    switch (valueType) {
+      case LONG:
+      case DOUBLE:
+      case FLOAT:
+        return new SerializablePair<>(123L, dimValue);
+      case STRING:
+        return new SerializablePairLongString(123L, (String) dimValue);
+      default:
+        throw new IllegalArgumentException("bad valueType: " + valueType);
+    }
+  }
+
+  private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Collections.singletonList(
+            new DefaultDimensionSpec("test", "test", valueType)
+        ))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                getComplexAggregatorFactoryForValueType(valueType)
+            )
+        )
+        .setPostAggregatorSpecs(
+            ImmutableList.of(new ConstantPostAggregator("post", 10))
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    CacheStrategy<Row, Object, GroupByQuery> strategy =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(
+            query1
+        );
+
+    final Row result1 = new MapBasedRow(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        ImmutableMap.of(
+            "test", dimValue,
+            "rows", 1,
+            "complexMetric", getIntermediateComplexValue(valueType, dimValue)
+        )
+    );
+
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
+        result1
+    );
+
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Object fromCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Row fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+
+    Assert.assertEquals(result1, fromCacheResult);
+
+    final Row result2 = new MapBasedRow(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        ImmutableMap.of(
+            "test", dimValue,
+            "rows", 1,
+            "complexMetric", dimValue,
+            "post", 10
+        )
+    );
+
+    // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
+    final Row typeAdjustedResult2;
+    if (valueType == ValueType.FLOAT) {
+      typeAdjustedResult2 = new MapBasedRow(
+          DateTimes.utc(123L),
+          ImmutableMap.of(
+              "test", dimValue,
+              "rows", 1,
+              "complexMetric", 2.1d,
+              "post", 10
+          )
+      );
+    } else if (valueType == ValueType.LONG) {
+      typeAdjustedResult2 = new MapBasedRow(
+          DateTimes.utc(123L),
+          ImmutableMap.of(
+              "test", dimValue,
+              "rows", 1,
+              "complexMetric", 2,
+              "post", 10
+          )
+      );
+    } else {
+      typeAdjustedResult2 = result2;
+    }
+
+
+    Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
+        result2
+    );
+
+    Object fromResultCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Row fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
+    Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+  }
 }

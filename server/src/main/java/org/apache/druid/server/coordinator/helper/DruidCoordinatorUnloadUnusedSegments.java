@@ -33,7 +33,7 @@ import java.util.Set;
 import java.util.SortedSet;
 
 /**
- *
+ * Unloads segments that are no longer marked as used from Historical servers.
  */
 public class DruidCoordinatorUnloadUnusedSegments implements DruidCoordinatorHelper
 {
@@ -46,9 +46,6 @@ public class DruidCoordinatorUnloadUnusedSegments implements DruidCoordinatorHel
     Set<DataSegment> usedSegments = params.getUsedSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Unload segments that are no longer marked as used from historical servers, *if* the usedSegments collection has
-    // been populated. Used segments must be already populated because otherwise the earlier helper
-    // DruidCoordinatorUsedSegmentsLoader would have canceled the Coordinator's run.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();

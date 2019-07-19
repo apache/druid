@@ -31,7 +31,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=bad-intermediate@druid.io
+emailAddress=bad-intermediate@druid.apache.org
 CN = badintermediate
 
 [ req_ext ]
@@ -62,7 +62,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=basic-constraint-fail@druid.io
+emailAddress=basic-constraint-fail@druid.apache.org
 CN = localhost
 
 [ req_ext ]

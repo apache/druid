@@ -50,7 +50,6 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   private final int maxSegmentsToKill;
   private long lastKillTime = 0;
 
-
   private final SegmentsMetadata segmentsMetadata;
   private final IndexingServiceClient indexingServiceClient;
 

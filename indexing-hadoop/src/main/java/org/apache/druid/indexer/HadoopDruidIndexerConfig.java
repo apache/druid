@@ -299,6 +299,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getIndexSpec();
   }
 
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return schema.getTuningConfig().getIndexSpecForIntermediatePersists();
+  }
+
   public boolean isOverwriteFiles()
   {
     return schema.getTuningConfig().isOverwriteFiles();
@@ -374,6 +379,12 @@ public class HadoopDruidIndexerConfig
   {
     return schema.getTuningConfig().getMaxParseExceptions();
   }
+
+  public boolean isUseYarnRMJobStatusFallback()
+  {
+    return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
+  }
+
 
   public void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {

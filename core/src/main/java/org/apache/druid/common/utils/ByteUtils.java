@@ -31,5 +31,7 @@ public final class ByteUtils
     return result;
   }
 
-  private ByteUtils() {}
+  private ByteUtils()
+  {
+  }
 }

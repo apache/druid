@@ -35,6 +35,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,9 +116,11 @@ public class SqlSegmentsMetadataTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    SegmentsMetadataConfig config = new SegmentsMetadataConfig();
+    config.setPollDuration(Period.seconds(1));
     sqlSegmentsMetadata = new SqlSegmentsMetadata(
         jsonMapper,
-        Suppliers.ofInstance(new SegmentsMetadataConfig()),
+        Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
@@ -157,14 +160,14 @@ public class SqlSegmentsMetadataTest
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         sqlSegmentsMetadata
-            .prepareImmutableDataSourcesWithAllUsedSegments()
+            .getImmutableDataSourcesWithAllUsedSegments()
             .stream()
             .map(ImmutableDruidDataSource::getName)
             .collect(Collectors.toList())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
@@ -178,7 +181,7 @@ public class SqlSegmentsMetadataTest
     DataSegment newSegment = pollThenStopThenStartIntro();
     Assert.assertEquals(
         ImmutableSet.of(newSegment),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
     );
   }
 
@@ -188,7 +191,7 @@ public class SqlSegmentsMetadataTest
     DataSegment newSegment = pollThenStopThenStartIntro();
     Assert.assertEquals(
         ImmutableSet.of(newSegment),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.getDataSourceWithUsedSegments("wikipedia2").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia2").getSegments())
     );
   }
 
@@ -200,7 +203,7 @@ public class SqlSegmentsMetadataTest
         ImmutableSet.of(segment1, segment2, newSegment),
         ImmutableSet.copyOf(
             sqlSegmentsMetadata
-                .prepareImmutableDataSourcesWithAllUsedSegments()
+                .getImmutableDataSourcesWithAllUsedSegments()
                 .stream()
                 .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream())
                 .iterator()
@@ -258,7 +261,7 @@ public class SqlSegmentsMetadataTest
 
     Assert.assertEquals(
         "wikipedia",
-        Iterables.getOnlyElement(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
+        Iterables.getOnlyElement(sqlSegmentsMetadata.getImmutableDataSourcesWithAllUsedSegments()).getName()
     );
   }
 
@@ -282,8 +285,8 @@ public class SqlSegmentsMetadataTest
     );
   }
 
-  @Test
-  public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException
+  @Test(timeout = 60_000)
+  public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException, InterruptedException
   {
     sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
@@ -294,9 +297,11 @@ public class SqlSegmentsMetadataTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    awaitDataSourceAppeared(newDataSource);
     int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource(newDataSource);
     Assert.assertEquals(1, numChangedSegments);
+    awaitDataSourceDisappeared(newDataSource);
+    Assert.assertNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
   }
 
   private static DataSegment createNewSegment1(String newDataSource)
@@ -321,8 +326,8 @@ public class SqlSegmentsMetadataTest
     );
   }
 
-  @Test
-  public void testMarkSegmentAsUnused() throws IOException
+  @Test(timeout = 60_000)
+  public void testMarkSegmentAsUnused() throws IOException, InterruptedException
   {
     sqlSegmentsMetadata.startPollingDatabasePeriodically();
     sqlSegmentsMetadata.poll();
@@ -338,9 +343,26 @@ public class SqlSegmentsMetadataTest
     );
 
     publisher.publishSegment(newSegment);
+    awaitDataSourceAppeared(newDataSource);
+    Assert.assertNotNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
 
-    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
-    Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId()));
+    Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId().toString()));
+    awaitDataSourceDisappeared(newDataSource);
+    Assert.assertNull(sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource));
+  }
+
+  private void awaitDataSourceAppeared(String newDataSource) throws InterruptedException
+  {
+    while (sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(newDataSource) == null) {
+      Thread.sleep(1000);
+    }
+  }
+
+  private void awaitDataSourceDisappeared(String dataSource) throws InterruptedException
+  {
+    while (sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments(dataSource) != null) {
+      Thread.sleep(1000);
+    }
   }
 
   @Test

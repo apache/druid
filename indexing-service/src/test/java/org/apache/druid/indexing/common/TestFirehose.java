@@ -47,7 +47,9 @@ public class TestFirehose implements Firehose
     private boolean waitForClose = true;
     private List<Object> seedRows;
 
-    public TestFirehoseFactory() {}
+    public TestFirehoseFactory()
+    {
+    }
 
     public TestFirehoseFactory(boolean waitForClose, List<Object> seedRows)
     {

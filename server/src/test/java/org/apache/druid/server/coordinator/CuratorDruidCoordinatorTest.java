@@ -32,6 +32,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -83,6 +84,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
   private DruidCoordinator coordinator;
   private SegmentsMetadata segmentsMetadata;
+  private DataSourcesSnapshot dataSourcesSnapshot;
+  private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
+
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon sourceLoadQueuePeon;
@@ -125,6 +129,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   public void setUp() throws Exception
   {
     segmentsMetadata = EasyMock.createNiceMock(SegmentsMetadata.class);
+    dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
+    coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
+
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -133,7 +140,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -160,10 +167,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         10,
         null,
-        false,
-        false,
-        new Duration("PT0s"),
-        Duration.millis(10)
+        new Duration("PT0s")
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
@@ -365,10 +369,15 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(sourceSegments.get(2));
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(EasyMock.anyString())).andReturn(druidDataSource);
-    EasyMock.replay(segmentsMetadata);
+    EasyMock.expect(segmentsMetadata.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
+            .andReturn(druidDataSource);
+    EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
+    EasyMock.replay(segmentsMetadata, coordinatorRuntimeParams);
 
+    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
+    EasyMock.replay(dataSourcesSnapshot);
     coordinator.moveSegment(
+        coordinatorRuntimeParams,
         source.toImmutableDruidServer(),
         dest.toImmutableDruidServer(),
         sourceSegments.get(2),
@@ -532,14 +541,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     return DataSegment.builder()
                       .dataSource("test_curator_druid_coordinator")
                       .interval(Intervals.of(intervalStr))
-                      .loadSpec(
-                          ImmutableMap.of(
-                              "type",
-                              "local",
-                              "path",
-                              "somewhere"
-                          )
-                      )
+                      .loadSpec(ImmutableMap.of("type", "local", "path", "somewhere"))
                       .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())

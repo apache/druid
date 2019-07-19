@@ -48,16 +48,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-
 public class RemoteTaskActionClientTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   private DruidLeaderClient druidLeaderClient;
-  private ObjectMapper objectMapper = new DefaultObjectMapper();
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
@@ -69,11 +66,11 @@ public class RemoteTaskActionClientTest
   public void testSubmitSimple() throws Exception
   {
     Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
-    expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
-        .andReturn(request);
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
+            .andReturn(request);
 
     // return status code 200 and a list with size equals 1
-    Map<String, Object> responseBody = new HashMap<String, Object>();
+    Map<String, Object> responseBody = new HashMap<>();
     final List<TaskLock> expectedLocks = Collections.singletonList(new TaskLock(
         TaskLockType.SHARED,
         "groupId",
@@ -91,8 +88,8 @@ public class RemoteTaskActionClientTest
     );
 
     // set up mocks
-    expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    replay(druidLeaderClient);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
 
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
@@ -112,8 +109,8 @@ public class RemoteTaskActionClientTest
   {
     // return status code 400 and a list with size equals 1
     Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
-    expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
-        .andReturn(request);
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
+            .andReturn(request);
 
     // return status code 200 and a list with size equals 1
     FullResponseHolder responseHolder = new FullResponseHolder(
@@ -123,8 +120,8 @@ public class RemoteTaskActionClientTest
     );
 
     // set up mocks
-    expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    replay(druidLeaderClient);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
 
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(

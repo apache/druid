@@ -47,7 +47,7 @@ public class DruidCoordinatorMarkAsUnusedOvershadowedSegments implements DruidCo
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
-    if (!params.lagSinceCoordinatorStartElapsedBeforeCanMarkAsUnusedOvershadowedSegements()) {
+    if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
       return params;
     }
 
@@ -61,12 +61,11 @@ public class DruidCoordinatorMarkAsUnusedOvershadowedSegments implements DruidCo
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
-          if (timeline == null) {
-            timeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-            timelines.put(dataSource.getName(), timeline);
-          }
-
+          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+              .computeIfAbsent(
+                  dataSource.getName(),
+                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+              );
           VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
         }
       }

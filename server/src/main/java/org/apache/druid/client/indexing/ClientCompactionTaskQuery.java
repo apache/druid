@@ -38,7 +38,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final String dataSource;
   private final List<DataSegment> segments;
   private final Interval interval;
-  private final boolean keepSegmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
   private final ClientCompactionTaskQueryTuningConfig tuningConfig;
@@ -49,7 +48,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("dataSource") String dataSource,
       @Nullable @JsonProperty("interval") final Interval interval,
       @Nullable @JsonProperty("segments") final List<DataSegment> segments,
-      @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
@@ -58,7 +56,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.dataSource = dataSource;
     this.segments = segments;
     this.interval = interval;
-    this.keepSegmentGranularity = keepSegmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
@@ -91,12 +88,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
-  public boolean isKeepSegmentGranularity()
-  {
-    return keepSegmentGranularity;
-  }
-
-  @JsonProperty
   @Nullable
   public Long getTargetCompactionSizeBytes()
   {
@@ -125,8 +116,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       return false;
     }
     ClientCompactionTaskQuery that = (ClientCompactionTaskQuery) o;
-    return keepSegmentGranularity == that.keepSegmentGranularity &&
-           Objects.equals(dataSource, that.dataSource) &&
+    return Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(segments, that.segments) &&
            Objects.equals(interval, that.interval) &&
            Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
@@ -141,7 +131,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         dataSource,
         segments,
         interval,
-        keepSegmentGranularity,
         targetCompactionSizeBytes,
         tuningConfig,
         context
@@ -155,7 +144,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
            ", interval=" + interval +
-           ", keepSegmentGranularity=" + keepSegmentGranularity +
            ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
            ", context=" + context +

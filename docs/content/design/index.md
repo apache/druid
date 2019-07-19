@@ -24,18 +24,23 @@ title: "Apache Druid (incubating) Design"
 
 # What is Druid?<a id="what-is-druid"></a>
 
-Apache Druid (incubating) is a data store designed for high-performance slice-and-dice analytics
-("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)"-style) on large data sets. Druid is most often
-used as a data store for powering GUI analytical applications, or as a backend for highly-concurrent APIs that need
-fast aggregations. Common application areas for Druid include:
+Apache Druid (incubating) is a real-time analytics database designed for fast slice-and-dice analytics
+("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)" queries) on large data sets. Druid is most often
+used as a database for powering use cases where real-time ingest, fast query performance, and high uptime are important. 
+As such, Druid is commonly used for powering GUIs of analytical applications, or as a backend for highly-concurrent APIs 
+that need fast aggregations. Druid works best with event-oriented data.
 
-- Clickstream analytics
-- Network flow analytics
+Common application areas for Druid include:
+
+- Clickstream analytics (web and mobile analytics)
+- Network telemetry analytics (network performance monitoring)
 - Server metrics storage
+- Supply chain analytics (manufacturing metrics)
 - Application performance metrics
-- Digital marketing analytics
+- Digital marketing/advertising analytics
 - Business intelligence / OLAP
 
+Druid's core architecture combines ideas from data warehouses, timeseries databases, and logsearch systems. Some of 
 Druid's key features are:
 
 1. **Columnar storage format.** Druid uses column-oriented storage, meaning it only needs to load the exact columns
@@ -45,7 +50,7 @@ column is stored optimized for its particular data type, which supports fast sca
 offer ingest rates of millions of records/sec, retention of trillions of records, and query latencies of sub-second to a
 few seconds.
 3. **Massively parallel processing.** Druid can process a query in parallel across the entire cluster.
-4. **Realtime or batch ingestion.** Druid can ingest data either realtime (ingested data is immediately available for
+4. **Realtime or batch ingestion.** Druid can ingest data either real-time (ingested data is immediately available for
 querying) or in batches.
 5. **Self-healing, self-balancing, easy to operate.** As an operator, to scale the cluster out or in, simply add or
 remove servers and the cluster will rebalance itself automatically, in the background, without any downtime. If any
@@ -59,11 +64,14 @@ Druid servers, replication ensures that queries are still possible while the sys
 7. **Indexes for quick filtering.** Druid uses [CONCISE](https://arxiv.org/pdf/1004.0403) or
 [Roaring](https://roaringbitmap.org/) compressed bitmap indexes to create indexes that power fast filtering and
 searching across multiple columns.
-8. **Approximate algorithms.** Druid includes algorithms for approximate count-distinct, approximate ranking, and
+8. **Time-based partitioning.** Druid first partitions data by time, and can additionally partition based on other fields. 
+This means time-based queries will only access the partitions that match the time range of the query. This leads to 
+significant performance improvements for time-based data. 
+9. **Approximate algorithms.** Druid includes algorithms for approximate count-distinct, approximate ranking, and
 computation of approximate histograms and quantiles. These algorithms offer bounded memory usage and are often
 substantially faster than exact computations. For situations where accuracy is more important than speed, Druid also
 offers exact count-distinct and exact ranking.
-9. **Automatic summarization at ingest time.** Druid optionally supports data summarization at ingestion time. This
+10. **Automatic summarization at ingest time.** Druid optionally supports data summarization at ingestion time. This
 summarization partially pre-aggregates your data, and can lead to big costs savings and performance boosts.
 
 # When should I use Druid?<a id="when-to-use-druid"></a>
@@ -85,7 +93,8 @@ Situations where you would likely _not_ want to use Druid include:
 - You need low-latency updates of _existing_ records using a primary key. Druid supports streaming inserts, but not streaming updates (updates are done using
 background batch jobs).
 - You are building an offline reporting system where query latency is not very important.
-- You want to do "big" joins (joining one big fact table to another big fact table).
+- You want to do "big" joins (joining one big fact table to another big fact table) and you are okay with these queries 
+taking up to hours to complete.
 
 # Architecture
 
@@ -157,7 +166,7 @@ The following diagram shows how queries and data flow through this architecture,
 Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
 partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a "chunk" (for
 example, a single day, if your datasource is partitioned by day). Within a chunk, data is partitioned into one or more
-"segments". Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
+["segments"](../design/segments.html). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
 organized into time chunks, it's sometimes helpful to think of segments as living on a timeline like the following:
 
 <img src="../../img/druid-timeline.png" width="800" />
@@ -183,10 +192,10 @@ cluster.
 
 # Query processing
 
-Queries first enter the Broker, where the Broker will identify which segments have data that may pertain to that query.
+Queries first enter the [Broker](../design/broker.html), where the Broker will identify which segments have data that may pertain to that query.
 The list of segments is always pruned by time, and may also be pruned by other attributes depending on how your
-datasource is partitioned. The Broker will then identify which Historicals and MiddleManagers are serving those segments
-and send a rewritten subquery to each of those processes. The Historical/MiddleManager processes will take in the
+datasource is partitioned. The Broker will then identify which [Historicals](../design/historical.html) and 
+[MiddleManagers](../design/middlemanager.html) are serving those segments and send a rewritten subquery to each of those processes. The Historical/MiddleManager processes will take in the
 queries, process them and return results. The Broker receives results and merges them together to get the final answer,
 which it returns to the original caller.
 

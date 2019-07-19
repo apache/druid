@@ -98,7 +98,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
     EasyMock.replay(segmentsMetadata);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
-    DruidCoordinatorUnusedSegmentsKiller coordinatorSegmentKiller = new DruidCoordinatorUnusedSegmentsKiller(
+    DruidCoordinatorUnusedSegmentsKiller unusedSegmentsKiller = new DruidCoordinatorUnusedSegmentsKiller(
         segmentsMetadata,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(
@@ -110,16 +110,13 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
             Duration.parse("PT86400S"),
             1000,
             null,
-            false,
-            false,
-            Duration.ZERO,
-            Duration.millis(10)
+            Duration.ZERO
         )
     );
 
     Assert.assertEquals(
         expected,
-        coordinatorSegmentKiller.findIntervalForKill("test", 10000)
+        unusedSegmentsKiller.findIntervalForKill("test", 10000)
     );
   }
 }

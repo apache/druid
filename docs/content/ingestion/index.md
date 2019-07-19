@@ -33,7 +33,7 @@ title: "Ingestion"
 Apache Druid (incubating) data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
 partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a "chunk" (for
 example, a single day, if your datasource is partitioned by day). Within a chunk, data is partitioned into one or more
-"segments". Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
+["segments"](../design/segments.html). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
 organized into time chunks, it's sometimes helpful to think of segments as living on a timeline like the following:
 
 <img src="../../img/druid-timeline.png" width="800" />

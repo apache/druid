@@ -77,7 +77,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     final CoordinatorStats stats = new CoordinatorStats();
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSourcesWithUsedSegments();
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+          params.getUsedSegmentsTimelinesPerDataSource();
       List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
@@ -85,7 +86,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
-        // dataSource -> list of intervals of compact tasks
+        // dataSource -> list of intervals of compaction tasks
         final Map<String, List<Interval>> compactionTaskIntervals = new HashMap<>(compactionConfigList.size());
         for (TaskStatusPlus status : compactionTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
@@ -186,7 +187,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
-            config.isKeepSegmentGranularity(),
             config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),

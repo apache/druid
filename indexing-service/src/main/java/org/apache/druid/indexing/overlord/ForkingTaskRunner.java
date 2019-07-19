@@ -39,6 +39,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
@@ -69,7 +70,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -84,7 +84,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -108,7 +107,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   /** Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting. */
-  private final ConcurrentMap<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   private volatile boolean stopping = false;
 
@@ -214,309 +213,306 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
-      if (!tasks.containsKey(task.getId())) {
-        tasks.put(
-            task.getId(),
-            new ForkingTaskRunnerWorkItem(
-                task,
-                exec.submit(
-                    new Callable<TaskStatus>()
-                    {
-                      @Override
-                      public TaskStatus call()
-                      {
-                        final String attemptUUID = UUID.randomUUID().toString();
-                        final File taskDir = taskConfig.getTaskDir(task.getId());
-                        final File attemptDir = new File(taskDir, attemptUUID);
+      tasks.computeIfAbsent(
+          task.getId(), k ->
+          new ForkingTaskRunnerWorkItem(
+            task,
+            exec.submit(
+              new Callable<TaskStatus>() {
+                @Override
+                public TaskStatus call()
+                {
+                  final String attemptUUID = UUID.randomUUID().toString();
+                  final File taskDir = taskConfig.getTaskDir(task.getId());
+                  final File attemptDir = new File(taskDir, attemptUUID);
 
-                        final ProcessHolder processHolder;
-                        final String childHost = node.getHost();
-                        int childPort = -1;
-                        int tlsChildPort = -1;
+                  final ProcessHolder processHolder;
+                  final String childHost = node.getHost();
+                  int childPort = -1;
+                  int tlsChildPort = -1;
 
-                        if (node.isEnablePlaintextPort()) {
-                          childPort = portFinder.findUnusedPort();
+                  if (node.isEnablePlaintextPort()) {
+                    childPort = portFinder.findUnusedPort();
+                  }
+
+                  if (node.isEnableTlsPort()) {
+                    tlsChildPort = portFinder.findUnusedPort();
+                  }
+
+                  final TaskLocation taskLocation = TaskLocation.create(childHost, childPort, tlsChildPort);
+
+                  try {
+                    final Closer closer = Closer.create();
+                    try {
+                      if (!attemptDir.mkdirs()) {
+                        throw new IOE("Could not create directories: %s", attemptDir);
+                      }
+
+                      final File taskFile = new File(taskDir, "task.json");
+                      final File statusFile = new File(attemptDir, "status.json");
+                      final File logFile = new File(taskDir, "log");
+                      final File reportsFile = new File(attemptDir, "report.json");
+
+                      // time to adjust process holders
+                      synchronized (tasks) {
+                        final ForkingTaskRunnerWorkItem taskWorkItem = tasks.get(task.getId());
+
+                        if (taskWorkItem.shutdown) {
+                          throw new IllegalStateException("Task has been shut down!");
                         }
 
-                        if (node.isEnableTlsPort()) {
-                          tlsChildPort = portFinder.findUnusedPort();
+                        if (taskWorkItem == null) {
+                          log.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                          throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                         }
 
-                        final TaskLocation taskLocation = TaskLocation.create(childHost, childPort, tlsChildPort);
+                        if (taskWorkItem.processHolder != null) {
+                          log.makeAlert("WTF?! TaskInfo already has a processHolder")
+                            .addData("task", task.getId())
+                            .emit();
+                          throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
+                        }
 
-                        try {
-                          final Closer closer = Closer.create();
-                          try {
-                            if (!attemptDir.mkdirs()) {
-                              throw new IOE("Could not create directories: %s", attemptDir);
+                        final List<String> command = new ArrayList<>();
+                        final String taskClasspath;
+                        if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
+                          taskClasspath = Joiner.on(File.pathSeparator).join(
+                            task.getClasspathPrefix(),
+                            config.getClasspath()
+                          );
+                        } else {
+                          taskClasspath = config.getClasspath();
+                        }
+
+                        command.add(config.getJavaCommand());
+                        command.add("-cp");
+                        command.add(taskClasspath);
+
+                        Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
+                        Iterables.addAll(command, config.getJavaOptsArray());
+
+                        // Override task specific javaOpts
+                        Object taskJavaOpts = task.getContextValue(
+                            ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
+                        );
+                        if (taskJavaOpts != null) {
+                          Iterables.addAll(
+                              command,
+                              new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                          );
+                        }
+
+                        for (String propName : props.stringPropertyNames()) {
+                          for (String allowedPrefix : config.getAllowedPrefixes()) {
+                            // See https://github.com/apache/incubator-druid/issues/1841
+                            if (propName.startsWith(allowedPrefix)
+                                && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
+                                && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
+                            ) {
+                              command.add(
+                                  StringUtils.format(
+                                  "-D%s=%s",
+                                  propName,
+                                  props.getProperty(propName)
+                                )
+                              );
                             }
+                          }
+                        }
 
-                            final File taskFile = new File(taskDir, "task.json");
-                            final File statusFile = new File(attemptDir, "status.json");
-                            final File logFile = new File(taskDir, "log");
-                            final File reportsFile = new File(attemptDir, "report.json");
-
-                            // time to adjust process holders
-                            synchronized (tasks) {
-                              final ForkingTaskRunnerWorkItem taskWorkItem = tasks.get(task.getId());
-
-                              if (taskWorkItem.shutdown) {
-                                throw new IllegalStateException("Task has been shut down!");
-                              }
-
-                              if (taskWorkItem == null) {
-                                log.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
-                                throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
-                              }
-
-                              if (taskWorkItem.processHolder != null) {
-                                log.makeAlert("WTF?! TaskInfo already has a processHolder")
-                                   .addData("task", task.getId())
-                                   .emit();
-                                throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
-                              }
-
-                              final List<String> command = new ArrayList<>();
-                              final String taskClasspath;
-                              if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
-                                taskClasspath = Joiner.on(File.pathSeparator).join(
-                                    task.getClasspathPrefix(),
-                                    config.getClasspath()
-                                );
-                              } else {
-                                taskClasspath = config.getClasspath();
-                              }
-
-                              command.add(config.getJavaCommand());
-                              command.add("-cp");
-                              command.add(taskClasspath);
-
-                              Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
-                              Iterables.addAll(command, config.getJavaOptsArray());
-
-                              // Override task specific javaOpts
-                              Object taskJavaOpts = task.getContextValue(
-                                  ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
-                              );
-                              if (taskJavaOpts != null) {
-                                Iterables.addAll(
-                                    command,
-                                    new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
-                                );
-                              }
-
-                              for (String propName : props.stringPropertyNames()) {
-                                for (String allowedPrefix : config.getAllowedPrefixes()) {
-                                  // See https://github.com/apache/incubator-druid/issues/1841
-                                  if (propName.startsWith(allowedPrefix)
-                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
-                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
-                                      ) {
-                                    command.add(
-                                        StringUtils.format(
-                                            "-D%s=%s",
-                                            propName,
-                                            props.getProperty(propName)
-                                        )
-                                    );
-                                  }
-                                }
-                              }
-
-                              // Override child JVM specific properties
-                              for (String propName : props.stringPropertyNames()) {
-                                if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                                  command.add(
-                                      StringUtils.format(
-                                          "-D%s=%s",
-                                          propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                          props.getProperty(propName)
-                                      )
-                                  );
-                                }
-                              }
-
-                              // Override task specific properties
-                              final Map<String, Object> context = task.getContext();
-                              if (context != null) {
-                                for (String propName : context.keySet()) {
-                                  if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                                    command.add(
-                                        StringUtils.format(
-                                            "-D%s=%s",
-                                            propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                            task.getContextValue(propName)
-                                        )
-                                    );
-                                  }
-                                }
-                              }
-
-                              // Add dataSource, taskId and taskType for metrics or logging
-                              command.add(
-                                  StringUtils.format(
-                                      "-D%s%s=%s",
-                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                                      DruidMetrics.DATASOURCE,
-                                      task.getDataSource()
-                                  )
-                              );
-                              command.add(
-                                  StringUtils.format(
-                                      "-D%s%s=%s",
-                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                                      DruidMetrics.TASK_ID,
-                                      task.getId()
-                                  )
-                              );
-                              command.add(
-                                  StringUtils.format(
-                                      "-D%s%s=%s",
-                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                                      DruidMetrics.TASK_TYPE,
-                                      task.getType()
-                                  )
-                              );
-
-                              command.add(StringUtils.format("-Ddruid.host=%s", childHost));
-                              command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
-                              command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
-                              /**
-                               * These are not enabled per default to allow the user to either set or not set them
-                               * Users are highly suggested to be set in druid.indexer.runner.javaOpts
-                               * See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
-                               * for more information
-                               command.add("-XX:+UseThreadPriorities");
-                               command.add("-XX:ThreadPriorityPolicy=42");
-                               */
-
-                              command.add("org.apache.druid.cli.Main");
-                              command.add("internal");
-                              command.add("peon");
-                              command.add(taskFile.toString());
-                              command.add(statusFile.toString());
-                              command.add(reportsFile.toString());
-                              String nodeType = task.getNodeType();
-                              if (nodeType != null) {
-                                command.add("--nodeType");
-                                command.add(nodeType);
-                              }
-
-                              if (!taskFile.exists()) {
-                                jsonMapper.writeValue(taskFile, task);
-                              }
-
-                              log.info("Running command: %s", Joiner.on(" ").join(command));
-                              taskWorkItem.processHolder = new ProcessHolder(
-                                  new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
-                                  logFile,
-                                  taskLocation.getHost(),
-                                  taskLocation.getPort(),
-                                  taskLocation.getTlsPort()
-                              );
-
-                              processHolder = taskWorkItem.processHolder;
-                              processHolder.registerWithCloser(closer);
-                            }
-
-                            TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
-                            TaskRunnerUtils.notifyStatusChanged(
-                                listeners,
-                                task.getId(),
-                                TaskStatus.running(task.getId())
+                        // Override child JVM specific properties
+                        for (String propName : props.stringPropertyNames()) {
+                          if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
+                            command.add(
+                                StringUtils.format(
+                                "-D%s=%s",
+                                propName.substring(CHILD_PROPERTY_PREFIX.length()),
+                                props.getProperty(propName)
+                              )
                             );
-
-                            log.info("Logging task %s output to: %s", task.getId(), logFile);
-                            boolean runFailed = true;
-
-                            final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
-
-                            // This will block for a while. So we append the thread information with more details
-                            final String priorThreadName = Thread.currentThread().getName();
-                            Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
-
-                            try (final OutputStream toLogfile = logSink.openStream()) {
-                              ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
-                              final int statusCode = processHolder.process.waitFor();
-                              log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-                              if (statusCode == 0) {
-                                runFailed = false;
-                              }
-                            }
-                            finally {
-                              Thread.currentThread().setName(priorThreadName);
-                              // Upload task logs
-                              taskLogPusher.pushTaskLog(task.getId(), logFile);
-                              if (reportsFile.exists()) {
-                                taskLogPusher.pushTaskReports(task.getId(), reportsFile);
-                              }
-                            }
-
-                            TaskStatus status;
-                            if (!runFailed) {
-                              // Process exited successfully
-                              status = jsonMapper.readValue(statusFile, TaskStatus.class);
-                            } else {
-                              // Process exited unsuccessfully
-                              status = TaskStatus.failure(task.getId());
-                            }
-
-                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
-                            return status;
-                          }
-                          catch (Throwable t) {
-                            throw closer.rethrow(t);
-                          }
-                          finally {
-                            closer.close();
                           }
                         }
-                        catch (Throwable t) {
-                          log.info(t, "Exception caught during execution");
-                          throw new RuntimeException(t);
+
+                        // Override task specific properties
+                        final Map<String, Object> context = task.getContext();
+                        if (context != null) {
+                          for (String propName : context.keySet()) {
+                            if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
+                              command.add(
+                                  StringUtils.format(
+                                  "-D%s=%s",
+                                  propName.substring(CHILD_PROPERTY_PREFIX.length()),
+                                  task.getContextValue(propName)
+                                )
+                              );
+                            }
+                          }
                         }
-                        finally {
-                          try {
-                            synchronized (tasks) {
-                              final ForkingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
-                              if (taskWorkItem != null && taskWorkItem.processHolder != null) {
-                                taskWorkItem.processHolder.process.destroy();
-                              }
-                              if (!stopping) {
-                                saveRunningTasks();
-                              }
-                            }
 
-                            if (node.isEnablePlaintextPort()) {
-                              portFinder.markPortUnused(childPort);
-                            }
-                            if (node.isEnableTlsPort()) {
-                              portFinder.markPortUnused(tlsChildPort);
-                            }
+                        // Add dataSource, taskId and taskType for metrics or logging
+                        command.add(
+                            StringUtils.format(
+                            "-D%s%s=%s",
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                            DruidMetrics.DATASOURCE,
+                            task.getDataSource()
+                          )
+                        );
+                        command.add(
+                            StringUtils.format(
+                            "-D%s%s=%s",
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                            DruidMetrics.TASK_ID,
+                            task.getId()
+                          )
+                        );
+                        command.add(
+                            StringUtils.format(
+                            "-D%s%s=%s",
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                            DruidMetrics.TASK_TYPE,
+                            task.getType()
+                          )
+                        );
 
-                            try {
-                              if (!stopping && taskDir.exists()) {
-                                log.info("Removing task directory: %s", taskDir);
-                                FileUtils.deleteDirectory(taskDir);
-                              }
-                            }
-                            catch (Exception e) {
-                              log.makeAlert(e, "Failed to delete task directory")
-                                 .addData("taskDir", taskDir.toString())
-                                 .addData("task", task.getId())
-                                 .emit();
-                            }
-                          }
-                          catch (Exception e) {
-                            log.error(e, "Suppressing exception caught while cleaning up task");
-                          }
+                        command.add(StringUtils.format("-Ddruid.host=%s", childHost));
+                        command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
+                        command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
+                        /**
+                         * These are not enabled per default to allow the user to either set or not set them
+                         * Users are highly suggested to be set in druid.indexer.runner.javaOpts
+                         * See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
+                         * for more information
+                         command.add("-XX:+UseThreadPriorities");
+                         command.add("-XX:ThreadPriorityPolicy=42");
+                         */
+
+                        command.add("org.apache.druid.cli.Main");
+                        command.add("internal");
+                        command.add("peon");
+                        command.add(taskFile.toString());
+                        command.add(statusFile.toString());
+                        command.add(reportsFile.toString());
+                        String nodeType = task.getNodeType();
+                        if (nodeType != null) {
+                          command.add("--nodeType");
+                          command.add(nodeType);
+                        }
+
+                        if (!taskFile.exists()) {
+                          jsonMapper.writeValue(taskFile, task);
+                        }
+
+                        log.info("Running command: %s", Joiner.on(" ").join(command));
+                        taskWorkItem.processHolder = new ProcessHolder(
+                          new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
+                          logFile,
+                          taskLocation.getHost(),
+                          taskLocation.getPort(),
+                          taskLocation.getTlsPort()
+                        );
+
+                        processHolder = taskWorkItem.processHolder;
+                        processHolder.registerWithCloser(closer);
+                      }
+
+                      TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                      TaskRunnerUtils.notifyStatusChanged(
+                          listeners,
+                          task.getId(),
+                          TaskStatus.running(task.getId())
+                      );
+
+                      log.info("Logging task %s output to: %s", task.getId(), logFile);
+                      boolean runFailed = true;
+
+                      final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+                      // This will block for a while. So we append the thread information with more details
+                      final String priorThreadName = Thread.currentThread().getName();
+                      Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+
+                      try (final OutputStream toLogfile = logSink.openStream()) {
+                        ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+                        final int statusCode = processHolder.process.waitFor();
+                        log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+                        if (statusCode == 0) {
+                          runFailed = false;
                         }
                       }
+                      finally {
+                        Thread.currentThread().setName(priorThreadName);
+                        // Upload task logs
+                        taskLogPusher.pushTaskLog(task.getId(), logFile);
+                        if (reportsFile.exists()) {
+                          taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                        }
+                      }
+
+                      TaskStatus status;
+                      if (!runFailed) {
+                        // Process exited successfully
+                        status = jsonMapper.readValue(statusFile, TaskStatus.class);
+                      } else {
+                        // Process exited unsuccessfully
+                        status = TaskStatus.failure(task.getId());
+                      }
+
+                      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+                      return status;
                     }
-                )
+                    catch (Throwable t) {
+                      throw closer.rethrow(t);
+                    }
+                    finally {
+                      closer.close();
+                    }
+                  }
+                  catch (Throwable t) {
+                    log.info(t, "Exception caught during execution");
+                    throw new RuntimeException(t);
+                  }
+                  finally {
+                    try {
+                      synchronized (tasks) {
+                        final ForkingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
+                        if (taskWorkItem != null && taskWorkItem.processHolder != null) {
+                          taskWorkItem.processHolder.process.destroy();
+                        }
+                        if (!stopping) {
+                          saveRunningTasks();
+                        }
+                      }
+
+                      if (node.isEnablePlaintextPort()) {
+                        portFinder.markPortUnused(childPort);
+                      }
+                      if (node.isEnableTlsPort()) {
+                        portFinder.markPortUnused(tlsChildPort);
+                      }
+
+                      try {
+                        if (!stopping && taskDir.exists()) {
+                          log.info("Removing task directory: %s", taskDir);
+                          FileUtils.deleteDirectory(taskDir);
+                        }
+                      }
+                      catch (Exception e) {
+                        log.makeAlert(e, "Failed to delete task directory")
+                          .addData("taskDir", taskDir.toString())
+                          .addData("task", task.getId())
+                          .emit();
+                      }
+                    }
+                    catch (Exception e) {
+                      log.error(e, "Suppressing exception caught while cleaning up task");
+                    }
+                  }
+                }
+              }
             )
-        );
-      }
+          )
+      );
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }

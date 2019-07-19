@@ -28,7 +28,9 @@ import org.asynchttpclient.AsyncHttpClient;
 
 public class LoggingEmitterFactory extends LoggingEmitterConfig implements EmitterFactory
 {
-  public LoggingEmitterFactory() {}
+  public LoggingEmitterFactory()
+  {
+  }
 
   @Override
   public Emitter makeEmitter(ObjectMapper objectMapper, AsyncHttpClient httpClient, Lifecycle lifecycle)

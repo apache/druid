@@ -65,7 +65,8 @@ public class GroupByRowProcessor
       final String processingTmpDir,
       final int mergeBufferSize,
       final List<Closeable> closeOnExit,
-      final boolean wasQueryPushedDown
+      final boolean wasQueryPushedDown,
+      final boolean useVirtualizedColumnSelectorFactory
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -112,7 +113,8 @@ public class GroupByRowProcessor
         temporaryStorage,
         spillMapper,
         aggregatorFactories,
-        mergeBufferSize
+        mergeBufferSize,
+        useVirtualizedColumnSelectorFactory
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
     final Accumulator<AggregateResult, Row> accumulator = pair.rhs;

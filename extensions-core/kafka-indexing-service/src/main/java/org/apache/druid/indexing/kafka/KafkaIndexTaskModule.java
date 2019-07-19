@@ -48,7 +48,8 @@ public class KafkaIndexTaskModule implements DruidModule
                 // (Older versions of Druid didn't specify a type name and got this one by default.)
                 new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig"),
                 new NamedType(KafkaSupervisorTuningConfig.class, "kafka"),
-                new NamedType(KafkaSupervisorSpec.class, "kafka")
+                new NamedType(KafkaSupervisorSpec.class, "kafka"),
+                new NamedType(KafkaSamplerSpec.class, "kafka")
             )
     );
   }

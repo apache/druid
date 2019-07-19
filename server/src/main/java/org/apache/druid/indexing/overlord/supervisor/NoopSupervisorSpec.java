@@ -98,10 +98,14 @@ public class NoopSupervisorSpec implements SupervisorSpec
     return new Supervisor()
     {
       @Override
-      public void start() {}
+      public void start()
+      {
+      }
 
       @Override
-      public void stop(boolean stopGracefully) {}
+      public void stop(boolean stopGracefully)
+      {
+      }
 
       @Override
       public SupervisorReport getStatus()
@@ -110,7 +114,15 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
-      public void reset(DataSourceMetadata dataSourceMetadata) {}
+      public SupervisorStateManager.State getState()
+      {
+        return SupervisorStateManager.BasicState.RUNNING;
+      }
+
+      @Override
+      public void reset(DataSourceMetadata dataSourceMetadata)
+      {
+      }
 
       @Override
       public void checkpoint(

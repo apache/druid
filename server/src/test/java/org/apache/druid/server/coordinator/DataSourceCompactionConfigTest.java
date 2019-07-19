@@ -43,7 +43,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         100L,
         null,
@@ -56,7 +55,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertEquals(config.getTargetCompactionSizeBytes(), fromJson.getTargetCompactionSizeBytes());
@@ -73,7 +71,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         30,
@@ -86,7 +83,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
@@ -114,7 +110,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         null,
@@ -133,7 +128,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
@@ -154,7 +148,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         10000L,
         1000,
@@ -174,7 +167,6 @@ public class DataSourceCompactionConfigTest
     );
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
-        null,
         null,
         500L,
         10000L,
@@ -198,7 +190,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         10000,
@@ -218,7 +209,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());

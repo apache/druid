@@ -237,6 +237,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void identity(String identity);
 
   /**
+   * Sets whether or not a segment scan has been vectorized. Generally expected to only be attached to segment-level
+   * metrics, since at whole-query level we might have a mix of vectorized and non-vectorized segment scans.
+   */
+  void vectorized(boolean vectorized);
+
+  /**
    * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
    * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
    * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more

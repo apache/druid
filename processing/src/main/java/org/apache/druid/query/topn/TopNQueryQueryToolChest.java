@@ -294,8 +294,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
           query.getPostAggregatorSpecs(),
-          query.getTopNMetricSpec()
-               .getMetricName(query.getDimensionSpec())
+          query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
       );
 
       @Override
@@ -398,7 +397,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
             while (inputIter.hasNext()) {
               List<Object> result = (List<Object>) inputIter.next();
-              Map<String, Object> vals = Maps.newLinkedHashMap();
+              final Map<String, Object> vals = Maps.newLinkedHashMap();
 
               Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
@@ -409,18 +408,24 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   DimensionHandlerUtils.convertObjectToType(resultIter.next(), query.getDimensionSpec().getOutputType())
               );
 
-              while (aggIter.hasNext() && resultIter.hasNext()) {
-                final AggregatorFactory factory = aggIter.next();
-                vals.put(factory.getName(), factory.deserialize(resultIter.next()));
-              }
+              CacheStrategy.fetchAggregatorsFromCache(
+                  aggIter,
+                  resultIter,
+                  isResultLevelCache,
+                  (aggName, aggValueObject) -> {
+                    vals.put(aggName, aggValueObject);
+                    return null;
+                  }
+              );
 
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
-              }
               if (isResultLevelCache) {
                 Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
                 while (postItr.hasNext() && resultIter.hasNext()) {
                   vals.put(postItr.next().getName(), resultIter.next());
+                }
+              } else {
+                for (PostAggregator postAgg : postAggs) {
+                  vals.put(postAgg.getName(), postAgg.compute(vals));
                 }
               }
               retVal.add(vals);

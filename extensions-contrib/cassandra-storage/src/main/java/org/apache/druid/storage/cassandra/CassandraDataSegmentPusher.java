@@ -41,8 +41,6 @@ import java.util.Map;
 
 /**
  * Cassandra Segment Pusher
- *
- * @author boneill42
  */
 public class CassandraDataSegmentPusher extends CassandraStorage implements DataSegmentPusher
 {

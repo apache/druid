@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -31,6 +29,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
@@ -86,7 +85,6 @@ import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryConfig;
 import org.apache.druid.query.select.SelectQueryEngine;
 import org.apache.druid.query.select.SelectQueryQueryToolChest;
 import org.apache.druid.query.select.SelectQueryRunnerFactory;
@@ -217,9 +215,6 @@ public class CalciteTests
   );
 
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
-      new SelectQueryConfig(true)
-  );
 
   private static final Injector INJECTOR = Guice.createInjector(
       (Module) binder -> {
@@ -515,8 +510,7 @@ public class CalciteTests
                 new SelectQueryRunnerFactory(
                     new SelectQueryQueryToolChest(
                         TestHelper.makeJsonMapper(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-                        SELECT_CONFIG_SUPPLIER
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     new SelectQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -761,9 +755,11 @@ public class CalciteTests
             plannerConfig
         ),
         new TestServerInventoryView(walker.getSegments()),
+        EasyMock.createMock(ServerInventoryView.class),
         TEST_AUTHORIZER_MAPPER,
         druidLeaderClient,
         druidLeaderClient,
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
         getJsonMapper()
     );
     return schema;

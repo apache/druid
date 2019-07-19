@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -79,27 +78,25 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
   public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterator<DataSegment> segments)
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    final VersionedIntervalTimeline<String, DataSegment> timeline =
+        new VersionedIntervalTimeline<>(Comparator.naturalOrder());
     addSegments(timeline, segments);
     return timeline;
   }
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
-  final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
-      Comparators.intervalsByStartThenEnd()
-  );
-  final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
-      Comparators.intervalsByStartThenEnd()
-  );
+  private final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline =
+      new TreeMap<>(Comparators.intervalsByStartThenEnd());
+  @VisibleForTesting
+  final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline =
+      new TreeMap<>(Comparators.intervalsByStartThenEnd());
   private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
   private final AtomicInteger numObjects = new AtomicInteger();
 
   private final Comparator<? super VersionType> versionComparator;
 
-  public VersionedIntervalTimeline(
-      Comparator<? super VersionType> versionComparator
-  )
+  public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
     this.versionComparator = versionComparator;
   }
@@ -252,7 +249,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   @Override
-  public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
+  public @Nullable PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
   {
     try {
       lock.readLock().lock();
@@ -348,6 +345,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     );
   }
 
+  /**
+   * This method should be deduplicated with DataSourcesSnapshot.determineOvershadowedSegments(): see
+   * https://github.com/apache/incubator-druid/issues/8070.
+   */
   public Set<TimelineObjectHolder<VersionType, ObjectType>> findOvershadowed()
   {
     try {
@@ -356,8 +357,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
       Map<Interval, Map<VersionType, TimelineEntry>> overShadowed = new HashMap<>();
       for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
-        Map<VersionType, TimelineEntry> versionCopy = new HashMap<>();
-        versionCopy.putAll(versionEntry.getValue());
+        @SuppressWarnings("unchecked")
+        Map<VersionType, TimelineEntry> versionCopy = (TreeMap) versionEntry.getValue().clone();
         overShadowed.put(versionEntry.getKey(), versionCopy);
       }
 

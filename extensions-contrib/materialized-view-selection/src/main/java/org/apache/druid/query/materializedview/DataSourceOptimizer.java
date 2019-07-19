@@ -92,11 +92,10 @@ public class DataSourceOptimizer
     }
     lock.readLock().lock();
     try {
-      totalCount.putIfAbsent(datasourceName, new AtomicLong(0));
+      totalCount.computeIfAbsent(datasourceName, dsName -> new AtomicLong(0)).incrementAndGet();
       hitCount.putIfAbsent(datasourceName, new AtomicLong(0));
-      costTime.putIfAbsent(datasourceName, new AtomicLong(0));
-      totalCount.get(datasourceName).incrementAndGet();
-      
+      AtomicLong costTimeOfDataSource = costTime.putIfAbsent(datasourceName, new AtomicLong(0));
+
       // get all fields which the query required
       Set<String> requiredFields = MaterializedViewUtils.getRequiredFields(query);
       
@@ -109,10 +108,11 @@ public class DataSourceOptimizer
       }
       // if no derivatives contains all required dimensions, this materialized view selection failed.
       if (derivativesWithRequiredFields.isEmpty()) {
-        missFields.putIfAbsent(datasourceName, new ConcurrentHashMap<>());
-        missFields.get(datasourceName).putIfAbsent(requiredFields, new AtomicLong(0));
-        missFields.get(datasourceName).get(requiredFields).incrementAndGet();
-        costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
+        missFields
+            .computeIfAbsent(datasourceName, dsName -> new ConcurrentHashMap<>())
+            .computeIfAbsent(requiredFields, rf -> new AtomicLong(0))
+            .incrementAndGet();
+        costTimeOfDataSource.addAndGet(System.currentTimeMillis() - start);
         return Collections.singletonList(query);
       }
       

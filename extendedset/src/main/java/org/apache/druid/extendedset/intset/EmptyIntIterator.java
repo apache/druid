@@ -30,7 +30,9 @@ public final class EmptyIntIterator implements IntSet.IntIterator
     return INSTANCE;
   }
 
-  private EmptyIntIterator() {}
+  private EmptyIntIterator()
+  {
+  }
 
   @Override
   public boolean hasNext()

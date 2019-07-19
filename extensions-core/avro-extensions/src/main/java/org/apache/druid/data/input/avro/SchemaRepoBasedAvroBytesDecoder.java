@@ -38,6 +38,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Objects;
 
 public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDecoder
 {
@@ -107,14 +108,10 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
 
     SchemaRepoBasedAvroBytesDecoder<?, ?> that = (SchemaRepoBasedAvroBytesDecoder<?, ?>) o;
 
-    if (subjectAndIdConverter != null
-        ? !subjectAndIdConverter.equals(that.subjectAndIdConverter)
-        : that.subjectAndIdConverter != null) {
+    if (!Objects.equals(subjectAndIdConverter, that.subjectAndIdConverter)) {
       return false;
     }
-    return !(schemaRepository != null
-        ? !schemaRepository.equals(that.schemaRepository)
-        : that.schemaRepository != null);
+    return Objects.equals(schemaRepository, that.schemaRepository);
   }
 
   @Override

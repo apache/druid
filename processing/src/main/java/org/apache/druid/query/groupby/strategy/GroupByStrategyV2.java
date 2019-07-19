@@ -351,7 +351,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
               closeOnExit,
-              wasQueryPushedDown
+              wasQueryPushedDown,
+              true
           )
       );
 
@@ -389,7 +390,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final List<Closeable> closeOnExit = new ArrayList<>();
 
     try {
-      GroupByQuery queryWithoutSubtotalsSpec = query.withSubtotalsSpec(null);
+      GroupByQuery queryWithoutSubtotalsSpec = query.withSubtotalsSpec(null).withDimFilter(null);
       List<List<String>> subtotals = query.getSubtotalsSpec();
 
       Supplier<Grouper> grouperSupplier = Suppliers.memoize(
@@ -414,6 +415,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
               closeOnExit,
+              false,
               false
           )
       );

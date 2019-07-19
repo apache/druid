@@ -139,17 +139,17 @@ public class ServerDiscoverySelectorTest
   @Test
   public void testPickIPv6() throws Exception
   {
-    final String ADDRESS = "2001:0db8:0000:0000:0000:ff00:0042:8329";
+    final String address = "2001:0db8:0000:0000:0000:ff00:0042:8329";
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
-    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(address).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
     EasyMock.expect(instance.getSslPort()).andReturn(-1).anyTimes();
     EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
-    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertEquals(address, server.getAddress());
     Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
-    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertTrue(server.getHost().contains(address));
     Assert.assertEquals("http", server.getScheme());
     EasyMock.verify(instance, serviceProvider);
     final URI uri = new URI(
@@ -162,7 +162,7 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(StringUtils.format("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals(StringUtils.format("[%s]", address), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 
@@ -170,17 +170,17 @@ public class ServerDiscoverySelectorTest
   @Test
   public void testPickIPv6Bracket() throws Exception
   {
-    final String ADDRESS = "[2001:0db8:0000:0000:0000:ff00:0042:8329]";
+    final String address = "[2001:0db8:0000:0000:0000:ff00:0042:8329]";
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
-    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(address).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
     EasyMock.expect(instance.getSslPort()).andReturn(-1).anyTimes();
     EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
-    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertEquals(address, server.getAddress());
     Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
-    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertTrue(server.getHost().contains(address));
     Assert.assertEquals("http", server.getScheme());
     EasyMock.verify(instance, serviceProvider);
     final URI uri = new URI(
@@ -193,7 +193,7 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals(address, uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 

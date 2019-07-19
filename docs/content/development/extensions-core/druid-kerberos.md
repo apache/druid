@@ -54,12 +54,15 @@ The configuration examples in the rest of this document will use "kerberos" as t
 |`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid processes|empty|Yes|
 |`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid processes|empty|Yes|
 |`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
-|`druid.auth.authenticator.kerberos.excludedPaths`|`['/status','/health']`| Array of HTTP paths which which does NOT need to be authenticated.|None|No|
 |`druid.auth.authenticator.kerberos.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies. It is advisable to explicitly set it, if you have multiple druid ndoes running on same machine with different ports as the Cookie Specification does not guarantee isolation by port.|<Random value>|No|
 |`druid.auth.authenticator.kerberos.authorizerName`|Depends on available authorizers|Authorizer that requests should be directed to|Empty|Yes|
 
 As a note, it is required that the SPNego principal in use by the druid processes must start with HTTP (This specified by [RFC-4559](https://tools.ietf.org/html/rfc4559)) and must be of the form "HTTP/_HOST@REALM".
 The special string _HOST will be replaced automatically with the value of config `druid.host`
+
+### `druid.auth.authenticator.kerberos.excludedPaths`
+
+In older releases, the Kerberos authenticator had an `excludedPaths` property that allowed the user to specify a list of paths where authentication checks should be skipped. This property has been removed from the Kerberos authenticator because the path exclusion functionality is now handled across all authenticators/authorizers by setting `druid.auth.unsecuredPaths`, as described in the [main auth documentation](../../design/auth.html).
 
 ### Auth to Local Syntax
 `druid.auth.authenticator.kerberos.authToLocal` allows you to set a general rules for mapping principal names to local user names.

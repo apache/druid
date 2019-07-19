@@ -26,8 +26,16 @@ import java.util.Collection;
  */
 public class UnknownSegmentIdsException extends Exception
 {
+  private final Collection<String> unknownSegmentIds;
+
   UnknownSegmentIdsException(Collection<String> segmentIds)
   {
     super("Cannot find segment ids " + segmentIds);
+    this.unknownSegmentIds = segmentIds;
+  }
+
+  public Collection<String> getUnknownSegmentIds()
+  {
+    return unknownSegmentIds;
   }
 }

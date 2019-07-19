@@ -70,44 +70,72 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       throw new IAE("Expected 2 args, got %s", operands.size());
     }
 
-    final RexNode timeRexNode = operands.get(0);
-    final RexNode shiftRexNode = operands.get(1);
+    final RexNode leftRexNode = operands.get(0);
+    final RexNode rightRexNode = operands.get(1);
 
-    final DruidExpression timeExpr = Expressions.toDruidExpression(plannerContext, rowSignature, timeRexNode);
-    final DruidExpression shiftExpr = Expressions.toDruidExpression(plannerContext, rowSignature, shiftRexNode);
+    final DruidExpression leftExpr = Expressions.toDruidExpression(plannerContext, rowSignature, leftRexNode);
+    final DruidExpression rightExpr = Expressions.toDruidExpression(plannerContext, rowSignature, rightRexNode);
 
-    if (timeExpr == null || shiftExpr == null) {
+    if (leftExpr == null || rightExpr == null) {
       return null;
     }
 
-    if (shiftRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+    if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
       // timestamp_expr { + | - } <interval_expr> (year-month interval)
       // Period is a value in months.
       return DruidExpression.fromExpression(
           DruidExpression.functionCall(
               "timestamp_shift",
-              timeExpr,
-              shiftExpr.map(
+              leftExpr,
+              rightExpr.map(
                   simpleExtraction -> null,
                   expression -> StringUtils.format("concat('P', %s, 'M')", expression)
               ),
-              DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1))
+              DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1)),
+              DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
           )
       );
-    } else if (shiftRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
+    } else if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
       // timestamp_expr { + | - } <interval_expr> (day-time interval)
       // Period is a value in milliseconds. Ignore time zone.
       return DruidExpression.fromExpression(
           StringUtils.format(
               "(%s %s %s)",
-              timeExpr.getExpression(),
+              leftExpr.getExpression(),
               direction > 0 ? "+" : "-",
-              shiftExpr.getExpression()
+              rightExpr.getExpression()
           )
       );
+    } else if ((leftRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        leftRexNode.getType().getFamily() == SqlTypeFamily.DATE) &&
+        (rightRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        rightRexNode.getType().getFamily() == SqlTypeFamily.DATE)) {
+      // Calcite represents both TIMESTAMP - INTERVAL and TIMESTAMPDIFF (TIMESTAMP - TIMESTAMP)
+      // with a MINUS_DATE operator, so we must tell which case we're in by checking the type of
+      // the second argument.
+      Preconditions.checkState(direction < 0, "Time arithmetic require direction < 0");
+      if (call.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+        return DruidExpression.fromExpression(
+            DruidExpression.functionCall(
+                "subtract_months",
+                leftExpr,
+                rightExpr,
+                DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+            )
+        );
+      } else {
+        return DruidExpression.fromExpression(
+          StringUtils.format(
+              "(%s %s %s)",
+              leftExpr.getExpression(),
+              "-",
+              rightExpr.getExpression()
+          )
+        );
+      }
     } else {
       // Shouldn't happen if subclasses are behaving.
-      throw new ISE("Got unexpected type period type family[%s]", shiftRexNode.getType().getFamily());
+      throw new ISE("Got unexpected type period type family[%s]", rightRexNode.getType().getFamily());
     }
   }
 

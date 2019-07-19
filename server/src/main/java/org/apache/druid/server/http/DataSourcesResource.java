@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -121,8 +122,8 @@ public class DataSourcesResource
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getQueryableDataSources(
-      @QueryParam("full") String full,
-      @QueryParam("simple") String simple,
+      @QueryParam("full") @Nullable String full,
+      @QueryParam("simple") @Nullable String simple,
       @Context final HttpServletRequest req
   )
   {
@@ -155,7 +156,7 @@ public class DataSourcesResource
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     if (full != null) {
@@ -165,14 +166,40 @@ public class DataSourcesResource
     return Response.ok(getSimpleDatasource(dataSourceName)).build();
   }
 
+  private interface MarkSegments
+  {
+    int markSegments() throws UnknownSegmentIdsException;
+  }
+
   @POST
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    int numChangedSegments = segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
-    return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+    MarkSegments markSegments = () -> segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
+  }
+
+  @POST
+  @Path("/{dataSourceName}/markUsed")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response markAsUsedNonOvershadowedSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      MarkDataSourceSegmentsPayload payload
+  )
+  {
+    MarkSegments markSegments = () -> {
+      final Interval interval = payload.getInterval();
+      if (interval != null) {
+        return segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+      } else {
+        final Set<String> segmentIds = payload.getSegmentIds();
+        return segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+      }
+    };
+    return doMarkSegmentsWithPayload("markAsUsedNonOvershadowedSegments", dataSourceName, payload, markSegments);
   }
 
   @POST
@@ -180,40 +207,72 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response markSegmentsUnused(
+  public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
       final MarkDataSourceSegmentsPayload payload
   )
   {
+    MarkSegments markSegments = () -> {
+      final Interval interval = payload.getInterval();
+      if (interval != null) {
+        return segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+      } else {
+        final Set<String> segmentIds = payload.getSegmentIds();
+        return segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
+      }
+    };
+    return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
+  }
+
+  private Response doMarkSegmentsWithPayload(
+      String method,
+      String dataSourceName,
+      MarkDataSourceSegmentsPayload payload,
+      MarkSegments markSegments
+  )
+  {
     if (payload == null || !payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
-                     .build();
+      log.warn("Invalid request payload: [%s]", payload);
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .build();
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      log.warn("datasource not found [%s]", dataSourceName);
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
-    int numChangedSegments;
+    return doMarkSegments(method, dataSourceName, markSegments);
+  }
+
+  private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
+  {
+    log.warn("datasource not found [%s]", dataSourceName);
+    return Response.noContent().build();
+  }
+
+  private static Response doMarkSegments(String method, String dataSourceName, MarkSegments markSegments)
+  {
     try {
-      final Interval interval = payload.getInterval();
-      final Set<String> segmentIds = payload.getSegmentIds();
-      if (interval != null) {
-        numChangedSegments = segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
-      } else {
-        numChangedSegments = segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
-      }
+      int numChangedSegments = markSegments.markSegments();
+      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
-    catch (Exception e) {
+    catch (UnknownSegmentIdsException e) {
+      log.warn("Segment ids %s are not found", e.getUnknownSegmentIds());
       return Response
-          .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", e.toString()))
+          .status(Response.Status.NOT_FOUND)
+          .entity(ImmutableMap.of("message", e.getMessage()))
           .build();
     }
-    return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+    catch (Exception e) {
+      log.error(e, "Error occurred during [%s] call, data source: [%s]", method, dataSourceName);
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
+    }
   }
 
   /**
@@ -242,8 +301,8 @@ public class DataSourcesResource
     if (killSegments) {
       return killSegmentsInInterval(dataSourceName, interval);
     } else {
-      int numChangedSegments = segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
-      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+      MarkSegments markSegments = () -> segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
     }
   }
 
@@ -293,7 +352,7 @@ public class DataSourcesResource
     if (simple == null && full == null) {
       final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
       if (dataSource == null) {
-        return Response.noContent().build();
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
       final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
       Set<Interval> intervals = new TreeSet<>(comparator);
@@ -319,7 +378,7 @@ public class DataSourcesResource
     if (simple == null && full == null) {
       final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
       if (dataSource == null) {
-        return Response.noContent().build();
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
       final Set<SegmentId> segmentIds = new TreeSet<>();
       for (DataSegment dataSegment : dataSource.getSegments()) {
@@ -351,7 +410,7 @@ public class DataSourcesResource
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
@@ -400,7 +459,7 @@ public class DataSourcesResource
   {
     ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     Response.ResponseBuilder builder = Response.ok();
@@ -422,7 +481,7 @@ public class DataSourcesResource
   {
     ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
@@ -431,6 +490,7 @@ public class DataSourcesResource
         return Response.ok(ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)).build();
       }
     }
+    log.warn("Segment id [%s] is unknown", segmentId);
     return Response.noContent().build();
   }
 
@@ -442,7 +502,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(dataSourceName, segmentId);
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
@@ -478,20 +538,22 @@ public class DataSourcesResource
   @Nullable
   private ImmutableDruidDataSource getDataSource(final String dataSourceName)
   {
-    List<ImmutableDruidDataSource> dataSources = serverInventoryView
+    List<DruidDataSource> dataSources = serverInventoryView
         .getInventory()
         .stream()
         .map(server -> server.getDataSource(dataSourceName))
         .filter(Objects::nonNull)
-        .map(DruidDataSource::toImmutableDruidDataSource)
         .collect(Collectors.toList());
 
     if (dataSources.isEmpty()) {
       return null;
     }
 
+    // Note: this logic doesn't guarantee that the result is a snapshot that ever existed in the cluster because all
+    // DruidDataSource objects (belonging to different servers) are independently, concurrently mutable objects.
+    // But this is OK because a "snapshot" hardly even makes sense in a distributed system anyway.
     final SortedMap<SegmentId, DataSegment> segmentMap = new TreeMap<>();
-    for (ImmutableDruidDataSource dataSource : dataSources) {
+    for (DruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
         segmentMap.put(segment.getId(), segment);
@@ -541,6 +603,8 @@ public class DataSourcesResource
     Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
+    long totalReplicatedSize = 0;
+
     DateTime minTime = DateTimes.MAX;
     DateTime maxTime = DateTimes.MIN;
     String tier;
@@ -552,11 +616,11 @@ public class DataSourcesResource
         continue;
       }
 
-      if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, new HashSet<>());
-      }
+      tierDistinctSegments.computeIfAbsent(tier, t -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
+      long replicatedSegmentSize = 0;
+
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
         // tier segments stats
         if (!tierDistinctSegments.get(tier).contains(dataSegment.getId())) {
@@ -570,6 +634,8 @@ public class DataSourcesResource
           minTime = DateTimes.min(minTime, dataSegment.getInterval().getStart());
           maxTime = DateTimes.max(maxTime, dataSegment.getInterval().getEnd());
         }
+        totalReplicatedSize += dataSegment.getSize();
+        replicatedSegmentSize += dataSegment.getSize();
       }
 
       // tier stats
@@ -582,10 +648,14 @@ public class DataSourcesResource
 
       long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
       tierStats.put("size", segmentSize + dataSourceSegmentSize);
+
+      long replicatedSize = MapUtils.getLong(tierStats, "replicatedSize", 0L);
+      tierStats.put("replicatedSize", replicatedSize + replicatedSegmentSize);
     }
 
     segments.put("count", totalDistinctSegments.size());
     segments.put("size", totalSegmentSize);
+    segments.put("replicatedSize", totalReplicatedSize);
     segments.put("minTime", minTime);
     segments.put("maxTime", maxTime);
     return retVal;
@@ -705,55 +775,6 @@ public class DataSourcesResource
       }
     }
     return false;
-  }
-
-  @POST
-  @Path("/{dataSourceName}/markUsed")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
-  public Response markAsUsedNonOvershadowedSegments(
-      @PathParam("dataSourceName") String dataSourceName,
-      MarkDataSourceSegmentsPayload payload
-  )
-  {
-    if (payload == null || !payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
-                     .build();
-    }
-
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
-      return Response.noContent().build();
-    }
-
-    int modified;
-    try {
-      Interval interval = payload.getInterval();
-      if (interval != null) {
-        modified = segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSource.getName(), interval);
-      } else {
-        modified = segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSource.getName(), payload.getSegmentIds());
-      }
-    }
-    catch (Exception e) {
-      if (e.getCause() instanceof UnknownSegmentIdsException) {
-        return Response
-            .status(Response.Status.NOT_FOUND)
-            .entity(ImmutableMap.of("message", e.getCause().getMessage()))
-            .build();
-      }
-      return Response
-          .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", e.getMessage()))
-          .build();
-    }
-
-    if (modified == 0) {
-      return Response.noContent().build();
-    }
-
-    return Response.ok().build();
   }
 
   @VisibleForTesting

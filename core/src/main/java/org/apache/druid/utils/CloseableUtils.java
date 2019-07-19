@@ -40,10 +40,13 @@ public final class CloseableUtils
   public static void closeBoth(Closeable first, Closeable second) throws IOException
   {
     //noinspection EmptyTryBlock
-    try (Closeable ignore1 = second; Closeable ignore2 = first) {
+    try (Closeable ignore1 = second;
+         Closeable ignore2 = first) {
       // piggy-back try-with-resources semantics
     }
   }
 
-  private CloseableUtils() {}
+  private CloseableUtils()
+  {
+  }
 }

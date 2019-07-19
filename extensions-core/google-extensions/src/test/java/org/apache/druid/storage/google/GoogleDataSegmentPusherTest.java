@@ -36,15 +36,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import static org.easymock.EasyMock.expectLastCall;
-
 public class GoogleDataSegmentPusherTest extends EasyMockSupport
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private static final String bucket = "bucket";
-  private static final String prefix = "prefix";
+  private static final String BUCKET = "bucket";
+  private static final String PREFIX = "prefix";
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;
@@ -54,8 +52,8 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
   {
     storage = createMock(GoogleStorage.class);
     googleAccountConfig = new GoogleAccountConfig();
-    googleAccountConfig.setBucket(bucket);
-    googleAccountConfig.setPrefix(prefix);
+    googleAccountConfig.setBucket(BUCKET);
+    googleAccountConfig.setPrefix(PREFIX);
   }
 
   @Test
@@ -86,14 +84,14 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         .createMock();
 
     final String storageDir = pusher.getStorageDir(segmentToPush, false);
-    final String indexPath = prefix + "/" + storageDir + "/" + "index.zip";
+    final String indexPath = PREFIX + "/" + storageDir + "/" + "index.zip";
 
     pusher.insert(
         EasyMock.anyObject(File.class),
         EasyMock.eq("application/zip"),
         EasyMock.eq(indexPath)
     );
-    expectLastCall();
+    EasyMock.expectLastCall();
 
     replayAll();
 
@@ -102,12 +100,9 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(segmentToPush, segment);
     Assert.assertEquals(ImmutableMap.of(
-        "type",
-        GoogleStorageDruidModule.SCHEME,
-        "bucket",
-        bucket,
-        "path",
-        indexPath
+        "type", GoogleStorageDruidModule.SCHEME,
+        "bucket", BUCKET,
+        "path", indexPath
     ), segment.getLoadSpec());
 
     verifyAll();

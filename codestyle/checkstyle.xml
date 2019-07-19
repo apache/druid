@@ -32,6 +32,15 @@
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
+  <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
+  <module name="RegexpSingleline">
+    <property name="format" value="^\s*\*\s*@author" />
+    <property name="minimum" value="0" />
+    <property name="maximum" value="0" />
+    <property name="message" value="Prohibit @author tags in Javadoc" />
+    <property name="fileExtensions" value="java" />
+  </module>
+
   <module name="TreeWalker">
     <module name="SuppressionCommentFilter">
       <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
@@ -302,5 +311,13 @@ codestyle/checkstyle.xml.&#10;"/>
 	 <module name="MethodName">
 	   <property name = "format" value = "^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
 	 </module>
+
+    <!-- Added as per the issue #7609 - Local variable names shouldn't start with capital -->
+    <module name="LocalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+    </module>
+    <module name="LocalFinalVariableName">
+      <property name="format" value="^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+    </module>
   </module>
 </module>

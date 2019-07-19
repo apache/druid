@@ -38,7 +38,9 @@ public final class MetaSerdeHelper<T>
 
   private final List<FieldWriter<T>> fieldWriters = new ArrayList<>();
 
-  private MetaSerdeHelper() {}
+  private MetaSerdeHelper()
+  {
+  }
 
   public MetaSerdeHelper<T> writeInt(IntFieldWriter<T> fieldWriter)
   {

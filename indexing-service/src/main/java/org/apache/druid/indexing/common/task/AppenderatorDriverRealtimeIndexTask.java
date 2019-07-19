@@ -244,7 +244,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                                                         .withBasePersistDirectory(toolbox.getPersistDir());
 
     final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
 
     final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
         this,

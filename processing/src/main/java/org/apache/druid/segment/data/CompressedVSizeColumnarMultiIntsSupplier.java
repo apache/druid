@@ -46,9 +46,13 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
 {
   private static final byte version = 0x2;
 
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier offsetSupplier;
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier valueSupplier;
 
   private CompressedVSizeColumnarMultiIntsSupplier(
@@ -176,6 +180,39 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
       final int size = offsets.get(index + 1) - offset;
       rowValues.setValues(offset, size);
       return rowValues;
+    }
+
+    @Override
+    public IndexedInts getUnshared(int index)
+    {
+      final int offset = offsets.get(index);
+      final int size = offsets.get(index + 1) - offset;
+
+      class UnsharedIndexedInts implements IndexedInts
+      {
+        @Override
+        public int size()
+        {
+          return size;
+        }
+
+        @Override
+        public int get(int index)
+        {
+          if (index >= size) {
+            throw new IAE("Index[%d] >= size[%d]", index, size);
+          }
+          return values.get(index + offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("values", values);
+        }
+      }
+
+      return new UnsharedIndexedInts();
     }
 
     @Override

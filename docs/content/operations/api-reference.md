@@ -164,7 +164,7 @@ Returns a list of datasource names found in the cluster.
 
 * `/druid/coordinator/v1/datasources?simple`
 
-Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, minTime, and maxTime.
+Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
 
 * `/druid/coordinator/v1/datasources?full`
 
@@ -172,7 +172,7 @@ Returns a list of datasource names found in the cluster with all metadata about 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Returns a JSON object containing the name and properties of a datasource. Properties include segment count, total segment byte size, minTime, and maxTime.
+Returns a JSON object containing the name and properties of a datasource. Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}?full`
 
@@ -232,12 +232,12 @@ Caution : Avoid using indexing or kill tasks and these API's at the same time fo
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
 Marks as used all segments belonging to a data source. Returns a JSON object of the form
-`{"numChangedSegments": <number>"}` with the number of segments in the database whose state has been changed (that is,
+`{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as used) as the result of this API call. 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>"}` with
+Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
 result of this API call. 
 
@@ -266,7 +266,7 @@ JSON Request Payload:
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
 Marks as unused all segments belonging to a data source. Returns a JSON object of the form
-`{"numChangedSegments": <number>"}` with the number of segments in the database whose state has been changed (that is,
+`{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as unused) as the result of this API call. 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
@@ -276,8 +276,8 @@ Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>"}` with
-the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
+Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
 result of this API call. 
 
 #### Retention Rules
@@ -520,7 +520,21 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor?state=true`
+
+Returns a list of objects of the currently active supervisors and their current state.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`healthy`|Boolean|true or false indicator of overall supervisor health|
 
 * `/druid/indexer/v1/supervisor/<supervisorId>`
 
@@ -591,7 +605,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/indexer/v1/worker`
 
-Retreives current overlord dynamic configuration.
+Retrieves current overlord dynamic configuration.
 
 * `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
 
@@ -730,8 +744,8 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 <div class="note caution">
-This API is deprecated and will be removed in future releases. Please use <a href="/querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="/querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
+This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 
@@ -741,7 +755,7 @@ Returns the metrics of the datasource.
 
 <div class="note caution">
 This API is deprecated and will be removed in future releases. Please use <a href="../querying/segmentmetadataquery.html">SegmentMetadataQuery</a> instead
-which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use <a href="../querying/sql.html#retrieving-metadata">INFORMATION_SCHEMA tables</a>
 if you're using SQL.
 </div>
 

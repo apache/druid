@@ -27,7 +27,9 @@ public class RoaringBitMapFactory implements BitMapFactory
 {
   private static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
 
-  public RoaringBitMapFactory() {}
+  public RoaringBitMapFactory()
+  {
+  }
 
   @Override
   public MutableBitmap makeEmptyMutableBitmap()

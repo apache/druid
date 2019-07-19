@@ -85,7 +85,9 @@ public class NativeIO
 
   private static native int sync_file_range(int fd, long offset, long len, int flags);
 
-  private NativeIO() {}
+  private NativeIO()
+  {
+  }
 
   private static Field getFieldByReflection(Class cls, String fieldName)
   {

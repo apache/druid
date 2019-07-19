@@ -35,7 +35,9 @@ public class HadoopFsWrapper
 {
   private static final Logger log = new Logger(HadoopFsWrapper.class);
 
-  private HadoopFsWrapper() {}
+  private HadoopFsWrapper()
+  {
+  }
 
   /**
    * Same as FileSystem.rename(from, to, Options.Rename). It is different from FileSystem.rename(from, to) which moves

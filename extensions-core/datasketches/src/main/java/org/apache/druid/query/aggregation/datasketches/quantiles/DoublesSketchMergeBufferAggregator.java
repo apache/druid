@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.DoublesUnion;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -29,19 +28,20 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 
 public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  private final ColumnValueSelector<DoublesSketch> selector;
+  private final ColumnValueSelector selector;
   private final int k;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<DoublesUnion>> unions = new IdentityHashMap<>();
 
   public DoublesSketchMergeBufferAggregator(
-      final ColumnValueSelector<DoublesSketch> selector,
+      final ColumnValueSelector selector,
       final int k,
       final int maxIntermediateSize)
   {
@@ -62,12 +62,8 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public synchronized void aggregate(final ByteBuffer buffer, final int position)
   {
-    final DoublesSketch sketch = selector.getObject();
-    if (sketch == null) {
-      return;
-    }
     final DoublesUnion union = unions.get(buffer).get(position);
-    union.update(sketch);
+    DoublesSketchMergeAggregator.updateUnion(selector, union);
   }
 
   @Override
@@ -118,7 +114,7 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf));
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN));
   }
 
   private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)

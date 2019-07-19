@@ -20,13 +20,18 @@
 package org.apache.druid.utils;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Spliterator;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -79,5 +84,39 @@ public final class CollectionUtils
     return set;
   }
 
-  private CollectionUtils() {}
+  /**
+   * Returns a transformed map from the given input map where the value is modified based on the given valueMapper
+   * function.
+   * Unlike {@link Maps#transformValues}, this method applies the mapping function eagerly to all key-value pairs
+   * in the source map and returns a new {@link HashMap}, while {@link Maps#transformValues} returns a lazy map view.
+   */
+  public static <K, V, V2> Map<K, V2> mapValues(Map<K, V> map, Function<V, V2> valueMapper)
+  {
+    final Map<K, V2> result = Maps.newHashMapWithExpectedSize(map.size());
+    map.forEach((k, v) -> result.put(k, valueMapper.apply(v)));
+    return result;
+  }
+
+  /**
+   * Returns a transformed map from the given input map where the key is modified based on the given keyMapper
+   * function. This method fails if keys collide after applying the  given keyMapper function and
+   * throws a IllegalStateException.
+   *
+   * @throws ISE if key collisions occur while applying specified keyMapper
+   */
+  public static <K, V, K2> Map<K2, V> mapKeys(Map<K, V> map, Function<K, K2> keyMapper)
+  {
+    final Map<K2, V> result = Maps.newHashMapWithExpectedSize(map.size());
+    map.forEach((k, v) -> {
+      final K2 k2 = keyMapper.apply(k);
+      if (result.putIfAbsent(k2, v) != null) {
+        throw new ISE("Conflicting key[%s] calculated via keyMapper for original key[%s]", k2, k);
+      }
+    });
+    return result;
+  }
+
+  private CollectionUtils()
+  {
+  }
 }

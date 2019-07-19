@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +64,7 @@ public class CoordinatorResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   private String getCoordinatorURL()
@@ -240,11 +239,6 @@ public class CoordinatorResourceTestClient
           response.getContent()
       );
     }
-
-    Map<String, Object> results = jsonMapper.readValue(
-        response.getContent(),
-        new TypeReference<Map<String, Object>>(){}
-    );
 
     StatusResponseHolder response2 = httpClient.go(
         new Request(HttpMethod.POST, new URL(url)).setContent(

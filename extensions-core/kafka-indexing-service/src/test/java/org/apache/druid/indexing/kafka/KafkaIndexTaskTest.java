@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -106,11 +105,11 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -140,8 +139,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -165,8 +162,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -189,13 +184,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.druid.query.QueryPlus.wrap;
-
-@RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
   private static final long POLL_RETRY_MS = 100;
 
   private static TestingCluster zkServer;
@@ -203,6 +195,10 @@ public class KafkaIndexTaskTest
   private static ServiceEmitter emitter;
   private static ListeningExecutorService taskExec;
   private static int topicPostfix;
+
+  static {
+    new KafkaIndexTaskModule().getJacksonModules().forEach(OBJECT_MAPPER::registerModule);
+  }
 
   private final List<Task> runningTasks = new ArrayList<>();
 
@@ -224,27 +220,13 @@ public class KafkaIndexTaskTest
   private File directory;
   private String topic;
   private List<ProducerRecord<byte[], byte[]>> records;
-  private final boolean isIncrementalHandoffSupported;
   private final Set<Integer> checkpointRequestsHash = new HashSet<>();
   private File reportsFile;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
 
-  // This should be removed in versions greater that 0.12.x
-  // isIncrementalHandoffSupported should always be set to true in those later versions
-  @Parameterized.Parameters(name = "isIncrementalHandoffSupported = {0}")
-  public static Iterable<Object[]> constructorFeeder()
-  {
-    return ImmutableList.of(new Object[]{true}, new Object[]{false});
-  }
-
-  public KafkaIndexTaskTest(boolean isIncrementalHandoffSupported)
-  {
-    this.isIncrementalHandoffSupported = isIncrementalHandoffSupported;
-  }
-
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
-      objectMapper.convertValue(
+      OBJECT_MAPPER.convertValue(
           new StringInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("timestamp", "iso", null),
@@ -272,7 +254,7 @@ public class KafkaIndexTaskTest
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
       null,
-      objectMapper
+      OBJECT_MAPPER
   );
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
@@ -498,9 +480,6 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testIncrementalHandOff() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     final String baseSequenceName = "sequence0";
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
@@ -604,9 +583,6 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testIncrementalHandOffMaxTotalRows() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     final String baseSequenceName = "sequence0";
     // incremental publish should happen every 3 records
     maxRowsPerSegment = Integer.MAX_VALUE;
@@ -684,7 +660,7 @@ public class KafkaIndexTaskTest
     final Map<Integer, Long> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
 
-    Assert.assertTrue(checkpoint2.getPartitionSequenceNumberMap().equals(nextOffsets));
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), nextOffsets);
     task.getRunner().setEndOffsets(nextOffsets, false);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -730,10 +706,11 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc7 = sd(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
-          new KafkaDataSourceMetadata(
-              new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
-          ),
-          metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
+        ),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
 
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
@@ -758,9 +735,6 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testTimeBasedIncrementalHandOff() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     final String baseSequenceName = "sequence0";
     // as soon as any segment hits maxRowsPerSegment or intermediateHandoffPeriod, incremental publishing should happen
     maxRowsPerSegment = Integer.MAX_VALUE;
@@ -806,7 +780,7 @@ public class KafkaIndexTaskTest
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint.getPartitionSequenceNumberMap().equals(currentOffsets));
+    Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
     task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -848,24 +822,14 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     records = generateSinglePartitionRecords(topic);
 
     final String baseSequenceName = "sequence0";
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
 
-    // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData();
+
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
@@ -1320,7 +1284,7 @@ public class KafkaIndexTaskTest
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(null, status.getErrorMsg());
+    Assert.assertNull(status.getErrorMsg());
 
     // Check metrics
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
@@ -1670,9 +1634,7 @@ public class KafkaIndexTaskTest
     // desc3 will not be created in KafkaIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
     SegmentDescriptor desc3 = sd(task, "2011/P1D", 1);
     SegmentDescriptor desc4 = sd(task, "2012/P1D", 0);
-    Assert.assertEquals(isIncrementalHandoffSupported
-                        ? ImmutableSet.of(desc1, desc2, desc4)
-                        : ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 2L))
@@ -1686,12 +1648,8 @@ public class KafkaIndexTaskTest
 
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(ImmutableList.of("d", "e", "h"))
-        : ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(readSegmentColumn("dim1", desc2))
-        : ImmutableSet.of(readSegmentColumn("dim1", desc2), readSegmentColumn("dim1", desc3))
+        ImmutableSet.of(ImmutableList.of("d", "e", "h")),
+        ImmutableSet.of(readSegmentColumn("dim1", desc2))
     );
   }
 
@@ -1862,10 +1820,6 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRestoreAfterPersistingSequences() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
-
     records = generateSinglePartitionRecords(topic);
     maxRowsPerSegment = 2;
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
@@ -2011,7 +1965,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
-    Map<Integer, Long> currentOffsets = objectMapper.readValue(
+    Map<Integer, Long> currentOffsets = OBJECT_MAPPER.readValue(
         task.getRunner().pause().getEntity().toString(),
         new TypeReference<Map<Integer, Long>>()
         {
@@ -2122,21 +2076,15 @@ public class KafkaIndexTaskTest
     }
 
     for (int i = 0; i < 5; i++) {
-      Assert.assertEquals(task.getRunner().getStatus(), Status.READING);
+      Assert.assertEquals(Status.READING, task.getRunner().getStatus());
       // Offset should not be reset
-      Assert.assertTrue(task.getRunner().getCurrentOffsets().get(0) == 200L);
+      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(0));
     }
   }
 
   @Test(timeout = 60_000L)
   public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
   {
-    // This tests the case when a replacement task is created in place of a failed test
-    // which has done some incremental handoffs, thus the context will contain starting
-    // sequence offsets from which the task should start reading and ignore the start offsets
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     // Insert data
     insertData();
 
@@ -2147,7 +2095,7 @@ public class KafkaIndexTaskTest
     final Map<String, Object> context = new HashMap<>();
     context.put(
         SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY,
-        objectMapper.writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF).writeValueAsString(sequences)
+        OBJECT_MAPPER.writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF).writeValueAsString(sequences)
     );
 
     final KafkaIndexTask task = createTask(
@@ -2267,7 +2215,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
     //verify the 2 indexed records
-    final QuerySegmentSpec firstInterval = objectMapper.readValue(
+    final QuerySegmentSpec firstInterval = OBJECT_MAPPER.readValue(
         "\"2008/2010\"", QuerySegmentSpec.class
     );
     Iterable<ScanResultValue> scanResultValues = scanData(task, firstInterval);
@@ -2287,7 +2235,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
-    final QuerySegmentSpec rollbackedInterval = objectMapper.readValue(
+    final QuerySegmentSpec rollbackedInterval = OBJECT_MAPPER.readValue(
         "\"2010/2012\"", QuerySegmentSpec.class
     );
     scanResultValues = scanData(task, rollbackedInterval);
@@ -2304,7 +2252,7 @@ public class KafkaIndexTaskTest
       kafkaProducer.commitTransaction();
     }
 
-    final QuerySegmentSpec endInterval = objectMapper.readValue(
+    final QuerySegmentSpec endInterval = OBJECT_MAPPER.readValue(
         "\"2008/2049\"", QuerySegmentSpec.class
     );
     Iterable<ScanResultValue> scanResultValues1 = scanData(task, endInterval);
@@ -2339,22 +2287,11 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testCanStartFromLaterThanEarliestOffset() throws Exception
   {
-    if (!isIncrementalHandoffSupported) {
-      return;
-    }
     final String baseSequenceName = "sequence0";
     maxRowsPerSegment = Integer.MAX_VALUE;
     maxTotalRows = null;
 
-    // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData();
 
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
@@ -2388,13 +2325,41 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
   }
 
+  @Test
+  public void testSerde() throws Exception
+  {
+    // This is both a serde test and a regression test for https://github.com/apache/incubator-druid/issues/7724.
+
+    final KafkaIndexTask task = createTask(
+        "taskid",
+        DATA_SCHEMA.withTransformSpec(
+            new TransformSpec(
+                null,
+                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of()),
+            ImmutableMap.of(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
+    );
+
+    final Task task1 = OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsBytes(task), Task.class);
+    Assert.assertEquals(task, task1);
+  }
+
   private List<ScanResultValue> scanData(final Task task, QuerySegmentSpec spec)
   {
     ScanQuery query = new Druids.ScanQueryBuilder().dataSource(
         DATA_SCHEMA.getDataSource()).intervals(spec).build();
-    List<ScanResultValue> results =
-        task.getQueryRunner(query).run(wrap(query), new HashMap<>()).toList();
-    return results;
+    return task.getQueryRunner(query).run(QueryPlus.wrap(query), new HashMap<>()).toList();
   }
 
   private void insertData() throws ExecutionException, InterruptedException
@@ -2411,6 +2376,7 @@ public class KafkaIndexTaskTest
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
+    //noinspection CatchMayIgnoreException
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -2443,14 +2409,7 @@ public class KafkaIndexTaskTest
   {
     return Iterables.find(
         taskLockbox.findLocksForTask(task),
-        new Predicate<TaskLock>()
-        {
-          @Override
-          public boolean apply(TaskLock lock)
-          {
-            return lock.getInterval().contains(interval);
-          }
-        }
+        lock -> lock.getInterval().contains(interval)
     );
   }
 
@@ -2497,6 +2456,7 @@ public class KafkaIndexTaskTest
         null,
         null,
         null,
+        null,
         true,
         reportParseExceptions,
         handoffConditionTimeout,
@@ -2507,17 +2467,13 @@ public class KafkaIndexTaskTest
         maxParseExceptions,
         maxSavedParseExceptions
     );
-    if (isIncrementalHandoffSupported) {
-      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
-
-      if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
-        final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
-        checkpoints.put(0, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-        final String checkpointsJson = objectMapper
-            .writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF)
-            .writeValueAsString(checkpoints);
-        context.put(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY, checkpointsJson);
-      }
+    if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
+      final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
+      checkpoints.put(0, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+      final String checkpointsJson = OBJECT_MAPPER
+          .writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF)
+          .writeValueAsString(checkpoints);
+      context.put(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY, checkpointsJson);
     }
 
     final KafkaIndexTask task = new KafkaIndexTask(
@@ -2530,7 +2486,7 @@ public class KafkaIndexTaskTest
         null,
         null,
         rowIngestionMetersFactory,
-        objectMapper
+        OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
@@ -2544,7 +2500,7 @@ public class KafkaIndexTaskTest
         dataSchema.getAggregators(),
         dataSchema.getGranularitySpec(),
         dataSchema.getTransformSpec(),
-        objectMapper
+        OBJECT_MAPPER
     );
   }
 
@@ -2569,13 +2525,8 @@ public class KafkaIndexTaskTest
                 new TimeseriesQueryRunnerFactory(
                     new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                     new TimeseriesQueryEngine(),
-                    new QueryWatcher()
-                    {
-                      @Override
-                      public void registerQuery(Query query, ListenableFuture future)
-                      {
-                        // do nothing
-                      }
+                    (query, future) -> {
+                      // do nothing
                     }
                 )
             )
@@ -2701,14 +2652,6 @@ public class KafkaIndexTaskTest
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
-    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return new ArrayList<>();
-      }
-    };
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -2815,7 +2758,7 @@ public class KafkaIndexTaskTest
     return values;
   }
 
-  public long countEvents(final Task task)
+  private long countEvents(final Task task)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -2829,7 +2772,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(wrap(query), ImmutableMap.of()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }
@@ -2861,7 +2804,7 @@ public class KafkaIndexTaskTest
 
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = objectMapper.readValue(
+    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
         new TypeReference<Map<String, TaskReport>>()
         {

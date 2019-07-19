@@ -47,5 +47,7 @@ public final class Counters
     return counter.incrementAndGet();
   }
 
-  private Counters() {}
+  private Counters()
+  {
+  }
 }

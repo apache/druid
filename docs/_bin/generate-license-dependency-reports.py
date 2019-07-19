@@ -16,62 +16,87 @@
 # limitations under the License.
 
 import os
+import shutil
 import subprocess
 import sys
+import argparse
+import concurrent.futures
+import time
+import threading
 
 
-existing_jar_dict_notice = {}
+def generate_report(module_path, report_orig_path, report_out_path):
+    is_dir = os.path.isdir(module_path)
+    if not is_dir:
+        print("{} is not a directory".format(module_path))
+        return
 
-def main():
-    if len(sys.argv) != 3:
-      sys.stderr.write('usage: program <druid source path> <full tmp path>\n')
-      sys.exit(1)
+    os.makedirs(report_out_path, exist_ok=True)
 
-    druid_path = sys.argv[1]
-    tmp_path = sys.argv[2]
+    try:
+        print("Generating report for {}".format(module_path))
+        # This command prints lots of false errors. Here, we redirect stdout and stderr to avoid them.
+        command = "mvn -Ddependency.locations.enabled=false -Ddependency.details.enabled=false project-info-reports:dependencies"
+        subprocess.check_output(command, cwd=module_path, shell=True)
+        command = "cp -r {} {}".format(report_orig_path, report_out_path)
+        subprocess.check_output(command, cwd=module_path, shell=True)
+        print("Generated report for {} in {}".format(module_path, report_out_path))
+    except Exception as e:
+        print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
-    generate_reports(druid_path, tmp_path)
 
-def generate_reports(druid_path, tmp_path):
-    license_main_path =  tmp_path + "/license-reports"
-    license_ext_path = tmp_path + "/license-reports/ext"
-    os.mkdir(license_main_path)
-    os.mkdir(license_ext_path)
+def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
+    tmp_path = os.path.abspath(tmp_path)
+    license_report_root = os.path.join(tmp_path, "license-reports")
+    license_core_path =  os.path.join(license_report_root, "core")
+    license_ext_path = os.path.join(license_report_root, "ext")
+    shutil.rmtree(license_report_root, ignore_errors=True)
+    os.makedirs(license_core_path)
+    os.makedirs(license_ext_path)
+    druid_path = os.path.abspath(druid_path)
 
-    print("********** Generating main LICENSE report.... **********")
-    os.chdir(druid_path)
-    command = "mvn -Pdist -Ddependency.locations.enabled=false project-info-reports:dependencies"
-    outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-    command = "cp -r distribution/target/site {}/site".format(license_main_path)
-    outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+    script_args = [(druid_path, os.path.join(druid_path, "distribution", "target", "site"), license_core_path)]
 
-    sys.exit()
+    if not exclude_ext:
+        extensions_core_path = os.path.join(druid_path, "extensions-core")
+        extension_dirs = os.listdir(extensions_core_path)
+        print("Found {} extensions".format(len(extension_dirs)))
+        for extension_dir in extension_dirs:
+            print("extension dir: {}".format(extension_dir))
+            extension_path = os.path.join(extensions_core_path, extension_dir)
+            if not os.path.isdir(extension_path):
+                print("{} is not a directory".format(extension_path))
+                continue
 
-    print("********** Generating extension LICENSE reports.... **********")
-    extension_dirs = os.listdir("extensions-core")
-    for extension_dir in extension_dirs:
-        full_extension_dir = druid_path + "/extensions-core/" + extension_dir
-        if not os.path.isdir(full_extension_dir):
-            continue
+            extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
+            script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
+    
+    print("Generating dependency reports")
 
-        print("--- Generating report for {}... ---".format(extension_dir))
+    if num_threads > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            for module_path, report_orig_path, report_out_path in script_args:
+                executor.submit(generate_report, module_path, report_orig_path, report_out_path)
+    else:
+        for module_path, report_orig_path, report_out_path in script_args:
+            generate_report(module_path, report_orig_path, report_out_path)
 
-        extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
-        os.mkdir(extension_report_dir)
-        os.chdir(full_extension_dir)
-
-        try:
-            command = "mvn -Ddependency.locations.enabled=false project-info-reports:dependencies"
-            outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-            command = "cp -r target/site {}/site".format(extension_report_dir)
-            outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
-        except:
-            print("Encountered error when generating report for: " + extension_dir)
-
-        os.chdir("..")
 
 if __name__ == "__main__":
     try:
-        main()
+        parser = argparse.ArgumentParser(description='Generating dependency reports.')
+        parser.add_argument('druid_path', metavar='<Druid source path>', type=str)
+        parser.add_argument('tmp_path', metavar='<Full tmp path>', type=str)
+        parser.add_argument('--exclude-extension', dest='exclude_ext', action='store_const', const=True, default=False, help="Exclude extension report")
+        parser.add_argument('--clean-maven-artifact-transfer', dest='clean_mvn_artifact_transfer', action='store_const', const=True, default=False, help="Clean maven-artifact-transfer before generating dependency reports")
+        parser.add_argument('--parallel', dest='num_threads', type=int, default=1, help='Number of threads for generating reports')
+        args = parser.parse_args()
+
+        # The default maven-artifact-transfer in Travis is currently corrupted. Set the below argument properly to remove the corrupted one.
+        if args.clean_mvn_artifact_transfer:
+            command = "rm -rf ~/.m2/repository/org/apache/maven/shared/maven-artifact-transfer"
+            subprocess.check_call(command, shell=True)
+        
+        generate_reports(args.druid_path, args.tmp_path, args.exclude_ext, args.num_threads)
     except KeyboardInterrupt:
         print('Interrupted, closing.')

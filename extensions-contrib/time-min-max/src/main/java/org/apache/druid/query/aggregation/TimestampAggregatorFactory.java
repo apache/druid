@@ -27,6 +27,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.Collections;
@@ -157,10 +158,11 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return DateTimes.utc((long) object);
+    return object == null ? null : DateTimes.utc((long) object);
   }
 
   @Override

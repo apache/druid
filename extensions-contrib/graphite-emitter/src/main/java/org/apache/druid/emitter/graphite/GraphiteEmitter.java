@@ -57,6 +57,7 @@ public class GraphiteEmitter implements Emitter
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
   private static final long FLUSH_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1); // default flush wait 1 min
+  private static final Pattern DOT_OR_WHITESPACE_PATTERN = Pattern.compile("[\\s]+|[.]+");
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")
@@ -249,8 +250,7 @@ public class GraphiteEmitter implements Emitter
 
   protected static String sanitize(String namespace, Boolean replaceSlashToDot)
   {
-    Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    String sanitizedNamespace = DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    String sanitizedNamespace = DOT_OR_WHITESPACE_PATTERN.matcher(namespace).replaceAll("_");
     if (replaceSlashToDot) {
       sanitizedNamespace = sanitizedNamespace.replace('/', '.');
     }

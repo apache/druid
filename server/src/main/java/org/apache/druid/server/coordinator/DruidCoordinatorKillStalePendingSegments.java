@@ -72,7 +72,7 @@ public class DruidCoordinatorKillStalePendingSegments implements DruidCoordinato
     // If there is no running/pending/waiting/complete tasks, stalePendingSegmentsCutoffCreationTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
     final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (String dataSource : params.getDataSourcesWithUsedSegments().keySet()) {
+    for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
       if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",

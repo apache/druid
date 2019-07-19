@@ -20,7 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -32,20 +32,20 @@ import java.util.Set;
 public class AvailableSegmentMetadata
 {
   public static Builder builder(
-      SegmentId segmentId,
+      DataSegment segment,
       long isRealtime,
       Set<String> segmentServers,
       RowSignature rowSignature,
       long numRows
   )
   {
-    return new Builder(segmentId, isRealtime, segmentServers, rowSignature, numRows);
+    return new Builder(segment, isRealtime, segmentServers, rowSignature, numRows);
   }
 
   public static Builder from(AvailableSegmentMetadata h)
   {
     return new Builder(
-        h.getSegmentId(),
+        h.getSegment(),
         h.isRealtime(),
         h.getReplicas(),
         h.getRowSignature(),
@@ -53,7 +53,7 @@ public class AvailableSegmentMetadata
     );
   }
 
-  private final SegmentId segmentId;
+  private final DataSegment segment;
   // Booleans represented as long type, where 1 = true and 0 = false
   // to make it easy to count number of segments which are realtime
   private final long isRealtime;
@@ -69,7 +69,7 @@ public class AvailableSegmentMetadata
     this.isRealtime = builder.isRealtime;
     this.segmentServers = builder.segmentServers;
     this.numRows = builder.numRows;
-    this.segmentId = builder.segmentId;
+    this.segment = builder.segment;
   }
 
   public long isRealtime()
@@ -77,9 +77,9 @@ public class AvailableSegmentMetadata
     return isRealtime;
   }
 
-  public SegmentId getSegmentId()
+  public DataSegment getSegment()
   {
-    return segmentId;
+    return segment;
   }
 
   public Set<String> getReplicas()
@@ -105,7 +105,7 @@ public class AvailableSegmentMetadata
 
   public static class Builder
   {
-    private final SegmentId segmentId;
+    private final DataSegment segment;
     private final long isRealtime;
 
     private Set<String> segmentServers;
@@ -114,14 +114,14 @@ public class AvailableSegmentMetadata
     private long numRows;
 
     private Builder(
-        SegmentId segmentId,
+        DataSegment segment,
         long isRealtime,
         Set<String> servers,
-        RowSignature rowSignature,
+        @Nullable RowSignature rowSignature,
         long numRows
     )
     {
-      this.segmentId = segmentId;
+      this.segment = segment;
       this.isRealtime = isRealtime;
       this.segmentServers = servers;
       this.rowSignature = rowSignature;

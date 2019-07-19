@@ -37,9 +37,16 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -60,6 +67,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -101,8 +109,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -138,6 +144,8 @@ public class SystemSchemaTest extends CalciteTestBase
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
+  private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+  private InventoryView serverInventoryView;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -238,13 +246,17 @@ public class SystemSchemaTest extends CalciteTestBase
     druidSchema.start();
     druidSchema.awaitInitialization();
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
+    druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,
         serverView,
+        serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
         client,
         client,
+        druidNodeDiscoveryProvider,
         mapper
     );
   }
@@ -349,6 +361,73 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
+
+  private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
+      new DruidNode("s1", "localhost", false, 8081, null, true, false),
+      NodeType.COORDINATOR,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
+      new DruidNode("s2", "localhost", false, 8090, null, true, false),
+      NodeType.OVERLORD,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
+      new DruidNode("s3", "localhost", false, 8082, null, true, false),
+      NodeType.BROKER,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode broker2 = new DiscoveryDruidNode(
+      new DruidNode("s3", "brokerHost", false, 8082, null, true, false),
+      NodeType.BROKER,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode router = new DiscoveryDruidNode(
+      new DruidNode("s4", "localhost", false, 8888, null, true, false),
+      NodeType.ROUTER,
+      ImmutableMap.of()
+  );
+
+  private final DiscoveryDruidNode historical1 = new DiscoveryDruidNode(
+      new DruidNode("s5", "localhost", false, 8083, null, true, false),
+      NodeType.HISTORICAL,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+      )
+  );
+
+  private final DiscoveryDruidNode historical2 = new DiscoveryDruidNode(
+      new DruidNode("s5", "histHost", false, 8083, null, true, false),
+      NodeType.HISTORICAL,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
+  );
+
+  private final DiscoveryDruidNode middleManager = new DiscoveryDruidNode(
+      new DruidNode("s6", "mmHost", false, 8091, null, true, false),
+      NodeType.MIDDLE_MANAGER,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
+  );
+
+  private final DiscoveryDruidNode peon1 = new DiscoveryDruidNode(
+      new DruidNode("s7", "localhost", false, 8080, null, true, false),
+      NodeType.PEON,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+      )
+  );
+
+  private final DiscoveryDruidNode peon2 = new DiscoveryDruidNode(
+      new DruidNode("s7", "peonHost", false, 8080, null, true, false),
+      NodeType.PEON,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
+  );
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
@@ -601,14 +680,63 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
-                                                     .withConstructor(serverView, authMapper)
+                                                     .withConstructor(
+                                                         druidNodeDiscoveryProvider,
+                                                         serverInventoryView,
+                                                         authMapper
+                                                     )
                                                      .createMock();
     EasyMock.replay(serversTable);
+    final DruidNodeDiscovery coordinatorNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery overlordNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery brokerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery routerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery historicalNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery mmNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery peonNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
 
-    EasyMock.expect(serverView.getDruidServers())
-            .andReturn(immutableDruidServers)
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.COORDINATOR))
+            .andReturn(coordinatorNodeDiscovery)
             .once();
-    EasyMock.replay(serverView);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.OVERLORD))
+            .andReturn(overlordNodeDiscovery)
+            .once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER)).andReturn(brokerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.ROUTER)).andReturn(routerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.HISTORICAL))
+            .andReturn(historicalNodeDiscovery)
+            .once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(mmNodeDiscovery)
+            .once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(peonNodeDiscovery).once();
+
+    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator)).once();
+    EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(overlord)).once();
+    EasyMock.expect(brokerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(broker1, broker2)).once();
+    EasyMock.expect(routerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(router)).once();
+    EasyMock.expect(historicalNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(historical1, historical2)).once();
+    EasyMock.expect(mmNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
+    EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
+
+    final DruidServer server1 = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName())).andReturn(server1).once();
+    EasyMock.expect(server1.getCurrSize()).andReturn(200L).once();
+    final DruidServer server2 = EasyMock.createMock(DruidServer.class);
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical2.toDruidServer().getName())).andReturn(server2).once();
+    EasyMock.expect(server2.getCurrSize()).andReturn(400L).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, serverInventoryView, server1, server2);
+    EasyMock.replay(
+        coordinatorNodeDiscovery,
+        overlordNodeDiscovery,
+        brokerNodeDiscovery,
+        routerNodeDiscovery,
+        historicalNodeDiscovery,
+        mmNodeDiscovery,
+        peonNodeDiscovery
+    );
+
     DataContext dataContext = new DataContext()
     {
       @Override
@@ -636,16 +764,142 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
-    Assert.assertEquals(2, rows.size());
-    Object[] row1 = rows.get(0);
-    Assert.assertEquals("localhost:0000", row1[0]);
-    Assert.assertEquals("realtime", row1[4].toString());
-    Object[] row2 = rows.get(1);
-    Assert.assertEquals("server2:1234", row2[0]);
-    Assert.assertEquals("historical", row2[4].toString());
+    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
+    Assert.assertEquals(10, rows.size());
+    verifyServerRow(
+        rows.get(0),
+        "brokerHost:8082",
+        "brokerHost",
+        8082,
+        -1,
+        "broker",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(1),
+        "histHost:8083",
+        "histHost",
+        8083,
+        -1,
+        "historical",
+        "tier",
+        400,
+        1000
+    );
+    verifyServerRow(
+        rows.get(2),
+        "localhost:8080",
+        "localhost",
+        8080,
+        -1,
+        "peon",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(3),
+        "localhost:8081",
+        "localhost",
+        8081,
+        -1,
+        "coordinator",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(4),
+        "localhost:8082",
+        "localhost",
+        8082,
+        -1,
+        "broker",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(5),
+        "localhost:8083",
+        "localhost",
+        8083,
+        -1,
+        "historical",
+        "tier",
+        200,
+        1000
+    );
+    verifyServerRow(
+        rows.get(6),
+        "localhost:8090",
+        "localhost",
+        8090,
+        -1,
+        "overlord",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(7),
+        "localhost:8888",
+        "localhost",
+        8888,
+        -1,
+        "router",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(8),
+        "mmHost:8091",
+        "mmHost",
+        8091,
+        -1,
+        "middle_manager",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(9),
+        "peonHost:8080",
+        "peonHost",
+        8080,
+        -1,
+        "peon",
+        null,
+        0,
+        0
+    );
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.SERVERS_SIGNATURE);
+  }
+
+  private void verifyServerRow(
+      Object[] row,
+      String server,
+      String host,
+      long plaintextPort,
+      long tlsPort,
+      String serverType,
+      String tier,
+      long currSize,
+      long maxSize)
+  {
+    Assert.assertEquals(server, row[0].toString());
+    Assert.assertEquals(host, row[1]);
+    Assert.assertEquals(plaintextPort, row[2]);
+    Assert.assertEquals(tlsPort, row[3]);
+    Assert.assertEquals(serverType, row[4]);
+    Assert.assertEquals(tier, row[5]);
+    Assert.assertEquals(currSize, row[6]);
+    Assert.assertEquals(maxSize, row[7]);
   }
 
   @Test
@@ -738,7 +992,6 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"

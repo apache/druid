@@ -29,13 +29,13 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.15.0-incubating-SNAPSHOT</version>
+    <version>0.16.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <parquet.version>1.10.0</parquet.version>
+    <parquet.version>1.10.1</parquet.version>
     <snappy.version>1.1.7.2</snappy.version>
   </properties>
   <dependencies>

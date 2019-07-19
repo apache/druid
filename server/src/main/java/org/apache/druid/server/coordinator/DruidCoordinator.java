@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -67,7 +68,7 @@ import org.apache.druid.server.coordinator.helper.DruidCoordinatorMarkAsUnusedOv
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentCompactor;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorUnloadUnusedSegments;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorUsedSegmentsLoader;
+import org.apache.druid.server.coordinator.helper.DruidCoordinatorUsedSegmentsLogger;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -258,7 +259,7 @@ public class DruidCoordinator
       return underReplicationCountsPerDataSourcePerTier;
     }
 
-    final Iterable<DataSegment> dataSegments = iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = segmentsMetadata.iterateAllUsedSegments();
 
     final DateTime now = DateTimes.nowUtc();
 
@@ -294,7 +295,7 @@ public class DruidCoordinator
 
     final Object2IntOpenHashMap<String> numsUnavailableUsedSegmentsPerDataSource = new Object2IntOpenHashMap<>();
 
-    final Iterable<DataSegment> dataSegments = iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = segmentsMetadata.iterateAllUsedSegments();
 
     for (DataSegment segment : dataSegments) {
       if (segmentReplicantLookup.getLoadedReplicants(segment.getId()) == 0) {
@@ -311,7 +312,7 @@ public class DruidCoordinator
   {
     final Map<String, Double> loadStatus = new HashMap<>();
     final Collection<ImmutableDruidDataSource> dataSources =
-        segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
+        segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
 
     for (ImmutableDruidDataSource dataSource : dataSources) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
@@ -356,7 +357,7 @@ public class DruidCoordinator
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.info("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadata.markSegmentAsUnused(segment.getId());
+    segmentsMetadata.markSegmentAsUnused(segment.getId().toString());
   }
 
   public String getCurrentLeader()
@@ -365,6 +366,7 @@ public class DruidCoordinator
   }
 
   public void moveSegment(
+      DruidCoordinatorRuntimeParams params,
       ImmutableDruidServer fromServer,
       ImmutableDruidServer toServer,
       DataSegment segment,
@@ -384,8 +386,7 @@ public class DruidCoordinator
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource =
-          segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = params.getDataSourcesSnapshot().getDataSource(segment.getDataSource());
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
@@ -461,19 +462,6 @@ public class DruidCoordinator
         callback.execute();
       }
     }
-  }
-
-  /**
-   * Returns an iterable to go over all used segments in all data sources. The order in which segments are iterated
-   * is unspecified.
-   *
-   * Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try (to some
-   * reasonable extent) to organize the code so that it iterates the returned iterable only once rather than several
-   * times.
-   */
-  public Iterable<DataSegment> iterateAllUsedSegments()
-  {
-    return segmentsMetadata.iterateAllUsedSegments();
   }
 
   @LifecycleStart
@@ -605,13 +593,13 @@ public class DruidCoordinator
   private List<DruidCoordinatorHelper> makeIndexingServiceHelpers()
   {
     List<DruidCoordinatorHelper> helpers = new ArrayList<>();
-    helpers.add(new DruidCoordinatorUsedSegmentsLoader(DruidCoordinator.this));
+    helpers.add(new DruidCoordinatorUsedSegmentsLogger());
     helpers.add(segmentCompactor);
     helpers.addAll(indexingServiceHelpers);
 
     log.info(
         "Done making indexing service helpers [%s]",
-        helpers.stream().map(helper -> helper.getClass().getCanonicalName()).collect(Collectors.toList())
+        helpers.stream().map(helper -> helper.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(helpers);
   }
@@ -660,14 +648,13 @@ public class DruidCoordinator
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
-        final Collection<ImmutableDruidDataSource> dataSources =
-            segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
+        DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadata.getSnapshotOfDataSourcesWithAllUsedSegments();
 
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
                 .newBuilder()
                 .withStartTimeNanos(startTimeNanos)
-                .withDataSourcesWithUsedSegments(dataSources)
+                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
@@ -702,7 +689,7 @@ public class DruidCoordinator
     {
       super(
           ImmutableList.of(
-              new DruidCoordinatorUsedSegmentsLoader(DruidCoordinator.this),
+              new DruidCoordinatorUsedSegmentsLogger(),
               params -> {
                 List<ImmutableDruidServer> servers = serverInventoryView
                     .getInventory()

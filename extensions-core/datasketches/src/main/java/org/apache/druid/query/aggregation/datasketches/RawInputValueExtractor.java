@@ -31,7 +31,9 @@ public class RawInputValueExtractor implements ComplexMetricExtractor
     return EXTRACTOR;
   }
 
-  private RawInputValueExtractor() {}
+  private RawInputValueExtractor()
+  {
+  }
 
   @Override
   public Class<?> extractedClass()

@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -81,18 +80,18 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // Find used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
     // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
     // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
     // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
-    Set<DataSegment> overshadowed = ImmutableDruidDataSource.determineOvershadowedSegments(params.getUsedSegments());
+    Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutUsedSegments()
+        .buildFromExistingWithoutSegmentsMetadata()
         .withReplicationManager(replicatorThrottler)
         .build();
 
@@ -103,7 +102,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
     for (DataSegment segment : params.getUsedSegments()) {
-      if (overshadowed.contains(segment)) {
+      if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
         continue;
       }

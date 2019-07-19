@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -67,9 +68,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-
 public class MaterializedViewSupervisorTest
 {
   @Rule
@@ -77,7 +75,6 @@ public class MaterializedViewSupervisorTest
 
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
-  private TestDerbyConnector derbyConnector;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -85,28 +82,27 @@ public class MaterializedViewSupervisorTest
   private SqlSegmentsMetadata sqlSegmentsMetadata;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
-  private MaterializedViewSupervisorSpec spec;
-  private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  
+  private final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+
   @Before
   public void setUp()
   {
-    derbyConnector = derbyConnectorRule.getConnector();
+    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createSegmentTable();
-    taskStorage = createMock(TaskStorage.class);
-    taskMaster = createMock(TaskMaster.class);
+    taskStorage = EasyMock.createMock(TaskStorage.class);
+    taskMaster = EasyMock.createMock(TaskMaster.class);
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector
     );
-    metadataSupervisorManager = createMock(MetadataSupervisorManager.class);
-    sqlSegmentsMetadata = createMock(SqlSegmentsMetadata.class);
-    taskQueue = createMock(TaskQueue.class);
+    metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
+    sqlSegmentsMetadata = EasyMock.createMock(SqlSegmentsMetadata.class);
+    taskQueue = EasyMock.createMock(TaskQueue.class);
     taskQueue.start();
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
-    spec = new MaterializedViewSupervisorSpec(
+    MaterializedViewSupervisorSpec spec = new MaterializedViewSupervisorSpec(
         "base",
         new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
@@ -124,8 +120,9 @@ public class MaterializedViewSupervisorTest
         sqlSegmentsMetadata,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
-        createMock(AuthorizerMapper.class),
-        createMock(ChatHandlerProvider.class)
+        EasyMock.createMock(AuthorizerMapper.class),
+        EasyMock.createMock(ChatHandlerProvider.class),
+        new SupervisorStateManagerConfig()
     );
     supervisor = (MaterializedViewSupervisor) spec.createSupervisor();
   }
@@ -158,9 +155,9 @@ public class MaterializedViewSupervisorTest
         )
     );
     indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
-    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
     Map<Interval, List<DataSegment>> expectedSegments = new HashMap<>();
     expectedSegments.put(
@@ -199,11 +196,15 @@ public class MaterializedViewSupervisorTest
         )
     );
     indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
-    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-    expect(taskStorage.getStatus("test_task1")).andReturn(Optional.of(TaskStatus.failure("test_task1"))).anyTimes();
-    expect(taskStorage.getStatus("test_task2")).andReturn(Optional.of(TaskStatus.running("test_task2"))).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("test_task1"))
+            .andReturn(Optional.of(TaskStatus.failure("test_task1")))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus("test_task2"))
+            .andReturn(Optional.of(TaskStatus.running("test_task2")))
+            .anyTimes();
     EasyMock.replay(taskStorage);
 
     Pair<Map<Interval, HadoopIndexTask>, Map<Interval, String>> runningTasksPair = supervisor.getRunningTasks();
@@ -281,20 +282,21 @@ public class MaterializedViewSupervisorTest
         sqlSegmentsMetadata,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
-        createMock(AuthorizerMapper.class),
-        createMock(ChatHandlerProvider.class)
+        EasyMock.createMock(AuthorizerMapper.class),
+        EasyMock.createMock(ChatHandlerProvider.class),
+        new SupervisorStateManagerConfig()
     );
     MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
 
     // mock IndexerSQLMetadataStorageCoordinator to ensure that getDataSourceMetadata is not called
     // which will be true if truly suspended, since this is the first operation of the 'run' method otherwise
-    IndexerSQLMetadataStorageCoordinator mock = createMock(IndexerSQLMetadataStorageCoordinator.class);
-    expect(mock.getDataSourceMetadata(suspended.getDataSourceName()))
-        .andAnswer(() -> {
-          Assert.fail();
-          return null;
-        })
-        .anyTimes();
+    IndexerSQLMetadataStorageCoordinator mock = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
+    EasyMock.expect(mock.getDataSourceMetadata(suspended.getDataSourceName()))
+            .andAnswer(() -> {
+              Assert.fail();
+              return null;
+            })
+            .anyTimes();
 
     EasyMock.replay(mock);
     supervisor.run();

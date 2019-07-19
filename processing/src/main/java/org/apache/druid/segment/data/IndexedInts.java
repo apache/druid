@@ -41,8 +41,23 @@ public interface IndexedInts extends HotLoopCallee
 
   @CalledFromHotLoop
   int size();
+
   @CalledFromHotLoop
   int get(int index);
+
+  default void get(int[] out, int start, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(i + start);
+    }
+  }
+
+  default void get(int[] out, int[] indexes, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(indexes[i]);
+    }
+  }
 
   default void forEach(IntConsumer action)
   {

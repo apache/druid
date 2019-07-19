@@ -50,7 +50,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
-      String s3DescriptorPath = descriptorPathForSegmentPath(s3Path);
+      String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
 
       if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
         log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
@@ -66,11 +66,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     catch (AmazonServiceException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e);
     }
-  }
-
-  private static String descriptorPathForSegmentPath(String s3Path)
-  {
-    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json";
   }
 
   @Override

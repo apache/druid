@@ -51,7 +51,9 @@ public class Capabilities
   {
     private boolean dimensionValuesSorted = false;
 
-    private CapabilitiesBuilder() {}
+    private CapabilitiesBuilder()
+    {
+    }
 
     public CapabilitiesBuilder dimensionValuesSorted(boolean value)
     {

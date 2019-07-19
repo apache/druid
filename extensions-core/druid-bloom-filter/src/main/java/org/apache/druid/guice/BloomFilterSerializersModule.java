@@ -40,7 +40,7 @@ import java.io.IOException;
 
 public class BloomFilterSerializersModule extends SimpleModule
 {
-  public static String BLOOM_FILTER_TYPE_NAME = "bloom";
+  public static final String BLOOM_FILTER_TYPE_NAME = "bloom";
 
   public BloomFilterSerializersModule()
   {
@@ -52,9 +52,7 @@ public class BloomFilterSerializersModule extends SimpleModule
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
 
-    if (ComplexMetrics.getSerdeForType(BLOOM_FILTER_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(BLOOM_FILTER_TYPE_NAME, new BloomFilterSerde());
-    }
+    ComplexMetrics.registerSerde(BLOOM_FILTER_TYPE_NAME, new BloomFilterSerde());
   }
 
   private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>

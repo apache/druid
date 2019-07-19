@@ -38,5 +38,7 @@ public class CoordinatorRuntimeParamsTestHelpers
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster));
   }
 
-  private CoordinatorRuntimeParamsTestHelpers() {}
+  private CoordinatorRuntimeParamsTestHelpers()
+  {
+  }
 }

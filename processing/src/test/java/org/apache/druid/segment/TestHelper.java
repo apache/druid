@@ -316,16 +316,12 @@ public class TestHelper
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
-        if (expectedValue == null) {
-          Assert.assertNull(actualValue);
-        } else {
-          Assert.assertEquals(
-              StringUtils.format("%s: key[%s]", msg, key),
-              ((Number) expectedValue).doubleValue(),
-              ((Number) actualValue).doubleValue(),
-              Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
-          );
-        }
+        Assert.assertEquals(
+            StringUtils.format("%s: key[%s]", msg, key),
+            ((Number) expectedValue).doubleValue(),
+            ((Number) actualValue).doubleValue(),
+            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
+        );
       } else {
         Assert.assertEquals(
             StringUtils.format("%s: key[%s]", msg, key),

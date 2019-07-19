@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -33,8 +34,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class BroadcastDistributionRuleSerdeTest
@@ -44,7 +43,7 @@ public class BroadcastDistributionRuleSerdeTest
   @Parameterized.Parameters
   public static List<Object[]> constructorFeeder()
   {
-    final List<Object[]> params = Lists.newArrayList(
+    return Lists.newArrayList(
         new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of("large_source1", "large_source2"))},
         new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of())},
         new Object[]{new ForeverBroadcastDistributionRule(null)},
@@ -55,7 +54,6 @@ public class BroadcastDistributionRuleSerdeTest
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, ImmutableList.of())},
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, null)}
     );
-    return params;
   }
 
   private final Rule testRule;
@@ -71,6 +69,6 @@ public class BroadcastDistributionRuleSerdeTest
     final List<Rule> rules = Collections.singletonList(testRule);
     final String json = MAPPER.writeValueAsString(rules);
     final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<List<Rule>>(){});
-    assertEquals(rules, fromJson);
+    Assert.assertEquals(rules, fromJson);
   }
 }

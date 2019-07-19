@@ -20,7 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.client.DruidDataSource;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -72,57 +72,38 @@ public interface SegmentsMetadata
 
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
 
-  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds) throws UnknownSegmentIdsException;
-
-  /**
-   * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
-   * segment was marked as unused), false otherwise. If the call results in a database error, an exception is relayed to
-   * the caller.
-   *
-   * Prefer {@link #markSegmentAsUnused(SegmentId)} to this method when possible.
-   *
-   * This method is not removed because {@link org.apache.druid.server.http.DataSourcesResource#markSegmentAsUnused}
-   * uses it and if it migrates to {@link #markSegmentAsUnused(SegmentId)} the performance will be worse.
-   */
-  boolean markSegmentAsUnused(String dataSource, String segmentId);
+  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
    * segment was marked as unused), false otherwise. If the call results in a database error, an exception is relayed to
    * the caller.
    */
-  boolean markSegmentAsUnused(SegmentId segmentId);
+  boolean markSegmentAsUnused(String segmentId);
 
   /**
-   * If there are used segments belonging to the given data source, this method converts this set of segments to an
-   * {@link ImmutableDruidDataSource} object and returns. If there are no used segments belonging to the given data
-   * source, this method returns null.
-   *
-   * This method's name starts with "prepare" to indicate that it's not cheap (it creates an {@link
-   * ImmutableDruidDataSource} object). Not used "create" prefix to avoid giving a false impression that this method
-   * might put something into the database to create a data source with the given name, if absent.
-   */
-  @Nullable ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSource);
-
-  /**
-   * If there are used segments belonging to the given data source, this method returns a {@link DruidDataSource} object
-   * with a view on those segments. If there are no used segments belonging to the given data source, this method
+   * If there are used segments belonging to the given data source this method returns them as an {@link
+   * ImmutableDruidDataSource} object. If there are no used segments belonging to the given data source this method
    * returns null.
-   *
-   * Note that the returned {@link DruidDataSource} object may be updated concurrently and already be empty by the time
-   * it is returned.
    */
-  @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource);
+  @Nullable ImmutableDruidDataSource getImmutableDataSourceWithUsedSegments(String dataSource);
 
   /**
-   * Prepares a set of {@link ImmutableDruidDataSource} objects containing information about all used segments. {@link
+   * Returns a set of {@link ImmutableDruidDataSource} objects containing information about all used segments. {@link
    * ImmutableDruidDataSource} objects in the returned collection are unique. If there are no used segments, this method
    * returns an empty collection.
-   *
-   * This method's name starts with "prepare" for the same reason as {@link
-   * #prepareImmutableDataSourceWithUsedSegments}.
    */
-  Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments();
+  Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments();
+
+  /**
+   * Returns a set of overshadowed segment ids.
+   */
+  Set<SegmentId> getOvershadowedSegments();
+
+  /**
+   * Returns a snapshot of DruidDataSources and overshadowed segments
+   */
+  DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments();
 
   /**
    * Returns an iterable to go over all segments in all data sources. The order in which segments are iterated is
@@ -140,8 +121,8 @@ public interface SegmentsMetadata
    * Performance warning: this method makes a query into the database.
    *
    * This method might return a different set of data source names than may be observed via {@link
-   * #prepareImmutableDataSourcesWithAllUsedSegments} method. This method will include a data source name even if there
-   * are no used segments belonging to it, while {@link #prepareImmutableDataSourcesWithAllUsedSegments} won't return
+   * #getImmutableDataSourcesWithAllUsedSegments} method. This method will include a data source name even if there
+   * are no used segments belonging to it, while {@link #getImmutableDataSourcesWithAllUsedSegments} won't return
    * such a data source.
    */
   Collection<String> retrieveAllDataSourceNames();

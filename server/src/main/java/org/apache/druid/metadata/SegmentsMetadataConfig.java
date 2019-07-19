@@ -33,4 +33,9 @@ public class SegmentsMetadataConfig
   {
     return pollDuration;
   }
+
+  public void setPollDuration(Period pollDuration)
+  {
+    this.pollDuration = pollDuration;
+  }
 }

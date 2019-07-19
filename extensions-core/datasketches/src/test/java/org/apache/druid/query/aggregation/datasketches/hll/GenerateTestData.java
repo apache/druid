@@ -70,6 +70,14 @@ class GenerateTestData
     out.write("\t");
     out.write(dimension);
     out.write("\t");
+    int parsed = Integer.parseInt(dimension);
+    for (int i = parsed; i < parsed + 5; i++) {
+      out.write(Integer.toString(i));
+      if (i + 1 < parsed + 5) {
+        out.write(",");
+      }
+    }
+    out.write("\t");
     out.write(Integer.toString(id));
     out.newLine();
   }
@@ -79,6 +87,14 @@ class GenerateTestData
     out.write(date);
     out.write("\t");
     out.write(dimension);
+    out.write("\t");
+    int parsed = Integer.parseInt(dimension);
+    for (int i = parsed; i < parsed + 5; i++) {
+      out.write(Integer.toString(i));
+      if (i + 1 < parsed + 5) {
+        out.write(",");
+      }
+    }
     out.write("\t");
     out.write(StringUtils.encodeBase64String(sketch.toCompactByteArray()));
     out.newLine();

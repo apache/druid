@@ -27,7 +27,9 @@ public class ConciseBitMapFactory implements BitMapFactory
 {
   private static final BitmapFactory bitmapFactory = new ConciseBitmapFactory();
 
-  public ConciseBitMapFactory() {}
+  public ConciseBitMapFactory()
+  {
+  }
 
   @Override
   public MutableBitmap makeEmptyMutableBitmap()

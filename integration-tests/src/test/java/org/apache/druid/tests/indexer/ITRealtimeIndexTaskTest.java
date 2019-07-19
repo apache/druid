@@ -123,7 +123,9 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
         try {
           Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
         }
-        catch (InterruptedException ex) { /* nothing */ }
+        catch (InterruptedException ex) {
+          /* nothing */
+        }
         dtLast = dt;
         dt = DateTimes.nowUtc();
         i++;

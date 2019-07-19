@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -58,7 +59,7 @@ import java.util.concurrent.Executors;
  */
 public class DruidCoordinatorRuleRunnerTest
 {
-  public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
+  public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
       CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build();
 
   private DruidCoordinator coordinator;
@@ -67,6 +68,7 @@ public class DruidCoordinatorRuleRunnerTest
   private DruidCoordinatorRuleRunner ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
+  private SegmentsMetadata segmentsMetadata;
 
   @Before
   public void setUp()
@@ -76,6 +78,7 @@ public class DruidCoordinatorRuleRunnerTest
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    segmentsMetadata = EasyMock.createNiceMock(SegmentsMetadata.class);
 
     DateTime start = DateTimes.of("2012-01-01");
     usedSegments = new ArrayList<>();
@@ -190,13 +193,18 @@ public class DruidCoordinatorRuleRunnerTest
       BalancerStrategy balancerStrategy
   )
   {
+    return createCoordinatorRuntimeParams(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withBalancerStrategy(balancerStrategy);
+  }
+
+  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster)
+  {
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-        .withBalancerStrategy(balancerStrategy);
+        .withDatabaseRuleManager(databaseRuleManager);
   }
 
   /**
@@ -318,11 +326,7 @@ public class DruidCoordinatorRuleRunnerTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
@@ -426,11 +430,7 @@ public class DruidCoordinatorRuleRunnerTest
         )
         .build();
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
         .withEmitter(emitter)
         .build();
@@ -478,12 +478,8 @@ public class DruidCoordinatorRuleRunnerTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
@@ -538,17 +534,13 @@ public class DruidCoordinatorRuleRunnerTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
                 .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
                 .build()
         )
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
@@ -602,12 +594,8 @@ public class DruidCoordinatorRuleRunnerTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
@@ -658,12 +646,8 @@ public class DruidCoordinatorRuleRunnerTest
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
@@ -731,7 +715,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -980,7 +964,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1063,6 +1047,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
         .withBalancerStrategy(balancerStrategy)
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .build();
 
@@ -1087,7 +1072,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
+    EasyMock.replay(coordinator, segmentsMetadata);
   }
 
   private void mockEmptyPeon()

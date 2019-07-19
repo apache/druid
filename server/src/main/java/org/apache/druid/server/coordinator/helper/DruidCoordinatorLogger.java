@@ -259,7 +259,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     // Emit segment metrics
-    params.getDataSourcesWithUsedSegments().forEach(
+    params.getUsedSegmentsTimelinesPerDataSource().forEach(
         (String dataSource, VersionedIntervalTimeline<String, DataSegment> dataSourceWithUsedSegments) -> {
           long totalSizeOfUsedSegments = dataSourceWithUsedSegments
               .iterateAllObjects()

@@ -51,6 +51,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
+import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -105,6 +106,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/indexer/v1")
 public class OverlordResource
@@ -118,6 +120,7 @@ public class OverlordResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
+  private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -130,7 +133,8 @@ public class OverlordResource
       TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       AuditManager auditManager,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
   )
   {
     this.taskMaster = taskMaster;
@@ -140,6 +144,7 @@ public class OverlordResource
     this.configManager = configManager;
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
+    this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
   }
 
   /**
@@ -718,7 +723,7 @@ public class OverlordResource
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
                   taskRunner,
-                  taskRunner.getClass().getCanonicalName()
+                  taskRunner.getClass().getName()
               );
               return Response.serverError()
                              .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
@@ -727,6 +732,47 @@ public class OverlordResource
           }
         }
     );
+  }
+
+  @POST
+  @Path("/worker/{host}/enable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response enableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.ENABLE);
+  }
+
+  @POST
+  @Path("/worker/{host}/disable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response disableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
+  }
+
+  private Response changeWorkerStatus(String host, WorkerTaskRunner.ActionType action)
+  {
+    try {
+      if (WorkerTaskRunner.ActionType.DISABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.disableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "disabled")).build();
+      } else if (WorkerTaskRunner.ActionType.ENABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.enableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "enabled")).build();
+      } else {
+        return Response.serverError()
+                       .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Error in posting [%s] action to [%s]", action, host);
+      return Response.serverError()
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
+    }
   }
 
   @GET

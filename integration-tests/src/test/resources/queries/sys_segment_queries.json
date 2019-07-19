@@ -16,11 +16,11 @@
   },
   {
     "query": {
-      "query": "SELECT server_type FROM sys.servers"
+      "query": "SELECT server_type FROM sys.servers WHERE tier IS NOT NULL"
     },
     "expectedResults": [
       {
-        "server_type": "historical"
+        "server_type":"historical"
       }
     ]
   }

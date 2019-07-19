@@ -634,7 +634,7 @@ We've finished defining the ingestion spec, it should now look like the followin
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
-bin/post-index-task --file quickstart/ingestion-tutorial-index.json 
+bin/post-index-task --file quickstart/ingestion-tutorial-index.json --url http://localhost:8081
 ```
 
 After the script completes, we will query the data.

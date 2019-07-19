@@ -22,29 +22,32 @@ package org.apache.druid.math.expr;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.antlr.ExprLexer;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Parser
 {
   private static final Logger log = new Logger(Parser.class);
   private static final Map<String, Function> FUNCTIONS;
+  private static final Map<String, ApplyFunction> APPLY_FUNCTIONS;
 
   static {
     Map<String, Function> functionMap = new HashMap<>();
@@ -55,18 +58,50 @@ public class Parser
           functionMap.put(StringUtils.toLowerCase(function.name()), function);
         }
         catch (Exception e) {
-          log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
+          log.error(e, "failed to instantiate %s.. ignoring", clazz.getName());
         }
       }
     }
     FUNCTIONS = ImmutableMap.copyOf(functionMap);
+
+    Map<String, ApplyFunction> applyFunctionMap = new HashMap<>();
+    for (Class clazz : ApplyFunction.class.getClasses()) {
+      if (!Modifier.isAbstract(clazz.getModifiers()) && ApplyFunction.class.isAssignableFrom(clazz)) {
+        try {
+          ApplyFunction function = (ApplyFunction) clazz.newInstance();
+          applyFunctionMap.put(StringUtils.toLowerCase(function.name()), function);
+        }
+        catch (Exception e) {
+          log.error(e, "failed to instantiate %s.. ignoring", clazz.getName());
+        }
+      }
+    }
+    APPLY_FUNCTIONS = ImmutableMap.copyOf(applyFunctionMap);
   }
 
+  /**
+   * Get {@link Function} by {@link Function#name()}
+   */
   public static Function getFunction(String name)
   {
     return FUNCTIONS.get(StringUtils.toLowerCase(name));
   }
 
+  /**
+   * Get {@link ApplyFunction} by {@link ApplyFunction#name()}
+   */
+  public static ApplyFunction getApplyFunction(String name)
+  {
+    return APPLY_FUNCTIONS.get(StringUtils.toLowerCase(name));
+  }
+
+  /**
+   * Parse a string into a flattened {@link Expr}. There is some overhead to this, and these objects are all immutable,
+   * so re-use instead of re-creating whenever possible.
+   * @param in expression to parse
+   * @param macroTable additional extensions to expression language
+   * @return
+   */
   public static Expr parse(String in, ExprMacroTable macroTable)
   {
     return parse(in, macroTable, true);
@@ -86,83 +121,289 @@ public class Parser
     return withFlatten ? flatten(listener.getAST()) : listener.getAST();
   }
 
+  /**
+   * Flatten an {@link Expr}, evaluating expressions on constants where possible to simplify the {@link Expr}.
+   */
   public static Expr flatten(Expr expr)
   {
-    if (expr instanceof BinaryOpExprBase) {
-      BinaryOpExprBase binary = (BinaryOpExprBase) expr;
-      Expr left = flatten(binary.left);
-      Expr right = flatten(binary.right);
-      if (Evals.isAllConstants(left, right)) {
-        expr = expr.eval(null).toExpr();
-      } else if (left != binary.left || right != binary.right) {
-        return Evals.binaryOp(binary, left, right);
-      }
-    } else if (expr instanceof UnaryExpr) {
-      UnaryExpr unary = (UnaryExpr) expr;
-      Expr eval = flatten(unary.expr);
-      if (eval instanceof ConstantExpr) {
-        expr = expr.eval(null).toExpr();
-      } else if (eval != unary.expr) {
-        if (expr instanceof UnaryMinusExpr) {
-          expr = new UnaryMinusExpr(eval);
-        } else if (expr instanceof UnaryNotExpr) {
-          expr = new UnaryNotExpr(eval);
-        } else {
-          expr = unary; // unknown type..
+    return expr.visit(childExpr -> {
+      if (childExpr instanceof BinaryOpExprBase) {
+        BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
+        if (Evals.isAllConstants(binary.left, binary.right)) {
+          return childExpr.eval(null).toExpr();
         }
-      }
-    } else if (expr instanceof FunctionExpr) {
-      FunctionExpr functionExpr = (FunctionExpr) expr;
-      List<Expr> args = functionExpr.args;
-      boolean flattened = false;
-      List<Expr> flattening = Lists.newArrayListWithCapacity(args.size());
-      for (Expr arg : args) {
-        Expr flatten = flatten(arg);
-        flattened |= flatten != arg;
-        flattening.add(flatten);
-      }
-      if (Evals.isAllConstants(flattening)) {
-        expr = expr.eval(null).toExpr();
-      } else if (flattened) {
-        expr = new FunctionExpr(functionExpr.function, functionExpr.name, flattening);
-      }
-    }
-    return expr;
-  }
+      } else if (childExpr instanceof UnaryExpr) {
+        UnaryExpr unary = (UnaryExpr) childExpr;
 
-  public static List<String> findRequiredBindings(Expr expr)
-  {
-    final Set<String> found = new LinkedHashSet<>();
-    expr.visit(
-        new Expr.Visitor()
-        {
-          @Override
-          public void visit(Expr expr)
-          {
-            if (expr instanceof IdentifierExpr) {
-              found.add(expr.toString());
-            }
+        if (unary.expr instanceof ConstantExpr) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof FunctionExpr) {
+        FunctionExpr functionExpr = (FunctionExpr) childExpr;
+        List<Expr> args = functionExpr.args;
+        if (Evals.isAllConstants(args)) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof ApplyFunctionExpr) {
+        ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
+        List<Expr> args = applyFunctionExpr.argsExpr;
+        if (Evals.isAllConstants(args)) {
+          if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
+            return childExpr.eval(null).toExpr();
           }
         }
-    );
-    return Lists.newArrayList(found);
+      }
+      return childExpr;
+    });
   }
 
-  @Nullable
-  public static String getIdentifierIfIdentifier(Expr expr)
+  /**
+   * Applies a transformation to an {@link Expr} given a list of known (or uknown) multi-value input columns that are
+   * used in a scalar manner, walking the {@link Expr} tree and lifting array variables into the {@link LambdaExpr} of
+   * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr}
+   * @param expr expression to visit and rewrite
+   * @param toApply
+   * @return
+   */
+  public static Expr applyUnappliedIdentifiers(Expr expr, Expr.BindingDetails bindingDetails, List<String> toApply)
   {
-    if (expr instanceof IdentifierExpr) {
-      return expr.toString();
+    if (toApply.size() == 0) {
+      return expr;
+    }
+    List<String> unapplied = toApply.stream()
+                                     .filter(x -> bindingDetails.getRequiredColumns().contains(x))
+                                     .collect(Collectors.toList());
+
+    // any unapplied identifiers that are inside a lambda expression need that lambda expression to be rewritten
+    Expr newExpr = expr.visit(
+        childExpr -> {
+          if (childExpr instanceof ApplyFunctionExpr) {
+            // try to lift unapplied arguments into the apply function lambda
+            return liftApplyLambda((ApplyFunctionExpr) childExpr, unapplied);
+          } else if (childExpr instanceof FunctionExpr) {
+            // check array function arguments for unapplied identifiers to transform if necessary
+            FunctionExpr fnExpr = (FunctionExpr) childExpr;
+            Set<Expr> arrayInputs = fnExpr.function.getArrayInputs(fnExpr.args);
+            List<Expr> newArgs = new ArrayList<>();
+            for (Expr arg : fnExpr.args) {
+              if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
+                Expr newArg = applyUnappliedIdentifiers(arg, bindingDetails, unapplied);
+                newArgs.add(newArg);
+              } else {
+                newArgs.add(arg);
+              }
+            }
+
+            FunctionExpr newFnExpr = new FunctionExpr(fnExpr.function, fnExpr.function.name(), newArgs);
+            return newFnExpr;
+          }
+          return childExpr;
+        }
+    );
+
+    Expr.BindingDetails newExprBindings = newExpr.analyzeInputs();
+    final Set<String> expectedArrays = newExprBindings.getArrayVariables();
+    List<String> remainingUnappliedArgs =
+        unapplied.stream().filter(x -> !expectedArrays.contains(x)).collect(Collectors.toList());
+
+    // if lifting the lambdas got rid of all missing bindings, return the transformed expression
+    if (remainingUnappliedArgs.size() == 0) {
+      return newExpr;
+    }
+
+    return applyUnapplied(newExpr, remainingUnappliedArgs);
+  }
+
+  /**
+   * translate an {@link Expr} into an {@link ApplyFunctionExpr} for {@link ApplyFunction.MapFunction} or
+   * {@link ApplyFunction.CartesianMapFunction} if there are multiple unbound arguments to be applied
+   */
+  private static Expr applyUnapplied(Expr expr, List<String> unapplied)
+  {
+    // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
+    final Map<IdentifierExpr, IdentifierExpr> toReplace = new HashMap<>();
+    final List<IdentifierExpr> args = expr.analyzeInputs()
+                                          .getFreeVariables()
+                                          .stream()
+                                          .filter(x -> unapplied.contains(x.getBindingIdentifier()))
+                                          .collect(Collectors.toList());
+
+    final List<IdentifierExpr> lambdaArgs = new ArrayList<>();
+
+    // construct lambda args from list of args to apply
+    for (IdentifierExpr applyFnArg : args) {
+      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier());
+      lambdaArgs.add(lambdaRewrite);
+      toReplace.put(applyFnArg, lambdaRewrite);
+    }
+
+    // rewrite identifiers in the expression which will become the lambda body, so they match the lambda identifiers we
+    // are constructing
+    Expr newExpr = expr.visit(childExpr -> {
+      if (childExpr instanceof IdentifierExpr) {
+        if (toReplace.containsKey(childExpr)) {
+          return toReplace.get(childExpr);
+        }
+      }
+      return childExpr;
+    });
+
+    final LambdaExpr lambdaExpr = new LambdaExpr(lambdaArgs, newExpr);
+    final ApplyFunction fn;
+    if (args.size() == 1) {
+      fn = new ApplyFunction.MapFunction();
     } else {
-      return null;
+      fn = new ApplyFunction.CartesianMapFunction();
+    }
+
+    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(args));
+    return magic;
+  }
+
+  /**
+   * Performs partial lifting of free identifiers of the lambda expression of an {@link ApplyFunctionExpr}, constrained
+   * by a list of "unapplied" identifiers, and translating them into arguments of a new {@link LambdaExpr} and
+   * {@link ApplyFunctionExpr} as appropriate.
+   *
+   * The "unapplied" identifiers list is used to allow say only lifting array identifiers and adding it to the cartesian
+   * product to allow "magical" translation of multi-value string dimensions which are expressed as single value
+   * dimensions to function correctly and as expected.
+   */
+  private static ApplyFunctionExpr liftApplyLambda(ApplyFunctionExpr expr, List<String> unappliedArgs)
+  {
+    // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
+    Set<String> unappliedInThisApply =
+        unappliedArgs.stream()
+                     .filter(u -> !expr.bindingDetails.getArrayColumns().contains(u))
+                     .collect(Collectors.toSet());
+
+    List<String> unappliedIdentifiers =
+        expr.bindingDetails
+            .getFreeVariables()
+            .stream()
+            .filter(x -> unappliedInThisApply.contains(x.getIdentifierBindingIfIdentifier()))
+            .map(IdentifierExpr::getIdentifierIfIdentifier)
+            .collect(Collectors.toList());
+
+    List<Expr> newArgs = new ArrayList<>();
+    for (int i = 0; i < expr.argsExpr.size(); i++) {
+      newArgs.add(
+          applyUnappliedIdentifiers(
+              expr.argsExpr.get(i),
+              expr.argsBindingDetails.get(i),
+              unappliedIdentifiers
+          )
+      );
+    }
+
+    // this will _not_ include the lambda identifiers.. anything in this list needs to be applied
+    List<IdentifierExpr> unappliedLambdaBindings =
+        expr.lambdaBindingDetails.getFreeVariables()
+                                 .stream()
+                                 .filter(x -> unappliedArgs.contains(x.getIdentifierBindingIfIdentifier()))
+                                 .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBindingIdentifier()))
+                                 .collect(Collectors.toList());
+
+    if (unappliedLambdaBindings.size() == 0) {
+      return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
+    }
+
+    final ApplyFunction newFn;
+    final ApplyFunctionExpr newExpr;
+
+    newArgs.addAll(unappliedLambdaBindings);
+
+    switch (expr.function.name()) {
+      case ApplyFunction.MapFunction.NAME:
+      case ApplyFunction.CartesianMapFunction.NAME:
+        // map(x -> x + y, x) =>
+        //  cartesian_map((x, y) -> x + y, x, y)
+        // cartesian_map((x, y) -> x + y + z, x, y) =>
+        //  cartesian_map((x, y, z) -> x + y + z, x, y, z)
+        final List<IdentifierExpr> lambdaIds =
+            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedArgs.size());
+        lambdaIds.addAll(expr.lambdaExpr.getIdentifierExprs());
+        lambdaIds.addAll(unappliedLambdaBindings);
+        final LambdaExpr newLambda = new LambdaExpr(lambdaIds, expr.lambdaExpr.getExpr());
+        newFn = new ApplyFunction.CartesianMapFunction();
+        newExpr = new ApplyFunctionExpr(newFn, newFn.name(), newLambda, newArgs);
+        break;
+      case ApplyFunction.AllMatchFunction.NAME:
+      case ApplyFunction.AnyMatchFunction.NAME:
+      case ApplyFunction.FilterFunction.NAME:
+        // i'm lazy and didn't add 'cartesian_filter', 'cartesian_any', and 'cartesian_and', so instead steal the match
+        // expressions lambda and translate it into a 'cartesian_map', and apply that to the match function with a new
+        // identity expression lambda since the input is an array of boolean expression results (or should be..)
+        // filter(x -> x > y, x) =>
+        //  filter(x -> x, cartesian_map((x,y) -> x > y, x, y))
+        // any(x -> x > y, x) =>
+        //  any(x -> x, cartesian_map((x, y) -> x > y, x, y))
+        // all(x -> x > y, x) =>
+        //  all(x -> x, cartesian_map((x, y) -> x > y, x, y))
+        ApplyFunction newArrayFn = new ApplyFunction.CartesianMapFunction();
+        IdentifierExpr identityExprIdentifier = new IdentifierExpr("_");
+        LambdaExpr identityExpr = new LambdaExpr(ImmutableList.of(identityExprIdentifier), identityExprIdentifier);
+        ApplyFunctionExpr arrayExpr = new ApplyFunctionExpr(newArrayFn, newArrayFn.name(), identityExpr, newArgs);
+        newExpr = new ApplyFunctionExpr(expr.function, expr.function.name(), identityExpr, ImmutableList.of(arrayExpr));
+        break;
+      case ApplyFunction.FoldFunction.NAME:
+      case ApplyFunction.CartesianFoldFunction.NAME:
+        // fold((x, acc) -> acc + x + y, x, acc) =>
+        //  cartesian_fold((x, y, acc) -> acc + x + y, x, y, acc)
+        // cartesian_fold((x, y, acc) -> acc + x + y + z, x, y, acc) =>
+        //  cartesian_fold((x, y, z, acc) -> acc + x + y + z, x, y, z, acc)
+
+        final List<Expr> newFoldArgs =
+            new ArrayList<>(expr.argsExpr.size() + unappliedLambdaBindings.size());
+        final List<IdentifierExpr> newFoldLambdaIdentifiers =
+            new ArrayList<>(expr.lambdaExpr.getIdentifiers().size() + unappliedLambdaBindings.size());
+        final List<IdentifierExpr> existingFoldLambdaIdentifiers = expr.lambdaExpr.getIdentifierExprs();
+        // accumulator argument is last argument, slice it off when constructing new arg list and lambda args
+        for (int i = 0; i < expr.argsExpr.size() - 1; i++) {
+          newFoldArgs.add(expr.argsExpr.get(i));
+          newFoldLambdaIdentifiers.add(existingFoldLambdaIdentifiers.get(i));
+        }
+        newFoldArgs.addAll(unappliedLambdaBindings);
+        newFoldLambdaIdentifiers.addAll(unappliedLambdaBindings);
+        // add accumulator last
+        newFoldLambdaIdentifiers.add(existingFoldLambdaIdentifiers.get(existingFoldLambdaIdentifiers.size() - 1));
+        newFoldArgs.add(expr.argsExpr.get(expr.argsExpr.size() - 1));
+        final LambdaExpr newFoldLambda = new LambdaExpr(newFoldLambdaIdentifiers, expr.lambdaExpr.getExpr());
+
+        newFn = new ApplyFunction.CartesianFoldFunction();
+        newExpr = new ApplyFunctionExpr(newFn, newFn.name(), newFoldLambda, newFoldArgs);
+        break;
+      default:
+        throw new RE("Unable to transform apply function:[%s]", expr.function.name());
+    }
+
+    return newExpr;
+  }
+
+  /**
+   * Validate that an expression uses input bindings in a type consistent manner.
+   */
+  public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
+  {
+    final Set<String> conflicted =
+        Sets.intersection(bindingDetails.getScalarColumns(), bindingDetails.getArrayColumns());
+    if (conflicted.size() != 0) {
+      throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }
   }
 
+  /**
+   * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
+   */
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
     return bindings::get;
   }
 
+  /**
+   * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
+   * {@link Expr}
+   */
   public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
   {
     return (String name) -> {

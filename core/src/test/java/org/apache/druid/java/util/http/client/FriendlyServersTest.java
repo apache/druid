@@ -97,7 +97,7 @@ public class FriendlyServersTest
       final StatusResponseHolder response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
-              new StatusResponseHandler(StandardCharsets.UTF_8)
+              StatusResponseHandler.getInstance()
           ).get();
 
       Assert.assertEquals(200, response.getStatus().getCode());
@@ -156,7 +156,7 @@ public class FriendlyServersTest
       final StatusResponseHolder response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
-              new StatusResponseHandler(StandardCharsets.UTF_8)
+              StatusResponseHandler.getInstance()
           ).get();
 
       Assert.assertEquals(200, response.getStatus().getCode());
@@ -213,7 +213,7 @@ public class FriendlyServersTest
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(StandardCharsets.UTF_8)
+                StatusResponseHandler.getInstance()
             ).get().getStatus();
         Assert.assertEquals(404, status.getCode());
       }
@@ -226,7 +226,7 @@ public class FriendlyServersTest
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://127.0.0.1:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(StandardCharsets.UTF_8)
+                StatusResponseHandler.getInstance()
             );
 
         Throwable ea = null;
@@ -249,7 +249,7 @@ public class FriendlyServersTest
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(StandardCharsets.UTF_8)
+                StatusResponseHandler.getInstance()
             );
 
         Throwable eb = null;
@@ -285,7 +285,7 @@ public class FriendlyServersTest
         final HttpResponseStatus status = client
             .go(
                 new Request(HttpMethod.GET, new URL("https://httpbin.org/get")),
-                new StatusResponseHandler(StandardCharsets.UTF_8)
+                StatusResponseHandler.getInstance()
             ).get().getStatus();
 
         Assert.assertEquals(200, status.getCode());
@@ -296,7 +296,7 @@ public class FriendlyServersTest
             .go(
                 new Request(HttpMethod.POST, new URL("https://httpbin.org/post"))
                     .setContent(new byte[]{'a', 'b', 'c', 1, 2, 3}),
-                new StatusResponseHandler(StandardCharsets.UTF_8)
+                StatusResponseHandler.getInstance()
             ).get().getStatus();
 
         Assert.assertEquals(200, status.getCode());

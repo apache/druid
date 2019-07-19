@@ -58,7 +58,7 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
-  /** If true, {@link DruidCoordinatorUnusedSegmentsKiller} sends kill tasks for unused segments in all data sources. */
+  /** If true {@link DruidCoordinatorUnusedSegmentsKiller} sends kill tasks for unused segments in all data sources. */
   private final boolean killUnusedSegmentsInAllDataSources;
 
   /**

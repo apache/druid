@@ -73,7 +73,7 @@ public class SegmentListActionsTest
 
     expectedUsedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
-    expectedUnusedSegments.forEach(s -> actionTestKit.getSegmentsMetadata().markSegmentAsUnused(s.getId()));
+    expectedUnusedSegments.forEach(s -> actionTestKit.getSegmentsMetadata().markSegmentAsUnused(s.getId().toString()));
   }
 
   private DataSegment createSegment(Interval interval, String version)

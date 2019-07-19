@@ -34,6 +34,7 @@ java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor w
 java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
+java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
 
 @defaultMessage Use Locale.ENGLISH
 com.ibm.icu.text.DateFormatSymbols#<init>()
@@ -43,3 +44,6 @@ com.ibm.icu.text.SimpleDateFormat#<init>(java.lang.String)
 @defaultMessage For performance reasons, use the utf8Base64 / encodeBase64 / encodeBase64String / decodeBase64 / decodeBase64String methods in StringUtils
 org.apache.commons.codec.binary.Base64
 com.google.common.io.BaseEncoding.base64
+
+@defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
+javax.annotations.concurrent.GuardedBy

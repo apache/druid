@@ -105,7 +105,8 @@ public class RowBasedGrouperHelper
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
       final AggregatorFactory[] aggregatorFactories,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final boolean useVirtualizedColumnSelectorFactory
   )
   {
     return createGrouperAccumulatorPair(
@@ -123,7 +124,8 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize
+        mergeBufferSize,
+        useVirtualizedColumnSelectorFactory
     );
   }
 
@@ -147,7 +149,8 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final boolean useVirtualizedColumnSelectorFactory
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -159,12 +162,22 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
-    final ColumnSelectorFactory columnSelectorFactory = query.getVirtualColumns().wrap(
-        RowBasedColumnSelectorFactory.create(
-            columnSelectorRow,
-            rawInputRowSignature
-        )
+
+    ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        columnSelectorRow,
+        rawInputRowSignature
     );
+
+    // Although queries would work fine if we always wrap the columnSelectorFactory into a
+    // VirtualizedColumnSelectorFactory. However, VirtualizedColumnSelectorFactory is incapable of using
+    // ColumnSelector based variants of makeXXX methods which are more efficient.
+    // this flag is set to true when it is essential to wrap e.g. a nested groupBy query with virtual columns in
+    // the outer query. Without this flag, groupBy query processing would never use more efficient ColumnSelector
+    // based methods in VirtualColumn interface.
+    // For more details, See https://github.com/apache/incubator-druid/issues/7574
+    if (useVirtualizedColumnSelectorFactory) {
+      columnSelectorFactory = query.getVirtualColumns().wrap(columnSelectorFactory);
+    }
 
     final boolean willApplyLimitPushDown = query.isApplyLimitPushDown();
     final DefaultLimitSpec limitSpec = willApplyLimitPushDown ? (DefaultLimitSpec) query.getLimitSpec() : null;
@@ -423,8 +436,7 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     return new CloseableGrouperIterator<>(
-        grouper,
-        true,
+        grouper.iterator(true),
         new Function<Grouper.Entry<RowBasedKey>, Row>()
         {
           @Override
@@ -820,7 +832,10 @@ public class RowBasedGrouperHelper
             @Override
             public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
             {
-              final int timeCompare = Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+              final int timeCompare = Longs.compare(
+                  (long) entry1.getKey().getKey()[0],
+                  (long) entry2.getKey().getKey()[0]
+              );
 
               if (timeCompare != 0) {
                 return timeCompare;
@@ -917,8 +932,10 @@ public class RowBasedGrouperHelper
           // use natural comparison
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
-          cmp = comparator.compare(DimensionHandlerUtils.convertObjectToString(lhs),
-                                   DimensionHandlerUtils.convertObjectToString(rhs));
+          cmp = comparator.compare(
+              DimensionHandlerUtils.convertObjectToString(lhs),
+              DimensionHandlerUtils.convertObjectToString(rhs)
+          );
         }
 
         if (cmp != 0) {
@@ -1624,7 +1641,8 @@ public class RowBasedGrouperHelper
       FloatRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator)
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
