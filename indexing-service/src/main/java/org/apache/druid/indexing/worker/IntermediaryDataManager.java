@@ -63,10 +63,10 @@ import java.util.stream.Collectors;
  * This class manages intermediary segments for data shuffle between native parallel index tasks.
  * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers
  * and phase 2 tasks read those files via HTTP.
- *
+ * <p>
  * The directory where segment files are placed is structured as
  * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/partitionIdOfSegment.
- *
+ * <p>
  * This class provides interfaces to store, find, and remove segment files.
  * It also has a self-cleanup mechanism to clean up stale segment files. It periodically checks the last access time
  * per supervisorTask and removes its all segment files if the supervisorTask is not running anymore.
@@ -186,7 +186,7 @@ public class IntermediaryDataManager
   /**
    * Check supervisorTask status if its partitions have not been accessed in timeout and
    * delete all partitions for the supervisorTask if it is already finished.
-   *
+   * <p>
    * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
    * the self-cleanup for when the cleanup request is missing.
    */
@@ -226,12 +226,11 @@ public class IntermediaryDataManager
   /**
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
-   *
+   * <p>
    * This method is only useful for the new Indexer model. Tasks running in the existing middleManager should the static
    * addSegment method.
    */
   public void addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentFile)
-      throws IOException
   {
     final Iterator<StorageLocation> iterator = locationIterators.computeIfAbsent(
         supervisorTaskId,
@@ -279,35 +278,32 @@ public class IntermediaryDataManager
       String subTaskId,
       DataSegment segment,
       File segmentFile
-  ) throws IOException
-  {
-    final StorageLocation location = findLocationForSegment(cyclicIterator, numLocations, segment);
-    final File destFile = new File(
-        getPartitionDir(location, supervisorTaskId, segment.getInterval(), segment.getShardSpec().getPartitionNum()),
-        subTaskId
-    );
-    FileUtils.forceMkdirParent(destFile);
-    final long copiedBytes = Files.asByteSource(segmentFile).copyTo(Files.asByteSink(destFile));
-    if (copiedBytes == 0) {
-      throw new IOE(
-          "0 bytes copied after copying a segment file from [%s] to [%s]",
-          segmentFile.getAbsolutePath(),
-          destFile.getAbsolutePath()
-      );
-    }
-    location.addFile(destFile);
-  }
-
-  private static StorageLocation findLocationForSegment(
-      Iterator<StorageLocation> cyclicIterator,
-      int numLocations,
-      DataSegment segment
   )
   {
     for (int i = 0; i < numLocations; i++) {
       final StorageLocation location = cyclicIterator.next();
-      if (location.canHandle(segment)) {
-        return location;
+      final File destFile = new File(
+          getPartitionDir(location, supervisorTaskId, segment.getInterval(), segment.getShardSpec().getPartitionNum()),
+          subTaskId
+      );
+      if (location.reserve(destFile, segment.getId().toString(), segmentFile.length())) {
+        try {
+          FileUtils.forceMkdirParent(destFile);
+          final long copiedBytes = Files.asByteSource(segmentFile).copyTo(Files.asByteSink(destFile));
+          if (copiedBytes == 0) {
+            throw new IOE(
+                "0 bytes copied after copying a segment file from [%s] to [%s]",
+                segmentFile.getAbsolutePath(),
+                destFile.getAbsolutePath()
+            );
+          } else {
+            return;
+          }
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to write segmentFile at [%s]", destFile);
+          location.removeFile(segmentFile);
+        }
       }
     }
     throw new ISE("Can't find location to handle segment[%s]", segment);
