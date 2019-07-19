@@ -950,10 +950,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
     );
 
-    if (segments == null) {
-      log.wtf("Observed 'null' when polling segments from the db, aborting snapshot update.");
-      return;
-    }
+    Preconditions.checkNotNull(
+        segments,
+        "Unexpected 'null' when polling segments from the db, aborting snapshot update."
+    );
 
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
     // segments are marked as used or unused directly (via markAs...() methods in MetadataSegmentManager), the
