@@ -416,7 +416,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
                    .map(AggregatorFactory::getCombiningFactory)
                    .collect(Collectors.toList())
           )
-          .withLimitSpec(null)
           .withSubtotalsSpec(null)
           .withDimFilter(null);
 

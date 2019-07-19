@@ -894,6 +894,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder setLimitSpec(LimitSpec limitSpec)
     {
+      Preconditions.checkNotNull(limitSpec);
       ensureFluentLimitsNotSet();
       this.limitSpec = limitSpec;
       this.postProcessingFn = null;
