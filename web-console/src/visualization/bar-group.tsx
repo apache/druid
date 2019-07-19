@@ -19,7 +19,7 @@
 import { AxisScale } from 'd3-axis';
 import * as React from 'react';
 
-import { BarUnitData } from '../components/segment-timeline';
+import { BarUnitData } from '../components/segment-timeline/segment-timeline';
 
 import { BarUnit } from './bar-unit';
 import { HoveredBarInfo } from './stacked-bar-chart';
@@ -36,9 +36,7 @@ interface BarGroupProps extends React.Props<any> {
   hoverOn?: HoveredBarInfo | null;
 }
 
-interface BarGroupState {
-
-}
+interface BarGroupState {}
 
 export class BarGroup extends React.Component<BarGroupProps, BarGroupState> {
   constructor(props: BarGroupProps) {
@@ -47,11 +45,19 @@ export class BarGroup extends React.Component<BarGroupProps, BarGroupState> {
   }
 
   shouldComponentUpdate(nextProps: BarGroupProps, nextState: BarGroupState): boolean {
+    if (nextState === null) console.log(nextState);
     return nextProps.hoverOn === this.props.hoverOn;
   }
 
   render() {
-    const { dataToRender, changeActiveDatasource, xScale, yScale, onHoverBar, barWidth } = this.props;
+    const {
+      dataToRender,
+      changeActiveDatasource,
+      xScale,
+      yScale,
+      onHoverBar,
+      barWidth,
+    } = this.props;
     if (dataToRender === undefined) return null;
 
     return dataToRender.map((entry: BarUnitData, i: number) => {
@@ -65,18 +71,20 @@ export class BarGroup extends React.Component<BarGroupProps, BarGroupState> {
         height,
         datasource: entry.datasource,
         xValue: entry.x,
-        yValue: entry.y
+        yValue: entry.y,
       };
-      return <BarUnit
-        key={i}
-        x={x}
-        y={y}
-        width={barWidth}
-        height={height}
-        style={{fill: entry.color}}
-        onClick={() => changeActiveDatasource(entry.datasource)}
-        onHover={() => onHoverBar && onHoverBar(barInfo)}
-      />;
+      return (
+        <BarUnit
+          key={i}
+          x={x}
+          y={y}
+          width={barWidth}
+          height={height}
+          style={{ fill: entry.color }}
+          onClick={() => changeActiveDatasource(entry.datasource)}
+          onHover={() => onHoverBar && onHoverBar(barInfo)}
+        />
+      );
     });
   }
 }

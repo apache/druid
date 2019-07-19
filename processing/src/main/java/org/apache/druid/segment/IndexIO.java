@@ -84,7 +84,7 @@ public class IndexIO
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
-  public static BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
+  public static final BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 

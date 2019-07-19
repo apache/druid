@@ -84,10 +84,8 @@ Timeseries and TopN queries are much more optimized and significantly faster tha
 Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilizations and 
 too many large segments impacts query performance, most notably with TopN queries.
 
-# Read FAQs
+# FAQs and Guides
 
-You should read common problems people have here:
+1) The [Ingestion FAQ](../ingestion/faq.html) provides help with common ingestion problems.
 
-1) [Ingestion-FAQ](../ingestion/faq.html)
-
-2) [Performance-FAQ](../operations/performance-faq.html)
+2) The [Basic Cluster Tuning Guide](../operations/basic-cluster-tuning.html) offers introductory guidelines for tuning your Druid cluster.

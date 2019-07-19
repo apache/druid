@@ -31,34 +31,28 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-/**
- */
 public class SchemaRegistryBasedAvroBytesDecoderTest
 {
-
-  SchemaRegistryClient registry;
+  private SchemaRegistryClient registry;
 
   @Before
   public void setUp()
   {
-    registry = mock(SchemaRegistryClient.class);
+    registry = Mockito.mock(SchemaRegistryClient.class);
   }
 
   @Test
   public void testParse() throws Exception
   {
     // Given
-    when(registry.getByID(eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
+    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -74,7 +68,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParseCorrupted() throws Exception
   {
     // Given
-    when(registry.getByID(eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
+    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -87,7 +81,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParseWrongId() throws Exception
   {
     // Given
-    when(registry.getByID(anyInt())).thenThrow(new IOException("no pasaran"));
+    Mockito.when(registry.getByID(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -96,12 +90,11 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
+  private byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
   {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
     return out.toByteArray();
   }
-
 }

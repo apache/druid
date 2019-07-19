@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -129,6 +130,7 @@ public abstract class WorkerTaskManager
     synchronized (lock) {
       try {
         log.info("Starting...");
+        cleanupAndMakeTmpTaskDir();
         registerLocationListener();
         restoreRestorableTasks();
         initAssignedTasks();
@@ -264,7 +266,12 @@ public abstract class WorkerTaskManager
       }
 
       try {
-        jsonMapper.writeValue(new File(getAssignedTaskDir(), task.getId()), task);
+        FileUtils.writeAtomically(new File(getAssignedTaskDir(), task.getId()), getTmpTaskDir(),
+            os -> {
+            jsonMapper.writeValue(os, task);
+            return null;
+          }
+        );
         assignedTasks.put(task.getId(), task);
       }
       catch (IOException ex) {
@@ -284,6 +291,28 @@ public abstract class WorkerTaskManager
     }
 
     submitNoticeToExec(new RunNotice(task));
+  }
+
+  private File getTmpTaskDir()
+  {
+    return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
+  }
+
+  private void cleanupAndMakeTmpTaskDir()
+  {
+    File tmpDir = getTmpTaskDir();
+    tmpDir.mkdirs();
+    if (!tmpDir.isDirectory()) {
+      throw new ISE("Tmp Tasks Dir [%s] does not exist/not-a-directory.", tmpDir);
+    }
+
+    // Delete any tmp files left out from before due to jvm crash.
+    try {
+      org.apache.commons.io.FileUtils.cleanDirectory(tmpDir);
+    }
+    catch (IOException ex) {
+      log.warn("Failed to cleanup tmp dir [%s].", tmpDir.getAbsolutePath());
+    }
   }
 
   public File getAssignedTaskDir()
@@ -311,11 +340,11 @@ public abstract class WorkerTaskManager
           assignedTasks.put(taskId, task);
           log.info("Found assigned task[%s].", taskId);
         } else {
-          throw new ISE("Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("WTF! Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
-        throw new ISE(ex, "Failed to read assigned task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
+        log.error(ex, "Failed to read assigned task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
       }
     }
 
@@ -395,7 +424,12 @@ public abstract class WorkerTaskManager
       completedTasks.put(taskId, taskAnnouncement);
 
       try {
-        jsonMapper.writeValue(new File(getCompletedTaskDir(), taskId), taskAnnouncement);
+        FileUtils.writeAtomically(new File(getCompletedTaskDir(), taskId), getTmpTaskDir(),
+            os -> {
+            jsonMapper.writeValue(os, taskAnnouncement);
+            return null;
+          }
+        );
       }
       catch (IOException ex) {
         log.error(ex, "Error while trying to persist completed task[%s] announcement.", taskId);
@@ -423,11 +457,11 @@ public abstract class WorkerTaskManager
           completedTasks.put(taskId, taskAnnouncement);
           log.info("Found completed task[%s] with status[%s].", taskId, taskAnnouncement.getStatus());
         } else {
-          throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("WTF! Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
-        throw new ISE(ex, "Failed to read completed task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
+        log.error(ex, "Failed to read completed task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
       }
     }
   }

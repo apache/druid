@@ -31,7 +31,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=integration-test@druid.io
+emailAddress=integration-test@druid.apache.org
 CN = localhost
 
 [ req_ext ]
@@ -62,7 +62,7 @@ default_md = default
 preserve = no
 policy = policy_match
 serial = certs.seq
-email_in_dn=integration-test@druid.io
+email_in_dn=integration-test@druid.apache.org
 
 [req]
 default_bits = 4096
@@ -77,7 +77,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=integration-test@druid.io
+emailAddress=integration-test@druid.apache.org
 CN = itroot
 
 [ v3_ca ]

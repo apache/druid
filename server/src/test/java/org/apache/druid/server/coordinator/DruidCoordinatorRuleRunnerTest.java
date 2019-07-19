@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataSegmentManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -52,21 +53,22 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  */
 public class DruidCoordinatorRuleRunnerTest
 {
+  public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
+      CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build();
+
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
-  private List<DataSegment> availableSegments;
+  private List<DataSegment> usedSegments;
   private DruidCoordinatorRuleRunner ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
+  private MetadataSegmentManager segmentsMetadata;
 
   @Before
   public void setUp()
@@ -76,11 +78,12 @@ public class DruidCoordinatorRuleRunnerTest
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    segmentsMetadata = EasyMock.createNiceMock(MetadataSegmentManager.class);
 
     DateTime start = DateTimes.of("2012-01-01");
-    availableSegments = new ArrayList<>();
+    usedSegments = new ArrayList<>();
     for (int i = 0; i < 24; i++) {
-      availableSegments.add(
+      usedSegments.add(
           new DataSegment(
               "test",
               new Interval(start, start.plusHours(1)),
@@ -111,8 +114,6 @@ public class DruidCoordinatorRuleRunnerTest
    * hot - 1 replicant
    * normal - 1 replicant
    * cold - 1 replicant
-   *
-   * @throws Exception
    */
   @Test
   public void testRunThreeTiersOneReplicant()
@@ -139,72 +140,40 @@ public class DruidCoordinatorRuleRunnerTest
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "normal",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "normal",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "cold",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverCold",
-                        "hostCold",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "cold",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .addTier(
+            "normal",
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .addTier(
+            "cold",
+            new ServerHolder(
+                new DruidServer("serverCold", "hostCold", null, 1000, ServerType.HISTORICAL, "cold", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -219,12 +188,29 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.verify(mockPeon);
   }
 
+  private DruidCoordinatorRuntimeParams.Builder makeCoordinatorRuntimeParams(
+      DruidCluster druidCluster,
+      BalancerStrategy balancerStrategy
+  )
+  {
+    return createCoordinatorRuntimeParams(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withBalancerStrategy(balancerStrategy);
+  }
+
+  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster)
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager);
+  }
+
   /**
    * Nodes:
    * hot - 2 replicants
    * cold - 1 replicant
-   *
-   * @throws Exception
    */
   @Test
   public void testRunTwoTiersTwoReplicants()
@@ -248,68 +234,35 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot2",
-                        "hostHot2",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "cold",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverCold",
-                        "hostCold",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "cold",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .addTier(
+            "cold",
+            new ServerHolder(
+                new DruidServer("serverCold", "hostCold", null, 1000, ServerType.HISTORICAL, "cold", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -327,8 +280,6 @@ public class DruidCoordinatorRuleRunnerTest
    * Nodes:
    * hot - 1 replicant
    * normal - 1 replicant
-   *
-   * @throws Exception
    */
   @Test
   public void testRunTwoTiersWithExistingSegments()
@@ -352,63 +303,33 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer normServer = new DruidServer(
-        "serverNorm",
-        "hostNorm",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment availableSegment : availableSegments) {
-      normServer.addDataSegment(availableSegment);
+    DruidServer normServer = new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
+      normServer.addDataSegment(segment);
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "normal",
-            Stream.of(
-                new ServerHolder(
-                    normServer.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .addTier("normal", new ServerHolder(normServer.toImmutableDruidServer(), mockPeon))
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(segmentReplicantLookup)
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategy(balancerStrategy)
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -448,42 +369,24 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "normal",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withEmitter(emitter)
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withEmitter(emitter)
+        .build();
 
     ruleRunner.run(params);
 
@@ -515,35 +418,22 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
     EasyMock.replay(databaseRuleManager, mockPeon);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "normal",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .build();
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withEmitter(emitter)
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withEmitter(emitter)
+        .build();
 
     ruleRunner.run(params);
 
@@ -558,7 +448,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockEmptyPeon();
 
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(coordinator);
 
@@ -573,47 +463,25 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer server = new DruidServer(
-        "serverNorm",
-        "hostNorm",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment segment : availableSegments) {
+    DruidServer server = new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
       server.addDataSegment(segment);
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "normal",
-            Stream.of(
-                new ServerHolder(
-                    server.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-        )
-    );
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -644,62 +512,37 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer server1 = new DruidServer(
-        "serverNorm",
-        "hostNorm",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    server1.addDataSegment(availableSegments.get(0));
+    DruidServer server1 = new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    server1.addDataSegment(usedSegments.get(0));
 
-    DruidServer server2 = new DruidServer(
-        "serverNorm2",
-        "hostNorm2",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment segment : availableSegments) {
+    DruidServer server2 = new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+            new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
         )
-    );
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig
+                .builder()
+                .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
+                .build()
+        )
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -733,64 +576,28 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer server1 = new DruidServer(
-        "server1",
-        "host1",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "hot",
-        0
-    );
-    server1.addDataSegment(availableSegments.get(0));
-    DruidServer server2 = new DruidServer(
-        "serverNorm2",
-        "hostNorm2",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment segment : availableSegments) {
+    DruidServer server1 = new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, "hot", 0);
+    server1.addDataSegment(usedSegments.get(0));
+    DruidServer server2 = new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "hot",
-            Stream.of(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "normal",
-            Stream.of(
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-        )
-    );
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
+        .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -822,54 +629,27 @@ public class DruidCoordinatorRuleRunnerTest
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer server1 = new DruidServer(
-        "server1",
-        "host1",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "hot",
-        0
-    );
-    DruidServer server2 = new DruidServer(
-        "serverNorm2",
-        "hostNorm2",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment segment : availableSegments) {
+    DruidServer server1 = new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, "hot", 0);
+    DruidServer server2 = new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "hot",
-            Stream.of(new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-                  .collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            "normal",
-            Stream.of(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
-                  .collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-        )
-    );
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("hot", new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
+        .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
-        .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -899,37 +679,13 @@ public class DruidCoordinatorRuleRunnerTest
         .atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidServer server1 = new DruidServer(
-        "server1",
-        "host1",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    server1.addDataSegment(availableSegments.get(0));
-    DruidServer server2 = new DruidServer(
-        "serverNorm2",
-        "hostNorm2",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    server2.addDataSegment(availableSegments.get(1));
-    DruidServer server3 = new DruidServer(
-        "serverNorm3",
-        "hostNorm3",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    server3.addDataSegment(availableSegments.get(1));
-    server3.addDataSegment(availableSegments.get(2));
+    DruidServer server1 = new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    server1.addDataSegment(usedSegments.get(0));
+    DruidServer server2 = new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    server2.addDataSegment(usedSegments.get(1));
+    DruidServer server3 = new DruidServer("serverNorm3", "hostNorm3", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    server3.addDataSegment(usedSegments.get(1));
+    server3.addDataSegment(usedSegments.get(2));
 
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -941,33 +697,29 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.replay(anotherMockPeon);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "normal",
-            Stream.of(
-                new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
-                new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
-                new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
+            new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
+            new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
         )
-    );
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -983,8 +735,6 @@ public class DruidCoordinatorRuleRunnerTest
   /**
    * Nodes:
    * hot - 2 replicants
-   *
-   * @throws Exception
    */
   @Test
   public void testReplicantThrottle()
@@ -997,7 +747,8 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock
         .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
         .andReturn(
-            Collections.singletonList(new IntervalLoadRule(
+            Collections.singletonList(
+                new IntervalLoadRule(
                     Intervals.of("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
                     ImmutableMap.of("hot", 2)
                 )
@@ -1006,53 +757,27 @@ public class DruidCoordinatorRuleRunnerTest
         .atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot2",
-                        "hostHot2",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -1074,13 +799,13 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     afterParams = ruleRunner.run(
-        new DruidCoordinatorRuntimeParams.Builder()
+        CoordinatorRuntimeParamsTestHelpers
+            .newBuilder()
             .withDruidCluster(druidCluster)
             .withEmitter(emitter)
-            .withAvailableSegmentsInTest(Collections.singletonList(overFlowSegment))
+            .withUsedSegmentsInTest(overFlowSegment)
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build()
     );
@@ -1098,8 +823,6 @@ public class DruidCoordinatorRuleRunnerTest
    * Nodes:
    * hot - nothing loaded
    * _default_tier - 1 segment loaded
-   *
-   * @throws Exception
    */
   @Test
   public void testReplicantThrottleAcrossTiers()
@@ -1114,7 +837,7 @@ public class DruidCoordinatorRuleRunnerTest
                                     .build()
         )
         .atLeastOnce();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -1136,56 +859,37 @@ public class DruidCoordinatorRuleRunnerTest
         .atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        "hot",
-                        1
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
-            DruidServer.DEFAULT_TIER,
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        DruidServer.DEFAULT_TIER,
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 1)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(
+                new DruidServer(
+                    "serverNorm",
+                    "hostNorm",
+                    null,
+                    1000,
+                    ServerType.HISTORICAL,
+                    DruidServer.DEFAULT_TIER,
+                    0
+                ).toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(7, 1), coordinator);
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
@@ -1231,66 +935,40 @@ public class DruidCoordinatorRuleRunnerTest
         1,
         0
     );
-    List<DataSegment> longerAvailableSegments = Lists.newArrayList(availableSegments);
-    longerAvailableSegments.add(overFlowSegment);
+    List<DataSegment> longerUsedSegments = Lists.newArrayList(usedSegments);
+    longerUsedSegments.add(overFlowSegment);
 
-    DruidServer server1 = new DruidServer(
-        "serverNorm1",
-        "hostNorm1",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment availableSegment : longerAvailableSegments) {
-      server1.addDataSegment(availableSegment);
+    DruidServer server1 = new DruidServer("serverNorm1", "hostNorm1", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : longerUsedSegments) {
+      server1.addDataSegment(segment);
     }
-    DruidServer server2 = new DruidServer(
-        "serverNorm2",
-        "hostNorm2",
-        null,
-        1000,
-        ServerType.HISTORICAL,
-        "normal",
-        0
-    );
-    for (DataSegment availableSegment : longerAvailableSegments) {
-      server2.addDataSegment(availableSegment);
+    DruidServer server2 = new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0);
+    for (DataSegment segment : longerUsedSegments) {
+      server2.addDataSegment(segment);
     }
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+            new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
         )
-    );
+        .build();
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(longerAvailableSegments)
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
+        .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -1305,7 +983,7 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
-    Set<DataSegment> availableSegments = new HashSet<>();
+    Set<DataSegment> usedSegments = new HashSet<>();
     DataSegment v1 = new DataSegment(
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
@@ -1328,8 +1006,8 @@ public class DruidCoordinatorRuleRunnerTest
         IndexIO.CURRENT_VERSION_ID,
         1
     );
-    availableSegments.add(v1);
-    availableSegments.add(v2);
+    usedSegments.add(v1);
+    usedSegments.add(v2);
 
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
@@ -1340,42 +1018,38 @@ public class DruidCoordinatorRuleRunnerTest
         Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1)))).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
             DruidServer.DEFAULT_TIER,
-            Stream.of(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        null,
-                        1000,
-                        ServerType.HISTORICAL,
-                        DruidServer.DEFAULT_TIER,
-                        0
-                    ).toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            new ServerHolder(
+                new DruidServer(
+                    "serverHot",
+                    "hostHot",
+                    null,
+                    1000,
+                    ServerType.HISTORICAL,
+                    DruidServer.DEFAULT_TIER,
+                    0
+                ).toImmutableDruidServer(),
+                mockPeon
+            )
         )
-    );
+        .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(1));
-    BalancerStrategy balancerStrategy =
-        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withBalancerStrategy(balancerStrategy)
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -1385,9 +1059,9 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
-    Assert.assertEquals(2, availableSegments.size());
-    Assert.assertEquals(availableSegments, params.getAvailableSegments());
-    Assert.assertEquals(availableSegments, afterParams.getAvailableSegments());
+    Assert.assertEquals(2, usedSegments.size());
+    Assert.assertEquals(usedSegments, params.getUsedSegments());
+    Assert.assertEquals(usedSegments, afterParams.getUsedSegments());
 
     EasyMock.verify(mockPeon);
     exec.shutdown();
@@ -1396,9 +1070,9 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
+    EasyMock.replay(coordinator, segmentsMetadata);
   }
 
   private void mockEmptyPeon()
@@ -1413,7 +1087,7 @@ public class DruidCoordinatorRuleRunnerTest
   private CoordinatorDynamicConfig createCoordinatorDynamicConfig()
   {
     return CoordinatorDynamicConfig.builder()
-                                   .withMillisToWaitBeforeDeleting(0)
+                                   .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0)
                                    .withMergeBytesLimit(0)
                                    .withMergeSegmentsLimit(0)
                                    .withMaxSegmentsToMove(0)
@@ -1421,8 +1095,8 @@ public class DruidCoordinatorRuleRunnerTest
                                    .withReplicationThrottleLimit(24)
                                    .withBalancerComputeThreads(0)
                                    .withEmitBalancingStats(false)
-                                   .withKillDataSourceWhitelist(null)
-                                   .withKillAllDataSources(false)
+                                   .withSpecificDataSourcesToKillUnusedSegmentsIn(null)
+                                   .withKillUnusedSegmentsInAllDataSources(false)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .build();
   }

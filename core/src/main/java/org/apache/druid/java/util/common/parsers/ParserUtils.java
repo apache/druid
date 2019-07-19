@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
@@ -77,17 +77,17 @@ public class ParserUtils
     return names;
   }
 
-  public static Set<String> findDuplicates(Iterable<String> fieldNames)
+  @VisibleForTesting
+  static Set<String> findDuplicates(Iterable<String> fieldNames)
   {
     Set<String> duplicates = new HashSet<>();
     Set<String> uniqueNames = new HashSet<>();
 
     for (String fieldName : fieldNames) {
-      String next = StringUtils.toLowerCase(fieldName);
-      if (uniqueNames.contains(next)) {
-        duplicates.add(next);
+      if (uniqueNames.contains(fieldName)) {
+        duplicates.add(fieldName);
       }
-      uniqueNames.add(next);
+      uniqueNames.add(fieldName);
     }
 
     return duplicates;

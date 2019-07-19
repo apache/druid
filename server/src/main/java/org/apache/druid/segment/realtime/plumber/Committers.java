@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseV2;
 
 public class Committers
 {
@@ -83,18 +82,6 @@ public class Committers
             commitRunnable.run();
           }
         };
-      }
-    };
-  }
-
-  public static Supplier<Committer> supplierFromFirehoseV2(final FirehoseV2 firehose)
-  {
-    return new Supplier<Committer>()
-    {
-      @Override
-      public Committer get()
-      {
-        return firehose.makeCommitter();
       }
     };
   }

@@ -127,7 +127,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
             .map(server -> server.getServer().getMetadata())
             .forEach(candidates::add);
 
-        if (candidates.size() < numCandidates) {
+        if (candidates.size() < numCandidates) { //-V6007: false alarm due to a bug in PVS-Studio
           strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
               .stream()
               .map(server -> server.getServer().getMetadata())

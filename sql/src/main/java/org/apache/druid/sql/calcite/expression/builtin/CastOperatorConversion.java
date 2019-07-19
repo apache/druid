@@ -66,6 +66,14 @@ public class CastOperatorConversion implements SqlOperatorConversion
     builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
     builder.put(SqlTypeName.DATE, ExprType.LONG);
 
+    for (SqlTypeName type : SqlTypeName.DAY_INTERVAL_TYPES) {
+      builder.put(type, ExprType.LONG);
+    }
+
+    for (SqlTypeName type : SqlTypeName.YEAR_INTERVAL_TYPES) {
+      builder.put(type, ExprType.LONG);
+    }
+
     EXPRESSION_TYPES = builder.build();
   }
 

@@ -39,7 +39,8 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -68,14 +69,15 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
   @Override
   public DimFilter toDruidFilter(
       final PlannerContext plannerContext,
-      final DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       final RexNode rexNode
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
     final DruidExpression druidExpression = Expressions.toDruidExpression(
         plannerContext,
-        querySignature.getRowSignature(),
+        rowSignature,
         operands.get(0)
     );
     if (druidExpression == null) {
@@ -100,8 +102,8 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
           holder,
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
-    } else {
-      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+    } else if (virtualColumnRegistry != null) {
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           druidExpression,
           operands.get(0).getType().getSqlTypeName()
@@ -114,6 +116,8 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
           holder,
           null
       );
+    } else {
+      return null;
     }
   }
 }

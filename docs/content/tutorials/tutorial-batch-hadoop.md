@@ -26,7 +26,9 @@ title: "Tutorial: Load batch data using Apache Hadoop"
 
 This tutorial shows you how to load data files into Apache Druid (incubating) using a remote Hadoop cluster.
 
-For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system.
+For this tutorial, we'll assume that you've already completed the previous
+[batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system and are using the
+`micro-quickstart` single-machine configuration as described in the [quickstart](index.html).
 
 ## Install Docker
 

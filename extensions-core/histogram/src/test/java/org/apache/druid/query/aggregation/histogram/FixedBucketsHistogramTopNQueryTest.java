@@ -118,7 +118,8 @@ public class FixedBucketsHistogramTopNQueryTest
         10,
         0,
         2000,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
     );
 
     TopNQuery query = new TopNQueryBuilder()
@@ -141,11 +142,9 @@ public class FixedBucketsHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
-                new QuantilePostAggregator("quantile", "histo", 0.5f)
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg,
+            new QuantilePostAggregator("quantile", "histo", 0.5f)
         )
         .build();
 
@@ -178,7 +177,7 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
@@ -205,7 +204,7 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
@@ -232,7 +231,7 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build()
                 )

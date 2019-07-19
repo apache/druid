@@ -167,7 +167,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Test
-  public void testRunCompactionTwiceWithoutKeepSegmentGranularity() throws Exception
+  public void testRunCompactionTwice() throws Exception
   {
     runIndexTask();
 
@@ -184,54 +184,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(false)
-        .build();
-
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
-    Assert.assertTrue(resultPair.lhs.isSuccess());
-
-    List<DataSegment> segments = resultPair.rhs;
-    Assert.assertEquals(1, segments.size());
-
-    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
-    Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
-
-    final CompactionTask compactionTask2 = builder
-        .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(false)
-        .build();
-
-    resultPair = runTask(compactionTask2);
-
-    Assert.assertTrue(resultPair.lhs.isSuccess());
-
-    segments = resultPair.rhs;
-    Assert.assertEquals(1, segments.size());
-
-    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
-    Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
-  }
-
-  @Test
-  public void testRunCompactionTwiceWithKeepSegmentGranularity() throws Exception
-  {
-    runIndexTask();
-
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        coordinatorClient,
-        segmentLoaderFactory,
-        retryPolicyFactory
-    );
-
-    final CompactionTask compactionTask1 = builder
-        .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(true)
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -248,7 +200,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask2 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .keepSegmentGranularity(true)
         .build();
 
     resultPair = runTask(compactionTask2);
@@ -395,16 +346,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           @Override
           public List<StorageLocationConfig> getLocations()
           {
-            return ImmutableList.of(
-                new StorageLocationConfig()
-                {
-                  @Override
-                  public File getPath()
-                  {
-                    return deepStorageDir;
-                  }
-                }
-            );
+            return ImmutableList.of(new StorageLocationConfig(deepStorageDir, null, null));
           }
         },
         objectMapper

@@ -100,11 +100,12 @@ public class TaskManagementResource
    * @param hash hash received in last response.
    * @param timeout after which response is sent even if there are no new segment updates.
    * @param req
+   * @return null to avoid "MUST return a non-void type" warning.
    * @throws IOException
    */
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  public void getWorkerState(
+  public Void getWorkerState(
       @QueryParam("counter") long counter,
       @QueryParam("hash") long hash,
       @QueryParam("timeout") long timeout,
@@ -113,7 +114,7 @@ public class TaskManagementResource
   {
     if (timeout <= 0) {
       sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
-      return;
+      return null;
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
@@ -195,6 +196,7 @@ public class TaskManagementResource
     );
 
     asyncContext.setTimeout(timeout);
+    return null;
   }
 
   @POST

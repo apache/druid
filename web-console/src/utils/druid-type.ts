@@ -23,7 +23,10 @@ import { HeaderAndRows } from './sampler';
 
 export function guessTypeFromSample(sample: any[]): string {
   const definedValues = sample.filter(v => v != null);
-  if (definedValues.length && definedValues.every(v => !isNaN(v) && (typeof v === 'number' || typeof v === 'string'))) {
+  if (
+    definedValues.length &&
+    definedValues.every(v => !isNaN(v) && (typeof v === 'number' || typeof v === 'string'))
+  ) {
     if (definedValues.every(v => v % 1 === 0)) {
       return 'long';
     } else {
@@ -34,49 +37,69 @@ export function guessTypeFromSample(sample: any[]): string {
   }
 }
 
-export function getColumnTypeFromHeaderAndRows(headerAndRows: HeaderAndRows, column: string): string {
-  return guessTypeFromSample(filterMap(headerAndRows.rows, (r: any) => r.parsed ? r.parsed[column] : null));
+export function getColumnTypeFromHeaderAndRows(
+  headerAndRows: HeaderAndRows,
+  column: string,
+): string {
+  return guessTypeFromSample(
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : null)),
+  );
 }
 
-export function getDimensionSpecs(headerAndRows: HeaderAndRows, hasRollup: boolean): (string | DimensionSpec)[] {
-  return filterMap(headerAndRows.header, (h) => {
+export function getDimensionSpecs(
+  headerAndRows: HeaderAndRows,
+  hasRollup: boolean,
+): (string | DimensionSpec)[] {
+  return filterMap(headerAndRows.header, h => {
     if (h === '__time') return null;
     const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
     if (guessedType === 'string') return h;
     if (hasRollup) return null;
     return {
       type: guessedType,
-      name: h
+      name: h,
     };
   });
 }
 
 export function getMetricSecs(headerAndRows: HeaderAndRows): MetricSpec[] {
-  return [{ name: 'count', type: 'count' }].concat(filterMap(headerAndRows.header, (h) => {
-    if (h === '__time') return null;
-    const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
-    switch (guessedType) {
-      case 'double': return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };
-      case 'long': return { name: `sum_${h}`, type: 'longSum', fieldName: h };
-      default: return null;
-    }
-  }));
+  return [{ name: 'count', type: 'count' }].concat(
+    filterMap(headerAndRows.header, h => {
+      if (h === '__time') return null;
+      const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
+      switch (guessedType) {
+        case 'double':
+          return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };
+        case 'long':
+          return { name: `sum_${h}`, type: 'longSum', fieldName: h };
+        default:
+          return null;
+      }
+    }),
+  );
 }
 
-export function updateSchemaWithSample(spec: IngestionSpec, headerAndRows: HeaderAndRows, dimensionMode: DimensionMode, rollup: boolean): IngestionSpec {
+export function updateSchemaWithSample(
+  spec: IngestionSpec,
+  headerAndRows: HeaderAndRows,
+  dimensionMode: DimensionMode,
+  rollup: boolean,
+): IngestionSpec {
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
     newSpec = deepSet(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions', []);
-
   } else {
     newSpec = deepDelete(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensionExclusions');
 
     const dimensions = getDimensionSpecs(headerAndRows, rollup);
     if (dimensions) {
-      newSpec = deepSet(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions', dimensions);
+      newSpec = deepSet(
+        newSpec,
+        'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
+        dimensions,
+      );
     }
-
   }
 
   if (rollup) {
@@ -86,11 +109,9 @@ export function updateSchemaWithSample(spec: IngestionSpec, headerAndRows: Heade
     if (metrics) {
       newSpec = deepSet(newSpec, 'dataSchema.metricsSpec', metrics);
     }
-
   } else {
     newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.queryGranularity', 'NONE');
     newSpec = deepDelete(newSpec, 'dataSchema.metricsSpec');
-
   }
 
   newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', rollup);

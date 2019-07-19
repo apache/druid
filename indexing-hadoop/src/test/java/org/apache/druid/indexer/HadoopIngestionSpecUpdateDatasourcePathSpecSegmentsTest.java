@@ -111,7 +111,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   public void testUpdateSegmentListIfDatasourcePathSpecIsUsedWithJustDatasourcePathSpec() throws Exception
   {
     PathSpec pathSpec = new DatasourcePathSpec(
-        jsonMapper,
         null,
         new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false, null),
         null,
@@ -131,7 +130,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   public void testUpdateSegmentListIfDatasourcePathSpecWithMatchingUserSegments() throws Exception
   {
     PathSpec pathSpec = new DatasourcePathSpec(
-        jsonMapper,
         null,
         new DatasourceIngestionSpec(
             testDatasource,
@@ -161,7 +159,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   public void testUpdateSegmentListThrowsExceptionWithUserSegmentsMismatch() throws Exception
   {
     PathSpec pathSpec = new DatasourcePathSpec(
-        jsonMapper,
         null,
         new DatasourceIngestionSpec(
             testDatasource,
@@ -188,7 +185,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       throws Exception
   {
     PathSpec pathSpec = new DatasourcePathSpec(
-        jsonMapper,
         null,
         new DatasourceIngestionSpec(
             testDatasource,
@@ -221,7 +217,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
         ImmutableList.of(
             new StaticPathSpec("/xyz", null),
             new DatasourcePathSpec(
-                jsonMapper,
                 null,
                 new DatasourceIngestionSpec(
                     testDatasource,
@@ -238,7 +233,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                 false
             ),
             new DatasourcePathSpec(
-                jsonMapper,
                 null,
                 new DatasourceIngestionSpec(
                     testDatasource2,

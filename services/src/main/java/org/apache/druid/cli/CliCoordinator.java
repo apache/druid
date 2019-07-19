@@ -58,6 +58,7 @@ import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.MetadataSegmentManagerProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -97,7 +98,7 @@ import java.util.concurrent.ExecutorService;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see http://druid.io/docs/latest/Coordinator.html for a description."
+    description = "Runs the Coordinator, see https://druid.apache.org/docs/latest/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
@@ -216,8 +217,8 @@ public class CliCoordinator extends ServerRunnable
               throw new UnsupportedOperationException(
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See http://druid.io/docs/latest/operations/segment-optimization.html and "
-                  + "http://druid.io/docs/latest/operations/api-reference.html#compaction-configuration for more "
+                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for more "
                   + "details about compaction."
               );
             }
@@ -273,6 +274,10 @@ public class CliCoordinator extends ServerRunnable
 
     if (beOverlord) {
       modules.addAll(new CliOverlord().getModules(false));
+    } else {
+      // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
+      // the injector to get confused due to having multiple bindings for the same classes.
+      modules.add(new LookupSerdeModule());
     }
 
     return modules;

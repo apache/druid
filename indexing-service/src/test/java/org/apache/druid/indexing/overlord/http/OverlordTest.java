@@ -52,6 +52,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
@@ -212,6 +213,7 @@ public class OverlordTest
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
 
     final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage);
+    final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -220,7 +222,8 @@ public class OverlordTest
         null,
         null,
         null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        workerTaskRunnerQueryAdapter
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

@@ -49,7 +49,7 @@
   },
   "ioConfig": {
     "topic": "wikipedia",
-    "replicas": 2,
+    "replicas": 1,
     "taskDuration": "PT10M",
     "completionTimeout": "PT20M",
     "consumerProperties": {

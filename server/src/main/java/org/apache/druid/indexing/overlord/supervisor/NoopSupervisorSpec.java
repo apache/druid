@@ -114,6 +114,12 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
+      public SupervisorStateManager.State getState()
+      {
+        return SupervisorStateManager.BasicState.RUNNING;
+      }
+
+      @Override
       public void reset(DataSourceMetadata dataSourceMetadata)
       {
       }

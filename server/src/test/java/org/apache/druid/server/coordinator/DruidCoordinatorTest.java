@@ -23,12 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -85,7 +87,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final long COORDINATOR_PERIOD = 100;
 
   private DruidCoordinator coordinator;
-  private MetadataSegmentManager databaseSegmentManager;
+  private MetadataSegmentManager segmentsMetadata;
+  private DataSourcesSnapshot dataSourcesSnapshot;
+  private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
+
   private SingleServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
@@ -105,7 +110,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     druidServer = EasyMock.createMock(DruidServer.class);
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
-    databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
+    segmentsMetadata = EasyMock.createNiceMock(MetadataSegmentManager.class);
+    dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
+    coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -137,10 +144,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         10,
         null,
-        false,
-        false,
-        new Duration("PT0s"),
-        Duration.millis(10)
+        new Duration("PT0s")
     );
     pathChildrenCache = new PathChildrenCache(
         curator,
@@ -182,7 +186,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
           }
         },
         configManager,
-        databaseSegmentManager,
+        segmentsMetadata,
         serverInventoryView,
         metadataRuleManager,
         curator,
@@ -248,8 +252,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(segment);
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(databaseSegmentManager.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
-    EasyMock.replay(databaseSegmentManager);
+    EasyMock
+        .expect(segmentsMetadata.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
+        .andReturn(druidDataSource);
+    EasyMock.replay(segmentsMetadata);
+    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
+    EasyMock.replay(dataSourcesSnapshot);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
     EasyMock.replay(metadataRuleManager);
@@ -284,7 +292,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(serverInventoryView.isSegmentLoadedByServer("to", segment)).andReturn(true).once();
     EasyMock.replay(serverInventoryView);
 
+    mockCoordinatorRuntimeParams();
+
     coordinator.moveSegment(
+        coordinatorRuntimeParams,
         druidServer.toImmutableDruidServer(),
         druidServer2.toImmutableDruidServer(),
         segment,
@@ -297,11 +308,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
     LoadPeonCallback dropCallback = dropCallbackCapture.getValue();
     dropCallback.execute();
 
-    EasyMock.verify(druidServer);
-    EasyMock.verify(druidServer2);
-    EasyMock.verify(loadQueuePeon);
-    EasyMock.verify(serverInventoryView);
-    EasyMock.verify(metadataRuleManager);
+    EasyMock.verify(druidServer, druidServer2, loadQueuePeon, serverInventoryView, metadataRuleManager);
+    EasyMock.verify(coordinatorRuntimeParams);
+  }
+
+  private void mockCoordinatorRuntimeParams()
+  {
+    EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(this.dataSourcesSnapshot).anyTimes();
+    EasyMock.replay(coordinatorRuntimeParams);
   }
 
   @Test(timeout = 60_000L)
@@ -391,9 +405,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
     curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getId().toString()));
 
-    Map segmentAvailability = coordinator.getSegmentAvailability();
-    Assert.assertEquals(1, segmentAvailability.size());
-    Assert.assertEquals(0L, segmentAvailability.get(dataSource));
+    Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
+        coordinator.computeNumsUnavailableUsedSegmentsPerDataSource();
+    Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
+    Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
@@ -527,26 +542,42 @@ public class DruidCoordinatorTest extends CuratorTestBase
     leaderUnannouncerLatch.await();
 
     EasyMock.verify(serverInventoryView);
-    EasyMock.verify(databaseSegmentManager);
+    EasyMock.verify(segmentsMetadata);
     EasyMock.verify(metadataRuleManager);
   }
 
   private void setupMetadataSegmentManagerMock(DruidDataSource dataSource)
   {
-    EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadata.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock
-        .expect(databaseSegmentManager.iterateAllSegments())
+        .expect(segmentsMetadata.iterateAllUsedSegments())
         .andReturn(dataSource.getSegments())
         .anyTimes();
     EasyMock
-        .expect(databaseSegmentManager.getDataSources())
+        .expect(segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments())
         .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
         .anyTimes();
+    DataSourcesSnapshot dataSourcesSnapshot =
+        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
     EasyMock
-        .expect(databaseSegmentManager.getAllDataSourceNames())
+        .expect(segmentsMetadata.getSnapshotOfDataSourcesWithAllUsedSegments())
+        .andReturn(dataSourcesSnapshot)
+        .anyTimes();
+    EasyMock
+        .expect(segmentsMetadata.retrieveAllDataSourceNames())
         .andReturn(Collections.singleton(dataSource.getName()))
         .anyTimes();
-    EasyMock.replay(databaseSegmentManager);
+    EasyMock.replay(segmentsMetadata);
+
+    EasyMock
+        .expect(this.dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot())
+        .andReturn(dataSource.getSegments())
+        .anyTimes();
+    EasyMock
+        .expect(this.dataSourcesSnapshot.getDataSourcesWithAllUsedSegments())
+        .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
+        .anyTimes();
+    EasyMock.replay(this.dataSourcesSnapshot);
   }
 
   @Nullable

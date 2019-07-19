@@ -20,7 +20,7 @@ import * as d3 from 'd3';
 import { AxisScale } from 'd3';
 import * as React from 'react';
 
-import { BarChartMargin, BarUnitData } from '../components/segment-timeline';
+import { BarChartMargin, BarUnitData } from '../components/segment-timeline/segment-timeline';
 
 import { BarGroup } from './bar-group';
 import { ChartAxis } from './chart-axis';
@@ -57,12 +57,11 @@ export interface HoveredBarInfo {
 }
 
 export class StackedBarChart extends React.Component<StackedBarChartProps, StackedBarChartState> {
-
   constructor(props: StackedBarChartProps) {
     super(props);
     this.state = {
       width: this.props.svgWidth - this.props.margin.left - this.props.margin.right,
-      height: this.props.svgHeight - this.props.margin.bottom - this.props.margin.top
+      height: this.props.svgHeight - this.props.margin.bottom - this.props.margin.top,
     };
   }
 
@@ -70,88 +69,104 @@ export class StackedBarChart extends React.Component<StackedBarChartProps, Stack
     if (nextProps !== this.props) {
       this.setState({
         width: nextProps.svgWidth - this.props.margin.left - this.props.margin.right,
-        height: nextProps.svgHeight - this.props.margin.bottom - this.props.margin.top
+        height: nextProps.svgHeight - this.props.margin.bottom - this.props.margin.top,
       });
     }
   }
 
   renderBarChart() {
-    const { svgWidth, svgHeight, formatTick, xScale, yScale, dataToRender, changeActiveDatasource, barWidth } = this.props;
+    const {
+      svgWidth,
+      svgHeight,
+      formatTick,
+      xScale,
+      yScale,
+      dataToRender,
+      changeActiveDatasource,
+      barWidth,
+    } = this.props;
     const { width, height, hoverOn } = this.state;
-    return <div
-      className={'bar-chart-container'}
-    >
-      <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        preserveAspectRatio={'xMinYMin meet'}
-        style={{marginTop: '20px'}}
-      >
-        <ChartAxis
-          className={'gridline-x'}
-          transform={'translate(60, 0)'}
-          scale={d3.axisLeft(yScale).ticks(5).tickSize(-width).tickFormat(() => '').tickSizeOuter(0)}
-        />
-        <ChartAxis
-          className={'axis--x'}
-          transform={`translate(65, ${height})`}
-          scale={d3.axisBottom(xScale)}
-        />
-        <ChartAxis
-          className={'axis--y'}
-          transform={'translate(60, 0)'}
-          scale={d3.axisLeft(yScale).ticks(5).tickFormat((e: number) => formatTick(e))}
-        />
-        <g
-          className="bars-group"
-          onMouseLeave={() => this.setState({hoverOn: null})}
+    return (
+      <div className={'bar-chart-container'}>
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          preserveAspectRatio={'xMinYMin meet'}
+          style={{ marginTop: '20px' }}
         >
-          <BarGroup
-            dataToRender={dataToRender}
-            changeActiveDatasource={changeActiveDatasource}
-            formatTick={formatTick}
-            xScale={xScale}
-            yScale={yScale}
-            onHoverBar={(e: HoveredBarInfo) => this.setState({hoverOn: e})}
-            hoverOn={hoverOn}
-            barWidth={barWidth}
+          <ChartAxis
+            className={'gridline-x'}
+            transform={'translate(60, 0)'}
+            scale={d3
+              .axisLeft(yScale)
+              .ticks(5)
+              .tickSize(-width)
+              .tickFormat(() => '')
+              .tickSizeOuter(0)}
           />
-          {
-            hoverOn &&
-            <g
-              className={'hovered-bar'}
-              onClick={() => {this.setState({hoverOn: null}); changeActiveDatasource((hoverOn.datasource as string)); }}
-            >
-              <rect
-                x={hoverOn.xCoordinate}
-                y={hoverOn.yCoordinate}
-                width={barWidth}
-                height={hoverOn.height}
-              />
-            </g>
-          }
-        </g>
-      </svg>
-    </div>;
+          <ChartAxis
+            className={'axis--x'}
+            transform={`translate(65, ${height})`}
+            scale={d3.axisBottom(xScale)}
+          />
+          <ChartAxis
+            className={'axis--y'}
+            transform={'translate(60, 0)'}
+            scale={d3
+              .axisLeft(yScale)
+              .ticks(5)
+              .tickFormat((e: number) => formatTick(e))}
+          />
+          <g className="bars-group" onMouseLeave={() => this.setState({ hoverOn: null })}>
+            <BarGroup
+              dataToRender={dataToRender}
+              changeActiveDatasource={changeActiveDatasource}
+              formatTick={formatTick}
+              xScale={xScale}
+              yScale={yScale}
+              onHoverBar={(e: HoveredBarInfo) => this.setState({ hoverOn: e })}
+              hoverOn={hoverOn}
+              barWidth={barWidth}
+            />
+            {hoverOn && (
+              <g
+                className={'hovered-bar'}
+                onClick={() => {
+                  this.setState({ hoverOn: null });
+                  changeActiveDatasource(hoverOn.datasource as string);
+                }}
+              >
+                <rect
+                  x={hoverOn.xCoordinate}
+                  y={hoverOn.yCoordinate}
+                  width={barWidth}
+                  height={hoverOn.height}
+                />
+              </g>
+            )}
+          </g>
+        </svg>
+      </div>
+    );
   }
 
   render() {
     const { activeDataType, formatTick } = this.props;
     const { hoverOn } = this.state;
-    return <div className={'bar-chart'}>
-      <div className={'bar-chart-tooltip'} >
-        <div>
-          Datasource: {hoverOn ? hoverOn.datasource : ''}
+    return (
+      <div className={'bar-chart'}>
+        <div className={'bar-chart-tooltip'}>
+          <div>Datasource: {hoverOn ? hoverOn.datasource : ''}</div>
+          <div>Time: {hoverOn ? hoverOn.xValue : ''}</div>
+          <div>
+            {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${
+              hoverOn ? formatTick(hoverOn.yValue as number) : ''
+            }`}
+          </div>
         </div>
-        <div>
-          Time: {hoverOn ? hoverOn.xValue : ''}
-        </div>
-        <div>
-          {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${hoverOn ? formatTick((hoverOn.yValue as number)) : ''}`}
-        </div>
+        {this.renderBarChart()}
       </div>
-      {this.renderBarChart()}
-    </div>;
+    );
   }
 }

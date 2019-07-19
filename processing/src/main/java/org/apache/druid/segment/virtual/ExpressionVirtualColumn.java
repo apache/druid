@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
@@ -44,7 +46,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private final String name;
   private final String expression;
   private final ValueType outputType;
-  private final Expr parsedExpression;
+  private final Supplier<Expr> parsedExpression;
 
   @JsonCreator
   public ExpressionVirtualColumn(
@@ -57,7 +59,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.outputType = outputType != null ? outputType : ValueType.FLOAT;
-    this.parsedExpression = Parser.parse(expression, macroTable);
+    this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
   @JsonProperty("name")
@@ -88,7 +90,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return dimensionSpec.decorate(
         ExpressionSelectors.makeDimensionSelector(
             columnSelectorFactory,
-            parsedExpression,
+            parsedExpression.get(),
             dimensionSpec.getExtractionFn()
         )
     );
@@ -97,19 +99,22 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression);
+    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    return new ColumnCapabilitiesImpl().setType(outputType);
+    // Note: Ideally we would only "setHasMultipleValues(true)" if the expression in question could potentially return
+    // multiple values. However, we don't currently have a good way of determining this, so to be safe we always
+    // set the flag.
+    return new ColumnCapabilitiesImpl().setType(outputType).setHasMultipleValues(true);
   }
 
   @Override
   public List<String> requiredColumns()
   {
-    return Parser.findRequiredBindings(parsedExpression);
+    return parsedExpression.get().analyzeInputs().getRequiredColumnsList();
   }
 
   @Override

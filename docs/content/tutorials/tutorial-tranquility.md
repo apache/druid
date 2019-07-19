@@ -31,8 +31,8 @@ This tutorial shows you how to load streaming data into Apache Druid (incubating
 [Tranquility Server](https://github.com/druid-io/tranquility/blob/master/docs/server.md) allows a stream of data to be pushed into Druid using HTTP POSTs.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine. You
-don't need to have loaded any data yet.
+the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+running on your local machine. You don't need to have loaded any data yet.
 
 ## Download Tranquility
 

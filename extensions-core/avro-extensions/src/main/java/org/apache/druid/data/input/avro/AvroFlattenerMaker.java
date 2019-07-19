@@ -19,12 +19,10 @@
 
 package org.apache.druid.data.input.avro;
 
-import com.google.common.collect.Lists;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,7 +39,7 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
-  static final Configuration JSONPATH_CONFIGURATION =
+  private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
                    .jsonProvider(new GenericAvroJsonProvider())
                    .mappingProvider(new NotImplementedMappingProvider())
@@ -57,17 +55,17 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       Schema.Type.DOUBLE
   );
 
-  public static boolean isPrimitive(Schema schema)
+  private static boolean isPrimitive(Schema schema)
   {
     return ROOT_TYPES.contains(schema.getType());
   }
 
-  public static boolean isPrimitiveArray(Schema schema)
+  private static boolean isPrimitiveArray(Schema schema)
   {
     return schema.getType().equals(Schema.Type.ARRAY) && isPrimitive(schema.getElementType());
   }
 
-  public static boolean isOptionalPrimitive(Schema schema)
+  private static boolean isOptionalPrimitive(Schema schema)
   {
     return schema.getType().equals(Schema.Type.UNION) &&
            schema.getTypes().size() == 2 &&
@@ -79,7 +77,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
            );
   }
 
-  static boolean isFieldPrimitive(Schema.Field field)
+  private static boolean isFieldPrimitive(Schema.Field field)
   {
     return isPrimitive(field.schema()) ||
            isPrimitiveArray(field.schema()) ||
@@ -87,12 +85,13 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
 
-  private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString)
+  /**
+   * @param binaryAsString boolean to encode the byte[] as a string.
+   */
+  public AvroFlattenerMaker(final boolean binaryAsString)
   {
-    this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
   }
 
@@ -128,21 +127,16 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
 
   private Object transformValue(final Object field)
   {
-    if (fromPigAvroStorage && field instanceof GenericData.Array) {
-      return Lists.transform((List) field, item -> String.valueOf(((GenericRecord) item).get(0)));
-    }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
       } else {
         return ((ByteBuffer) field).array();
       }
-    }
-    if (field instanceof Utf8) {
+    } else if (field instanceof Utf8) {
       return field.toString();
-    }
-    if (field instanceof List) {
-      return ((List) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
+    } else if (field instanceof List) {
+      return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
     return field;
   }

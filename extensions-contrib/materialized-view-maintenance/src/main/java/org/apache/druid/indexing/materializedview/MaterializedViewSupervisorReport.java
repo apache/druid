@@ -19,17 +19,18 @@
 
 package org.apache.druid.indexing.materializedview;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Set;
 
-public class MaterializedViewSupervisorReport extends SupervisorReport 
+public class MaterializedViewSupervisorReport extends SupervisorReport
 {
-
   public MaterializedViewSupervisorReport(
       String dataSource,
       DateTime generationTime,
@@ -37,16 +38,26 @@ public class MaterializedViewSupervisorReport extends SupervisorReport
       String baseDataSource,
       Set<String> dimensions,
       Set<String> metrics,
-      List<Interval> missTimeline
+      List<Interval> missTimeline,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
-    super(dataSource, generationTime, "{" +
-        "dataSource='" + dataSource + '\'' +
-        ", baseDataSource='" + baseDataSource + '\'' +
-        ", suspended='" + suspended + "\'" +
-        ", dimensions=" + dimensions +
-        ", metrics=" + metrics +
-        ", missTimeline" + Sets.newHashSet(missTimeline) +
-        "}");
+    super(
+        dataSource,
+        generationTime,
+        ImmutableMap.builder()
+                    .put("dataSource", dataSource)
+                    .put("baseDataSource", baseDataSource)
+                    .put("suspended", suspended)
+                    .put("dimensions", dimensions)
+                    .put("metrics", metrics)
+                    .put("missTimeline", Sets.newHashSet(missTimeline))
+                    .put("healthy", healthy)
+                    .put("state", state)
+                    .put("recentErrors", recentErrors)
+                    .build()
+    );
   }
 }

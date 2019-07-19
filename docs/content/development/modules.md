@@ -39,7 +39,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
    and `org.apache.druid.query.aggregation.BufferAggregator`.
 1. Add PostAggregators by extending `org.apache.druid.query.aggregation.PostAggregator`.
 1. Add ExtractionFns by extending `org.apache.druid.query.extraction.ExtractionFn`.
-1. Add Complex metrics by extending `org.apache.druid.segment.serde.ComplexMetricsSerde`.
+1. Add Complex metrics by extending `org.apache.druid.segment.serde.ComplexMetricSerde`.
 1. Add new Query types by extending `org.apache.druid.query.QueryRunnerFactory`, `org.apache.druid.query.QueryToolChest`, and
    `org.apache.druid.query.Query`.
 1. Add new Jersey resources by calling `Jerseys.addResource(binder, clazz)`.

@@ -80,7 +80,12 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
         dimensionSpec,
         spec -> {
           if (virtualColumns.exists(spec.getDimension())) {
-            return virtualColumns.makeDimensionSelector(spec, this);
+            DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, index, offset);
+            if (dimensionSelector == null) {
+              return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+            } else {
+              return dimensionSelector;
+            }
           }
 
           return spec.decorate(makeDimensionSelectorUndecorated(spec));
@@ -123,7 +128,12 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
         columnName,
         name -> {
           if (virtualColumns.exists(columnName)) {
-            return virtualColumns.makeColumnValueSelector(columnName, this);
+            ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, index, offset);
+            if (selector == null) {
+              return virtualColumns.makeColumnValueSelector(columnName, this);
+            } else {
+              return selector;
+            }
           }
 
           BaseColumn column = getCachedColumn(columnName, BaseColumn.class);

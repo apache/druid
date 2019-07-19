@@ -129,8 +129,7 @@ public class SelectQueryRunnerTest
 
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-      configSupplier
+      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
   );
 
   @Parameterized.Parameters(name = "{0}:descending={1}")

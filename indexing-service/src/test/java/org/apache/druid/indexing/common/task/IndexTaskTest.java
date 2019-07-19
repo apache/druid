@@ -204,7 +204,7 @@ public class IndexTaskTest
           public List<StorageLocationConfig> getLocations()
           {
             return Collections.singletonList(
-                new StorageLocationConfig().setPath(cacheDir)
+                new StorageLocationConfig(cacheDir, null, null)
             );
           }
         },
@@ -1004,6 +1004,7 @@ public class IndexTaskTest
         null,
         indexSpec,
         null,
+        null,
         true,
         true,
         false,
@@ -1126,6 +1127,7 @@ public class IndexTaskTest
         null,
         indexSpec,
         null,
+        null,
         true,
         false,
         false,
@@ -1240,6 +1242,7 @@ public class IndexTaskTest
         null,
         null,
         indexSpec,
+        null,
         null,
         true,
         true,
@@ -1705,6 +1708,7 @@ public class IndexTaskTest
         numShards,
         partitionDimensions,
         indexSpec,
+        null,
         null,
         true,
         forceGuaranteedRollup,

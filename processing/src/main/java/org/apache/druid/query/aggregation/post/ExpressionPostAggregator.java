@@ -24,8 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
@@ -34,13 +35,13 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ExpressionPostAggregator implements PostAggregator
 {
@@ -63,8 +64,8 @@ public class ExpressionPostAggregator implements PostAggregator
   private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
 
-  private final Expr parsed;
-  private final Set<String> dependentFields;
+  private final Supplier<Expr> parsed;
+  private final Supplier<Set<String>> dependentFields;
 
   /**
    * Constructor for serialization.
@@ -91,6 +92,45 @@ public class ExpressionPostAggregator implements PostAggregator
       final Map<String, Function<Object, Object>> finalizers
   )
   {
+    this(
+        name,
+        expression,
+        ordering,
+        macroTable,
+        finalizers,
+        Suppliers.memoize(() -> Parser.parse(expression, macroTable))
+    );
+  }
+
+  private ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Map<String, Function<Object, Object>> finalizers,
+      final Supplier<Expr> parsed
+  )
+  {
+    this(
+        name,
+        expression,
+        ordering,
+        macroTable,
+        finalizers,
+        parsed,
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredColumns()));
+  }
+
+  private ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Map<String, Function<Object, Object>> finalizers,
+      final Supplier<Expr> parsed,
+      final Supplier<Set<String>> dependentFields
+  )
+  {
     Preconditions.checkArgument(expression != null, "expression cannot be null");
 
     this.name = name;
@@ -100,14 +140,15 @@ public class ExpressionPostAggregator implements PostAggregator
     this.macroTable = macroTable;
     this.finalizers = finalizers;
 
-    this.parsed = Parser.parse(expression, macroTable);
-    this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
+    this.parsed = parsed;
+    this.dependentFields = dependentFields;
   }
+
 
   @Override
   public Set<String> getDependentFields()
   {
-    return dependentFields;
+    return dependentFields.get();
   }
 
   @Override
@@ -128,7 +169,7 @@ public class ExpressionPostAggregator implements PostAggregator
         }
     );
 
-    return parsed.eval(Parser.withMap(finalizedValues)).value();
+    return parsed.get().eval(Parser.withMap(finalizedValues)).value();
   }
 
   @Override
@@ -146,12 +187,9 @@ public class ExpressionPostAggregator implements PostAggregator
         expression,
         ordering,
         macroTable,
-        aggregators.entrySet().stream().collect(
-            Collectors.toMap(
-                entry -> entry.getKey(),
-                entry -> entry.getValue()::finalizeComputation
-            )
-        )
+        CollectionUtils.mapValues(aggregators, aggregatorFactory -> obj -> aggregatorFactory.finalizeComputation(obj)),
+        parsed,
+        dependentFields
     );
   }
 

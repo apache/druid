@@ -23,7 +23,6 @@ package org.apache.druid.extendedset.intset;
  * This class provides a skeletal implementation of the {@link IntSet}
  * interface to minimize the effort required to implement this interface.
  *
- * @author Alessandro Colantonio
  * @version $Id: AbstractIntSet.java 156 2011-09-01 00:13:57Z cocciasik $
  */
 public abstract class AbstractIntSet implements IntSet

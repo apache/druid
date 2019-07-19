@@ -17,18 +17,15 @@
  */
 
 import * as d3 from 'd3';
-import { Axis, AxisScale } from 'd3';
 import * as React from 'react';
 
 interface ChartAxisProps extends React.Props<any> {
   transform: string;
-  scale: Axis<any>;
+  scale: any;
   className?: string;
 }
 
-interface ChartAxisState {
-
-}
+interface ChartAxisState {}
 
 export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
   constructor(props: ChartAxisProps) {
@@ -38,10 +35,12 @@ export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
 
   render() {
     const { transform, scale, className } = this.props;
-    return <g
-      className={`axis ${className}`}
-      transform={transform}
-      ref={node => d3.select(node).call(scale)}
-    />;
+    return (
+      <g
+        className={`axis ${className}`}
+        transform={transform}
+        ref={node => d3.select(node).call(scale)}
+      />
+    );
   }
 }

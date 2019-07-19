@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -28,7 +29,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.asynchttpclient.AsyncHttpClient;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.net.URI;

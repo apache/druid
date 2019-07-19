@@ -822,7 +822,6 @@ public class RealtimeIndexTaskTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new TestFirehose.TestFirehoseFactory(),
-        null,
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
@@ -833,6 +832,7 @@ public class RealtimeIndexTaskTest
         null,
         null,
         new ServerTimeRejectionPolicyFactory(),
+        null,
         null,
         null,
         null,
@@ -881,7 +881,7 @@ public class RealtimeIndexTaskTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));

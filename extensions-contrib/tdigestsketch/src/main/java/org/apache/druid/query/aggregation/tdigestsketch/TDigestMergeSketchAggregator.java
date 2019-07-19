@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import javax.annotation.concurrent.GuardedBy;
 
 /**
  * Aggregator that merges T-Digest based sketches generated from {@link TDigestBuildSketchAggregator}

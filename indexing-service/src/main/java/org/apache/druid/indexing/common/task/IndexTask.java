@@ -91,6 +91,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CollectionUtils;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -223,11 +224,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      determinePartitionsSavedParseExceptions = new CircularBuffer<Throwable>(
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      buildSegmentsSavedParseExceptions = new CircularBuffer<Throwable>(
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
     }
@@ -444,8 +445,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             toolbox.getTaskActionClient(),
             intervals
         );
-        versions = locks.entrySet().stream()
-                        .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
+        versions = CollectionUtils.mapValues(locks, TaskLock::getVersion);
 
         dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
             ingestionSchema.getDataSchema()
@@ -731,8 +731,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
-    int thrownAway = 0;
-    int unparseable = 0;
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
     try (
@@ -770,9 +768,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
 
           if (determineNumPartitions) {
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-            }
+            hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
                 queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
@@ -783,9 +779,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           } else {
             // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
             // for the interval and don't instantiate a HLL collector
-            if (!hllCollectors.containsKey(interval)) {
-              hllCollectors.put(interval, Optional.absent());
-            }
+            hllCollectors.putIfAbsent(interval, Optional.absent());
           }
           determinePartitionsMeters.incrementProcessed();
         }
@@ -807,12 +801,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     // These metrics are reported in generateAndPublishSegments()
-    if (thrownAway > 0) {
-      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
+    if (determinePartitionsMeters.getThrownAway() > 0) {
+      log.warn("Unable to find a matching interval for [%,d] events", determinePartitionsMeters.getThrownAway());
     }
-    if (unparseable > 0) {
-      log.warn("Unable to parse [%,d] events", unparseable);
+    if (determinePartitionsMeters.getUnparseable() > 0) {
+      log.warn("Unable to parse [%,d] events", determinePartitionsMeters.getUnparseable());
     }
+
     return hllCollectors;
   }
 
@@ -847,7 +842,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {
@@ -1275,6 +1270,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     private final Integer numShards;
     private final List<String> partitionDimensions;
     private final IndexSpec indexSpec;
+    private final IndexSpec indexSpecForIntermediatePersists;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
 
@@ -1310,6 +1306,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @JsonProperty("numShards") @Nullable Integer numShards,
         @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+        @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
@@ -1332,6 +1329,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           numShards,
           partitionDimensions,
           indexSpec,
+          indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -1351,7 +1349,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1362,6 +1360,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Nullable Integer numShards,
         @Nullable List<String> partitionDimensions,
         @Nullable IndexSpec indexSpec,
+        @Nullable IndexSpec indexSpecForIntermediatePersists,
         @Nullable Integer maxPendingPersists,
         @Nullable Boolean forceGuaranteedRollup,
         @Nullable Boolean reportParseExceptions,
@@ -1389,6 +1388,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
+      this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                              this.indexSpec : indexSpecForIntermediatePersists;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
       this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
       this.reportParseExceptions = reportParseExceptions == null
@@ -1425,6 +1426,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           numShards,
           partitionDimensions,
           indexSpec,
+          indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -1447,6 +1449,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           numShards,
           partitionDimensions,
           indexSpec,
+          indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -1469,6 +1472,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           numShards,
           partitionDimensions,
           indexSpec,
+          indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -1536,6 +1540,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public IndexSpec getIndexSpec()
     {
       return indexSpec;
+    }
+
+    @JsonProperty
+    @Override
+    public IndexSpec getIndexSpecForIntermediatePersists()
+    {
+      return indexSpecForIntermediatePersists;
     }
 
     @Override
@@ -1623,19 +1634,22 @@ public class IndexTask extends AbstractTask implements ChatHandler
       }
       IndexTuningConfig that = (IndexTuningConfig) o;
       return maxRowsInMemory == that.maxRowsInMemory &&
-             Objects.equals(maxTotalRows, that.maxTotalRows) &&
+             maxBytesInMemory == that.maxBytesInMemory &&
              maxPendingPersists == that.maxPendingPersists &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
              reportParseExceptions == that.reportParseExceptions &&
              pushTimeout == that.pushTimeout &&
-             Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-             Objects.equals(numShards, that.numShards) &&
-             Objects.equals(indexSpec, that.indexSpec) &&
-             Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
              logParseExceptions == that.logParseExceptions &&
              maxParseExceptions == that.maxParseExceptions &&
-             maxSavedParseExceptions == that.maxSavedParseExceptions;
+             maxSavedParseExceptions == that.maxSavedParseExceptions &&
+             Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+             Objects.equals(maxTotalRows, that.maxTotalRows) &&
+             Objects.equals(numShards, that.numShards) &&
+             Objects.equals(partitionDimensions, that.partitionDimensions) &&
+             Objects.equals(indexSpec, that.indexSpec) &&
+             Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
+             Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
+             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
     }
 
     @Override
@@ -1644,18 +1658,21 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return Objects.hash(
           maxRowsPerSegment,
           maxRowsInMemory,
+          maxBytesInMemory,
           maxTotalRows,
           numShards,
+          partitionDimensions,
           indexSpec,
+          indexSpecForIntermediatePersists,
           basePersistDirectory,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout,
-          segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions
+          maxSavedParseExceptions,
+          segmentWriteOutMediumFactory
       );
     }
 
@@ -1668,7 +1685,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
              ", maxBytesInMemory=" + maxBytesInMemory +
              ", maxTotalRows=" + maxTotalRows +
              ", numShards=" + numShards +
+             ", partitionDimensions=" + partitionDimensions +
              ", indexSpec=" + indexSpec +
+             ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +
              ", basePersistDirectory=" + basePersistDirectory +
              ", maxPendingPersists=" + maxPendingPersists +
              ", forceGuaranteedRollup=" + forceGuaranteedRollup +

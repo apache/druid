@@ -34,8 +34,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.dependentPostAggMetric;
-
 public class AggregatorUtilTest
 {
 
@@ -130,7 +128,7 @@ public class AggregatorUtilTest
     Pair<List<AggregatorFactory>, List<PostAggregator>> aggregatorsPair = AggregatorUtil.condensedAggregators(
         aggregatorFactories,
         postAggregatorList,
-        dependentPostAggMetric
+        QueryRunnerTestHelper.dependentPostAggMetric
     );
     // verify aggregators
     Assert.assertEquals(

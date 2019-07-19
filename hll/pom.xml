@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.16.0-incubating-SNAPSHOT</version>
     </parent>
 
     <artifactId>druid-hll</artifactId>
@@ -34,7 +34,7 @@
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
 

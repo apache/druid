@@ -43,6 +43,7 @@ public class HadoopTuningConfigTest
         null,
         null,
         null,
+        null,
         100,
         null,
         true,
@@ -70,6 +71,7 @@ public class HadoopTuningConfigTest
     Assert.assertNotNull(actual.getPartitionsSpec());
     Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(), actual.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(100, actual.getRowFlushBoundary());
     Assert.assertEquals(true, actual.isLeaveIntermediate());
     Assert.assertEquals(true, actual.isCleanupOnFailure());

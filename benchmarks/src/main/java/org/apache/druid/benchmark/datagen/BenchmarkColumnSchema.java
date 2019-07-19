@@ -424,4 +424,26 @@ public class BenchmarkColumnSchema
     schema.enumeratedProbabilities = enumeratedProbabilities;
     return schema;
   }
+
+  @Override
+  public String toString()
+  {
+    return "BenchmarkColumnSchema{" +
+           "distributionType=" + distributionType +
+           ", name='" + name + '\'' +
+           ", type=" + type +
+           ", isMetric=" + isMetric +
+           ", rowSize=" + rowSize +
+           ", nullProbability=" + nullProbability +
+           ", enumeratedValues=" + enumeratedValues +
+           ", enumeratedProbabilities=" + enumeratedProbabilities +
+           ", startInt=" + startInt +
+           ", endInt=" + endInt +
+           ", startDouble=" + startDouble +
+           ", endDouble=" + endDouble +
+           ", zipfExponent=" + zipfExponent +
+           ", mean=" + mean +
+           ", standardDeviation=" + standardDeviation +
+           '}';
+  }
 }

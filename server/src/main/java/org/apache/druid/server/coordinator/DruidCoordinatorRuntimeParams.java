@@ -21,7 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.ImmutableDruidDataSource;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -35,6 +36,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -45,19 +47,19 @@ public class DruidCoordinatorRuntimeParams
    * the segments from the given iterable. The given iterable is iterated exactly once. No special action is taken if
    * duplicate segments are encountered in the iterable.
    */
-  public static TreeSet<DataSegment> createAvailableSegmentsSet(Iterable<DataSegment> availableSegments)
+  private static TreeSet<DataSegment> createUsedSegmentsSet(Iterable<DataSegment> usedSegments)
   {
     TreeSet<DataSegment> segmentsSet = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
-    availableSegments.forEach(segmentsSet::add);
+    usedSegments.forEach(segmentsSet::add);
     return segmentsSet;
   }
 
-  private final long startTime;
+  private final long startTimeNanos;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
-  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-  private final @Nullable TreeSet<DataSegment> availableSegments;
+  private final @Nullable TreeSet<DataSegment> usedSegments;
+  private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
@@ -68,12 +70,12 @@ public class DruidCoordinatorRuntimeParams
   private final BalancerStrategy balancerStrategy;
 
   private DruidCoordinatorRuntimeParams(
-      long startTime,
+      long startTimeNanos,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
-      @Nullable TreeSet<DataSegment> availableSegments,
+      @Nullable TreeSet<DataSegment> usedSegments,
+      @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
@@ -84,12 +86,12 @@ public class DruidCoordinatorRuntimeParams
       BalancerStrategy balancerStrategy
   )
   {
-    this.startTime = startTime;
+    this.startTimeNanos = startTimeNanos;
     this.druidCluster = druidCluster;
     this.databaseRuleManager = databaseRuleManager;
     this.segmentReplicantLookup = segmentReplicantLookup;
-    this.dataSources = dataSources;
-    this.availableSegments = availableSegments;
+    this.usedSegments = usedSegments;
+    this.dataSourcesSnapshot = dataSourcesSnapshot;
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
     this.emitter = emitter;
@@ -100,9 +102,9 @@ public class DruidCoordinatorRuntimeParams
     this.balancerStrategy = balancerStrategy;
   }
 
-  public long getStartTime()
+  public long getStartTimeNanos()
   {
-    return startTime;
+    return startTimeNanos;
   }
 
   public DruidCluster getDruidCluster()
@@ -120,15 +122,20 @@ public class DruidCoordinatorRuntimeParams
     return segmentReplicantLookup;
   }
 
-  public Map<String, VersionedIntervalTimeline<String, DataSegment>> getDataSources()
+  /**
+   * Creates and returns a "dataSource -> VersionedIntervalTimeline[version String, DataSegment]" map with "used"
+   * segments.
+   */
+  public Map<String, VersionedIntervalTimeline<String, DataSegment>> getUsedSegmentsTimelinesPerDataSource()
   {
-    return dataSources;
+    Preconditions.checkState(dataSourcesSnapshot != null, "dataSourcesSnapshot or usedSegments must be set");
+    return dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource();
   }
 
-  public TreeSet<DataSegment> getAvailableSegments()
+  public TreeSet<DataSegment> getUsedSegments()
   {
-    Preconditions.checkState(availableSegments != null, "availableSegments must be set");
-    return availableSegments;
+    Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
+    return usedSegments;
   }
 
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
@@ -171,9 +178,18 @@ public class DruidCoordinatorRuntimeParams
     return balancerStrategy;
   }
 
-  public boolean hasDeletionWaitTimeElapsed()
+  public boolean coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()
   {
-    return (System.currentTimeMillis() - getStartTime() > coordinatorDynamicConfig.getMillisToWaitBeforeDeleting());
+    long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
+    long lagNanos = TimeUnit.MILLISECONDS.toNanos(
+        coordinatorDynamicConfig.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+    );
+    return nanosElapsedSinceCoordinatorStart > lagNanos;
+  }
+
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
   }
 
   public static Builder newBuilder()
@@ -184,12 +200,12 @@ public class DruidCoordinatorRuntimeParams
   public Builder buildFromExisting()
   {
     return new Builder(
-        startTime,
+        startTimeNanos,
         druidCluster,
         databaseRuleManager,
         segmentReplicantLookup,
-        dataSources,
-        availableSegments,
+        usedSegments,
+        dataSourcesSnapshot,
         loadManagementPeons,
         replicationManager,
         emitter,
@@ -201,15 +217,15 @@ public class DruidCoordinatorRuntimeParams
     );
   }
 
-  public Builder buildFromExistingWithoutAvailableSegments()
+  public Builder buildFromExistingWithoutSegmentsMetadata()
   {
     return new Builder(
-        startTime,
+        startTimeNanos,
         druidCluster,
         databaseRuleManager,
         segmentReplicantLookup,
-        dataSources,
-        null, // availableSegments
+        null, // usedSegments
+        null, // dataSourcesSnapshot
         loadManagementPeons,
         replicationManager,
         emitter,
@@ -223,12 +239,12 @@ public class DruidCoordinatorRuntimeParams
 
   public static class Builder
   {
-    private long startTime;
+    private @Nullable Long startTimeNanos;
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
-    private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-    private @Nullable TreeSet<DataSegment> availableSegments;
+    private @Nullable TreeSet<DataSegment> usedSegments;
+    private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
@@ -238,14 +254,14 @@ public class DruidCoordinatorRuntimeParams
     private DateTime balancerReferenceTimestamp;
     private BalancerStrategy balancerStrategy;
 
-    Builder()
+    private Builder()
     {
-      this.startTime = 0;
+      this.startTimeNanos = null;
       this.druidCluster = null;
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
-      this.dataSources = new HashMap<>();
-      this.availableSegments = null;
+      this.usedSegments = null;
+      this.dataSourcesSnapshot = null;
       this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
       this.emitter = null;
@@ -256,12 +272,12 @@ public class DruidCoordinatorRuntimeParams
     }
 
     Builder(
-        long startTime,
+        long startTimeNanos,
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
-        Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
-        @Nullable TreeSet<DataSegment> availableSegments,
+        @Nullable TreeSet<DataSegment> usedSegments,
+        @Nullable DataSourcesSnapshot dataSourcesSnapshot,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
@@ -272,12 +288,12 @@ public class DruidCoordinatorRuntimeParams
         BalancerStrategy balancerStrategy
     )
     {
-      this.startTime = startTime;
+      this.startTimeNanos = startTimeNanos;
       this.druidCluster = cluster;
       this.databaseRuleManager = databaseRuleManager;
       this.segmentReplicantLookup = segmentReplicantLookup;
-      this.dataSources = dataSources;
-      this.availableSegments = availableSegments;
+      this.usedSegments = usedSegments;
+      this.dataSourcesSnapshot = dataSourcesSnapshot;
       this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
       this.emitter = emitter;
@@ -290,13 +306,14 @@ public class DruidCoordinatorRuntimeParams
 
     public DruidCoordinatorRuntimeParams build()
     {
+      Preconditions.checkNotNull(startTimeNanos, "startTime must be set");
       return new DruidCoordinatorRuntimeParams(
-          startTime,
+          startTimeNanos,
           druidCluster,
           databaseRuleManager,
           segmentReplicantLookup,
-          dataSources,
-          availableSegments,
+          usedSegments,
+          dataSourcesSnapshot,
           loadManagementPeons,
           replicationManager,
           emitter,
@@ -308,9 +325,9 @@ public class DruidCoordinatorRuntimeParams
       );
     }
 
-    public Builder withStartTime(long time)
+    public Builder withStartTimeNanos(long startTimeNanos)
     {
-      startTime = time;
+      this.startTimeNanos = startTimeNanos;
       return this;
     }
 
@@ -332,58 +349,40 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withDataSources(Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources)
+    public Builder withSnapshotOfDataSourcesWithAllUsedSegments(DataSourcesSnapshot snapshot)
     {
-      this.dataSources = dataSources;
+      this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
+      this.dataSourcesSnapshot = snapshot;
       return this;
     }
 
-    public Builder withDataSources(Collection<ImmutableDruidDataSource> dataSourcesCollection)
+    /** This method must be used in test code only. */
+    @VisibleForTesting
+    public Builder withUsedSegmentsInTest(DataSegment... usedSegments)
     {
-      dataSourcesCollection.forEach(
-          dataSource -> {
-            VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.computeIfAbsent(
-                dataSource.getName(),
-                k -> new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER)
-            );
+      return withUsedSegmentsInTest(Arrays.asList(usedSegments));
+    }
 
-            dataSource.getSegments().forEach(
-                segment -> timeline.add(
-                    segment.getInterval(),
-                    segment.getVersion(),
-                    segment.getShardSpec().createChunk(segment)
-                )
-            );
-          }
+    /** This method must be used in test code only. */
+    @VisibleForTesting
+    public Builder withUsedSegmentsInTest(Collection<DataSegment> usedSegments)
+    {
+      this.usedSegments = createUsedSegmentsSet(usedSegments);
+      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
+      return this;
+    }
+
+    /** This method must be used in test code only. */
+    @VisibleForTesting
+    public Builder withUsedSegmentsTimelinesPerDataSourceInTest(
+        Map<String, VersionedIntervalTimeline<String, DataSegment>> usedSegmentsTimelinesPerDataSource
+    )
+    {
+      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegmentsTimelines(
+          usedSegmentsTimelinesPerDataSource,
+          ImmutableMap.of()
       );
-      return this;
-    }
-
-    /** This method must be used in test code only. */
-    @VisibleForTesting
-    public Builder withAvailableSegmentsInTest(DataSegment... availableSegments)
-    {
-      return withAvailableSegmentsInTest(Arrays.asList(availableSegments));
-    }
-
-    /** This method must be used in test code only. */
-    @VisibleForTesting
-    public Builder withAvailableSegmentsInTest(Collection<DataSegment> availableSegments)
-    {
-      return setAvailableSegments(createAvailableSegmentsSet(availableSegments));
-    }
-
-    /**
-     * Note: unlike {@link #withAvailableSegmentsInTest(Collection)}, this method doesn't make a defensive copy of the
-     * provided set. The set passed into this method must not be modified afterwards.
-     */
-    public Builder setAvailableSegments(TreeSet<DataSegment> availableSegments)
-    {
-      //noinspection ObjectEquality
-      if (availableSegments.comparator() != DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST) {
-        throw new IllegalArgumentException("Expected DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST");
-      }
-      this.availableSegments = availableSegments;
+      usedSegments = createUsedSegmentsSet(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot());
       return this;
     }
 

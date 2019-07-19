@@ -117,9 +117,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    *
    * @return sketch object
    */
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
+    if (object == null) {
+      return null;
+    }
+
     if (shouldFinalize) {
       SketchHolder holder = (SketchHolder) object;
       if (errorBoundsStdDev != null) {

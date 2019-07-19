@@ -36,7 +36,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 /**
  * This aggregator merges existing sketches.
  * The input column must contain {@link HllSketch}
- * @author Alexander Saydakov
  */
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {

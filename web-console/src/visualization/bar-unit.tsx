@@ -31,9 +31,7 @@ interface BarChartUnitProps extends React.Props<any> {
   offHover?: () => void;
 }
 
-interface BarChartUnitState {
-
-}
+interface BarChartUnitState {}
 
 export class BarUnit extends React.Component<BarChartUnitProps, BarChartUnitState> {
   constructor(props: BarChartUnitProps) {
@@ -43,21 +41,15 @@ export class BarUnit extends React.Component<BarChartUnitProps, BarChartUnitStat
 
   render() {
     const { x, y, width, height, style, onClick, onHover, offHover } = this.props;
-    return <g
-      className={`bar-chart-unit`}
-      onClick={onClick}
-      onMouseOver={onHover}
-      onMouseLeave={offHover}
-    >
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        style={
-          style
-        }
-      />
-    </g>;
+    return (
+      <g
+        className={`bar-chart-unit`}
+        onClick={onClick}
+        onMouseOver={onHover}
+        onMouseLeave={offHover}
+      >
+        <rect x={x} y={y} width={width} height={height} style={style} />
+      </g>
+    );
   }
 }

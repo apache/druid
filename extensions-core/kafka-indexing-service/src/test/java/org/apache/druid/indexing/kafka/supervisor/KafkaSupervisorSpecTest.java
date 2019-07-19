@@ -28,6 +28,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -56,6 +57,7 @@ public class KafkaSupervisorSpecTest
             .addValue(ServiceEmitter.class, new NoopServiceEmitter())
             .addValue(DruidMonitorSchedulerConfig.class, null)
             .addValue(RowIngestionMetersFactory.class, null)
+            .addValue(SupervisorStateManagerConfig.class, null)
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
     );
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());

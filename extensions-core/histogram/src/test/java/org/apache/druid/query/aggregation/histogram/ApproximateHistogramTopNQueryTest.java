@@ -118,7 +118,8 @@ public class ApproximateHistogramTopNQueryTest
         10,
         5,
         Float.NEGATIVE_INFINITY,
-        Float.POSITIVE_INFINITY
+        Float.POSITIVE_INFINITY,
+        false
     );
 
     TopNQuery query = new TopNQueryBuilder()
@@ -141,11 +142,9 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
-                new QuantilePostAggregator("quantile", "apphisto", 0.5f)
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg,
+            new QuantilePostAggregator("quantile", "apphisto", 0.5f)
         )
         .build();
 

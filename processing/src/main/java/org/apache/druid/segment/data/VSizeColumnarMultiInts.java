@@ -139,6 +139,12 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
+  public IndexedInts getUnshared(final int index)
+  {
+    return get(index);
+  }
+
+  @Override
   public int indexOf(IndexedInts value)
   {
     throw new UnsupportedOperationException("Reverse lookup not allowed.");
