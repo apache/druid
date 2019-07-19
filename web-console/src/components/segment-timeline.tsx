@@ -47,6 +47,8 @@ interface SegmentTimelineState {
   error: string | null;
   xScale: AxisScale<Date> | null;
   yScale: AxisScale<number> | null;
+  dStart: Date;
+  dEnd: Date;
 }
 
 interface BarChartScales {
@@ -79,6 +81,9 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
 
   constructor(props: SegmentTimelineProps) {
     super(props);
+    const dStart = new Date();
+    const dEnd = new Date();
+    dStart.setMonth(dStart.getMonth() - 3);
     this.state = {
       data: {},
       datasources: [],
@@ -91,7 +96,9 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       loading: true,
       error: null,
       xScale: null,
-      yScale: null
+      yScale: null,
+      dEnd: dEnd,
+      dStart: dStart
     };
   }
 
@@ -259,11 +266,11 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
 
   private calculateScales(): BarChartScales | null {
     const { chartWidth, chartHeight} = this.props;
-    const {data, activeDataType, activeDatasource, singleDatasourceData } = this.state;
+    const {data, activeDataType, activeDatasource, singleDatasourceData, dStart, dEnd } = this.state;
     if (Object.keys(data).length === 0) return null;
     const activeData = data[activeDataType];
-    const xDomain: Date[] = [new Date(activeData[0].day), new Date(activeData[activeData.length - 1].day)];
-    let yDomain: number[] = [0, activeData.reduce((max: any, d: any) => max.total > d.total ? max : d).total];
+    const xDomain: Date[] = [dStart, dEnd];
+    let yDomain: number[] = [0, activeData.length === 0 ? 0 : activeData.reduce((max: any, d: any) => max.total > d.total ? max : d).total];
     if (activeDatasource !== null && singleDatasourceData[activeDataType][activeDatasource] !== undefined) {
       yDomain = [0, singleDatasourceData[activeDataType][activeDatasource].reduce((max: any, d: any) => max.y > d.y ? max : d).y];
     }
@@ -276,9 +283,14 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
   }
 
   onTimeSpanChange = (e: any) => {
+    const dStart = new Date();
+    const dEnd = new Date();
+    dStart.setMonth(dStart.getMonth() - e);
     this.setState({
       timeSpan: e,
-      loading: true
+      loading: true,
+      dStart,
+      dEnd
     });
     this.dataQueryManager.rerunLastQuery();
   }
@@ -294,7 +306,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
 
   renderStackedBarChart() {
     const { chartWidth, chartHeight} = this.props;
-    const { loading, dataToRender, activeDataType, error, xScale, yScale, data, activeDatasource } = this.state;
+    const { loading, dataToRender, activeDataType, error, xScale, yScale, data, activeDatasource, dStart, dEnd } = this.state;
     if (loading) {
       return <div>
         <Loader
@@ -315,13 +327,20 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       </div>;
     }
 
-    if (activeDatasource !== null && data[activeDataType].every((d: any) => d[activeDatasource] === undefined)) {
+    if (data[activeDataType].length === 0) {
+      return <div>
+        <span className={'no-data-text'}>No data available for the time span selected</span>
+      </div>;
+    }
+
+    if (activeDatasource !== null && (data[activeDataType].every((d: any) => d[activeDatasource] === undefined))) {
       return <div>
         <span className={'no-data-text'}>No data available for <i>{activeDatasource}</i></span>
       </div>;
     }
 
-    const barCounts = data[activeDataType].length;
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+    const barCounts = (dEnd.getTime() - dStart.getTime()) / millisecondsPerDay;
     const barWidth = (chartWidth - this.chartMargin.left - this.chartMargin.right) / barCounts;
     return <StackedBarChart
       dataToRender={dataToRender}
