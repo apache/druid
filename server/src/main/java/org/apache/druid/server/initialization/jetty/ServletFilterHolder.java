@@ -38,7 +38,6 @@ import java.util.Map;
 @ExtensionPoint
 public interface ServletFilterHolder
 {
-
   /**
    * Get the Filter object that should be added to the servlet.
    *
@@ -73,6 +72,11 @@ public interface ServletFilterHolder
    * @return the path that this Filter should apply to
    */
   String getPath();
+
+  default String[] getPaths()
+  {
+    return new String[]{getPath()};
+  }
 
   /**
    * The dispatcher type that this Filter should apply to

@@ -27,6 +27,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
@@ -70,8 +71,15 @@ public class JettyServerInitUtils
         holder.setInitParameters(servletFilterHolder.getInitParameters());
       }
 
-      handler.addFilter(holder, servletFilterHolder.getPath(), servletFilterHolder.getDispatcherType());
+      FilterMapping filterMapping = new FilterMapping();
+      filterMapping.setFilterName(holder.getName());
+      filterMapping.setPathSpecs(servletFilterHolder.getPaths());
+      filterMapping.setDispatcherTypes(servletFilterHolder.getDispatcherType());
+
+      handler.getServletHandler().addFilter(holder, filterMapping);
     }
+    FilterMapping[] fms = handler.getServletHandler().getFilterMappings();
+    int x = 55;
   }
 
   public static Handler getJettyRequestLogHandler()

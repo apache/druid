@@ -121,16 +121,11 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
+            bindWorkerManagementClasses(binder);
 
-            binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-            binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
                   .in(LazySingleton.class);
-            Jerseys.addResource(binder, WorkerResource.class);
-            Jerseys.addResource(binder, TaskManagementResource.class);
 
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
@@ -174,5 +169,14 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceTaskLogsModule(),
         new LookupSerdeModule()
     );
+  }
+
+  public static void bindWorkerManagementClasses(Binder binder)
+  {
+    binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+    binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, WorkerTaskMonitor.class);
+    Jerseys.addResource(binder, WorkerResource.class);
+    Jerseys.addResource(binder, TaskManagementResource.class);
   }
 }

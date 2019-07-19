@@ -29,10 +29,16 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 
 import java.io.IOException;
 
+/**
+ * Ties the {@link DataSegmentServerAnnouncer} announce/unannounce to the lifecycle start and stop.
+ *
+ * Analogous to {@link org.apache.druid.server.coordination.SegmentLoadDropHandler} on the Historicals,
+ * but without segment cache management.
+ */
 @ManageLifecycle
-public class UnifiedIndexerLifecycleHandler
+public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(UnifiedIndexerLifecycleHandler.class);
+  private static final EmittingLogger log = new EmittingLogger(CliIndexerDataSegmentServerAnnouncerLifecycleHandler.class);
 
   private final DataSegmentServerAnnouncer dataSegmentServerAnnouncer;
 
@@ -42,7 +48,7 @@ public class UnifiedIndexerLifecycleHandler
   private volatile boolean started = false;
 
   @Inject
-  public UnifiedIndexerLifecycleHandler(
+  public CliIndexerDataSegmentServerAnnouncerLifecycleHandler(
       DataSegmentServerAnnouncer dataSegmentServerAnnouncer
   )
   {

@@ -19,21 +19,15 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
@@ -50,7 +44,6 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -75,13 +68,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * TaskRunner implemention for the Indexer task execution service, which runs all tasks in a single process.
+ * TaskRunner implemention for the CliIndexer task execution service, which runs all tasks in a single process.
  *
  * Two thread pools are used:
  * - A task execution pool, sized to number of worker slots. This is used to execute the Task run() methods.
@@ -93,26 +83,21 @@ import java.util.concurrent.TimeUnit;
  * Note that separate task logs are not supported, all task log entries will be written to the Indexer process log
  * instead.
  */
-public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySegmentWalker
+public class ThreadingTaskRunner
+    extends BaseRestorableTaskRunner<ThreadingTaskRunner.ThreadingTaskRunnerWorkItem>
+    implements TaskLogStreamer, QuerySegmentWalker
 {
-  private static final EmittingLogger log = new EmittingLogger(ThreadingTaskRunner.class);
+  private static final EmittingLogger LOGGER = new EmittingLogger(ThreadingTaskRunner.class);
 
-  private static final String TASK_RESTORE_FILENAME = "restore.json";
   private final TaskToolboxFactory toolboxFactory;
-  private final TaskConfig taskConfig;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode node;
-  private final ObjectMapper jsonMapper;
-  private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
   private final AppenderatorsManager appenderatorsManager;
   private final TaskReportFileWriter taskReportFileWriter;
   private final ListeningExecutorService taskExecutor;
   private final ListeningExecutorService controlThreadExecutor;
 
   private volatile boolean stopping = false;
-
-  /** Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting. */
-  private final ConcurrentHashMap<String, ThreadingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   @Inject
   public ThreadingTaskRunner(
@@ -126,10 +111,9 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
       @Self DruidNode node
   )
   {
+    super(jsonMapper, taskConfig);
     this.toolboxFactory = toolboxFactory;
-    this.taskConfig = taskConfig;
     this.taskLogPusher = taskLogPusher;
-    this.jsonMapper = jsonMapper;
     this.node = node;
     this.appenderatorsManager = appenderatorsManager;
     this.taskReportFileWriter = taskReportFileWriter;
@@ -149,84 +133,9 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
   }
 
   @Override
-  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
-  {
-    final File restoreFile = getRestoreFile();
-    final TaskRestoreInfo taskRestoreInfo;
-    if (restoreFile.exists()) {
-      try {
-        taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
-        return ImmutableList.of();
-      }
-    } else {
-      return ImmutableList.of();
-    }
-
-    final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
-    for (final String taskId : taskRestoreInfo.getRunningTasks()) {
-      try {
-        final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
-        final Task task = jsonMapper.readValue(taskFile, Task.class);
-
-        if (!task.getId().equals(taskId)) {
-          throw new ISE("WTF?! Task[%s] restore file had wrong id[%s].", taskId, task.getId());
-        }
-
-        if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
-          log.info("Restoring task[%s].", task.getId());
-          retVal.add(Pair.of(task, run(task)));
-        }
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to restore task[%s]. Trying to restore other tasks.", taskId);
-      }
-    }
-
-    log.info("Restored %,d tasks.", retVal.size());
-
-    return retVal;
-  }
-
-  @Override
   public void start()
   {
-
-  }
-
-  @Override
-  public void registerListener(TaskRunnerListener listener, Executor executor)
-  {
-    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
-      if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
-        throw new ISE("Listener [%s] already registered", listener.getListenerId());
-      }
-    }
-
-    final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
-
-    synchronized (tasks) {
-      for (ThreadingTaskRunnerWorkItem item : tasks.values()) {
-        TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTaskId(), item.getLocation());
-      }
-
-      listeners.add(listenerPair);
-      log.info("Registered listener [%s]", listener.getListenerId());
-    }
-  }
-
-  @Override
-  public void unregisterListener(String listenerId)
-  {
-    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
-      if (pair.lhs.getListenerId().equals(listenerId)) {
-        listeners.remove(pair);
-        log.info("Unregistered listener [%s]", listenerId);
-        return;
-      }
-    }
+    // Nothing to start.
   }
 
   @Override
@@ -268,13 +177,13 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
                               synchronized (tasks) {
                                 taskWorkItem = tasks.get(task.getId());
 
-                                if (taskWorkItem.shutdown) {
-                                  throw new IllegalStateException("Task has been shut down!");
+                                if (taskWorkItem == null) {
+                                  LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                                  throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                                 }
 
-                                if (taskWorkItem == null) {
-                                  log.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
-                                  throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
+                                if (taskWorkItem.shutdown) {
+                                  throw new IllegalStateException("Task has been shut down!");
                                 }
                               }
 
@@ -300,7 +209,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
                                           return task.run(toolbox);
                                         }
                                         catch (Exception e) {
-                                          log.error(e, "Task[%s] exited with exception.", task.getId());
+                                          LOGGER.error(e, "Task[%s] exited with exception.", task.getId());
                                           return null;
                                         }
                                         finally {
@@ -339,7 +248,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
                             }
                           }
                           catch (Throwable t) {
-                            log.info(t, "Exception caught during execution");
+                            LOGGER.info(t, "Exception caught during execution");
                             throw new RuntimeException(t);
                           }
                           finally {
@@ -356,19 +265,19 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
 
                               try {
                                 if (!stopping && taskDir.exists()) {
-                                  log.info("Removing task directory: %s", taskDir);
+                                  LOGGER.info("Removing task directory: %s", taskDir);
                                   FileUtils.deleteDirectory(taskDir);
                                 }
                               }
                               catch (Exception e) {
-                                log.makeAlert(e, "Failed to delete task directory")
-                                   .addData("taskDir", taskDir.toString())
-                                   .addData("task", task.getId())
-                                   .emit();
+                                LOGGER.makeAlert(e, "Failed to delete task directory")
+                                      .addData("taskDir", taskDir.toString())
+                                      .addData("task", task.getId())
+                                      .emit();
                               }
                             }
                             catch (Exception e) {
-                              log.error(e, "Suppressing exception caught while cleaning up task");
+                              LOGGER.error(e, "Suppressing exception caught while cleaning up task");
                             }
                           }
                         }
@@ -384,19 +293,19 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
   @Override
   public void shutdown(String taskid, String reason)
   {
-    log.info("Shutdown [%s] because: [%s]", taskid, reason);
+    LOGGER.info("Shutdown [%s] because: [%s]", taskid, reason);
     final ThreadingTaskRunnerWorkItem taskInfo;
 
     synchronized (tasks) {
       taskInfo = tasks.get(taskid);
 
       if (taskInfo == null) {
-        log.info("Ignoring request to cancel unknown task: %s", taskid);
+        LOGGER.info("Ignoring request to cancel unknown task: %s", taskid);
         return;
       }
 
       if (taskInfo.shutdown) {
-        log.info(
+        LOGGER.info(
             "Task [%s] is already shutting down, ignoring duplicate shutdown request with reason [%s]",
             taskid,
             reason
@@ -427,7 +336,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
             @Override
             public Void call()
             {
-              log.info("Stopping thread for task: %s", taskInfo.getTaskId());
+              LOGGER.info("Stopping thread for task: %s", taskInfo.getTaskId());
               taskInfo.getTask().stopGracefully(taskConfig);
 
               try {
@@ -443,7 +352,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
                 }
               }
               catch (Exception e) {
-                log.info(e, "Encountered exception while waiting for task [%s] shutdown", taskInfo.getTaskId());
+                LOGGER.info(e, "Encountered exception while waiting for task [%s] shutdown", taskInfo.getTaskId());
                 if (taskInfo.thread != null) {
                   taskInfo.thread.interrupt();
                 }
@@ -482,13 +391,13 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
       shutdownFuture.get();
     }
     catch (Exception e) {
-      log.error(e, "Encountered exception when stopping all tasks.");
+      LOGGER.error(e, "Encountered exception when stopping all tasks.");
     }
 
     final DateTime start = DateTimes.nowUtc();
     final long gracefulShutdownMillis = taskConfig.getGracefulShutdownTimeout().toStandardDuration().getMillis();
 
-    log.info("Waiting up to %,dms for shutdown.", gracefulShutdownMillis);
+    LOGGER.info("Waiting up to %,dms for shutdown.", gracefulShutdownMillis);
     if (gracefulShutdownMillis > 0) {
       try {
         final boolean terminated = controlThreadExecutor.awaitTermination(
@@ -497,18 +406,18 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
         );
         final long elapsed = System.currentTimeMillis() - start.getMillis();
         if (terminated) {
-          log.info("Finished stopping in %,dms.", elapsed);
+          LOGGER.info("Finished stopping in %,dms.", elapsed);
         } else {
           final Set<String> stillRunning;
           synchronized (tasks) {
             stillRunning = ImmutableSet.copyOf(tasks.keySet());
           }
-          log.makeAlert("Failed to stop task threads")
-             .addData("stillRunning", stillRunning)
-             .addData("elapsed", elapsed)
-             .emit();
+          LOGGER.makeAlert("Failed to stop task threads")
+                .addData("stillRunning", stillRunning)
+                .addData("elapsed", elapsed)
+                .emit();
 
-          log.warn(
+          LOGGER.warn(
               "Executor failed to stop after %,dms, not waiting for it! Tasks still running: [%s]",
               elapsed,
               Joiner.on("; ").join(stillRunning)
@@ -516,16 +425,16 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
         }
       }
       catch (InterruptedException e) {
-        log.warn(e, "Interrupted while waiting for executor to finish.");
+        LOGGER.warn(e, "Interrupted while waiting for executor to finish.");
         Thread.currentThread().interrupt();
       }
     } else {
-      log.warn("Ran out of time, not waiting for executor to finish!");
+      LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
   }
 
   @Override
-  public Collection<? extends TaskRunnerWorkItem> getRunningTasks()
+  public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     synchronized (tasks) {
       final List<TaskRunnerWorkItem> ret = new ArrayList<>();
@@ -539,7 +448,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
   }
 
   @Override
-  public Collection<? extends TaskRunnerWorkItem> getPendingTasks()
+  public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     synchronized (tasks) {
       final List<TaskRunnerWorkItem> ret = new ArrayList<>();
@@ -549,14 +458,6 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
         }
       }
       return ret;
-    }
-  }
-
-  @Override
-  public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
-  {
-    synchronized (tasks) {
-      return Lists.newArrayList(tasks.values());
     }
   }
 
@@ -584,32 +485,6 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
     return Optional.absent();
   }
 
-
-  // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
-  // occur while saving.
-  @GuardedBy("tasks")
-  private void saveRunningTasks()
-  {
-    final File restoreFile = getRestoreFile();
-    final List<String> theTasks = new ArrayList<>();
-    for (ThreadingTaskRunnerWorkItem threadingTaskRunnerWorkItem : tasks.values()) {
-      theTasks.add(threadingTaskRunnerWorkItem.getTaskId());
-    }
-
-    try {
-      Files.createParentDirs(restoreFile);
-      jsonMapper.writeValue(restoreFile, new TaskRestoreInfo(theTasks));
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
-    }
-  }
-
-  private File getRestoreFile()
-  {
-    return new File(taskConfig.getBaseTaskDir(), TASK_RESTORE_FILENAME);
-  }
-
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(
       Query<T> query,
@@ -628,26 +503,7 @@ public class ThreadingTaskRunner implements TaskRunner, TaskLogStreamer, QuerySe
     return appenderatorsManager.getQueryRunnerForSegments(query, specs);
   }
 
-  private static class TaskRestoreInfo
-  {
-    @JsonProperty
-    private final List<String> runningTasks;
-
-    @JsonCreator
-    public TaskRestoreInfo(
-        @JsonProperty("runningTasks") List<String> runningTasks
-    )
-    {
-      this.runningTasks = runningTasks;
-    }
-
-    public List<String> getRunningTasks()
-    {
-      return runningTasks;
-    }
-  }
-
-  private static class ThreadingTaskRunnerWorkItem extends TaskRunnerWorkItem
+  protected static class ThreadingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
     private volatile Thread thread;

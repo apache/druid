@@ -115,7 +115,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   @Override
   public void removeAppenderatorForTask(String taskId)
   {
-
+    // nothing to remove
   }
 
   @Override

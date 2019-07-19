@@ -51,6 +51,9 @@ import java.util.concurrent.ExecutorService;
  * useful for the Indexer where all Tasks run in the same process.
  *
  * The methods on AppenderatorsManager can be called by multiple threads.
+ *
+ * This class provides similar functionality to the {@link org.apache.druid.server.coordination.ServerManager} and
+ * {@link org.apache.druid.server.SegmentManager} on the Historical processes.
  */
 public interface AppenderatorsManager
 {

@@ -34,12 +34,45 @@ import java.util.zip.Deflater;
  */
 public class ServerConfig
 {
-
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+
+  public ServerConfig(
+      int numThreads,
+      int queueSize,
+      boolean enableRequestLimit,
+      @NotNull Period maxIdleTime,
+      long defaultQueryTimeout,
+      long maxScatterGatherBytes,
+      long maxQueryTimeout,
+      int maxRequestHeaderSize,
+      @NotNull Period gracefulShutdownTimeout,
+      @NotNull Period unannouncePropagationDelay,
+      int inflateBufferSize,
+      int compressionLevel
+  )
+  {
+    this.numThreads = numThreads;
+    this.queueSize = queueSize;
+    this.enableRequestLimit = enableRequestLimit;
+    this.maxIdleTime = maxIdleTime;
+    this.defaultQueryTimeout = defaultQueryTimeout;
+    this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxQueryTimeout = maxQueryTimeout;
+    this.maxRequestHeaderSize = maxRequestHeaderSize;
+    this.gracefulShutdownTimeout = gracefulShutdownTimeout;
+    this.unannouncePropagationDelay = unannouncePropagationDelay;
+    this.inflateBufferSize = inflateBufferSize;
+    this.compressionLevel = compressionLevel;
+  }
+
+  public ServerConfig()
+  {
+
+  }
 
   @JsonProperty
   @Min(1)
-  private int numThreads = Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  private int numThreads = getDefaultNumThreads();
 
   @JsonProperty
   @Min(1)
@@ -206,5 +239,10 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            '}';
+  }
+
+  public static int getDefaultNumThreads()
+  {
+    return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
   }
 }
