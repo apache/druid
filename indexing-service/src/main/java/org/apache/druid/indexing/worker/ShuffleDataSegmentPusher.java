@@ -28,6 +28,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
+/**
+ * DataSegmentPusher used for storing intermeidary data in local storage during data shuffle of native parallel
+ * indexing.
+ */
 public class ShuffleDataSegmentPusher implements DataSegmentPusher
 {
   private final String supervisorTaskId;

@@ -66,7 +66,7 @@ import java.util.stream.IntStream;
 
 /**
  * This class manages intermediary segments for data shuffle between native parallel index tasks.
- * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers
+ * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers (or indexer)
  * and phase 2 tasks read those files via HTTP.
  * <p>
  * The directory where segment files are placed is structured as
@@ -182,7 +182,9 @@ public class IntermediaryDataManager
               supervisorTaskId,
               k -> {
                 for (File eachFile : FileUtils.listFiles(supervisorTaskDir, null, true)) {
-                  location.reserve(eachFile, eachFile.getName(), eachFile.length());
+                  if (!location.reserve(eachFile, eachFile.getName(), eachFile.length())) {
+                    log.warn("Can't add a discovered partition[%s]", eachFile.getAbsolutePath());
+                  }
                 }
                 numDiscovered.increment();
                 return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
@@ -237,9 +239,6 @@ public class IntermediaryDataManager
   /**
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
-   * <p>
-   * This method is only useful for the new Indexer model. Tasks running in the existing middleManager should the static
-   * addSegment method.
    */
   public long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
