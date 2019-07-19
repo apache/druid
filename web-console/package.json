@@ -51,7 +51,6 @@
   "dependencies": {
     "@blueprintjs/core": "^3.17.1",
     "@blueprintjs/icons": "^3.9.1",
-    "@types/d3": "^5.7.2",
     "axios": "^0.19.0",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
@@ -81,6 +80,7 @@
     "@babel/preset-env": "^7.5.4",
     "@testing-library/react": "^8.0.5",
     "@types/classnames": "^2.2.9",
+    "@types/d3": "^5.7.2",
     "@types/d3-array": "^2.0.0",
     "@types/enzyme": "^3.10.2",
     "@types/enzyme-adapter-react-16": "^1.0.5",
