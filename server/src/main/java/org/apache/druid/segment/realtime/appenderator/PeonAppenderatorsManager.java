@@ -100,10 +100,9 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger
   )
   {
+    // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
     if (realtimeAppenderator != null) {
       throw new ISE("A realtime appenderator was already created for this peon's task.");
-    } else if (batchAppenderator != null) {
-      throw new ISE("A batch appenderator was already created for this peon's task.");
     } else {
       batchAppenderator = Appenderators.createOffline(
           schema,

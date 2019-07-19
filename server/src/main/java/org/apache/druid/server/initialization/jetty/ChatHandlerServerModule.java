@@ -125,11 +125,11 @@ public class ChatHandlerServerModule implements Module
    */
   private DruidNode makeDruidNodeForSeparateChatHandler()
   {
-    String serviceName = properties.getProperty("druid.service");
-    String host = properties.getProperty("druid.host");
+    String serviceName = properties.getProperty("druid.service", "druid/indexer");
+    String host = properties.getProperty("druid.host", DruidNode.getDefaultHost());
     String bindOnHost = properties.getProperty("druid.bindOnHost", "false");
     String plaintextPort = properties.getProperty("druid.plaintextPort");
-    String port = properties.getProperty("druid.port");
+    String port = properties.getProperty("druid.port", "8091");
     String tlsPort = properties.getProperty("druid.tlsPort");
     String enablePlaintextPort = properties.getProperty("druid.enablePlaintextPort", "true");
     String enableTlsPort = properties.getProperty("druid.enableTlsPort", "false");
