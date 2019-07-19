@@ -36,7 +36,6 @@ public class ForegroundCachePopulator implements CachePopulator
 {
   private static final Logger log = new Logger(ForegroundCachePopulator.class);
 
-  private final Object lock = new Object();
   private final ObjectMapper objectMapper;
   private final CachePopulatorStats cachePopulatorStats;
   private final long maxEntrySize;
@@ -76,19 +75,17 @@ public class ForegroundCachePopulator implements CachePopulator
             sequence,
             input -> {
               if (!tooBig.get()) {
-                synchronized (lock) {
-                  try {
-                    jsonGenerator.writeObject(cacheFn.apply(input));
+                try {
+                  jsonGenerator.writeObject(cacheFn.apply(input));
 
-                    // Not flushing jsonGenerator before checking this, but should be ok since Jackson buffers are
-                    // typically just a few KB, and we don't want to waste cycles flushing.
-                    if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
-                      tooBig.set(true);
-                    }
+                  // Not flushing jsonGenerator before checking this, but should be ok since Jackson buffers are
+                  // typically just a few KB, and we don't want to waste cycles flushing.
+                  if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
+                    tooBig.set(true);
                   }
-                  catch (IOException e) {
-                    throw new RuntimeException(e);
-                  }
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
                 }
               }
 
@@ -100,24 +97,22 @@ public class ForegroundCachePopulator implements CachePopulator
           @Override
           public void after(final boolean isDone, final Throwable thrown) throws Exception
           {
-            synchronized (lock) {
-              jsonGenerator.close();
+            jsonGenerator.close();
 
-              if (isDone) {
-                // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
-                if (tooBig.get() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
-                  cachePopulatorStats.incrementOversized();
-                  return;
-                }
+            if (isDone) {
+              // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
+              if (tooBig.get() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
+                cachePopulatorStats.incrementOversized();
+                return;
+              }
 
-                try {
-                  cache.put(cacheKey, bytes.toByteArray());
-                  cachePopulatorStats.incrementOk();
-                }
-                catch (Exception e) {
-                  log.warn(e, "Unable to write to cache");
-                  cachePopulatorStats.incrementError();
-                }
+              try {
+                cache.put(cacheKey, bytes.toByteArray());
+                cachePopulatorStats.incrementOk();
+              }
+              catch (Exception e) {
+                log.warn(e, "Unable to write to cache");
+                cachePopulatorStats.incrementError();
               }
             }
           }
