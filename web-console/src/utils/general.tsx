@@ -276,8 +276,8 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
-  return (xs.map(f) as any).filter(Boolean);
+export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | undefined): Q[] {
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
 export function alphanumericCompare(a: string, b: string): number {

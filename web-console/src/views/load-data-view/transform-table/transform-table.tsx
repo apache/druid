@@ -53,10 +53,10 @@ export class TransformTable extends React.PureComponent<TransformTableProps> {
         className="transform-table -striped -highlight"
         data={sampleData.rows}
         columns={filterMap(sampleData.header, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          if (!caseInsensitiveContains(columnName, columnFilter)) return;
           const timestamp = columnName === '__time';
           const transformIndex = transforms.findIndex(f => f.name === columnName);
-          if (transformIndex === -1 && transformedColumnsOnly) return null;
+          if (transformIndex === -1 && transformedColumnsOnly) return;
           const transform = transforms[transformIndex];
 
           const columnClassName = classNames({
