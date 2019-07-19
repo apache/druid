@@ -19,6 +19,11 @@
 
 package org.apache.druid.query.context;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -30,7 +35,6 @@ public abstract class ResponseContext
 
   public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
   public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
-  public static final String CTX_CPU_CONSUMED = "X-CPU-Consumed";
   public static final String CTX_MISSING_SEGMENTS_KEY = "missingSegments";
   public static final String CTX_HEADER_ETAG = "ETag";
   public static final String CTX_QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
@@ -59,13 +63,35 @@ public abstract class ResponseContext
     getDelegate().putAll(m);
   }
 
-  public boolean containsKey(String key)
+  public void putAll(ResponseContext responseContext)
   {
-    return getDelegate().containsKey(key);
+    getDelegate().putAll(responseContext.getDelegate());
   }
 
   public int size()
   {
     return getDelegate().size();
+  }
+
+  public String serialize(ObjectMapper objectMapper)
+      throws JsonProcessingException
+  {
+    return objectMapper.writeValueAsString(getDelegate());
+  }
+
+  public static ResponseContext deserialize(String responseContext, ObjectMapper objectMapper) throws IOException
+  {
+    final Map<String, Object> delegate = objectMapper.readValue(
+        responseContext,
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    return new ResponseContext()
+    {
+      @Override
+      protected Map<String, Object> getDelegate()
+      {
+        return delegate;
+      }
+    };
   }
 }

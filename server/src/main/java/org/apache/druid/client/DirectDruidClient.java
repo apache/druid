@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -68,7 +67,6 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URL;
 import java.util.Enumeration;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -232,12 +230,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
             // context may be null in case of error or query timeout
             if (responseContext != null) {
-              context.putAll(
-                  objectMapper.<Map<String, Object>>readValue(
-                      responseContext,
-                      JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-                  )
-              );
+              context.putAll(ResponseContext.deserialize(responseContext, objectMapper));
             }
             continueReading = enqueue(response.getContent(), 0L);
           }
