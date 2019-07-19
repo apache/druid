@@ -51,17 +51,18 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 |`kafkaProperties`|Kafka consumer properties. At least"bootstrap.servers" must be specified. |Yes||
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
 |`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.html))|No|`false`|
-|`namespaceParseSpec`|How to extract key and value pairs from Kafka message|No|null|
+|`namespaceParseSpec`|Spec to extract key and value pairs from Kafka JSON message|No|null|
 
-The extension `kafka-extraction-namespace` enables reading from a kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
+The extension `kafka-extraction-namespace` enables reading from a Apache Kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human-readable format.
 
 The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()` and `earliest` respectively.
 
 See [lookups](../../querying/lookups.html) for how to configure and use lookups.
 
-# Json Extrators
 
-Besides simple kafka key and message mapping, extraction allows to extract values from Kafka JSON messages.
+# JSON Extrators
+
+Besides simple Apache Kafka key and message mapping, extraction allows extracting values from Kafka JSON messages.
 
 ## Custom Json Extractor
 Allows to extract key and value from Kafka json message as per the following example:
@@ -81,9 +82,9 @@ Allows to extract key and value from Kafka json message as per the following exa
 }
 ```
 
-## Jq Json Extractor
+## Jq JSON Extractor
 
-Allows to extract key and value from Kafka json message using [JQ expressions](https://github.com/stedolan/jq/wiki/Cookbook). In the following example, Json array of categories parsed into a string where each categorie id get maps to the coresponding categorie name.
+Allows extracting key and value from Kafka JSON message using [JQ expressions](https://github.com/stedolan/jq/wiki/Cookbook). In the following example, JSON array of categories parsed into a string where each category id get maps to the corresponding category name.
 
 ```json
 {
