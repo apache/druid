@@ -32,9 +32,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -207,7 +210,40 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      Deserializer keyDeserializerObject;
+      Deserializer valueDeserializerObject;
+  
+      try {
+        Class keyDeserializerClass = Class.forName(props.getProperty("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer"));
+        Method keyDeserializerMethod = keyDeserializerClass.getMethod("deserialize", String.class, byte[].class);
+        Type keyDeserializerReturnType = keyDeserializerMethod.getGenericReturnType();
+    
+        if (keyDeserializerReturnType.getTypeName().equals("byte[]")) {
+          keyDeserializerObject = (Deserializer) keyDeserializerClass.getConstructor().newInstance();
+        } else {
+          throw new IllegalArgumentException("Key deserializer must return a byte array (byte[]), " + keyDeserializerClass.getName() + " returns " + keyDeserializerReturnType.getTypeName());
+        }
+      }
+      catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        throw new StreamException(e);
+      }
+  
+      try {
+        Class valueDeserializerClass = Class.forName(props.getProperty("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer"));
+        Method valueDeserializerMethod = valueDeserializerClass.getMethod("deserialize", String.class, byte[].class);
+        Type valueDeserializerReturnType = valueDeserializerMethod.getGenericReturnType();
+    
+        if (valueDeserializerReturnType.getTypeName().equals("byte[]")) {
+          valueDeserializerObject = (Deserializer) valueDeserializerClass.getConstructor().newInstance();
+        } else {
+          throw new IllegalArgumentException("Key deserializer must return a byte array (byte[]), " + valueDeserializerClass.getName() + " returns " + valueDeserializerReturnType.getTypeName());
+        }
+      }
+      catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        throw new StreamException(e);
+      }
+  
+      return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
