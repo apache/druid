@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -103,6 +104,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final AppenderatorsManager appenderatorsManager;
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
 
@@ -120,7 +122,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       @JacksonInject @Nullable IndexingServiceClient indexingServiceClient, // null in overlords
       @JacksonInject @Nullable ChatHandlerProvider chatHandlerProvider,     // null in overlords
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -143,6 +146,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.appenderatorsManager = appenderatorsManager;
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
@@ -318,7 +322,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         authorizerMapper,
         chatHandlerProvider,
         rowIngestionMetersFactory,
-        null
+        appenderatorsManager
     ).run(toolbox);
   }
 
