@@ -19,33 +19,41 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.Ordering;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
+
+import java.util.Comparator;
 import org.apache.druid.query.context.ResponseContext;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 
 /**
  */
 @PublicApi
-public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
+public class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
 {
+  private final Function<Query<T>, Comparator<T>> comparatorGenerator;
+  private final Function<Query<T>, BinaryOperator<T>> mergeFnGenerator;
+
   public ResultMergeQueryRunner(
-      QueryRunner<T> baseRunner
+      QueryRunner<T> baseRunner,
+      Function<Query<T>, Comparator<T>> comparatorGenerator,
+      Function<Query<T>, BinaryOperator<T>> mergeFnGenerator
   )
   {
     super(baseRunner);
+    this.comparatorGenerator = comparatorGenerator;
+    this.mergeFnGenerator = mergeFnGenerator;
   }
 
   @Override
   public Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, ResponseContext context)
   {
     Query<T> query = queryPlus.getQuery();
-    return CombiningSequence.create(baseRunner.run(queryPlus, context), makeOrdering(query), createMergeFn(query));
+    return CombiningSequence.create(
+        baseRunner.run(queryPlus, context),
+        comparatorGenerator.apply(query),
+        mergeFnGenerator.apply(query));
   }
-
-  protected abstract Ordering<T> makeOrdering(Query<T> query);
-
-  protected abstract BinaryFn<T, T, T> createMergeFn(Query<T> query);
 }

@@ -26,7 +26,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,7 +33,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
@@ -44,7 +42,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
-import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -53,9 +50,11 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -96,30 +95,18 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public QueryRunner<Result<SearchResultValue>> mergeResults(
-      QueryRunner<Result<SearchResultValue>> runner
+  public BinaryOperator<Result<SearchResultValue>> createMergeFn(
+      Query<Result<SearchResultValue>> query
   )
   {
-    return new ResultMergeQueryRunner<Result<SearchResultValue>>(runner)
-    {
-      @Override
-      protected Ordering<Result<SearchResultValue>> makeOrdering(Query<Result<SearchResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((SearchQuery) query).getGranularity(),
-            query.isDescending()
-        );
-      }
+    final SearchQuery searchQuery = (SearchQuery) query;
+    return new SearchBinaryFn(searchQuery.getSort(), searchQuery.getGranularity(), searchQuery.getLimit());
+  }
 
-      @Override
-      protected BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>> createMergeFn(
-          Query<Result<SearchResultValue>> input
-      )
-      {
-        SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
-      }
-    };
+  @Override
+  public Comparator<Result<SearchResultValue>> createResultComparator(Query<Result<SearchResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override

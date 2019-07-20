@@ -356,7 +356,7 @@ public class IncrementalIndexStorageAdapterTest
                   .dimension("sally")
                   .metric("cnt")
                   .threshold(10)
-                  .aggregators(Collections.singletonList(new LongSumAggregatorFactory("cnt", "cnt")))
+                  .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                   .build(),
               new IncrementalIndexStorageAdapter(index),
               null

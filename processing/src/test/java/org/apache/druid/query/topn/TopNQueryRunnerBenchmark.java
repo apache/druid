@@ -42,7 +42,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,7 +79,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               )
           )
       )
-      .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+      .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
       .build();
   private static final Map<TestCases, QueryRunner> testCaseMap = new HashMap<>();
 

@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.BySegmentSkippingQueryRunner;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -68,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -138,16 +138,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
-      private BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
+      private BinaryOperator<SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
-        return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
-          {
-            return mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
-          }
-        };
+        return (arg1, arg2) -> mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
       }
     };
   }

@@ -1525,7 +1525,7 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
 
     failMsg += " topN ";
@@ -1558,7 +1558,7 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
 
     failMsg += " filtered topN ";

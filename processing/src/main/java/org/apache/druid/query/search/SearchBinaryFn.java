@@ -23,17 +23,16 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class SearchBinaryFn
-    implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
+public class SearchBinaryFn implements BinaryOperator<Result<SearchResultValue>>
 {
   private final SearchSortSpec searchSortSpec;
   private final Granularity gran;
@@ -113,6 +112,6 @@ public class SearchBinaryFn
                                ? arg1.getTimestamp()
                                : gran.bucketStart(arg1.getTimestamp());
 
-    return new Result<SearchResultValue>(timestamp, new SearchResultValue(results));
+    return new Result<>(timestamp, new SearchResultValue(results));
   }
 }
