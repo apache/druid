@@ -126,11 +126,11 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
                                                  .setContext(maq.getContext());
       GroupByQuery gbq = builder.build();
 
-      ResponseContext gbqResponse = DefaultResponseContext.empty();
-      gbqResponse.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
-      gbqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      ResponseContext gbqResponseContext = DefaultResponseContext.empty();
+      gbqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
+      gbqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
-      Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponse);
+      Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
       try {
         // use localhost for remote address
         requestLogger.logNativeQuery(RequestLogLine.forNative(
@@ -164,11 +164,11 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           0,
           maq.getContext()
       );
-      ResponseContext tsqResponse = DefaultResponseContext.empty();
-      tsqResponse.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
-      tsqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      ResponseContext tsqResponseContext = DefaultResponseContext.empty();
+      tsqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
+      tsqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
-      Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponse);
+      Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponseContext);
       try {
         // use localhost for remote address
         requestLogger.logNativeQuery(RequestLogLine.forNative(

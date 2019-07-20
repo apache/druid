@@ -22,9 +22,9 @@ package org.apache.druid.query;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 
 import java.util.Comparator;
-import org.apache.druid.query.context.ResponseContext;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
