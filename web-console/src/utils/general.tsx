@@ -276,7 +276,7 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | undefined): Q[] {
+export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 

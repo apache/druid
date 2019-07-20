@@ -35,7 +35,7 @@
   "scripts": {
     "compile": "./script/build",
     "pretest": "./script/build",
-    "test": "npm run tslint && npm run stylelint && npm run check-licenses && jest --silent 2>&1",
+    "test": "npm run tslint && npm run stylelint && jest --silent 2>&1",
     "coverage": "jest --coverage",
     "update-snapshots": "jest -u",
     "tslint": "./node_modules/.bin/tslint -c tslint.json --project tsconfig.json --formatters-dir ./node_modules/awesome-code-style/formatter 'src/**/*.ts?(x)'",
