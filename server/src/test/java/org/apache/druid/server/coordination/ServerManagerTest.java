@@ -446,7 +446,7 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            ResponseContext context = DefaultResponseContext.empty();
+            ResponseContext context = DefaultResponseContext.createEmpty();
             Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
             seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();

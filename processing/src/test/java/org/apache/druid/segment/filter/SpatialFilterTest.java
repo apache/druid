@@ -573,7 +573,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -626,7 +626,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -714,7 +714,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

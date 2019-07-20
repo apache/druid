@@ -239,7 +239,7 @@ public class FixedBucketsHistogramTopNQueryTest
             )
         )
     );
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
 
     List<Result<TopNResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, results);

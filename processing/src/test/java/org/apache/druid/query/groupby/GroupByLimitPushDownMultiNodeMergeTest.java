@@ -551,7 +551,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -672,7 +672,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(

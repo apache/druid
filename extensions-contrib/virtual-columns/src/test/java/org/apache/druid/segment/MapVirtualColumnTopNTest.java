@@ -105,7 +105,7 @@ public class MapVirtualColumnTopNTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
   }
 
   @Test
@@ -129,7 +129,7 @@ public class MapVirtualColumnTopNTest
         null
     );
 
-    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     final List<Result<TopNResultValue>> expected = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

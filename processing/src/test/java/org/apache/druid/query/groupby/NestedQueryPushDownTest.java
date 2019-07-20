@@ -419,7 +419,7 @@ public class NestedQueryPushDownTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -472,7 +472,7 @@ public class NestedQueryPushDownTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -534,7 +534,7 @@ public class NestedQueryPushDownTest
         .setQuerySegmentSpec(intervalSpec)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(0, results.size());
@@ -583,7 +583,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "newDimA", "mango"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());
@@ -633,7 +633,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "newDimA", "mango"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());
@@ -684,7 +684,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "extractedDimA", "replacement"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(2, results.size());
@@ -730,7 +730,7 @@ public class NestedQueryPushDownTest
         "dimB", "sweet",
         "finalSum", 90L
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.empty());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());

@@ -112,7 +112,7 @@ public class VarianceTimeseriesQueryTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     assertExpectedResults(expectedResults, results);
   }
 

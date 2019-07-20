@@ -400,7 +400,7 @@ public class SearchBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -461,7 +461,7 @@ public class SearchBenchmark
 
     Sequence<Result<SearchResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
     blackhole.consume(results);

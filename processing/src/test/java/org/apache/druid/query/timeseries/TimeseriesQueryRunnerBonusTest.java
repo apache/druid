@@ -130,7 +130,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .aggregators(new CountAggregatorFactory("rows"))
                                   .descending(descending)
                                   .build();
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     return runner.run(QueryPlus.wrap(query), context).toList();
   }
 

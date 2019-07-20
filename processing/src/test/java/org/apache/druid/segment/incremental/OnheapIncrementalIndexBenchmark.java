@@ -394,7 +394,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
-                  ResponseContext context = DefaultResponseContext.empty();
+                  ResponseContext context = DefaultResponseContext.createEmpty();
                   List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
@@ -427,7 +427,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {

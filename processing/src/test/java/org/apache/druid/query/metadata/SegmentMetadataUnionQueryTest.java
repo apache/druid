@@ -123,7 +123,7 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    List result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

@@ -508,7 +508,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query1).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -534,7 +534,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query2).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -564,7 +564,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query3).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -598,7 +598,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 =
-          QueryPlus.wrap(query4).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query4).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -654,7 +654,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query1).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -690,7 +690,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query2).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -731,7 +731,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query3).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query3",
           ImmutableList.of(
@@ -766,7 +766,7 @@ public class AppenderatorTest
                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                      .build();
       final List<ScanResultValue> results4 =
-          QueryPlus.wrap(query4).run(appenderator, DefaultResponseContext.empty()).toList();
+          QueryPlus.wrap(query4).run(appenderator, DefaultResponseContext.createEmpty()).toList();
       Assert.assertEquals(2, results4.size()); // 2 segments, 1 row per segment
       Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
       Assert.assertArrayEquals(

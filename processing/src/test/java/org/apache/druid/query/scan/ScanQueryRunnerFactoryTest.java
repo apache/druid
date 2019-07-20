@@ -229,7 +229,7 @@ public class ScanQueryRunnerFactoryTest
           factory.nWayMergeAndLimit(
               groupedRunners,
               QueryPlus.wrap(query),
-              DefaultResponseContext.empty()
+              DefaultResponseContext.createEmpty()
           ).toList();
 
       validateSortedOutput(output, expectedEventTimestamps);

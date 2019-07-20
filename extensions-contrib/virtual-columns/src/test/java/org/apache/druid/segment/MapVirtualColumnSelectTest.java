@@ -190,7 +190,7 @@ public class MapVirtualColumnSelectTest
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
-    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), DefaultResponseContext.empty()).toList();
+    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), DefaultResponseContext.createEmpty()).toList();
     Assert.assertEquals(1, results.size());
 
     List<EventHolder> events = results.get(0).getValue().getEvents();

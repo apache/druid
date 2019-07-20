@@ -255,7 +255,7 @@ public class TopNQueryRunnerTest
       TopNQuery query
   )
   {
-    return runWithMerge(query, DefaultResponseContext.empty());
+    return runWithMerge(query, DefaultResponseContext.createEmpty());
   }
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
@@ -1304,7 +1304,7 @@ public class TopNQueryRunnerTest
         )
     );
 
-    final DefaultResponseContext responseContext = DefaultResponseContext.empty();
+    final DefaultResponseContext responseContext = DefaultResponseContext.createEmpty();
     responseContext.putAll(specialContext);
     Sequence<Result<TopNResultValue>> results = runWithMerge(query, responseContext);
     List<Result<BySegmentTopNResultValue>> resultList = results
@@ -4139,7 +4139,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
   }
 
   @Test
@@ -4178,7 +4178,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
   }
 
 
@@ -4294,7 +4294,7 @@ public class TopNQueryRunnerTest
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query)
   {
-    return runWithPreMergeAndMerge(query, DefaultResponseContext.empty());
+    return runWithPreMergeAndMerge(query, DefaultResponseContext.createEmpty());
   }
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)

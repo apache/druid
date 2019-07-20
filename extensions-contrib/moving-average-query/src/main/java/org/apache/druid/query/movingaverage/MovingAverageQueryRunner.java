@@ -126,7 +126,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
                                                  .setContext(maq.getContext());
       GroupByQuery gbq = builder.build();
 
-      ResponseContext gbqResponseContext = DefaultResponseContext.empty();
+      ResponseContext gbqResponseContext = DefaultResponseContext.createEmpty();
       gbqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
       gbqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
@@ -164,7 +164,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           0,
           maq.getContext()
       );
-      ResponseContext tsqResponseContext = DefaultResponseContext.empty();
+      ResponseContext tsqResponseContext = DefaultResponseContext.createEmpty();
       tsqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
       tsqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 

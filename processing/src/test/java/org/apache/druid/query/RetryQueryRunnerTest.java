@@ -89,7 +89,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRunWithMissingSegments()
   {
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -133,7 +133,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetry()
   {
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -181,7 +181,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetryMultiple()
   {
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -229,7 +229,7 @@ public class RetryQueryRunnerTest
   @Test(expected = SegmentMissingException.class)
   public void testException()
   {
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -261,7 +261,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testNoDuplicateRetry()
   {
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(

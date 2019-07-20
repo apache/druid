@@ -59,7 +59,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   private static final String marketDimension = "market";
   private static final SegmentId segmentId = SegmentId.dummy("testSegment");
 
-  private static final ResponseContext context = DefaultResponseContext.empty();
+  private static final ResponseContext context = DefaultResponseContext.createEmpty();
 
   private static final TopNQuery query = new TopNQueryBuilder()
       .dataSource(QueryRunnerTestHelper.dataSource)

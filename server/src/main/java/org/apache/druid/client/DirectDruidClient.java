@@ -106,7 +106,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   public static ResponseContext makeResponseContextForQuery()
   {
-    final ResponseContext responseContext = ConcurrentResponseContext.empty();
+    final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
     responseContext.put(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
     return responseContext;
   }

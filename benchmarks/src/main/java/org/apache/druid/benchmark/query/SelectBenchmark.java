@@ -262,7 +262,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -369,7 +369,7 @@ public class SelectBenchmark
 
     boolean done = false;
     while (!done) {
-      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), DefaultResponseContext.empty());
+      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), DefaultResponseContext.createEmpty());
       List<Result<SelectResultValue>> results = queryResult.toList();
       
       SelectResultValue result = results.get(0).getValue();

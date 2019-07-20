@@ -43,7 +43,7 @@ import java.util.Collections;
 
 public class TimewarpOperatorTest
 {
-  public static final ResponseContext CONTEXT = DefaultResponseContext.empty();
+  public static final ResponseContext CONTEXT = DefaultResponseContext.createEmpty();
 
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
       new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
@@ -356,7 +356,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 3))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList()
+        queryRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList()
     );
   }
 }

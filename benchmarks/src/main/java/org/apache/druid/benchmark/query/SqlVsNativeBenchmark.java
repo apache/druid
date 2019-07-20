@@ -151,7 +151,7 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole)
   {
-    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, DefaultResponseContext.empty());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, DefaultResponseContext.createEmpty());
     final Row lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
     blackhole.consume(lastRow);
   }

@@ -240,7 +240,7 @@ public class FilteredAggregatorBenchmark
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
         query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
     );
-    Sequence<T> queryResult = theRunner.run(queryToRun, DefaultResponseContext.empty());
+    Sequence<T> queryResult = theRunner.run(queryToRun, DefaultResponseContext.createEmpty());
     return queryResult.toList();
   }
 

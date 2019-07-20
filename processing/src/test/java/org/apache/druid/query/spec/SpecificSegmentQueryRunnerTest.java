@@ -93,7 +93,7 @@ public class SpecificSegmentQueryRunnerTest
     );
 
     // from accumulate
-    ResponseContext responseContext = DefaultResponseContext.empty();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
@@ -109,7 +109,7 @@ public class SpecificSegmentQueryRunnerTest
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null,
@@ -172,7 +172,7 @@ public class SpecificSegmentQueryRunnerTest
         )
     );
 
-    final ResponseContext responseContext = DefaultResponseContext.empty();
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)

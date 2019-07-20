@@ -143,7 +143,7 @@ public class VarianceTopNQueryTest
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;

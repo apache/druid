@@ -251,7 +251,7 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
     );
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
 
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }

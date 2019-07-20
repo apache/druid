@@ -487,7 +487,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -581,7 +581,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(

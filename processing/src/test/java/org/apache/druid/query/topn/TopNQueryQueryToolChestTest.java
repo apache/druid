@@ -274,19 +274,19 @@ public class TopNQueryQueryToolChestTest
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
           QueryPlus.wrap(query1),
-          DefaultResponseContext.empty()
+          DefaultResponseContext.createEmpty()
       );
       Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query2), DefaultResponseContext.empty());
+          .run(QueryPlus.wrap(query2), DefaultResponseContext.createEmpty());
       Assert.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query3), DefaultResponseContext.empty());
+          .run(QueryPlus.wrap(query3), DefaultResponseContext.createEmpty());
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }

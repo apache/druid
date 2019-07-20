@@ -141,7 +141,7 @@ public class MapVirtualColumnGroupByTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
   }
 
   @Test
@@ -162,7 +162,7 @@ public class MapVirtualColumnGroupByTest
         null
     );
 
-    final List<Row> result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    final List<Row> result = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     final List<Row> expected = ImmutableList.of(
         new MapBasedRow(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

@@ -194,7 +194,7 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
     );
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     return runner.run(QueryPlus.wrap(query), context).toList();
   }
 }

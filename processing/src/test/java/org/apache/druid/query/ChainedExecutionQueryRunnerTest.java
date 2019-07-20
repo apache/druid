@@ -119,7 +119,7 @@ public class ChainedExecutionQueryRunnerTest
          runners
         )
     );
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
@@ -244,7 +244,7 @@ public class ChainedExecutionQueryRunnerTest
             runners
         )
     );
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")

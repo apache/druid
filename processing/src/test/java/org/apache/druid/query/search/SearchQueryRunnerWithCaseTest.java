@@ -249,7 +249,7 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<Result<SearchResultValue>> results =
         runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
 

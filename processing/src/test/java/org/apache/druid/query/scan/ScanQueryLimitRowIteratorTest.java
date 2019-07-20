@@ -115,7 +115,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(multiEventScanResultValues)),
         queryPlus,
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
 
     int count = 0;
@@ -155,7 +155,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
 
     int count = 0;
@@ -196,7 +196,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
 
     int count = 0;

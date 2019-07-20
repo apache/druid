@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConcurrentResponseContext extends ResponseContext
 {
-  public static ConcurrentResponseContext empty()
+  public static ConcurrentResponseContext createEmpty()
   {
     return new ConcurrentResponseContext();
   }

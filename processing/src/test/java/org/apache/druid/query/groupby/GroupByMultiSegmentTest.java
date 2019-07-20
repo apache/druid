@@ -344,7 +344,7 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(

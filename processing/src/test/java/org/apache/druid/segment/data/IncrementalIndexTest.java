@@ -442,7 +442,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -597,7 +597,7 @@ public class IncrementalIndexTest
                         factory.createRunner(incrementalIndexSegment),
                         factory.getToolchest()
                     );
-                    ResponseContext context = DefaultResponseContext.empty();
+                    ResponseContext context = DefaultResponseContext.createEmpty();
                     Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
                     Double[] results = sequence.accumulate(
@@ -653,7 +653,7 @@ public class IncrementalIndexTest
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {

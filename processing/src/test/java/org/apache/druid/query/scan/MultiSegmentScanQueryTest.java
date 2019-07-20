@@ -199,7 +199,7 @@ public class MultiSegmentScanQueryTest
             Execs.directExecutor(),
             ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1))
         )
-        .run(QueryPlus.wrap(query), DefaultResponseContext.empty())
+        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
         .toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
@@ -226,8 +226,8 @@ public class MultiSegmentScanQueryTest
           {
             // simulate results back from 2 historicals
             List<Sequence<ScanResultValue>> sequences = Lists.newArrayListWithExpectedSize(2);
-            sequences.add(factory.createRunner(segment0).run(queryPlus, DefaultResponseContext.empty()));
-            sequences.add(factory.createRunner(segment1).run(queryPlus, DefaultResponseContext.empty()));
+            sequences.add(factory.createRunner(segment0).run(queryPlus, DefaultResponseContext.createEmpty()));
+            sequences.add(factory.createRunner(segment1).run(queryPlus, DefaultResponseContext.createEmpty()));
             return new MergeSequence<>(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(sequences)
@@ -236,7 +236,7 @@ public class MultiSegmentScanQueryTest
         }
     );
     ScanQuery query = newBuilder().build();
-    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();

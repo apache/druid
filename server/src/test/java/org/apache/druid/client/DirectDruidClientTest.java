@@ -154,22 +154,22 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
-    Sequence s1 = client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence s1 = client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     Assert.assertTrue(capturedRequest.hasCaptured());
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
-    client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
-    client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
-    client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
-    client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
 
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
@@ -184,8 +184,8 @@ public class DirectDruidClientTest
     Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client1.getNumOpenConnections());
 
-    client2.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
-    client2.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    client2.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    client2.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
 
     Assert.assertTrue(client2.getNumOpenConnections() == 2);
 
@@ -259,7 +259,7 @@ public class DirectDruidClientTest
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
-    Sequence results = client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence results = client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client1.getNumOpenConnections());
 
@@ -335,7 +335,7 @@ public class DirectDruidClientTest
             StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")
         )
     );
-    Sequence results = client1.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence results = client1.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
 
     QueryInterruptedException actualException = null;
     try {

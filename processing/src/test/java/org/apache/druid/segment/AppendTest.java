@@ -186,7 +186,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -211,7 +211,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment2);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -236,7 +236,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -261,7 +261,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -286,7 +286,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -311,7 +311,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -358,7 +358,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -406,7 +406,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -436,7 +436,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -456,7 +456,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -480,7 +480,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -502,7 +502,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -523,7 +523,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -545,7 +545,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -587,7 +587,7 @@ public class AppendTest
                                   .postAggregators(addRowsIndexConstant)
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 

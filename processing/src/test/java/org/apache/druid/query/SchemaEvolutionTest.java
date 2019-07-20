@@ -116,7 +116,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     return results.toList();
   }
 

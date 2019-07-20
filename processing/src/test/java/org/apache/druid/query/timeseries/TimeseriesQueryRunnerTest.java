@@ -88,7 +88,7 @@ import java.util.stream.StreamSupport;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryRunnerTest
 {
-  public static final ResponseContext CONTEXT = DefaultResponseContext.empty();
+  public static final ResponseContext CONTEXT = DefaultResponseContext.createEmpty();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -1632,7 +1632,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }
@@ -1676,7 +1676,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }
@@ -1720,7 +1720,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty())
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
                                                             .toList();
     assertExpectedResults(expectedResults, results);
   }

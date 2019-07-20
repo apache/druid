@@ -272,7 +272,7 @@ public class DoubleStorageTest
                                                       )
                                                       .merge(true)
                                                       .build();
-    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), DefaultResponseContext.empty()).toList();
+    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), DefaultResponseContext.createEmpty()).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
@@ -293,7 +293,7 @@ public class DoubleStorageTest
         .virtualColumns()
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     ScanResultValue expectedScanResult = new ScanResultValue(

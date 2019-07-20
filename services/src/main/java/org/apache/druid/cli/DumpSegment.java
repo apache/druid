@@ -485,7 +485,7 @@ public class DumpSegment extends GuiceRunnable
     return factory
         .getToolchest()
         .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
-        .run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)

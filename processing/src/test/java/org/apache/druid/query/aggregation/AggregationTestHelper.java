@@ -633,7 +633,7 @@ public class AggregationTestHelper implements Closeable
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    return baseRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
   }
 
   public QueryRunner<Row> makeStringSerdeQueryRunner(
@@ -648,7 +648,7 @@ public class AggregationTestHelper implements Closeable
       public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, DefaultResponseContext.empty());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, DefaultResponseContext.createEmpty());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()

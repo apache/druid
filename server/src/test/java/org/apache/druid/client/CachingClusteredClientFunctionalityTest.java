@@ -124,47 +124,47 @@ public class CachingClusteredClientFunctionalityTest
                                                             3
                                                         ));
 
-    ResponseContext responseContext = DefaultResponseContext.empty();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
     builder.intervals("2015-01-01/2015-01-03");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
-    responseContext = DefaultResponseContext.empty();
+    responseContext = DefaultResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }

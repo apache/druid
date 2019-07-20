@@ -365,7 +365,7 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final ResponseContext responseContext = DefaultResponseContext.empty();
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
 
     defineMocks();
 

@@ -285,7 +285,7 @@ public class SegmentMetadataQueryTest
   @SuppressWarnings("unchecked")
   public void testSegmentMetadataQuery()
   {
-    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), DefaultResponseContext.empty()).toList();
+    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), DefaultResponseContext.createEmpty()).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
@@ -352,7 +352,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -420,7 +420,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -488,7 +488,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -617,7 +617,7 @@ public class SegmentMetadataQueryTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -675,7 +675,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -737,7 +737,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -795,7 +795,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -853,7 +853,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()),
+        myRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -892,7 +892,7 @@ public class SegmentMetadataQueryTest
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
             QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of("bySegment", true))),
-            DefaultResponseContext.empty()
+            DefaultResponseContext.createEmpty()
         ),
         "failed SegmentMetadata bySegment query"
     );

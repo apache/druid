@@ -182,7 +182,7 @@ public class ScanQueryRunnerTest
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
@@ -224,7 +224,7 @@ public class ScanQueryRunnerTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
@@ -248,7 +248,7 @@ public class ScanQueryRunnerTest
         )
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     final List<List<Map<String, Object>>> expectedEvents = toEvents(
@@ -295,7 +295,7 @@ public class ScanQueryRunnerTest
         .columns(QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
@@ -330,7 +330,7 @@ public class ScanQueryRunnerTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
@@ -368,7 +368,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
@@ -428,10 +428,10 @@ public class ScanQueryRunnerTest
         .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), DefaultResponseContext.empty())
+        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -487,7 +487,7 @@ public class ScanQueryRunnerTest
         )
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
     List<ScanResultValue> expectedResults = Collections.emptyList();
 
@@ -502,7 +502,7 @@ public class ScanQueryRunnerTest
         .columns("foo", "foo2")
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
@@ -537,7 +537,7 @@ public class ScanQueryRunnerTest
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
@@ -625,7 +625,7 @@ public class ScanQueryRunnerTest
           .order(ScanQuery.Order.DESCENDING)
           .build();
 
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
@@ -738,7 +738,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
       final List<List<Map<String, Object>>> ascendingEvents = toEvents(
           new String[]{
@@ -829,7 +829,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
       String[] expectedRet = (String[]) ArrayUtils.addAll(seg1Results, seg2Results);
       ArrayUtils.reverse(expectedRet);

@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class DefaultResponseContext extends ResponseContext
 {
-  public static DefaultResponseContext empty()
+  public static DefaultResponseContext createEmpty()
   {
     return new DefaultResponseContext();
   }

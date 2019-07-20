@@ -517,7 +517,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
@@ -605,7 +605,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
@@ -699,7 +699,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {

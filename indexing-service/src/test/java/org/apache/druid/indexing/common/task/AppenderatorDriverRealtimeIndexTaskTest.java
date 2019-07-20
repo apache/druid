@@ -1642,7 +1642,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
     if (results.isEmpty()) {
       return 0L;

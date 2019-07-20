@@ -138,7 +138,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();

@@ -1036,7 +1036,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
@@ -1090,7 +1090,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
@@ -1151,7 +1151,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.empty();
+      ResponseContext context = DefaultResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
 
       List<Map<String, Object>> expected =

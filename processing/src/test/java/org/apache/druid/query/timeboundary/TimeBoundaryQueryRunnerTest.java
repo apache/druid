@@ -162,7 +162,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
@@ -186,7 +186,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
@@ -201,7 +201,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.empty();
+    ResponseContext context = DefaultResponseContext.createEmpty();
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -219,7 +219,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
@@ -238,7 +238,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
-    ResponseContext context = ConcurrentResponseContext.empty();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();

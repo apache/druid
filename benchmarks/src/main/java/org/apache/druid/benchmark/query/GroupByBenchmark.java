@@ -554,7 +554,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    return theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    return theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
   }
 
   @Benchmark
@@ -610,7 +610,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -631,7 +631,7 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -655,7 +655,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }

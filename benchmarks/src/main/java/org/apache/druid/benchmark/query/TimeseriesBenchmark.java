@@ -323,7 +323,7 @@ public class TimeseriesBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.empty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -401,7 +401,7 @@ public class TimeseriesBenchmark
 
     Sequence<Result<TimeseriesResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.empty()
+        DefaultResponseContext.createEmpty()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 

@@ -68,7 +68,7 @@ public class UnionQueryRunnerTest
                     .intervals("2014-01-01T00:00:00Z/2015-01-01T00:00:00Z")
                     .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                     .build();
-    ResponseContext responseContext = DefaultResponseContext.empty();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
     Sequence<?> result = runner.run(QueryPlus.wrap(q), responseContext);
     List res = result.toList();
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);

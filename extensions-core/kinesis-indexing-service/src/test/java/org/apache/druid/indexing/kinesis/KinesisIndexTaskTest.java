@@ -2962,7 +2962,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.empty()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }
