@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.guice.annotations.PublicApi;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The implementation of {@link ResponseContext} with a {@link ConcurrentHashMap} as a delegate
  */
+@PublicApi
 public class ConcurrentResponseContext extends ResponseContext
 {
   public static ConcurrentResponseContext createEmpty()

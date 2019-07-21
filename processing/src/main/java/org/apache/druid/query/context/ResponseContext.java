@@ -21,6 +21,7 @@ package org.apache.druid.query.context;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.util.Map;
  * The context is also transferred between Druid nodes with all the data it contains.
  * All the keys associated with data inside the context should be stored here.
  */
+@PublicApi
 public abstract class ResponseContext
 {
   protected abstract Map<String, Object> getDelegate();
