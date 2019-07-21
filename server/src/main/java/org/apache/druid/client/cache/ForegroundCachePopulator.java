@@ -22,6 +22,7 @@ package org.apache.druid.client.cache;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -29,9 +30,14 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
+/**
+ * {@link CachePopulator} implementation that populates a cache on the same thread that is processing the
+ * {@link Sequence}. Used if config "druid.*.cache.numBackgroundThreads" is 0 (the default). This {@link CachePopulator}
+ * should be more efficient than {@link BackgroundCachePopulator} if maximum cache entry size, specified by config
+ * "druid.*.cache.maxEntrySize", is exceeded.
+ */
 public class ForegroundCachePopulator implements CachePopulator
 {
   private static final Logger log = new Logger(ForegroundCachePopulator.class);
@@ -60,7 +66,7 @@ public class ForegroundCachePopulator implements CachePopulator
   )
   {
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    final AtomicBoolean tooBig = new AtomicBoolean(false);
+    final MutableBoolean tooBig = new MutableBoolean(false);
     final JsonGenerator jsonGenerator;
 
     try {
@@ -74,14 +80,14 @@ public class ForegroundCachePopulator implements CachePopulator
         Sequences.map(
             sequence,
             input -> {
-              if (!tooBig.get()) {
+              if (!tooBig.isTrue()) {
                 try {
                   jsonGenerator.writeObject(cacheFn.apply(input));
 
                   // Not flushing jsonGenerator before checking this, but should be ok since Jackson buffers are
                   // typically just a few KB, and we don't want to waste cycles flushing.
                   if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
-                    tooBig.set(true);
+                    tooBig.setValue(true);
                   }
                 }
                 catch (IOException e) {
@@ -101,7 +107,7 @@ public class ForegroundCachePopulator implements CachePopulator
 
             if (isDone) {
               // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
-              if (tooBig.get() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
+              if (tooBig.isTrue() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
                 cachePopulatorStats.incrementOversized();
                 return;
               }

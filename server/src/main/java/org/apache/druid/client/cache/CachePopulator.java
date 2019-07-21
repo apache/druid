@@ -23,6 +23,11 @@ import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.util.function.Function;
 
+/**
+ * Abstraction of mechanism for populating a {@link Cache} by wrapping a {@link Sequence} and providing a function to
+ * extract the values from it. At runtime, the {@link CachePopulator} implementation is used as a singleton and
+ * injected where needed to share between all cacheables, which requires the {@link Cache} itself to be thread-safe.
+ */
 public interface CachePopulator
 {
   <T, CacheType> Sequence<T> wrap(
