@@ -37,7 +37,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -116,7 +116,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    ).run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return results.toList();
   }
 

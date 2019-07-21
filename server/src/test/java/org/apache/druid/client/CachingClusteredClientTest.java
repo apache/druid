@@ -91,7 +91,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -514,7 +513,7 @@ public class CachingClusteredClientTest
     );
 
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = builder.intervals("2011-01-01/2011-01-10")
                                    .aggregators(RENAMED_AGGS)
                                    .postAggregators(RENAMED_POST_AGGS)
@@ -556,7 +555,7 @@ public class CachingClusteredClientTest
                                         .context(CONTEXT)
                                         .build();
 
-    final ResponseContext context = DefaultResponseContext.createEmpty();
+    final ResponseContext context = ResponseContext.createEmpty();
     final Cache cache = EasyMock.createStrictMock(Cache.class);
     final Capture<Iterable<Cache.NamedKey>> cacheKeyCapture = EasyMock.newCapture();
     EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
@@ -652,7 +651,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T00"), 18, 521,
             DateTimes.of("2011-01-09T02"), 181, 52
         ),
-        runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
+        runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty())
     );
   }
 
@@ -686,7 +685,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = builder
         .intervals("2011-11-04/2011-11-08")
         .aggregators(RENAMED_AGGS)
@@ -823,7 +822,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("imps")
@@ -884,7 +883,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TopNQuery query = builder
         .intervals("2011-11-04/2011-11-08")
         .metric("imps")
@@ -1005,7 +1004,7 @@ public class CachingClusteredClientTest
         )
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("imps")
@@ -1078,7 +1077,7 @@ public class CachingClusteredClientTest
         )
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("avg_imps_per_row_double")
@@ -1151,7 +1150,7 @@ public class CachingClusteredClientTest
         QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
@@ -1221,7 +1220,7 @@ public class CachingClusteredClientTest
         QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
@@ -1319,7 +1318,7 @@ public class CachingClusteredClientTest
             QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(
         makeSelectResults(
             dimensions,
@@ -1396,7 +1395,7 @@ public class CachingClusteredClientTest
             QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(
         makeSelectResults(
             dimensions,
@@ -1515,7 +1514,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         WAREHOUSE.getToolChest(query)
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
             DateTimes.of("2011-01-05T"),
@@ -1702,7 +1701,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(RENAMED_POST_AGGS);
 
     TimeseriesQuery query = builder.build();
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
 
     final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
     final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
@@ -1915,7 +1914,7 @@ public class CachingClusteredClientTest
             @Override
             public void run()
             {
-              ResponseContext context = DefaultResponseContext.createEmpty();
+              ResponseContext context = ResponseContext.createEmpty();
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     expected,
@@ -2121,7 +2120,7 @@ public class CachingClusteredClientTest
             @Override
             public void run()
             {
-              ResponseContext context = DefaultResponseContext.createEmpty();
+              ResponseContext context = ResponseContext.createEmpty();
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
@@ -3052,7 +3051,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         WAREHOUSE.getToolChest(query1)
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
             DateTimes.of("2011-01-05T"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
@@ -3124,7 +3123,7 @@ public class CachingClusteredClientTest
                                     .build();
 
 
-    ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    ResponseContext responseContext = ResponseContext.createEmpty();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
     Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.CTX_ETAG));
@@ -3170,7 +3169,7 @@ public class CachingClusteredClientTest
                                      .build();
 
 
-    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final ResponseContext responseContext = ResponseContext.createEmpty();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
     final Object etag1 = responseContext.get("ETag");

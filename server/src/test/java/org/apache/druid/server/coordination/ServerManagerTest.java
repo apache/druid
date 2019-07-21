@@ -54,7 +54,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
@@ -446,7 +445,7 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            ResponseContext context = DefaultResponseContext.createEmpty();
+            ResponseContext context = ResponseContext.createEmpty();
             Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
             seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();

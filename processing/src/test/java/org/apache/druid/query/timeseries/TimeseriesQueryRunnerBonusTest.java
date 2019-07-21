@@ -34,7 +34,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
@@ -130,7 +129,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .aggregators(new CountAggregatorFactory("rows"))
                                   .descending(descending)
                                   .build();
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     return runner.run(QueryPlus.wrap(query), context).toList();
   }
 

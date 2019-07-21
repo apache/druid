@@ -33,7 +33,6 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ConcurrentResponseContext;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -162,7 +161,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
@@ -186,7 +185,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
@@ -201,7 +200,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();

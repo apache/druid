@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.easymock.Capture;
@@ -119,7 +118,7 @@ public class ChainedExecutionQueryRunnerTest
          runners
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
@@ -244,7 +243,7 @@ public class ChainedExecutionQueryRunnerTest
             runners
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")

@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -442,7 +441,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -597,7 +596,7 @@ public class IncrementalIndexTest
                         factory.createRunner(incrementalIndexSegment),
                         factory.getToolchest()
                     );
-                    ResponseContext context = DefaultResponseContext.createEmpty();
+                    ResponseContext context = ResponseContext.createEmpty();
                     Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
                     Double[] results = sequence.accumulate(
@@ -653,7 +652,7 @@ public class IncrementalIndexTest
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {

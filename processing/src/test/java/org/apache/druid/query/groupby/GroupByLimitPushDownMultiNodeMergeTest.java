@@ -59,7 +59,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -551,7 +550,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -672,7 +671,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(

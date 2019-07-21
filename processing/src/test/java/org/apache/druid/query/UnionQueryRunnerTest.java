@@ -23,7 +23,6 @@ import com.google.common.collect.Iterables;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.junit.Test;
 
@@ -68,7 +67,7 @@ public class UnionQueryRunnerTest
                     .intervals("2014-01-01T00:00:00Z/2015-01-01T00:00:00Z")
                     .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                     .build();
-    ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    ResponseContext responseContext = ResponseContext.createEmpty();
     Sequence<?> result = runner.run(QueryPlus.wrap(q), responseContext);
     List res = result.toList();
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);

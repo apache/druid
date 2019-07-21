@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -272,7 +271,7 @@ public class DoubleStorageTest
                                                       )
                                                       .merge(true)
                                                       .build();
-    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), DefaultResponseContext.createEmpty()).toList();
+    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), ResponseContext.createEmpty()).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
@@ -293,7 +292,7 @@ public class DoubleStorageTest
         .virtualColumns()
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     ScanResultValue expectedScanResult = new ScanResultValue(

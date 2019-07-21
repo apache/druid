@@ -46,7 +46,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.DimExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
 import org.apache.druid.query.extraction.LowerExtractionFn;
@@ -400,7 +400,7 @@ public class SearchBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -461,7 +461,7 @@ public class SearchBenchmark
 
     Sequence<Result<SearchResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.createEmpty()
+        ResponseContext.createEmpty()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
     blackhole.consume(results);

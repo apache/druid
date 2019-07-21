@@ -42,7 +42,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
@@ -162,7 +161,7 @@ public class SchemalessTestSimpleTest
         )
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -239,7 +238,7 @@ public class SchemalessTestSimpleTest
 
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      ResponseContext context = DefaultResponseContext.createEmpty();
+      ResponseContext context = ResponseContext.createEmpty();
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
   }
@@ -269,7 +268,7 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
@@ -295,7 +294,7 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 }

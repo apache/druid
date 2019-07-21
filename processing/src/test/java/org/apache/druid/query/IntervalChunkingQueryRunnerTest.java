@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids.TimeseriesQueryBuilder;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class IntervalChunkingQueryRunnerTest
   public void testDefaultNoChunking()
   {
     QueryPlus queryPlus = QueryPlus.wrap(queryBuilder.intervals("2014/2016").build());
-    final DefaultResponseContext context = DefaultResponseContext.createEmpty();
+    final ResponseContext context = ResponseContext.createEmpty();
 
     EasyMock.expect(baseRunner.run(queryPlus, context)).andReturn(Sequences.empty());
     EasyMock.replay(baseRunner);
@@ -86,7 +86,7 @@ public class IntervalChunkingQueryRunnerTest
     EasyMock.replay(toolChest);
 
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
-    runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
     EasyMock.verify(executors);
   }
@@ -103,7 +103,7 @@ public class IntervalChunkingQueryRunnerTest
     EasyMock.replay(toolChest);
 
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
-    runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
     EasyMock.verify(executors);
   }

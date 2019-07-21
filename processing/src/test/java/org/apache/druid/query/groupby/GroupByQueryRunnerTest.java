@@ -81,7 +81,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -2955,7 +2954,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
@@ -3011,7 +3010,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -3054,7 +3053,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -3108,7 +3107,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -3225,7 +3224,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -3258,7 +3257,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
 
@@ -3350,7 +3349,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3387,7 +3386,7 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "technology", 2L, 178.24917602539062D}
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3431,7 +3430,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3971,7 +3970,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -4272,7 +4271,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -4373,7 +4372,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     // add an extra layer of merging, simulate broker forwarding query to historical
     TestHelper.assertExpectedObjects(
         expectedResults,
@@ -4525,7 +4524,7 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
 
@@ -4577,7 +4576,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
@@ -7962,7 +7961,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), DefaultResponseContext.createEmpty()),
+        theRunner.run(QueryPlus.wrap(fullQuery), ResponseContext.createEmpty()),
         "bySegment"
     );
     exec.shutdownNow();
@@ -8031,7 +8030,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), DefaultResponseContext.createEmpty()),
+        theRunner.run(QueryPlus.wrap(fullQuery), ResponseContext.createEmpty()),
         "bySegment"
     );
     exec.shutdownNow();
@@ -8096,7 +8095,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), DefaultResponseContext.createEmpty()),
+        theRunner.run(QueryPlus.wrap(fullQuery), ResponseContext.createEmpty()),
         "bySegment-dim-extraction"
     );
     exec.shutdownNow();
@@ -8603,7 +8602,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), DefaultResponseContext.createEmpty()),
+        theRunner.run(QueryPlus.wrap(fullQuery), ResponseContext.createEmpty()),
         "bySegment-filter"
     );
     exec.shutdownNow();
@@ -10043,7 +10042,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
@@ -10109,7 +10108,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
@@ -10178,7 +10177,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -10310,7 +10309,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(

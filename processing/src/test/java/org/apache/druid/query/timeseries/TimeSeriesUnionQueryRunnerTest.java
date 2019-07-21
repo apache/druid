@@ -34,7 +34,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Test;
@@ -114,7 +113,7 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     assertExpectedResults(expectedResults, results);
@@ -219,7 +218,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results =
-        mergingrunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+        mergingrunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     assertExpectedResults(expectedResults, results);
 

@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
@@ -1036,7 +1035,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.createEmpty();
+      ResponseContext context = ResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
@@ -1090,7 +1089,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.createEmpty();
+      ResponseContext context = ResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
@@ -1151,7 +1150,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = DefaultResponseContext.createEmpty();
+      ResponseContext context = ResponseContext.createEmpty();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
 
       List<Map<String, Object>> expected =

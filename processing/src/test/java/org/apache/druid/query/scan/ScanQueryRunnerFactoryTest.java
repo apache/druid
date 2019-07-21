@@ -30,7 +30,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -229,7 +229,7 @@ public class ScanQueryRunnerFactoryTest
           factory.nWayMergeAndLimit(
               groupedRunners,
               QueryPlus.wrap(query),
-              DefaultResponseContext.createEmpty()
+              ResponseContext.createEmpty()
           ).toList();
 
       validateSortedOutput(output, expectedEventTimestamps);

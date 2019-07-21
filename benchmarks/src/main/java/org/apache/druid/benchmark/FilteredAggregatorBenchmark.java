@@ -44,7 +44,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -240,7 +240,7 @@ public class FilteredAggregatorBenchmark
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
         query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
     );
-    Sequence<T> queryResult = theRunner.run(queryToRun, DefaultResponseContext.createEmpty());
+    Sequence<T> queryResult = theRunner.run(queryToRun, ResponseContext.createEmpty());
     return queryResult.toList();
   }
 

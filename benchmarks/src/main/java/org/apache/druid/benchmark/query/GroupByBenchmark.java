@@ -56,7 +56,7 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -554,7 +554,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    return theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    return theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
   }
 
   @Benchmark
@@ -610,7 +610,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -631,7 +631,7 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), DefaultResponseContext.createEmpty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -655,7 +655,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     List<Row> results = queryResult.toList();
     blackhole.consume(results);
   }

@@ -55,7 +55,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -633,7 +632,7 @@ public class AggregationTestHelper implements Closeable
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    return baseRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
   }
 
   public QueryRunner<Row> makeStringSerdeQueryRunner(
@@ -648,7 +647,7 @@ public class AggregationTestHelper implements Closeable
       public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, DefaultResponseContext.createEmpty());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, ResponseContext.createEmpty());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()

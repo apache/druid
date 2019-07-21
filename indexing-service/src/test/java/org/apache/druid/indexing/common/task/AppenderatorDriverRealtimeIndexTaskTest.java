@@ -106,7 +106,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -1642,7 +1642,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     if (results.isEmpty()) {
       return 0L;

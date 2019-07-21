@@ -38,7 +38,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -176,7 +175,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
@@ -219,7 +218,7 @@ public class SelectQueryRunnerTest
 
     SelectQuery query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -233,7 +232,7 @@ public class SelectQueryRunnerTest
 
     query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -274,7 +273,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     String segmentIdInThisQuery = QueryRunnerTestHelper.segmentId.toString();
@@ -387,7 +386,7 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
@@ -425,7 +424,7 @@ public class SelectQueryRunnerTest
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -460,7 +459,7 @@ public class SelectQueryRunnerTest
           .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1]))
           .build();
 
-      ResponseContext context = DefaultResponseContext.createEmpty();
+      ResponseContext context = ResponseContext.createEmpty();
       Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
@@ -533,7 +532,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -581,10 +580,10 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
     Iterable<Result<SelectResultValue>> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
+        .run(QueryPlus.wrap(query), ResponseContext.createEmpty())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -636,7 +635,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     List<Result<SelectResultValue>> expectedResults = Collections.singletonList(
         new Result<SelectResultValue>(
@@ -681,7 +680,7 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList("foo2"))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -718,7 +717,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
@@ -833,7 +832,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(

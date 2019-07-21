@@ -65,7 +65,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -255,7 +254,7 @@ public class TopNQueryRunnerTest
       TopNQuery query
   )
   {
-    return runWithMerge(query, DefaultResponseContext.createEmpty());
+    return runWithMerge(query, ResponseContext.createEmpty());
   }
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
@@ -1304,7 +1303,7 @@ public class TopNQueryRunnerTest
         )
     );
 
-    final DefaultResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final ResponseContext responseContext = ResponseContext.createEmpty();
     responseContext.putAll(specialContext);
     Sequence<Result<TopNResultValue>> results = runWithMerge(query, responseContext);
     List<Result<BySegmentTopNResultValue>> resultList = results
@@ -4139,7 +4138,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()));
   }
 
   @Test
@@ -4178,7 +4177,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()));
   }
 
 
@@ -4294,7 +4293,7 @@ public class TopNQueryRunnerTest
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query)
   {
-    return runWithPreMergeAndMerge(query, DefaultResponseContext.createEmpty());
+    return runWithPreMergeAndMerge(query, ResponseContext.createEmpty());
   }
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)

@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -274,19 +273,19 @@ public class TopNQueryQueryToolChestTest
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
           QueryPlus.wrap(query1),
-          DefaultResponseContext.createEmpty()
+          ResponseContext.createEmpty()
       );
       Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query2), DefaultResponseContext.createEmpty());
+          .run(QueryPlus.wrap(query2), ResponseContext.createEmpty());
       Assert.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query3), DefaultResponseContext.createEmpty());
+          .run(QueryPlus.wrap(query3), ResponseContext.createEmpty());
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }

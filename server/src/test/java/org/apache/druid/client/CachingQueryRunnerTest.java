@@ -56,7 +56,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -320,7 +319,7 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     Sequence res = runner.run(QueryPlus.wrap(query), context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
@@ -401,7 +400,7 @@ public class CachingQueryRunnerTest
         }
 
     );
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }

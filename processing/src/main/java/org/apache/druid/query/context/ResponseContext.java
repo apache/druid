@@ -47,6 +47,15 @@ public abstract class ResponseContext
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
   public static final String CTX_COUNT = "count";
 
+  /**
+   * Create an empty DefaultResponseContext instance
+   * @return empty DefaultResponseContext instance
+   */
+  public static ResponseContext createEmpty()
+  {
+    return DefaultResponseContext.createEmpty();
+  }
+
   protected abstract Map<String, Object> getDelegate();
 
   public Object put(String key, Object value)

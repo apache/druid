@@ -38,7 +38,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
@@ -126,7 +125,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
                                                  .setContext(maq.getContext());
       GroupByQuery gbq = builder.build();
 
-      ResponseContext gbqResponseContext = DefaultResponseContext.createEmpty();
+      ResponseContext gbqResponseContext = ResponseContext.createEmpty();
       gbqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
       gbqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
@@ -164,7 +163,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           0,
           maq.getContext()
       );
-      ResponseContext tsqResponseContext = DefaultResponseContext.createEmpty();
+      ResponseContext tsqResponseContext = ResponseContext.createEmpty();
       tsqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
       tsqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 

@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -43,7 +42,7 @@ import java.util.Collections;
 
 public class TimewarpOperatorTest
 {
-  public static final ResponseContext CONTEXT = DefaultResponseContext.createEmpty();
+  public static final ResponseContext CONTEXT = ResponseContext.createEmpty();
 
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
       new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
@@ -356,7 +355,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 3))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList()
+        queryRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList()
     );
   }
 }

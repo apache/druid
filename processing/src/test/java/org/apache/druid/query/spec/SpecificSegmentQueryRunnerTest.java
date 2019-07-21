@@ -38,7 +38,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultBuilder;
@@ -93,7 +92,7 @@ public class SpecificSegmentQueryRunnerTest
     );
 
     // from accumulate
-    ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    ResponseContext responseContext = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
@@ -109,7 +108,7 @@ public class SpecificSegmentQueryRunnerTest
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
-    responseContext = DefaultResponseContext.createEmpty();
+    responseContext = ResponseContext.createEmpty();
     results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null,
@@ -172,7 +171,7 @@ public class SpecificSegmentQueryRunnerTest
         )
     );
 
-    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final ResponseContext responseContext = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)

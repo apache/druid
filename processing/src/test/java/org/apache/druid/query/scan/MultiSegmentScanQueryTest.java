@@ -37,7 +37,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.select.SelectQueryRunnerTest;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -199,7 +198,7 @@ public class MultiSegmentScanQueryTest
             Execs.directExecutor(),
             ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1))
         )
-        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty())
+        .run(QueryPlus.wrap(query), ResponseContext.createEmpty())
         .toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
@@ -226,8 +225,8 @@ public class MultiSegmentScanQueryTest
           {
             // simulate results back from 2 historicals
             List<Sequence<ScanResultValue>> sequences = Lists.newArrayListWithExpectedSize(2);
-            sequences.add(factory.createRunner(segment0).run(queryPlus, DefaultResponseContext.createEmpty()));
-            sequences.add(factory.createRunner(segment1).run(queryPlus, DefaultResponseContext.createEmpty()));
+            sequences.add(factory.createRunner(segment0).run(queryPlus, ResponseContext.createEmpty()));
+            sequences.add(factory.createRunner(segment1).run(queryPlus, ResponseContext.createEmpty()));
             return new MergeSequence<>(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(sequences)
@@ -236,7 +235,7 @@ public class MultiSegmentScanQueryTest
         }
     );
     ScanQuery query = newBuilder().build();
-    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();

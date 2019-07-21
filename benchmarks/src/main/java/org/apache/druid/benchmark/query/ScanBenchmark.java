@@ -46,7 +46,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -330,7 +330,7 @@ public class ScanBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -441,7 +441,7 @@ public class ScanBenchmark
 
     Sequence<Result<ScanResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(effectiveQuery),
-        DefaultResponseContext.createEmpty()
+        ResponseContext.createEmpty()
     );
     List<Result<ScanResultValue>> results = queryResult.toList();
     blackhole.consume(results);

@@ -35,7 +35,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
@@ -127,7 +126,7 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

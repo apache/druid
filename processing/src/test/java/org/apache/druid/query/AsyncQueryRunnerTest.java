@@ -24,7 +24,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -79,7 +78,7 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
-    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     latch.countDown();
     Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
@@ -110,7 +109,7 @@ public class AsyncQueryRunnerTest
 
     Sequence lazy = asyncRunner.run(
         QueryPlus.wrap(query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))),
-        DefaultResponseContext.createEmpty()
+        ResponseContext.createEmpty()
     );
 
     try {
@@ -134,7 +133,7 @@ public class AsyncQueryRunnerTest
 
     AsyncQueryRunner asyncRunner = new AsyncQueryRunner<>(baseRunner, executor, mock);
 
-    asyncRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    asyncRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     EasyMock.verify(mock);
   }
 }

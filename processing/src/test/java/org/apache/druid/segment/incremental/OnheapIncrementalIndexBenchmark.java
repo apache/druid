@@ -49,7 +49,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -394,7 +393,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
-                  ResponseContext context = DefaultResponseContext.createEmpty();
+                  ResponseContext context = ResponseContext.createEmpty();
                   List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
@@ -427,7 +426,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    ResponseContext context = DefaultResponseContext.createEmpty();
+    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {

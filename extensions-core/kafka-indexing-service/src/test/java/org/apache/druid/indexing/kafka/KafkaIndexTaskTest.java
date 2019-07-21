@@ -116,7 +116,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
@@ -2360,7 +2360,7 @@ public class KafkaIndexTaskTest
   {
     ScanQuery query = new Druids.ScanQueryBuilder().dataSource(
         DATA_SCHEMA.getDataSource()).intervals(spec).build();
-    return task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    return task.getQueryRunner(query).run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
   }
 
   private void insertData() throws ExecutionException, InterruptedException
@@ -2774,7 +2774,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }

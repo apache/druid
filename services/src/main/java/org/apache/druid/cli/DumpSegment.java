@@ -58,7 +58,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -485,7 +485,7 @@ public class DumpSegment extends GuiceRunnable
     return factory
         .getToolchest()
         .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
-        .run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+        .run(QueryPlus.wrap(query), ResponseContext.createEmpty());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)

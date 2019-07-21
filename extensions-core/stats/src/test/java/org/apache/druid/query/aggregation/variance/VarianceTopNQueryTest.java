@@ -30,7 +30,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -143,7 +143,7 @@ public class VarianceTopNQueryTest
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.createEmpty()
+        ResponseContext.createEmpty()
     );
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;

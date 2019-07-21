@@ -47,7 +47,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -307,7 +307,7 @@ public class TopNBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -367,7 +367,7 @@ public class TopNBenchmark
 
     Sequence<Result<TopNResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        DefaultResponseContext.createEmpty()
+        ResponseContext.createEmpty()
     );
     List<Result<TopNResultValue>> results = queryResult.toList();
     blackhole.consume(results);
