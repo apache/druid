@@ -27,6 +27,20 @@ import java.util.function.Function;
  * Abstraction of mechanism for populating a {@link Cache} by wrapping a {@link Sequence} and providing a function to
  * extract the values from it. At runtime, the {@link CachePopulator} implementation is used as a singleton and
  * injected where needed to share between all cacheables, which requires the {@link Cache} itself to be thread-safe.
+ *
+ * Consumers of the {@link Sequence} will either be a processing thread (in the case of a historical or task), or
+ * an http thread in the case of a broker. See:
+ *
+ *  historicals:    {@link org.apache.druid.server.coordination.ServerManager} and
+ *                  {@link org.apache.druid.client.CachingQueryRunner}
+ *
+ *  realtime tasks: {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} and
+ *                  {@link org.apache.druid.client.CachingQueryRunner}
+ *
+ *  brokers:        {@link org.apache.druid.server.ClientQuerySegmentWalker} and
+ *                  {@link org.apache.druid.client.CachingClusteredClient}
+ *
+ *  for additional details
  */
 public interface CachePopulator
 {
