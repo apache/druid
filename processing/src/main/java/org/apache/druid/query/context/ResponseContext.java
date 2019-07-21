@@ -35,8 +35,6 @@ import java.util.Map;
 @PublicApi
 public abstract class ResponseContext
 {
-  protected abstract Map<String, Object> getDelegate();
-
   public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
   public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
   public static final String CTX_MISSING_SEGMENTS = "missingSegments";
@@ -48,6 +46,8 @@ public abstract class ResponseContext
    */
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
   public static final String CTX_COUNT = "count";
+
+  protected abstract Map<String, Object> getDelegate();
 
   public Object put(String key, Object value)
   {
