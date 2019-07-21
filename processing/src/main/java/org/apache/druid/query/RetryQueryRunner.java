@@ -72,7 +72,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-            context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+            context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
             final QueryPlus<T> retryQueryPlus = queryPlus.withQuerySegmentSpec(
                 new MultipleSpecificSegmentSpec(
                     missingSegments
@@ -102,7 +102,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
   private List<SegmentDescriptor> getMissingSegments(final ResponseContext context)
   {
-    final Object maybeMissingSegments = context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY);
+    final Object maybeMissingSegments = context.get(ResponseContext.CTX_MISSING_SEGMENTS);
     if (maybeMissingSegments == null) {
       return new ArrayList<>();
     }

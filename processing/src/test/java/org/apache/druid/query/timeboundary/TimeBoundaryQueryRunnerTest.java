@@ -220,7 +220,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -239,7 +239,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();

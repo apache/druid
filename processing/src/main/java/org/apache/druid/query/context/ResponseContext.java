@@ -37,11 +37,13 @@ public abstract class ResponseContext
 
   public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
   public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
-  public static final String CTX_MISSING_SEGMENTS_KEY = "missingSegments";
-  public static final String CTX_HEADER_ETAG = "ETag";
+  public static final String CTX_MISSING_SEGMENTS = "missingSegments";
+  public static final String CTX_ETAG = "ETag";
   public static final String CTX_QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
-  // This variable indicates when a running query should be expired,
-  // and is effective only when 'timeout' of queryContext has a positive value.
+  /**
+   * This variable indicates when a running query should be expired,
+   * and is effective only when 'timeout' of queryContext has a positive value.
+   */
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
   public static final String CTX_COUNT = "count";
 

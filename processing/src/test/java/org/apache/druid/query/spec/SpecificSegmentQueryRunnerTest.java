@@ -198,7 +198,7 @@ public class SpecificSegmentQueryRunnerTest
   private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, ResponseContext responseContext)
       throws IOException
   {
-    Object missingSegments = responseContext.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY);
+    Object missingSegments = responseContext.get(ResponseContext.CTX_MISSING_SEGMENTS);
 
     Assert.assertTrue(missingSegments != null);
     Assert.assertTrue(missingSegments instanceof List);

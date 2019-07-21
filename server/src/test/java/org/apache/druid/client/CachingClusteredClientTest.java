@@ -3127,7 +3127,7 @@ public class CachingClusteredClientTest
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.CTX_HEADER_ETAG));
+    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.CTX_ETAG));
   }
 
   @Test

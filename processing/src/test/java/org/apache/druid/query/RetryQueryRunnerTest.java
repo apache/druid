@@ -90,14 +90,14 @@ public class RetryQueryRunnerTest
   public void testRunWithMissingSegments()
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(QueryPlus queryPlus, ResponseContext context)
           {
-            ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                 new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
             );
             return Sequences.empty();
@@ -124,7 +124,7 @@ public class RetryQueryRunnerTest
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
-        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).size() == 1
+        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).size() == 1
     );
     Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
   }
@@ -135,7 +135,7 @@ public class RetryQueryRunnerTest
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -146,7 +146,7 @@ public class RetryQueryRunnerTest
           )
           {
             if ((int) context.get("count") == 0) {
-              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
               context.put("count", 1);
@@ -174,7 +174,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).size() == 0
+        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).size() == 0
     );
   }
 
@@ -183,7 +183,7 @@ public class RetryQueryRunnerTest
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -194,7 +194,7 @@ public class RetryQueryRunnerTest
           )
           {
             if ((int) context.get("count") < 3) {
-              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
               context.put("count", (int) context.get("count") + 1);
@@ -222,7 +222,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).size() == 0
+        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).size() == 0
     );
   }
 
@@ -230,7 +230,7 @@ public class RetryQueryRunnerTest
   public void testException()
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -240,7 +240,7 @@ public class RetryQueryRunnerTest
               ResponseContext context
           )
           {
-            ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                 new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
             );
             return Sequences.empty();
@@ -254,7 +254,7 @@ public class RetryQueryRunnerTest
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
-        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).size() == 1
+        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).size() == 1
     );
   }
 
@@ -263,7 +263,7 @@ public class RetryQueryRunnerTest
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.put("count", 0);
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, new ArrayList<>());
+    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -276,10 +276,10 @@ public class RetryQueryRunnerTest
             final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
             if ((int) context.get("count") == 0) {
               // assume 2 missing segments at first run
-              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
-              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
               );
               context.put("count", 1);
@@ -297,7 +297,7 @@ public class RetryQueryRunnerTest
               // this is first retry
               Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 2);
               // assume only left 1 missing at first retry
-              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
               );
               context.put("count", 2);
@@ -338,7 +338,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with 3 elements", ((List) actualResults).size() == 3);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY)).size() == 0
+        ((List) context.get(ResponseContext.CTX_MISSING_SEGMENTS)).size() == 0
     );
   }
 }

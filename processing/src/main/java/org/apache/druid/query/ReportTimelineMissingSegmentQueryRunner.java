@@ -41,10 +41,10 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     List<SegmentDescriptor> missingSegments =
-        (List<SegmentDescriptor>) responseContext.get(ResponseContext.CTX_MISSING_SEGMENTS_KEY);
+        (List<SegmentDescriptor>) responseContext.get(ResponseContext.CTX_MISSING_SEGMENTS);
     if (missingSegments == null) {
       missingSegments = new ArrayList<>();
-      responseContext.put(ResponseContext.CTX_MISSING_SEGMENTS_KEY, missingSegments);
+      responseContext.put(ResponseContext.CTX_MISSING_SEGMENTS, missingSegments);
     }
     missingSegments.add(descriptor);
     return Sequences.empty();

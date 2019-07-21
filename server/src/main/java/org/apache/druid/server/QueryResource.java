@@ -193,7 +193,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.CTX_HEADER_ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.CTX_ETAG))) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -246,9 +246,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(ResponseContext.CTX_HEADER_ETAG) != null) {
-          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.CTX_HEADER_ETAG));
-          responseContext.remove(ResponseContext.CTX_HEADER_ETAG);
+        if (responseContext.get(ResponseContext.CTX_ETAG) != null) {
+          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.CTX_ETAG));
+          responseContext.remove(ResponseContext.CTX_ETAG);
         }
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
