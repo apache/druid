@@ -248,9 +248,8 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    ResponseContext context = ResponseContext.createEmpty();
     Iterable<Result<SearchResultValue>> results =
-        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
+        runner.run(QueryPlus.wrap(searchQuery), ResponseContext.createEmpty()).toList();
 
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
