@@ -169,11 +169,11 @@ public class QueryResource implements QueryCountStatsProvider
       acceptHeader = req.getContentType();
     }
 
-    final QueryResponseContext context = createContext(acceptHeader, pretty != null);
+    final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(acceptHeader, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      queryLifecycle.initialize(readQuery(req, in, context));
+      queryLifecycle.initialize(readQuery(req, in));
       query = queryLifecycle.getQuery();
       final String queryId = query.getId();
 
@@ -206,7 +206,7 @@ public class QueryResource implements QueryCountStatsProvider
         boolean serializeDateTimeAsLong =
             QueryContexts.isSerializeDateTimeAsLong(query, false)
             || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
-        final ObjectWriter jsonWriter = context.newOutputWriter(serializeDateTimeAsLong);
+        final ObjectWriter jsonWriter = ioReaderWriter.newOutputWriter(serializeDateTimeAsLong);
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -242,7 +242,7 @@ public class QueryResource implements QueryCountStatsProvider
                     }
                   }
                 },
-                context.getContentType()
+                ioReaderWriter.getContentType()
             )
             .header("X-Druid-Query-Id", queryId);
 
@@ -279,7 +279,7 @@ public class QueryResource implements QueryCountStatsProvider
     catch (QueryInterruptedException e) {
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
-      return context.gotError(e);
+      return ioReaderWriter.gotError(e);
     }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
@@ -296,7 +296,7 @@ public class QueryResource implements QueryCountStatsProvider
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return context.gotError(e);
+      return ioReaderWriter.gotError(e);
     }
     finally {
       Thread.currentThread().setName(currThreadName);
@@ -305,8 +305,7 @@ public class QueryResource implements QueryCountStatsProvider
 
   private Query<?> readQuery(
       final HttpServletRequest req,
-      final InputStream in,
-      final QueryResponseContext context
+      final InputStream in
   ) throws IOException
   {
     Query baseQuery = getMapperForRequest(req.getContentType()).readValue(in, Query.class);
@@ -338,12 +337,12 @@ public class QueryResource implements QueryCountStatsProvider
     return mapper.copy().registerModule(new SimpleModule().addSerializer(DateTime.class, new DateTimeSerializer()));
   }
 
-  protected QueryResponseContext createContext(String requestType, boolean pretty)
+  protected ResourceIOReaderWriter createResourceIOReaderWriter(String requestType, boolean pretty)
   {
     boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) ||
                       APPLICATION_SMILE.equals(requestType);
     String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
-    return new QueryResponseContext(
+    return new ResourceIOReaderWriter(
         contentType,
         isSmile ? smileMapper : jsonMapper,
         isSmile ? serializeDateTimeAsLongSmileMapper : serializeDateTimeAsLongJsonMapper,
@@ -351,14 +350,14 @@ public class QueryResource implements QueryCountStatsProvider
     );
   }
 
-  protected static class QueryResponseContext
+  protected static class ResourceIOReaderWriter
   {
     private final String contentType;
     private final ObjectMapper inputMapper;
     private final ObjectMapper serializeDateTimeAsLongInputMapper;
     private final boolean isPretty;
 
-    QueryResponseContext(
+    ResourceIOReaderWriter(
         String contentType,
         ObjectMapper inputMapper,
         ObjectMapper serializeDateTimeAsLongInputMapper,
@@ -376,7 +375,7 @@ public class QueryResource implements QueryCountStatsProvider
       return contentType;
     }
 
-    public ObjectMapper getObjectMapper()
+    ObjectMapper getInputMapper()
     {
       return inputMapper;
     }

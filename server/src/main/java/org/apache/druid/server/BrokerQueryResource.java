@@ -89,10 +89,11 @@ public class BrokerQueryResource extends QueryResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final QueryResponseContext context = createContext(req.getContentType(), pretty != null);
+    final ResourceIOReaderWriter ioReaderWriter =
+        createResourceIOReaderWriter(req.getContentType(), pretty != null);
     try {
-      Query<?> query = context.getObjectMapper().readValue(in, Query.class);
-      return context.ok(
+      Query<?> query = ioReaderWriter.getInputMapper().readValue(in, Query.class);
+      return ioReaderWriter.ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
               query.getDataSource(),
@@ -102,7 +103,7 @@ public class BrokerQueryResource extends QueryResource
       );
     }
     catch (Exception e) {
-      return context.gotError(e);
+      return ioReaderWriter.gotError(e);
     }
   }
 }
