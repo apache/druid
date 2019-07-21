@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -30,17 +31,27 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * This class is a very simple logical representation of a local path. It keeps track of files stored under the
+ * {@link #path} via {@link #reserve}, so that the total size of stored files doesn't exceed the {@link #maxSize} and
+ * available space is always kept smaller than {@link #freeSpaceToKeep}.
+ *
+ * This class is thread-safe, so that multiple threads can update its state at the same time.
+ * One example usage is that a historical can use multiple threads to load different segments in parallel
+ * from deep storage.
 */
 public class StorageLocation
 {
   private static final Logger log = new Logger(StorageLocation.class);
 
   private final File path;
-  private final long maxSize;
+  private final long maxSize; // in bytes
   private final long freeSpaceToKeep;
+
+  // Set of files stored under the given path. All accesses must be synchronized with currSize.
   private final Set<File> files = new HashSet<>();
 
-  private volatile long currSize = 0;
+  // Current total size of files in bytes. All accesses must be synchronized with files.
+  private long currSize = 0;
 
   public StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
   {
@@ -78,6 +89,8 @@ public class StorageLocation
   {
     if (files.remove(file)) {
       currSize -= FileUtils.sizeOf(file);
+    } else {
+      log.warn("File[%s] is not found under this location[%s]", file, path);
     }
   }
 
@@ -88,32 +101,39 @@ public class StorageLocation
   {
     if (files.remove(segmentDir)) {
       currSize -= segment.getSize();
+    } else {
+      log.warn("SegmentDir[%s] is not found under this location[%s]", segmentDir, path);
     }
   }
 
   /**
    * Reserves space to store the given segment. The segment size is added to currSize.
-   * Returns true if it succeeds to add the given file.
+   * If it succeeds, it returns a file for the given segmentDir in this storage location. Returns null otherwise.
    */
-  public synchronized boolean reserve(File segmentDir, DataSegment segment)
+  @Nullable
+  public synchronized File reserve(String segmentDir, DataSegment segment)
   {
-    return reserve(segmentDir, segment.getId().toString(), segment.getSize());
+    return reserve(segmentDir, segment.getId(), segment.getSize());
   }
 
   /**
-   * Reserves space to store the given segment. Returns true if it succeeds to add the given file.
+   * Reserves space to store the given segment.
+   * If it succeeds, it returns a file for the given segmentFilePathToAdd in this storage location.
+   * Returns null otherwise.
    */
-  public synchronized boolean reserve(File segmentFileToAdd, String segmentId, long segmentSize)
+  @Nullable
+  public synchronized File reserve(String segmentFilePathToAdd, SegmentId segmentId, long segmentSize)
   {
+    final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
     if (files.contains(segmentFileToAdd)) {
-      return false;
+      return null;
     }
     if (canHandle(segmentId, segmentSize)) {
       files.add(segmentFileToAdd);
       currSize += segmentSize;
-      return true;
+      return segmentFileToAdd;
     } else {
-      return false;
+      return null;
     }
   }
 
@@ -121,7 +141,7 @@ public class StorageLocation
    * This method is available for only unit tests. Production code must use {@link #reserve} instead.
    */
   @VisibleForTesting
-  boolean canHandle(String segmentId, long segmentSize)
+  boolean canHandle(SegmentId segmentId, long segmentSize)
   {
     if (available() < segmentSize) {
       log.warn(
