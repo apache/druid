@@ -21,6 +21,9 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.partitions.HadoopHashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.DateTime;
@@ -40,9 +43,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   private String hadoopJobIdFile;
 
   @Inject
-  public HadoopDruidDetermineConfigurationJob(
-      HadoopDruidIndexerConfig config
-  )
+  public HadoopDruidDetermineConfigurationJob(HadoopDruidIndexerConfig config)
   {
     this.config = config;
   }
@@ -57,20 +58,28 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       config.setHadoopJobIdFileName(hadoopJobIdFile);
       return JobHelper.runSingleJob(job, config);
     } else {
-      int shardsPerInterval = config.getPartitionsSpec().getNumShards();
+      final HadoopPartitionsSpec partitionsSpec = config.getPartitionsSpec();
+      final int shardsPerInterval;
+      if (partitionsSpec instanceof HadoopHashedPartitionsSpec) {
+        final HadoopHashedPartitionsSpec hashedPartitionsSpec = (HadoopHashedPartitionsSpec) partitionsSpec;
+        shardsPerInterval = PartitionsSpec.isEffectivelyNull(hashedPartitionsSpec.getNumShards())
+                            ? 1
+                            : hashedPartitionsSpec.getNumShards();
+      } else {
+        shardsPerInterval = 1;
+      }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
         // negative shardsPerInterval means a single shard
-        final int realShardsPerInterval = shardsPerInterval < 0 ? 1 : shardsPerInterval;
-        List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(realShardsPerInterval);
-        for (int i = 0; i < realShardsPerInterval; i++) {
+        List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
+        for (int i = 0; i < shardsPerInterval; i++) {
           specs.add(
               new HadoopyShardSpec(
                   new HashBasedNumberedShardSpec(
                       i,
-                      realShardsPerInterval,
+                      shardsPerInterval,
                       config.getPartitionsSpec().getPartitionDimensions(),
                       HadoopDruidIndexerConfig.JSON_MAPPER
                   ),

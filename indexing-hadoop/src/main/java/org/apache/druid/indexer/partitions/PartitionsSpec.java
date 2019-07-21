@@ -19,40 +19,55 @@
 
 package org.apache.druid.indexer.partitions;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.Jobby;
 
-import java.util.List;
+import javax.annotation.Nullable;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HashedPartitionsSpec.class)
+/**
+ * PartitionsSpec describes the secondary partitioning method for data ingestion.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HadoopHashedPartitionsSpec.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "hashed", value = HashedPartitionsSpec.class)
+    @JsonSubTypes.Type(name = "dimension", value = HadoopSingleDimensionPartitionsSpec.class), // backward compatibility
+    @JsonSubTypes.Type(name = "hashed", value = HadoopHashedPartitionsSpec.class), // backward compatibility
+    @JsonSubTypes.Type(name = "hadoop_single_dim_partitions", value = HadoopSingleDimensionPartitionsSpec.class),
+    @JsonSubTypes.Type(name = "hadoop_hashed_partitions", value = HadoopHashedPartitionsSpec.class),
+    @JsonSubTypes.Type(name = "single_dim_partitions", value = SingleDimensionPartitionsSpec.class),
+    @JsonSubTypes.Type(name = "hashed_partitions", value = HashedPartitionsSpec.class),
+    @JsonSubTypes.Type(name = "dynamic_partitions", value = DynamicPartitionsSpec.class)
 })
 public interface PartitionsSpec
 {
-  @JsonIgnore
-  Jobby getPartitionJob(HadoopDruidIndexerConfig config);
+  int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
 
-  @JsonProperty
-  long getTargetPartitionSize();
+  /**
+   * Returns the max number of rows per segment.
+   * Implementations can have different default values which it could be even null.
+   * Callers should use the right value depending on the context if this returns null.
+   */
+  @Nullable
+  Integer getMaxRowsPerSegment();
 
-  @JsonProperty
-  long getMaxPartitionSize();
+  /**
+   * Returns true if this partitionsSpec needs to determine the number of partitions to start data ingetsion.
+   * It should usually return true if perfect rollup is enforced but number of partitions is not specified.
+   */
+  boolean needsDeterminePartitions();
 
-  @JsonProperty
-  boolean isAssumeGrouped();
+  /**
+   * '-1' regarded as null for some historical reason.
+   */
+  static boolean isEffectivelyNull(@Nullable Integer val)
+  {
+    return val == null || val == -1;
+  }
 
-  @JsonIgnore
-  boolean isDeterminingPartitions();
-
-  @JsonProperty
-  int getNumShards();
-
-  @JsonProperty
-  List<String> getPartitionDimensions();
+  /**
+   * '-1' regarded as null for some historical reason.
+   */
+  static boolean isEffectivelyNull(@Nullable Long val)
+  {
+    return val == null || val == -1;
+  }
 }

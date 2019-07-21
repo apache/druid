@@ -37,6 +37,8 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -995,17 +997,17 @@ public class IndexTaskTest
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(2, null, null),
         indexSpec,
         null,
         null,
-        true,
         true,
         false,
         null,
@@ -1118,17 +1120,17 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new DynamicPartitionsSpec(2, null),
         indexSpec,
         null,
         null,
-        true,
         false,
         false,
         null,
@@ -1234,17 +1236,17 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(2, null, null),
         indexSpec,
         null,
         null,
-        true,
         true,
         false,
         null,
@@ -1707,10 +1709,10 @@ public class IndexTaskTest
         null,
         numShards,
         partitionDimensions,
+        null,
         indexSpec,
         null,
         null,
-        true,
         forceGuaranteedRollup,
         reportParseException,
         null,

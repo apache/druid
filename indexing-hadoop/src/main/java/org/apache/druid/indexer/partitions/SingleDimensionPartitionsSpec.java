@@ -22,29 +22,56 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.indexer.DeterminePartitionsJob;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.Jobby;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
-public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
+public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
+  private final int targetPartitionSize;
+  private final int maxPartitionSize;
   @Nullable
   private final String partitionDimension;
+  private final boolean assumeGrouped;
 
   @JsonCreator
   public SingleDimensionPartitionsSpec(
+      @JsonProperty("targetPartitionSize") int targetPartitionSize,
+      @JsonProperty("maxPartitionSize") @Nullable Integer maxPartitionSize,
       @JsonProperty("partitionDimension") @Nullable String partitionDimension,
-      @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
-      @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
-      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+      @JsonProperty("assumeGrouped") boolean assumeGrouped // false by default
   )
   {
-    super(targetPartitionSize, maxPartitionSize, assumeGrouped, null);
+    Preconditions.checkArgument(targetPartitionSize > 0, "targetPartitionSize must be specified");
+    this.targetPartitionSize = targetPartitionSize;
+    this.maxPartitionSize = PartitionsSpec.isEffectivelyNull(maxPartitionSize)
+                            ? Math.multiplyExact(targetPartitionSize, (int) (targetPartitionSize * 0.5))
+                            : maxPartitionSize;
     this.partitionDimension = partitionDimension;
+    this.assumeGrouped = assumeGrouped;
+  }
+
+  @Nullable
+  @Override
+  @JsonProperty("targetPartitionSize")
+  public Integer getMaxRowsPerSegment()
+  {
+    return targetPartitionSize;
+  }
+
+  @Override
+  public boolean needsDeterminePartitions()
+  {
+    return true;
+  }
+
+  @JsonProperty
+  public int getMaxPartitionSize()
+  {
+    return maxPartitionSize;
   }
 
   @JsonProperty
@@ -54,16 +81,48 @@ public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
     return partitionDimension;
   }
 
-  @Override
-  public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
+  @JsonProperty
+  public boolean isAssumeGrouped()
   {
-    return new DeterminePartitionsJob(config);
+    return assumeGrouped;
   }
 
   @Override
-  @JsonProperty
   public List<String> getPartitionDimensions()
   {
-    return ImmutableList.of();
+    return partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SingleDimensionPartitionsSpec that = (SingleDimensionPartitionsSpec) o;
+    return targetPartitionSize == that.targetPartitionSize &&
+           maxPartitionSize == that.maxPartitionSize &&
+           assumeGrouped == that.assumeGrouped &&
+           Objects.equals(partitionDimension, that.partitionDimension);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(targetPartitionSize, maxPartitionSize, partitionDimension, assumeGrouped);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SingleDimensionPartitionsSpec{" +
+           "targetPartitionSize=" + targetPartitionSize +
+           ", maxPartitionSize=" + maxPartitionSize +
+           ", partitionDimension='" + partitionDimension + '\'' +
+           ", assumeGrouped=" + assumeGrouped +
+           '}';
   }
 }

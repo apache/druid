@@ -41,6 +41,8 @@ import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -818,8 +820,14 @@ public class CompactionTask extends AbstractTask
         // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
         // If this is set to something too small, compactionTask can generate small segments
         // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-        return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
+        final IndexTuningConfig newTuningConfig = tuningConfig == null
+                                                       ? IndexTuningConfig.createDefault()
+                                                       : tuningConfig;
+        if (newTuningConfig.isForceGuaranteedRollup()) {
+          return newTuningConfig.withPartitoinsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
+        } else {
+          return newTuningConfig.withPartitoinsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, Long.MAX_VALUE));
+        }
       } else {
         return tuningConfig;
       }
@@ -827,8 +835,7 @@ public class CompactionTask extends AbstractTask
 
     /**
      * Check the validity of {@link #targetCompactionSizeBytes} and return a valid value. Note that
-     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#maxRowsPerSegment},
-     * {@link IndexTuningConfig#maxTotalRows}, or {@link IndexTuningConfig#numShards} together.
+     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#getPartitionsSpec} together.
      * {@link #hasPartitionConfig} checks one of those configs is set.
      * <p>
      * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
@@ -845,12 +852,9 @@ public class CompactionTask extends AbstractTask
       if (targetCompactionSizeBytes != null && tuningConfig != null) {
         Preconditions.checkArgument(
             !hasPartitionConfig(tuningConfig),
-            "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s], maxTotalRows[%s],"
-            + " or numShards[%s] of tuningConfig",
+            "targetCompactionSizeBytes[%s] cannot be used with partitionsSpec[%s]",
             targetCompactionSizeBytes,
-            tuningConfig.getMaxRowsPerSegment(),
-            tuningConfig.getMaxTotalRows(),
-            tuningConfig.getNumShards()
+            tuningConfig.getPartitionsSpec()
         );
         return targetCompactionSizeBytes;
       } else {
@@ -863,9 +867,7 @@ public class CompactionTask extends AbstractTask
     private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
     {
       if (tuningConfig != null) {
-        return tuningConfig.getMaxRowsPerSegment() != null
-               || tuningConfig.getMaxTotalRows() != null
-               || tuningConfig.getNumShards() != null;
+        return tuningConfig.getPartitionsSpec() != null;
       } else {
         return false;
       }

@@ -22,8 +22,9 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
+import org.apache.druid.indexer.partitions.HadoopSingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -144,17 +145,13 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    final HadoopPartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
+    Assert.assertTrue("isDeterminingPartitions", partitionsSpec.needsDeterminePartitions());
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
+        partitionsSpec.getMaxRowsPerSegment().intValue(),
         100
     );
 
@@ -190,17 +187,18 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    final HadoopSingleDimensionPartitionsSpec partitionsSpec =
+        (HadoopSingleDimensionPartitionsSpec) schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
+        partitionsSpec.needsDeterminePartitions(),
         true
     );
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
+        partitionsSpec.getMaxRowsPerSegment().intValue(),
         100
     );
 
@@ -213,7 +211,7 @@ public class HadoopIngestionSpecTest
     Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec) partitionsSpec).getPartitionDimension(),
+        partitionsSpec.getPartitionDimension(),
         "foo"
     );
   }
@@ -275,10 +273,9 @@ public class HadoopIngestionSpecTest
         false
     );
 
-    Assert.assertEquals(
+    Assert.assertFalse(
         "isDeterminingPartitions",
-        schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions(),
-        false
+        schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions()
     );
 
     Assert.assertFalse(Strings.isNullOrEmpty(schema.getUniqueId()));

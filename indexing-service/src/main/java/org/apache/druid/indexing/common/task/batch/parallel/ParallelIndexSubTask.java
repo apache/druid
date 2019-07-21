@@ -30,6 +30,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -262,10 +263,10 @@ public class ParallelIndexSubTask extends AbstractTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#maxRowsPerSegment}
+   * If the number of rows in a segment exceeds {@link DynamicPartitionsSpec#maxRowsPerSegment}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -297,8 +298,7 @@ public class ParallelIndexSubTask extends AbstractTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
-    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
@@ -343,7 +343,8 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            if (partitionsSpec.isSegmentFull(addResult.getNumRowsInSegment())
+                || partitionsSpec.isAppenderatorFull(addResult.getTotalNumRowsInAppenderator())) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.

@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.HadoopHashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -40,7 +40,7 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
+  private static final HadoopPartitionsSpec DEFAULT_PARTITIONS_SPEC = HadoopHashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
@@ -79,7 +79,7 @@ public class HadoopTuningConfig implements TuningConfig
 
   private final String workingPath;
   private final String version;
-  private final PartitionsSpec partitionsSpec;
+  private final HadoopPartitionsSpec partitionsSpec;
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
@@ -104,7 +104,7 @@ public class HadoopTuningConfig implements TuningConfig
   public HadoopTuningConfig(
       final @JsonProperty("workingPath") String workingPath,
       final @JsonProperty("version") String version,
-      final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
+      final @JsonProperty("partitionsSpec") HadoopPartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") IndexSpec indexSpec,
       final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -187,7 +187,7 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public PartitionsSpec getPartitionsSpec()
+  public HadoopPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
   }

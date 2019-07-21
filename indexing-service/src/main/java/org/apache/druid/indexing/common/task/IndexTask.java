@@ -40,6 +40,9 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -220,7 +223,17 @@ public class IndexTask extends AbstractTask implements ChatHandler
         dataSource,
         context
     );
-    this.ingestionSchema = ingestionSchema;
+    if (ingestionSchema.tuningConfig.partitionsSpec == null) {
+      this.ingestionSchema = new IndexIngestionSpec(
+          ingestionSchema.dataSchema,
+          ingestionSchema.ioConfig,
+          ingestionSchema.tuningConfig.withPartitoinsSpec(
+              ingestionSchema.tuningConfig.getGivenPartitionsSpecOrDefault()
+          )
+      );
+    } else {
+      this.ingestionSchema = ingestionSchema;
+    }
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
@@ -433,9 +446,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       // Initialize maxRowsPerSegment and maxTotalRows lazily
       final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
-      @Nullable final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
-      @Nullable final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
-      final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir, maxRowsPerSegment);
+      final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
       final DataSchema dataSchema;
       final Map<Interval, String> versions;
       if (determineIntervals) {
@@ -471,8 +482,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           versions,
           firehoseFactory,
           firehoseTempDir,
-          maxRowsPerSegment,
-          maxTotalRows
+          tuningConfig.getNonNullPartitionsSpec()
       );
     }
     catch (Exception e) {
@@ -564,7 +574,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
    * specified in {@link IndexTuningConfig}.
    * <P/>
    * If both intervals and shardSpecs don't have to be determined, this method simply returns {@link ShardSpecs} for the
-   * given intervals.  Here, if {@link IndexTuningConfig#numShards} is not specified, {@link NumberedShardSpec} is used.
+   * given intervals.  Here, if {@link HashedPartitionsSpec#numShards} is not specified, {@link NumberedShardSpec} is
+   * used.
    * <p/>
    * If one of intervals or shardSpecs need to be determined, this method reads the entire input for determining one of
    * them.  If the perfect rollup must be guaranteed, {@link HashBasedNumberedShardSpec} is used for hash partitioning
@@ -575,8 +586,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private ShardSpecs determineShardSpecs(
       final TaskToolbox toolbox,
       final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir,
-      @Nullable final Integer maxRowsPerSegment
+      final File firehoseTempDir
   ) throws IOException
   {
     final ObjectMapper jsonMapper = toolbox.getObjectMapper();
@@ -589,8 +599,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
-    final boolean determineNumPartitions = tuningConfig.getNumShards() == null
-                                           && isGuaranteedRollup(ioConfig, tuningConfig);
+    final boolean determineNumPartitions = tuningConfig.getNonNullPartitionsSpec().needsDeterminePartitions();
 
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
@@ -610,9 +619,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           firehoseTempDir,
           granularitySpec,
           tuningConfig,
-          determineIntervals,
-          determineNumPartitions,
-          maxRowsPerSegment
+          determineIntervals
       );
     }
   }
@@ -629,7 +636,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     if (isGuaranteedRollup(ioConfig, tuningConfig)) {
       // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
-      final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
+      assert tuningConfig.getNonNullPartitionsSpec() instanceof HashedPartitionsSpec;
+      final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
+      final int numShards = partitionsSpec.getNumShards() == null ? 1 : partitionsSpec.getNumShards();
 
       for (Interval interval : intervals) {
         final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
@@ -637,7 +646,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
                                                                 shardId -> new HashBasedNumberedShardSpec(
                                                                     shardId,
                                                                     numShards,
-                                                                    tuningConfig.partitionDimensions,
+                                                                    partitionsSpec.getPartitionDimensions(),
                                                                     jsonMapper
                                                                 )
                                                             )
@@ -660,9 +669,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       File firehoseTempDir,
       GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
-      boolean determineIntervals,
-      boolean determineNumPartitions,
-      @Nullable Integer maxRowsPerSegment
+      boolean determineIntervals
   ) throws IOException
   {
     log.info("Determining intervals and shardSpecs");
@@ -674,36 +681,44 @@ public class IndexTask extends AbstractTask implements ChatHandler
         firehoseFactory,
         firehoseTempDir,
         granularitySpec,
-        determineIntervals,
-        determineNumPartitions
+        determineIntervals
     );
 
     final Map<Interval, List<ShardSpec>> intervalToShardSpecs = new HashMap<>();
-    final int defaultNumShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
     for (final Map.Entry<Interval, Optional<HyperLogLogCollector>> entry : hllCollectors.entrySet()) {
       final Interval interval = entry.getKey();
-      final HyperLogLogCollector collector = entry.getValue().orNull();
-
-      final int numShards;
-      if (determineNumPartitions) {
-        final long numRows = Preconditions.checkNotNull(collector, "HLL collector").estimateCardinalityRound();
-        numShards = (int) Math.ceil(
-            (double) numRows / Preconditions.checkNotNull(maxRowsPerSegment, "maxRowsPerSegment")
-        );
-        log.info("Estimated [%,d] rows of data for interval [%s], creating [%,d] shards", numRows, interval, numShards);
-      } else {
-        numShards = defaultNumShards;
-        log.info("Creating [%,d] shards for interval [%s]", numShards, interval);
-      }
 
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+        assert tuningConfig.getNonNullPartitionsSpec() instanceof HashedPartitionsSpec;
+        final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
+
+        final HyperLogLogCollector collector = entry.getValue().orNull();
+
+        final int numShards;
+        if (partitionsSpec.needsDeterminePartitions()) {
+          final long numRows = Preconditions.checkNotNull(collector, "HLL collector").estimateCardinalityRound();
+          final int nonNullMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
+                                               ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
+                                               : partitionsSpec.getMaxRowsPerSegment();
+          numShards = (int) Math.ceil((double) numRows / nonNullMaxRowsPerSegment);
+          log.info(
+              "Estimated [%,d] rows of data for interval [%s], creating [%,d] shards",
+              numRows,
+              interval,
+              numShards
+          );
+        } else {
+          numShards = partitionsSpec.getNumShards() == null ? 1 : partitionsSpec.getNumShards();
+          log.info("Creating [%,d] shards for interval [%s]", numShards, interval);
+        }
+
         // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
         final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
                                                             .mapToObj(
                                                                 shardId -> new HashBasedNumberedShardSpec(
                                                                     shardId,
                                                                     numShards,
-                                                                    tuningConfig.partitionDimensions,
+                                                                    partitionsSpec.getPartitionDimensions(),
                                                                     jsonMapper
                                                                 )
                                                             ).collect(Collectors.toList());
@@ -724,8 +739,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
-      boolean determineIntervals,
-      boolean determineNumPartitions
+      boolean determineIntervals
   ) throws IOException
   {
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
@@ -767,7 +781,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             interval = optInterval.get();
           }
 
-          if (determineNumPartitions) {
+          if (ingestionSchema.tuningConfig.getNonNullPartitionsSpec().needsDeterminePartitions()) {
             hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
@@ -814,14 +828,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
   /**
    * This method reads input data row by row and adds the read row to a proper segment using {@link BaseAppenderatorDriver}.
    * If there is no segment for the row, a new one is created.  Segments can be published in the middle of reading inputs
-   * if one of below conditions are satisfied.
+   * if {@link DynamicPartitionsSpec} is used and one of below conditions are satisfied.
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link IndexTuningConfig#maxRowsPerSegment}
+   * If the number of rows in a segment exceeds {@link DynamicPartitionsSpec#maxRowsPerSegment}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link IndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -836,10 +850,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir,
-      @Nullable final Integer maxRowsPerSegment,
-      @Nullable final Long maxTotalRows
+      final PartitionsSpec partitionsSpec
   ) throws IOException, InterruptedException
   {
+    @Nullable
+    final DynamicPartitionsSpec dynamicPartitionsSpec = partitionsSpec instanceof DynamicPartitionsSpec
+                                                        ? (DynamicPartitionsSpec) partitionsSpec
+                                                        : null;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics =
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
@@ -971,8 +988,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
+
             // incremental segment publishment is allowed only when rollup don't have to be perfect.
-            if (!isGuaranteedRollup && addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            if (dynamicPartitionsSpec != null
+                && (dynamicPartitionsSpec.isSegmentFull(addResult.getNumRowsInSegment())
+                    || dynamicPartitionsSpec.isAppenderatorFull(addResult.getTotalNumRowsInAppenderator()))) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
@@ -1026,40 +1046,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
     catch (TimeoutException | ExecutionException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Return the valid target partition size. If {@link IndexTuningConfig#numShards} is valid, this returns null.
-   * Otherwise, this returns {@link IndexTuningConfig#DEFAULT_MAX_ROWS_PER_SEGMENT} or the given
-   * {@link IndexTuningConfig#maxRowsPerSegment}.
-   */
-  public static Integer getValidMaxRowsPerSegment(IndexTuningConfig tuningConfig)
-  {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Integer maxRowsPerSegment = tuningConfig.maxRowsPerSegment;
-    if (numShards == null || numShards == -1) {
-      return maxRowsPerSegment == null || maxRowsPerSegment.equals(-1)
-             ? IndexTuningConfig.DEFAULT_MAX_ROWS_PER_SEGMENT
-             : maxRowsPerSegment;
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Return the valid target partition size. If {@link IndexTuningConfig#numShards} is valid, this returns null.
-   * Otherwise, this returns {@link IndexTuningConfig#DEFAULT_MAX_TOTAL_ROWS} or the given
-   * {@link IndexTuningConfig#maxTotalRows}.
-   */
-  public static Long getValidMaxTotalRows(IndexTuningConfig tuningConfig)
-  {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Long maxTotalRows = tuningConfig.maxTotalRows;
-    if (numShards == null || numShards == -1) {
-      return maxTotalRows == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
-    } else {
-      return null;
     }
   }
 
@@ -1251,24 +1237,18 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
-    static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
-    static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
-
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
-    @Nullable
-    private final Integer maxRowsPerSegment;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
+
+    // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
     @Nullable
-    private final Long maxTotalRows;
-    @Nullable
-    private final Integer numShards;
-    private final List<String> partitionDimensions;
+    private final PartitionsSpec partitionsSpec;
     private final IndexSpec indexSpec;
     private final IndexSpec indexSpecForIntermediatePersists;
     private final File basePersistDirectory;
@@ -1295,21 +1275,60 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return new IndexTuningConfig();
     }
 
+    @Nullable
+    private static PartitionsSpec getDefaultPartitionsSpec(
+        boolean forceGuaranteedRollup,
+        @Nullable PartitionsSpec partitionsSpec,
+        @Nullable Integer maxRowsPerSegment,
+        @Nullable Long maxTotalRows,
+        @Nullable Integer numShards,
+        @Nullable List<String> partitionDimensions
+    )
+    {
+      if (partitionsSpec == null) {
+        if (forceGuaranteedRollup) {
+          if (maxRowsPerSegment != null
+              || numShards != null
+              || (partitionDimensions != null && !partitionDimensions.isEmpty())) {
+            return new HashedPartitionsSpec(maxRowsPerSegment, numShards, partitionDimensions);
+          } else {
+            return null;
+          }
+        } else {
+          if (maxRowsPerSegment != null || maxTotalRows != null) {
+            return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
+          } else {
+            return null;
+          }
+        }
+      } else {
+        if (forceGuaranteedRollup) {
+          if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
+            throw new ISE("HashedPartitonsSpec must be used for perfect rollup");
+          }
+        } else {
+          if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
+            throw new ISE("DynamicPartitionsSpec must be used for best-effort rollup");
+          }
+        }
+        return partitionsSpec;
+      }
+    }
+
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-        @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+        @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+        @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
-        @JsonProperty("numShards") @Nullable Integer numShards,
-        @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+        @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
+        @JsonProperty("partitionDimensions") @Deprecated @Nullable List<String> partitionDimensions,
+        @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
-        @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("reportParseExceptions") @Deprecated @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Deprecated @Nullable Long publishTimeout,
@@ -1322,12 +1341,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     )
     {
       this(
-          maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
-          maxTotalRows,
-          numShards,
-          partitionDimensions,
+          getDefaultPartitionsSpec(
+              forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
+              partitionsSpec,
+              maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,
+              maxTotalRows,
+              numShards,
+              partitionDimensions
+          ),
           indexSpec,
           indexSpecForIntermediatePersists,
           maxPendingPersists,
@@ -1349,16 +1372,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
-        @Nullable Integer maxRowsPerSegment,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
-        @Nullable Long maxTotalRows,
-        @Nullable Integer numShards,
-        @Nullable List<String> partitionDimensions,
+        @Nullable PartitionsSpec partitionsSpec,
         @Nullable IndexSpec indexSpec,
         @Nullable IndexSpec indexSpecForIntermediatePersists,
         @Nullable Integer maxPendingPersists,
@@ -1372,21 +1392,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions
     )
     {
-      Preconditions.checkArgument(
-          maxRowsPerSegment == null || maxRowsPerSegment.equals(-1) || numShards == null || numShards.equals(-1),
-          "maxRowsPerSegment and numShards cannot both be set"
-      );
-
-      this.maxRowsPerSegment = (maxRowsPerSegment != null && maxRowsPerSegment == -1)
-                                 ? null
-                                 : maxRowsPerSegment;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-      this.maxTotalRows = maxTotalRows;
-      this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
-      this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
+      this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                               this.indexSpec : indexSpecForIntermediatePersists;
@@ -1419,12 +1429,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public IndexTuningConfig withBasePersistDirectory(File dir)
     {
       return new IndexTuningConfig(
-          maxRowsPerSegment,
           maxRowsInMemory,
           maxBytesInMemory,
-          maxTotalRows,
-          numShards,
-          partitionDimensions,
+          partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
           maxPendingPersists,
@@ -1439,38 +1446,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
     }
 
-    public IndexTuningConfig withMaxTotalRows(Long maxTotalRows)
+    public IndexTuningConfig withPartitoinsSpec(PartitionsSpec partitionsSpec)
     {
       return new IndexTuningConfig(
-          maxRowsPerSegment,
           maxRowsInMemory,
           maxBytesInMemory,
-          maxTotalRows,
-          numShards,
-          partitionDimensions,
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          basePersistDirectory,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions
-      );
-    }
-
-    public IndexTuningConfig withMaxRowsPerSegment(int maxRowsPerSegment)
-    {
-      return new IndexTuningConfig(
-          maxRowsPerSegment,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          maxTotalRows,
-          numShards,
-          partitionDimensions,
+          partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
           maxPendingPersists,
@@ -1487,14 +1468,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     /**
      * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
-     * Please use {@link IndexTask#getValidMaxRowsPerSegment} instead to get the valid value.
+     * Deprecated in favor of {@link #getNonNullPartitionsSpec()}.
      */
     @Nullable
-    @JsonProperty
     @Override
+    @Deprecated
     public Integer getMaxRowsPerSegment()
     {
-      return maxRowsPerSegment;
+      return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
     }
 
     @JsonProperty
@@ -1513,26 +1494,50 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     /**
      * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
-     * Please use {@link IndexTask#getValidMaxTotalRows} instead to get the valid value.
+     * Deprecated in favor of {@link #getNonNullPartitionsSpec()}.
      */
-    @JsonProperty
     @Override
     @Nullable
+    @Deprecated
     public Long getMaxTotalRows()
     {
-      return maxTotalRows;
+      return partitionsSpec instanceof DynamicPartitionsSpec
+             ? ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+             : null;
     }
 
-    @JsonProperty
+    @Deprecated
+    @Nullable
     public Integer getNumShards()
     {
-      return numShards;
+      return partitionsSpec instanceof HashedPartitionsSpec
+             ? ((HashedPartitionsSpec) partitionsSpec).getNumShards()
+             : null;
+    }
+
+    @Deprecated
+    public List<String> getPartitionDimensions()
+    {
+      return partitionsSpec instanceof HashedPartitionsSpec
+             ? ((HashedPartitionsSpec) partitionsSpec).getPartitionDimensions()
+             : Collections.emptyList();
     }
 
     @JsonProperty
-    public List<String> getPartitionDimensions()
+    @Nullable
+    public PartitionsSpec getPartitionsSpec()
     {
-      return partitionDimensions;
+      return partitionsSpec;
+    }
+
+    public PartitionsSpec getNonNullPartitionsSpec()
+    {
+      return Preconditions.checkNotNull(partitionsSpec, "partitionsSpec");
+    }
+
+    public PartitionsSpec getGivenPartitionsSpecOrDefault()
+    {
+      return partitionsSpec == null ? new DynamicPartitionsSpec(null, null) : partitionsSpec;
     }
 
     @JsonProperty
@@ -1642,10 +1647,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
              logParseExceptions == that.logParseExceptions &&
              maxParseExceptions == that.maxParseExceptions &&
              maxSavedParseExceptions == that.maxSavedParseExceptions &&
-             Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-             Objects.equals(maxTotalRows, that.maxTotalRows) &&
-             Objects.equals(numShards, that.numShards) &&
-             Objects.equals(partitionDimensions, that.partitionDimensions) &&
+             Objects.equals(partitionsSpec, that.partitionsSpec) &&
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -1656,12 +1658,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public int hashCode()
     {
       return Objects.hash(
-          maxRowsPerSegment,
           maxRowsInMemory,
           maxBytesInMemory,
-          maxTotalRows,
-          numShards,
-          partitionDimensions,
+          partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
           basePersistDirectory,
@@ -1680,12 +1679,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public String toString()
     {
       return "IndexTuningConfig{" +
-             "maxRowsPerSegment=" + maxRowsPerSegment +
-             ", maxRowsInMemory=" + maxRowsInMemory +
+             "maxRowsInMemory=" + maxRowsInMemory +
              ", maxBytesInMemory=" + maxBytesInMemory +
-             ", maxTotalRows=" + maxTotalRows +
-             ", numShards=" + numShards +
-             ", partitionDimensions=" + partitionDimensions +
+             ", partitionsSpec=" + partitionsSpec +
              ", indexSpec=" + indexSpec +
              ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +
              ", basePersistDirectory=" + basePersistDirectory +
