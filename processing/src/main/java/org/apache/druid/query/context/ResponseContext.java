@@ -35,6 +35,9 @@ import java.util.Map;
 @PublicApi
 public abstract class ResponseContext
 {
+  /**
+   * CTX_* keys might be aggregated into an enum. Consider refactoring that.
+   */
   public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
   public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
   public static final String CTX_MISSING_SEGMENTS = "missingSegments";
@@ -61,6 +64,10 @@ public abstract class ResponseContext
   public Object put(String key, Object value)
   {
     return getDelegate().put(key, value);
+  }
+
+  public Object putIfAbsent(String key, Object value) {
+    return getDelegate().putIfAbsent(key, value);
   }
 
   public Object get(String key)
