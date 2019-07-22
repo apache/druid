@@ -388,9 +388,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
   )
   {
     // How it works?
-    // First we accumulate the result of top level query aka queryResult arg inside a Grouper#1 object.
+    // First we accumulate the result of top level query aka queryResult arg inside a GrouperOne object.
     // Next for each subtotalSpec
-    //   If subtotalSpec is a prefix of top level dims then we iterate on rows in Grouper#1 object which are still
+    //   If subtotalSpec is a prefix of top level dims then we iterate on rows in GrouperTwo object which are still
     //   sorted by subtotalSpec, stream merge them and return.
     //
     //   If subtotalSpec is not a prefix of top level dims then we create a Grouper#2 object filled with rows from
@@ -421,7 +421,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
       List<List<String>> subtotals = query.getSubtotalsSpec();
 
-      Supplier<Grouper> grouperSupplier = Suppliers.memoize(
+      Supplier<Grouper> grouperOneSupplier = Suppliers.memoize(
           () -> GroupByRowProcessor.createGrouper(
               queryWithoutSubtotalsSpec,
               queryResult,
@@ -465,7 +465,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                   return GroupByRowProcessor.getRowsFromGrouper(
                       queryWithoutSubtotalsSpec,
                       subtotalSpec,
-                      grouperSupplier
+                      grouperOneSupplier
                   );
                 }
               }, subtotalQuery, null),
@@ -481,29 +481,32 @@ public class GroupByStrategyV2 implements GroupByStrategy
                 {
                   List<Closeable> closeables = new ArrayList<>();
 
+                  Supplier<Grouper> grouperTwoSupplier = Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
+                      subtotalQuery,
+                      GroupByRowProcessor.getRowsFromGrouper(
+                          queryWithoutSubtotalsSpec,
+                          subtotalSpec,
+                          grouperOneSupplier
+                      ),
+                      GroupByQueryHelper.rowSignatureFor(subtotalQuery),
+                      configSupplier.get(),
+                      resource,
+                      spillMapper,
+                      processingConfig.getTmpDir(),
+                      processingConfig.intermediateComputeSizeBytes(),
+                      closeables,
+                      false,
+                      false
+                  ));
+
                   Sequence<Row> result = GroupByRowProcessor.getRowsFromGrouper(
                       subtotalQuery,
                       subtotalSpec,
-                      Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
-                          subtotalQuery,
-                          GroupByRowProcessor.getRowsFromGrouper(
-                              queryWithoutSubtotalsSpec,
-                              subtotalSpec,
-                              grouperSupplier
-                          ),
-                          GroupByQueryHelper.rowSignatureFor(subtotalQuery),
-                          configSupplier.get(),
-                          resource,
-                          spillMapper,
-                          processingConfig.getTmpDir(),
-                          processingConfig.intermediateComputeSizeBytes(),
-                          closeables,
-                          false,
-                          false
-                                        )
-                      )
+                      grouperTwoSupplier
                   );
 
+                  // Close all the resources associated with grouperTwo as soon as all results for this
+                  // subtotal spec are read.
                   return Sequences.withBaggage(result, () -> Lists.reverse(closeables).forEach(closeable -> CloseQuietly.close(closeable)));
                 }
               }, subtotalQuery, null),
@@ -513,6 +516,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
       }
 
+      // Close all resources associated with grouperOne when all results have been read.
       return Sequences.withBaggage(
           Sequences.concat(subtotalsResults),
           () -> Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable))
