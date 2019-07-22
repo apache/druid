@@ -81,8 +81,14 @@ public class QueryResource implements QueryCountStatsProvider
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   protected static final String APPLICATION_SMILE = "application/smile";
 
+  /**
+   * The maximum length of {@link ResponseContext} serialized string that might be put into an HTTP response header
+   */
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
+  /**
+   * HTTP response header name containing {@link ResponseContext} serialized string
+   */
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String HEADER_ETAG = "ETag";
