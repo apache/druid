@@ -456,62 +456,76 @@ public class GroupByStrategyV2 implements GroupByStrategy
         );
 
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
-          subtotalsResults.add(applyPostProcessing(
-              mergeResults(new QueryRunner<Row>()
-              {
-                @Override
-                public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-                {
-                  return GroupByRowProcessor.getRowsFromGrouper(
-                      queryWithoutSubtotalsSpec,
-                      subtotalSpec,
-                      grouperOneSupplier
-                  );
-                }
-              }, subtotalQuery, null),
-              subtotalQuery
-                               )
+          subtotalsResults.add(
+              applyPostProcessing(
+                  mergeResults(
+                      new QueryRunner<Row>()
+                      {
+                        @Override
+                        public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+                        {
+                          return GroupByRowProcessor.getRowsFromGrouper(
+                              queryWithoutSubtotalsSpec,
+                              subtotalSpec,
+                              grouperOneSupplier
+                          );
+                        }
+                      },
+                      subtotalQuery,
+                      null
+                  ),
+                  subtotalQuery
+              )
           );
         } else {
-          subtotalsResults.add(applyPostProcessing(
-              mergeResults(new QueryRunner<Row>()
-              {
-                @Override
-                public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-                {
-                  List<Closeable> closeables = new ArrayList<>();
+          subtotalsResults.add(
+              applyPostProcessing(
+                  mergeResults(
+                      new QueryRunner<Row>()
+                      {
+                        @Override
+                        public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+                        {
+                          List<Closeable> closeables = new ArrayList<>();
 
-                  Supplier<Grouper> grouperTwoSupplier = Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
+                          Supplier<Grouper> grouperTwoSupplier = Suppliers.memoize(() -> GroupByRowProcessor.createGrouper(
+                              subtotalQuery,
+                              GroupByRowProcessor.getRowsFromGrouper(
+                                  queryWithoutSubtotalsSpec,
+                                  subtotalSpec,
+                                  grouperOneSupplier
+                              ),
+                              GroupByQueryHelper.rowSignatureFor(subtotalQuery),
+                              configSupplier.get(),
+                              resource,
+                              spillMapper,
+                              processingConfig.getTmpDir(),
+                              processingConfig.intermediateComputeSizeBytes(),
+                              closeables,
+                              false,
+                              false
+                          ));
+
+                          Sequence<Row> result = GroupByRowProcessor.getRowsFromGrouper(
+                              subtotalQuery,
+                              subtotalSpec,
+                              grouperTwoSupplier
+                          );
+
+                          // Close all the resources associated with grouperTwo as soon as all results for this
+                          // subtotal spec are read.
+                          return Sequences.withBaggage(
+                              result,
+                              () -> Lists.reverse(closeables)
+                                         .forEach(closeable -> CloseQuietly.close(closeable))
+                          );
+                        }
+                      },
                       subtotalQuery,
-                      GroupByRowProcessor.getRowsFromGrouper(
-                          queryWithoutSubtotalsSpec,
-                          subtotalSpec,
-                          grouperOneSupplier
-                      ),
-                      GroupByQueryHelper.rowSignatureFor(subtotalQuery),
-                      configSupplier.get(),
-                      resource,
-                      spillMapper,
-                      processingConfig.getTmpDir(),
-                      processingConfig.intermediateComputeSizeBytes(),
-                      closeables,
-                      false,
-                      false
-                  ));
-
-                  Sequence<Row> result = GroupByRowProcessor.getRowsFromGrouper(
-                      subtotalQuery,
-                      subtotalSpec,
-                      grouperTwoSupplier
-                  );
-
-                  // Close all the resources associated with grouperTwo as soon as all results for this
-                  // subtotal spec are read.
-                  return Sequences.withBaggage(result, () -> Lists.reverse(closeables).forEach(closeable -> CloseQuietly.close(closeable)));
-                }
-              }, subtotalQuery, null),
-              subtotalQuery
-                               )
+                      null
+                  ),
+                  subtotalQuery
+              )
           );
         }
       }
