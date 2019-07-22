@@ -147,6 +147,10 @@
             <groupId>io.tesla.aether</groupId>
             <artifactId>tesla-aether</artifactId>
         </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>

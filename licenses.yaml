@@ -486,7 +486,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.29.Final
+version: 4.1.30.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1358,6 +1358,16 @@ libraries:
 
 ---
 
+name: Apache Commons Pool
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 2.5.0
+libraries:
+  - org.apache.commons: commons-pool2
+
+---
+
 name: Apache Kafka
 version: 2.1.0
 license_category: binary
@@ -2006,7 +2016,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.15
+version: 1.19.3
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -2161,6 +2171,16 @@ libraries:
 
 ---
 
+name: Apache Hadoop
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 2.2.0
+libraries:
+  - org.apache.hadoop: hadoop-hdfs
+
+---
+
 name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
@@ -2276,6 +2296,16 @@ version: 2.10.4
 license_file_path: licenses/bin/scala-lang.BSD3
 libraries:
   - org.scala-lang: scala-library
+
+---
+
+name: Apache Log4j
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 1.2.14
+libraries:
+  - log4j: log4j
 
 ---
 

@@ -79,6 +79,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
+            <artifactId>druid-services</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
