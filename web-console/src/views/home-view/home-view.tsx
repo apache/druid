@@ -60,6 +60,10 @@ export interface HomeViewState {
   suspendedSupervisorCount: number;
   supervisorCountError: string | null;
 
+  lookupsCountLoading: boolean;
+  lookupsCount: number;
+  lookupsCountError: string | null;
+
   taskCountLoading: boolean;
   runningTaskCount: number;
   pendingTaskCount: number;
@@ -86,6 +90,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
   private supervisorQueryManager: QueryManager<null, any>;
   private taskQueryManager: QueryManager<boolean, any>;
   private serverQueryManager: QueryManager<boolean, any>;
+  private lookupsQueryManager: QueryManager<null, any>;
 
   constructor(props: HomeViewProps, context: any) {
     super(props, context);
@@ -107,6 +112,10 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       runningSupervisorCount: 0,
       suspendedSupervisorCount: 0,
       supervisorCountError: null,
+
+      lookupsCountLoading: false,
+      lookupsCount: 0,
+      lookupsCountError: null,
 
       taskCountLoading: false,
       runningTaskCount: 0,
@@ -293,6 +302,24 @@ GROUP BY 1`,
         });
       },
     });
+
+    this.lookupsQueryManager = new QueryManager({
+      processQuery: async () => {
+        const resp = await axios.get('/druid/coordinator/v1/lookups/status');
+        const data = resp.data;
+        const lookupsCount = Object.keys(data.__default).length;
+        return {
+          lookupsCount,
+        };
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          lookupsCount: result ? result.lookupsCount : 0,
+          lookupsCountLoading: loading,
+          lookupsCountError: error,
+        });
+      },
+    });
   }
 
   componentDidMount(): void {
@@ -304,6 +331,7 @@ GROUP BY 1`,
     this.supervisorQueryManager.runQuery(null);
     this.taskQueryManager.runQuery(noSqlMode);
     this.serverQueryManager.runQuery(noSqlMode);
+    this.lookupsQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
@@ -447,6 +475,18 @@ GROUP BY 1`,
             </>
           ),
           error: state.serverCountError,
+        })}
+        {this.renderCard({
+          href: '#lookups',
+          icon: IconNames.PROPERTIES,
+          title: 'Lookups',
+          loading: state.lookupsCountLoading,
+          content: (
+            <>
+              <p>{pluralIfNeeded(state.lookupsCount, 'lookup')}</p>
+            </>
+          ),
+          error: state.lookupsCountError,
         })}
       </div>
     );
