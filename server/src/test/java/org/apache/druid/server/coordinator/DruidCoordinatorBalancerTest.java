@@ -20,11 +20,11 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -520,19 +520,19 @@ public class DruidCoordinatorBalancerTest
       List<Boolean> decommissioning
   )
   {
-    return DruidCoordinatorRuntimeParams
+    return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
-            new DruidCluster(
-                null,
-                ImmutableMap.of(
+            DruidClusterBuilder
+                .newBuilder()
+                .addTier(
                     "normal",
                     IntStream
                         .range(0, druidServers.size())
                         .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i), decommissioning.get(i)))
-                        .collect(Collectors.toSet())
+                        .toArray(ServerHolder[]::new)
                 )
-            )
+                .build()
         )
         .withLoadManagementPeons(
             IntStream
@@ -540,14 +540,9 @@ public class DruidCoordinatorBalancerTest
                 .boxed()
                 .collect(Collectors.toMap(i -> String.valueOf(i + 1), peons::get))
         )
-        .withAvailableSegmentsInTest(segments)
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
-                MAX_SEGMENTS_TO_MOVE
-            ).build()
-        )
-        .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"));
+        .withUsedSegmentsInTest(segments)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+        .withBalancerStrategy(balancerStrategy);
   }
 
   private static void mockDruidServer(
@@ -563,7 +558,7 @@ public class DruidCoordinatorBalancerTest
     EasyMock.expect(druidServer.getTier()).andReturn(tier).anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(currentSize).atLeastOnce();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).atLeastOnce();
-    EasyMock.expect(druidServer.getLazyAllSegments()).andReturn(segments).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer, segments);
     EasyMock.expect(druidServer.getHost()).andReturn(name).anyTimes();
     EasyMock.expect(druidServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
     if (!segments.isEmpty()) {
@@ -578,6 +573,7 @@ public class DruidCoordinatorBalancerTest
   private static void mockCoordinator(DruidCoordinator coordinator)
   {
     coordinator.moveSegment(
+        EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),

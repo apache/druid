@@ -57,6 +57,7 @@ const tableColumns: string[] = [
   'Retention',
   'Compaction',
   'Size',
+  'Replicated size',
   'Num rows',
   ActionCell.COLUMN_LABEL,
 ];
@@ -100,6 +101,7 @@ interface DatasourceQueryResultRow {
   num_segments_to_load: number;
   num_segments_to_drop: number;
   size: number;
+  replicated_size: number;
   num_rows: number;
 }
 
@@ -138,6 +140,7 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
   SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
+  SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS replicated_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_rows
 FROM sys.segments
 GROUP BY 1`;
@@ -201,6 +204,7 @@ GROUP BY 1`;
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
                 size: d.properties.segments.size,
+                replicated_size: -1,
                 num_rows: -1,
               };
             },
@@ -266,27 +270,26 @@ GROUP BY 1`;
 
   renderDropDataAction() {
     const { dropDataDatasource } = this.state;
+    if (!dropDataDatasource) return;
 
     return (
       <AsyncActionDialog
-        action={
-          dropDataDatasource
-            ? async () => {
-                const resp = await axios.delete(
-                  `/druid/coordinator/v1/datasources/${dropDataDatasource}`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.delete(
+            `/druid/coordinator/v1/datasources/${dropDataDatasource}`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Drop data"
         successText="Data drop request acknowledged, next time the coordinator runs data will be dropped"
         failText="Could not drop data"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ dropDataDatasource: null });
-          if (success) this.datasourceQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.datasourceQueryManager.rerunLastQuery();
         }}
       >
         <p>
@@ -298,27 +301,26 @@ GROUP BY 1`;
 
   renderEnableAction() {
     const { enableDatasource } = this.state;
+    if (!enableDatasource) return;
 
     return (
       <AsyncActionDialog
-        action={
-          enableDatasource
-            ? async () => {
-                const resp = await axios.post(
-                  `/druid/coordinator/v1/datasources/${enableDatasource}`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.post(
+            `/druid/coordinator/v1/datasources/${enableDatasource}`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Enable datasource"
         successText="Datasource has been enabled"
         failText="Could not enable datasource"
         intent={Intent.PRIMARY}
-        onClose={success => {
+        onClose={() => {
           this.setState({ enableDatasource: null });
-          if (success) this.datasourceQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.datasourceQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to enable datasource '${enableDatasource}'?`}</p>
@@ -328,34 +330,33 @@ GROUP BY 1`;
 
   renderDropReloadAction() {
     const { dropReloadDatasource, dropReloadAction, dropReloadInterval } = this.state;
+    if (!dropReloadDatasource) return;
     const isDrop = dropReloadAction === 'drop';
 
     return (
       <AsyncActionDialog
-        action={
-          dropReloadDatasource
-            ? async () => {
-                if (!dropReloadInterval) return;
-                const resp = await axios.post(
-                  `/druid/coordinator/v1/datasources/${dropReloadDatasource}/${
-                    isDrop ? 'markUnused' : 'markUsed'
-                  }`,
-                  {
-                    interval: dropReloadInterval,
-                  },
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          if (!dropReloadInterval) return;
+          const resp = await axios.post(
+            `/druid/coordinator/v1/datasources/${dropReloadDatasource}/${
+              isDrop ? 'markUnused' : 'markUsed'
+            }`,
+            {
+              interval: dropReloadInterval,
+            },
+          );
+          return resp.data;
+        }}
         confirmButtonText={`${isDrop ? 'Drop' : 'Reload'} selected data`}
         confirmButtonDisabled={!/.\/./.test(dropReloadInterval)}
         successText={`${isDrop ? 'Drop' : 'Reload'} request submitted`}
         failText={`Could not ${isDrop ? 'drop' : 'reload'} data`}
         intent={Intent.PRIMARY}
-        onClose={success => {
+        onClose={() => {
           this.setState({ dropReloadDatasource: null });
-          if (success) this.datasourceQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.datasourceQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Please select the interval that you want to ${isDrop ? 'drop' : 'reload'}?`}</p>
@@ -375,27 +376,26 @@ GROUP BY 1`;
 
   renderKillAction() {
     const { killDatasource } = this.state;
+    if (!killDatasource) return;
 
     return (
       <AsyncActionDialog
-        action={
-          killDatasource
-            ? async () => {
-                const resp = await axios.delete(
-                  `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
-                  {},
-                );
-                return resp.data;
-              }
-            : null
-        }
+        action={async () => {
+          const resp = await axios.delete(
+            `/druid/coordinator/v1/datasources/${killDatasource}?kill=true&interval=1000/3000`,
+            {},
+          );
+          return resp.data;
+        }}
         confirmButtonText="Permanently delete data"
         successText="Kill task was issued. Datasource will be deleted"
         failText="Could not submit kill task"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ killDatasource: null });
-          if (success) this.datasourceQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.datasourceQueryManager.rerunLastQuery();
         }}
       >
         <p>
@@ -766,6 +766,14 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Size'),
             },
             {
+              Header: 'Replicated size',
+              accessor: 'replicated_size',
+              filterable: false,
+              width: 100,
+              Cell: row => formatBytes(row.value),
+              show: hiddenColumns.exists('Replicated size'),
+            },
+            {
               Header: 'Num rows',
               accessor: 'num_rows',
               filterable: false,
@@ -808,7 +816,7 @@ GROUP BY 1`;
       <div className="data-sources-view app-view">
         <ViewControlBar label="Datasources">
           <RefreshButton
-            onRefresh={auto => this.datasourceQueryManager.rerunLastQueryInBackground(auto)}
+            onRefresh={auto => this.datasourceQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
           {!noSqlMode && (

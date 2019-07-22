@@ -545,7 +545,7 @@ public class TaskLifecycleTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
 
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
@@ -696,6 +696,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -778,6 +779,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -1168,6 +1170,7 @@ public class TaskLifecycleTest
                 null,
                 indexSpec,
                 null,
+                null,
                 false,
                 null,
                 null,
@@ -1293,6 +1296,7 @@ public class TaskLifecycleTest
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
+        null,
         null,
         null,
         null,

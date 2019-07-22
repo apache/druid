@@ -189,7 +189,7 @@ public class Initialization
 
     private void tryAdd(T serviceImpl, String extensionType)
     {
-      final String serviceImplName = serviceImpl.getClass().getCanonicalName();
+      final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
             "Implementation [%s] was ignored because it doesn't have a canonical name, "
@@ -474,7 +474,7 @@ public class Initialization
 
     private boolean checkModuleClass(Class<?> moduleClass)
     {
-      String moduleClassName = moduleClass.getCanonicalName();
+      String moduleClassName = moduleClass.getName();
       if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
         log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
         return false;

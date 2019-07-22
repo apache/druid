@@ -91,7 +91,7 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return Response.ok(coordinator.getSegmentAvailability()).build();
+      return Response.ok(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource()).build();
     }
 
     if (full != null) {

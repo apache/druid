@@ -52,13 +52,13 @@ public interface Rule
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
   /**
-   * {@link DruidCoordinatorRuntimeParams#getAvailableSegments()} must not be called in Rule's code, because the
-   * available segments are not specified for the {@link DruidCoordinatorRuntimeParams} passed into Rule's code. This is
-   * because {@link DruidCoordinatorRuntimeParams} entangles two slightly different (nonexistent yet) abstractions:
+   * {@link DruidCoordinatorRuntimeParams#getUsedSegments()} must not be called in Rule's code, because the used
+   * segments are not specified for the {@link DruidCoordinatorRuntimeParams} passed into Rule's code. This is because
+   * {@link DruidCoordinatorRuntimeParams} entangles two slightly different (nonexistent yet) abstractions:
    * "DruidCoordinatorHelperParams" and "RuleParams" which contain params that only {@link
    * org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper}s and Rules need, respectively.
    * For example, {@link org.apache.druid.server.coordinator.ReplicationThrottler} needs to belong only to "RuleParams",
-   * but not "DruidCoordinatorHelperParams". The opposite for "AvailableSegments".
+   * but not "DruidCoordinatorHelperParams". The opposite for the collection of used segments.
    *
    * See https://github.com/apache/incubator-druid/issues/7228
    */

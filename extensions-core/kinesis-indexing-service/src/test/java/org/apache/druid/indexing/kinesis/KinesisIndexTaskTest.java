@@ -2634,6 +2634,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         true,
         reportParseExceptions,
         handoffConditionTimeout,
@@ -2751,6 +2752,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         50000,
         null,
         true,
+        null,
         null,
         null
     );

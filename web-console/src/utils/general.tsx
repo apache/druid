@@ -24,6 +24,12 @@ import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
+export function wait(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
   value = `"${value}"`;
   const currentFilter = filters.find(f => f.id === id);
@@ -270,8 +276,8 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
-  return (xs.map(f) as any).filter(Boolean);
+export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
 export function alphanumericCompare(a: string, b: string): number {

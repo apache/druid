@@ -169,6 +169,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new File("/test"),
         null,
         null,
+        null,
         true,
         false,
         null,
@@ -202,7 +203,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     supervisor = null;
   }
-
 
   @Test
   public void testNoInitialState() throws Exception
@@ -3678,6 +3678,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         new Period("P1Y"),
         new File("/test"),
+        null,
         null,
         null,
         true,

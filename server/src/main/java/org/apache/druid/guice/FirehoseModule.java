@@ -29,6 +29,7 @@ import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.FixedCountFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.HttpFirehoseFactory;
+import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -36,8 +37,6 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import java.util.Collections;
 import java.util.List;
 
-/**
- */
 public class FirehoseModule implements DruidModule
 {
   @Override
@@ -58,7 +57,8 @@ public class FirehoseModule implements DruidModule
                 new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
                 new NamedType(CombiningFirehoseFactory.class, "combining"),
                 new NamedType(FixedCountFirehoseFactory.class, "fixedCount"),
-                new NamedType(SqlFirehoseFactory.class, "sql")
+                new NamedType(SqlFirehoseFactory.class, "sql"),
+                new NamedType(InlineFirehoseFactory.class, "inline")
             )
     );
   }

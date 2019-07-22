@@ -23,6 +23,7 @@ import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -60,6 +61,18 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new SuppressedBufferAggregator(delegate.factorizeBuffered(metricFactory));
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return new SuppressedVectorAggregator(delegate.factorizeVector(columnSelectorFactory));
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return delegate.canVectorize();
   }
 
   @Override
@@ -133,6 +146,12 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return delegate.getMaxIntermediateSize();
+  }
+
+  @Override
+  public int getMaxIntermediateSizeWithNulls()
+  {
+    return delegate.getMaxIntermediateSizeWithNulls();
   }
 
   @Override
@@ -370,6 +389,80 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
     public BufferAggregator getDelegate()
     {
       return delegate;
+    }
+  }
+
+  public static class SuppressedVectorAggregator implements VectorAggregator
+  {
+    private final VectorAggregator delegate;
+
+    public SuppressedVectorAggregator(VectorAggregator delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void init(ByteBuffer buf, int position)
+    {
+      delegate.init(buf, position);
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+    {
+      // no-op
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
+    {
+      // no-op
+    }
+
+    @Nullable
+    @Override
+    public Object get(ByteBuffer buf, int position)
+    {
+      return delegate.get(buf, position);
+    }
+
+    @Override
+    public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+    {
+      delegate.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      SuppressedVectorAggregator that = (SuppressedVectorAggregator) o;
+      return Objects.equals(delegate, that.delegate);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(delegate);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SuppressedVectorAggregator{" +
+             "delegate=" + delegate +
+             '}';
     }
   }
 }

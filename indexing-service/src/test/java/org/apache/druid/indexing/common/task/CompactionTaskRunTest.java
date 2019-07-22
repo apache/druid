@@ -353,16 +353,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           @Override
           public List<StorageLocationConfig> getLocations()
           {
-            return ImmutableList.of(
-                new StorageLocationConfig()
-                {
-                  @Override
-                  public File getPath()
-                  {
-                    return deepStorageDir;
-                  }
-                }
-            );
+            return ImmutableList.of(new StorageLocationConfig(deepStorageDir, null, null));
           }
         },
         objectMapper

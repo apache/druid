@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -44,7 +45,7 @@ public class BufferArrayGrouperTest
   public void testAggregate()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final IntGrouper grouper = newGrouper(columnSelectorFactory, 1024);
+    final IntGrouper grouper = newGrouper(columnSelectorFactory, 32768);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     grouper.aggregate(12);
@@ -77,11 +78,13 @@ public class BufferArrayGrouperTest
 
     final BufferArrayGrouper grouper = new BufferArrayGrouper(
         Suppliers.ofInstance(buffer),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("valueSum", "value"),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
         1000
     );
     grouper.init();
