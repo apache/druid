@@ -38,22 +38,22 @@ import java.util.stream.Collectors;
 /**
  * Like {@link SQLMetadataRuleManagerTest} except with no segments to make sure it behaves when it's empty
  */
-public class SQLMetadataSegmentManagerEmptyTest
+public class SqlSegmentsMetadataEmptyTest
 {
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SQLMetadataSegmentManager sqlSegmentsMetadata;
+  private SqlSegmentsMetadata sqlSegmentsMetadata;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    MetadataSegmentManagerConfig config = new MetadataSegmentManagerConfig();
+    SegmentsMetadataConfig config = new SegmentsMetadataConfig();
     config.setPollDuration(Period.seconds(1));
-    sqlSegmentsMetadata = new SQLMetadataSegmentManager(
+    sqlSegmentsMetadata = new SqlSegmentsMetadata(
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
