@@ -53,9 +53,9 @@ export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
         className="parse-data-table -striped -highlight"
         data={sampleData.rows}
         columns={filterMap(sampleData.header, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          if (!caseInsensitiveContains(columnName, columnFilter)) return;
           const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
-          if (flattenFieldIndex === -1 && flattenedColumnsOnly) return null;
+          if (flattenFieldIndex === -1 && flattenedColumnsOnly) return;
           const flattenField = flattenFields[flattenFieldIndex];
           return {
             Header: (

@@ -26,7 +26,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
@@ -43,7 +42,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
@@ -76,9 +74,11 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 public class GroupByStrategyV2 implements GroupByStrategy
@@ -214,6 +214,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
+  public Comparator<Row> createResultComparator(Query<Row> queryParam)
+  {
+    return ((GroupByQuery) queryParam).getRowOrdering(true);
+  }
+
+  @Override
+  public BinaryOperator<Row> createMergeFn(Query<Row> queryParam)
+  {
+    return new GroupByBinaryFnV2((GroupByQuery) queryParam);
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
@@ -222,20 +234,11 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
-    final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(baseRunner)
-    {
-      @Override
-      protected Ordering<Row> makeOrdering(Query<Row> queryParam)
-      {
-        return ((GroupByQuery) queryParam).getRowOrdering(true);
-      }
-
-      @Override
-      protected BinaryFn<Row, Row, Row> createMergeFn(Query<Row> queryParam)
-      {
-        return new GroupByBinaryFnV2((GroupByQuery) queryParam);
-      }
-    };
+    final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<>(
+        baseRunner,
+        this::createResultComparator,
+        this::createMergeFn
+    );
 
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);

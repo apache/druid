@@ -19,20 +19,20 @@
 
 package org.apache.druid.client.selector;
 
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.query.QueryRunner;
 
 /**
  */
-public class QueryableDruidServer
+public class QueryableDruidServer<T extends QueryRunner>
 {
   private final DruidServer server;
-  private final DirectDruidClient client;
+  private final T queryRunner;
 
-  public QueryableDruidServer(DruidServer server, DirectDruidClient client)
+  public QueryableDruidServer(DruidServer server, T queryRunner)
   {
     this.server = server;
-    this.client = client;
+    this.queryRunner = queryRunner;
   }
 
   public DruidServer getServer()
@@ -40,9 +40,9 @@ public class QueryableDruidServer
     return server;
   }
 
-  public DirectDruidClient getClient()
+  public T getQueryRunner()
   {
-    return client;
+    return queryRunner;
   }
 
   @Override
@@ -50,7 +50,7 @@ public class QueryableDruidServer
   {
     return "QueryableDruidServer{" +
            "server=" + server +
-           ", client=" + client +
+           ", queryRunner=" + queryRunner +
            '}';
   }
 }

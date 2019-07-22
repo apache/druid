@@ -59,8 +59,8 @@ public class Log4jShutterDownerModule implements Module
       if (!(contextFactory instanceof Log4jContextFactory)) {
         log.warn(
             "Expected [%s] found [%s]. Unknown class for context factory. Not logging shutdown",
-            Log4jContextFactory.class.getCanonicalName(),
-            contextFactory.getClass().getCanonicalName()
+            Log4jContextFactory.class.getName(),
+            contextFactory.getClass().getName()
         );
         return;
       }
@@ -68,8 +68,8 @@ public class Log4jShutterDownerModule implements Module
       if (!(registry instanceof Log4jShutdown)) {
         log.warn(
             "Shutdown callback registry expected class [%s] found [%s]. Skipping shutdown registry",
-            Log4jShutdown.class.getCanonicalName(),
-            registry.getClass().getCanonicalName()
+            Log4jShutdown.class.getName(),
+            registry.getClass().getName()
         );
         return;
       }

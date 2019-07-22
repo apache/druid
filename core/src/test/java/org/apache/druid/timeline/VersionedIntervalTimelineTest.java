@@ -240,22 +240,22 @@ public class VersionedIntervalTimelineTest
   public void testFindEntry()
   {
     Assert.assertEquals(
-        new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
+        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle(1))),
         timeline.findEntry(Intervals.of("2011-10-01/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
+        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle(1))),
         timeline.findEntry(Intervals.of("2011-10-01/2011-10-01T10"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
+        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle(1))),
         timeline.findEntry(Intervals.of("2011-10-01T02/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
+        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle(1))),
         timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "1")
     );
 
@@ -279,7 +279,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-02/2011-01-05", "2", 1);
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
+        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle(1))),
         timeline.findEntry(Intervals.of("2011-01-02T02/2011-01-04"), "1")
     );
   }
@@ -1564,11 +1564,11 @@ public class VersionedIntervalTimelineTest
   {
     timeline = makeStringIntegerTimeline();
 
-    add("2011-04-05/2011-04-07", "1", new SingleElementPartitionChunk<Integer>(1));
-    add("2011-04-07/2011-04-09", "1", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-05/2011-04-07", "1", new SingleElementPartitionChunk<>(1));
+    add("2011-04-07/2011-04-09", "1", new SingleElementPartitionChunk<>(1));
 
-    add("2011-04-15/2011-04-17", "1", new SingleElementPartitionChunk<Integer>(1));
-    add("2011-04-17/2011-04-19", "1", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-15/2011-04-17", "1", new SingleElementPartitionChunk<>(1));
+    add("2011-04-17/2011-04-19", "1", new SingleElementPartitionChunk<>(1));
 
     Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-03"), "0"));
     Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-05"), "0"));
@@ -1629,11 +1629,11 @@ public class VersionedIntervalTimelineTest
   {
     timeline = makeStringIntegerTimeline();
 
-    add("2011-04-05/2011-04-09", "11", new SingleElementPartitionChunk<Integer>(1));
-    add("2011-04-07/2011-04-11", "12", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-05/2011-04-09", "11", new SingleElementPartitionChunk<>(1));
+    add("2011-04-07/2011-04-11", "12", new SingleElementPartitionChunk<>(1));
 
-    add("2011-04-15/2011-04-19", "12", new SingleElementPartitionChunk<Integer>(1));
-    add("2011-04-17/2011-04-21", "11", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-15/2011-04-19", "12", new SingleElementPartitionChunk<>(1));
+    add("2011-04-17/2011-04-21", "11", new SingleElementPartitionChunk<>(1));
 
 
     Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-03"), "0"));
@@ -1730,13 +1730,13 @@ public class VersionedIntervalTimelineTest
   {
     return Pair.of(
         Intervals.of(intervalString),
-        Pair.of(version, new PartitionHolder<Integer>(values))
+        Pair.of(version, new PartitionHolder<>(values))
     );
   }
 
   private SingleElementPartitionChunk<Integer> makeSingle(Integer value)
   {
-    return new SingleElementPartitionChunk<Integer>(value);
+    return new SingleElementPartitionChunk<>(value);
   }
 
   private void add(String interval, String version, Integer value)
@@ -1808,7 +1808,7 @@ public class VersionedIntervalTimelineTest
 
   private VersionedIntervalTimeline<String, Integer> makeStringIntegerTimeline()
   {
-    return new VersionedIntervalTimeline<String, Integer>(Ordering.natural());
+    return new VersionedIntervalTimeline<>(Ordering.natural());
   }
 
 }
