@@ -66,10 +66,6 @@ public abstract class ResponseContext
     return getDelegate().put(key, value);
   }
 
-  public Object putIfAbsent(String key, Object value) {
-    return getDelegate().putIfAbsent(key, value);
-  }
-
   public Object get(String key)
   {
     return getDelegate().get(key);
