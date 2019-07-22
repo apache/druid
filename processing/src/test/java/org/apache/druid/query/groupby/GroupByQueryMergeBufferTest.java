@@ -166,7 +166,7 @@ public class GroupByQueryMergeBufferTest
       () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes())
   );
 
-  private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
+  private static final TestBlockingPool MERGE_BUFFER_POOL = new TestBlockingPool(
       () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes()),
       PROCESSING_CONFIG.getNumMergeBuffers()
   );

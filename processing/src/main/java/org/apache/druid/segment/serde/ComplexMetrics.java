@@ -49,7 +49,7 @@ public class ComplexMetrics
         );
       }
     } else {
-        COMPLEX_SERIALIZERS.put(type, serde);
+      COMPLEX_SERIALIZERS.put(type, serde);
     }
   }
 }
