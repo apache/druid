@@ -39,7 +39,7 @@ import java.util.List;
  * Completely removes information about unused segments whose end time is older than {@link #retainDuration} from now
  * from the metadata store. This action is called "to kill a segment".
  *
- * @see org.apache.druid.indexing.common.task.KillUnusedSegmentsTask
+ * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
 public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHelper
 {

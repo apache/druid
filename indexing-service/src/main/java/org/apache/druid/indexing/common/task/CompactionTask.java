@@ -112,6 +112,10 @@ import java.util.stream.StreamSupport;
 public class CompactionTask extends AbstractTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
+  /**
+   * Must be synced with {@link
+   * org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentCompactor#COMPACTION_TASK_TYPE}.
+   */
   private static final String TYPE = "compact";
 
   private final Interval interval;
@@ -836,11 +840,14 @@ public class CompactionTask extends AbstractTask
      * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#maxRowsPerSegment},
      * {@link IndexTuningConfig#maxTotalRows}, or {@link IndexTuningConfig#numShards} together.
      * {@link #hasPartitionConfig} checks one of those configs is set.
-     * <p>
-     * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
+     *
+     * Throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and {@link #hasPartitionConfig}
      * returns true. If targetCompactionSizeBytes is not set, this returns null or
      * {@link DataSourceCompactionConfig#DEFAULT_TARGET_COMPACTION_SIZE_BYTES} according to the result of
-     * hasPartitionConfig.
+     * {@link #hasPartitionConfig}.
+     *
+     * Changes in this method must be synced with {@link DataSourceCompactionConfig#getValidTargetCompactionSizeBytes}.
+     * See the Javadoc for that method for more details.
      */
     @Nullable
     private static Long getValidTargetCompactionSizeBytes(
@@ -866,6 +873,10 @@ public class CompactionTask extends AbstractTask
       }
     }
 
+    /**
+     * Changes in this method must be synced with {@link
+     * DataSourceCompactionConfig#hasPartitionConfig}. See the Javadoc for that method for more details.
+     */
     private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
     {
       if (tuningConfig != null) {

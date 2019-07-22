@@ -92,12 +92,12 @@ public class DataSourceCompactionConfig
   }
 
   /**
-   * This method is copied from {@link
-   * org.apache.druid.indexing.common.task.CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is
+   * This method is copied from
+   * org.apache.druid.indexing.common.task.CompactionTask.getValidTargetCompactionSizeBytes(). The only difference is
    * this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}.
    *
    * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
+   * the same method, this method must be synced with CompactionTask.getValidTargetCompactionSizeBytes().
    */
   @Nullable
   private static Long getValidTargetCompactionSizeBytes(
@@ -121,14 +121,15 @@ public class DataSourceCompactionConfig
   }
 
   /**
-   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * This method is copied from org.apache.druid.indexing.common.task.CompactionTask.hasPartitionConfig(). The two
+   * differences are
    * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}, and
    * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
    * {@link UserCompactionTaskQueryTuningConfig}.
    *
    * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with {@link
-   * org.apache.druid.indexing.common.task.CompactionTask#hasPartitionConfig}.
+   * the same method, this method must be synced with
+   * org.apache.druid.indexing.common.task.CompactionTask.hasPartitionConfig().
    */
   private static boolean hasPartitionConfig(
       @Nullable Integer maxRowsPerSegment,

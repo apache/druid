@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
- * Client representation of {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}. JSON searialization
- * fields of this class must correspond to those of {@link
- * org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}, except for "id" and "context" fields.
+ * Client representation of org.apache.druid.indexing.common.task.KillUnusedSegmentsTask. JSON searialization
+ * fields of this class must correspond to those of org.apache.druid.indexing.common.task.KillUnusedSegmentsTask, except
+ * for "id" and "context" fields.
  */
 public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 {

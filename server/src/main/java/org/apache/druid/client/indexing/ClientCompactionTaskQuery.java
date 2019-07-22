@@ -30,8 +30,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Client representation of {@link org.apache.druid.indexing.common.task.CompactionTask}. JSON serialization fields of
- * this class must correspond to those of {@link org.apache.druid.indexing.common.task.CompactionTask}.
+ * Client representation of org.apache.druid.indexing.common.task.CompactionTask. JSON serialization fields of
+ * this class must correspond to those of org.apache.druid.indexing.common.task.CompactionTask.
  */
 public class ClientCompactionTaskQuery implements ClientTaskQuery
 {

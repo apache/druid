@@ -52,7 +52,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
 
-  /** Should be synced with {@link org.apache.druid.indexing.common.task.CompactionTask#TYPE} */
+  /** Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE. */
   private static final String COMPACTION_TASK_TYPE = "compact";
 
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
