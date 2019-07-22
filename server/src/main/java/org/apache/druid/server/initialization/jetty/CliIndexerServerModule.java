@@ -31,6 +31,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -136,10 +137,16 @@ public class CliIndexerServerModule implements Module
     );
   }
 
+  /**
+   * Adjusts the ServerConfig such that we double the number of configured HTTP threads,
+   * with one half allocated using QoS to chat handler requests, and the other half for other requests.
+   *
+   * 2 dedicated threads are added for lookup listening, which also has a QoS filter applied.
+   */
   public ServerConfig makeAdjustedServerConfig(ServerConfig oldConfig)
   {
     return new ServerConfig(
-        (oldConfig.getNumThreads() * 2) + 2,
+        (oldConfig.getNumThreads() * 2) + LookupModule.LOOKUP_LISTENER_QOS_MAX_REQUESTS,
         oldConfig.getQueueSize(),
         oldConfig.isEnableRequestLimit(),
         oldConfig.getMaxIdleTime(),

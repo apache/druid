@@ -31,6 +31,7 @@ import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
+import java.util.Arrays;
 import java.util.Set;
 
 public class JettyServerInitUtils
@@ -64,7 +65,11 @@ public class JettyServerInitUtils
       } else if (servletFilterHolder.getFilterClass() != null) {
         holder = new FilterHolder(servletFilterHolder.getFilterClass());
       } else {
-        throw new ISE("Filter[%s] for path[%s] didn't have a Filter!?", servletFilterHolder, servletFilterHolder.getPath());
+        throw new ISE(
+            "Filter[%s] for paths[%s] didn't have a Filter!?",
+            servletFilterHolder,
+            Arrays.toString(servletFilterHolder.getPaths())
+        );
       }
 
       if (servletFilterHolder.getInitParameters() != null) {
@@ -78,8 +83,6 @@ public class JettyServerInitUtils
 
       handler.getServletHandler().addFilter(holder, filterMapping);
     }
-    FilterMapping[] fms = handler.getServletHandler().getFilterMappings();
-    int x = 55;
   }
 
   public static Handler getJettyRequestLogHandler()
