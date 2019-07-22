@@ -950,14 +950,10 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
         }
     );
 
-    if (segments == null || segments.isEmpty()) {
-      log.info("No segments found in the database!");
-      return;
-    }
-
-    log.info("Polled and found %,d segments in the database", segments.size());
-
-    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
+    Preconditions.checkNotNull(
+        segments,
+        "Unexpected 'null' when polling segments from the db, aborting snapshot update."
+    );
 
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
     // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadata), the
@@ -967,6 +963,13 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
     // Updates outside of database polls were primarily for the user experience, so users would immediately see the
     // effect of a segment mark call reflected in MetadataResource API calls.
+
+    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
+    if (segments.isEmpty()) {
+      log.info("No segments found in the database!");
+    } else {
+      log.info("Polled and found %,d segments in the database", segments.size());
+    }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties

@@ -77,27 +77,36 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   private static final Indexed<String> NULL_STR_DIM_VAL = new ListIndexed<>(Collections.singletonList(null));
   private static final Splitter SPLITTER = Splitter.on(",");
 
-  private ColumnarIntsSerializer encodedValueSerializer;
-
-  private String dimensionName;
-  private GenericIndexedWriter<String> dictionaryWriter;
-  private String firstDictionaryValue;
-  private int dictionarySize;
-  private GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
-  private ByteBufferWriter<ImmutableRTree> spatialWriter;
-  private ArrayList<IntBuffer> dimConversions;
-  private int cardinality = 0;
-  private boolean hasNull = false;
-  private MutableBitmap nullRowsBitmap;
-  private final SegmentWriteOutMedium segmentWriteOutMedium;
-  private int rowCount = 0;
-  private ColumnCapabilities capabilities;
-  private List<IndexableAdapter> adapters;
-  private final IndexSpec indexSpec;
-  private IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
-
+  private final String dimensionName;
   private final ProgressIndicator progress;
   private final Closer closer;
+  private final IndexSpec indexSpec;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
+  private final MutableBitmap nullRowsBitmap;
+  private final ColumnCapabilities capabilities;
+
+  private int dictionarySize;
+  private int rowCount = 0;
+  private int cardinality = 0;
+  private boolean hasNull = false;
+
+  @Nullable
+  private GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
+  @Nullable
+  private ByteBufferWriter<ImmutableRTree> spatialWriter;
+  @Nullable
+  private ArrayList<IntBuffer> dimConversions;
+  @Nullable
+  private List<IndexableAdapter> adapters;
+  @Nullable
+  private IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
+  @Nullable
+  private ColumnarIntsSerializer encodedValueSerializer;
+  @Nullable
+  private GenericIndexedWriter<String> dictionaryWriter;
+  @Nullable
+  private String firstDictionaryValue;
+
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -537,13 +546,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
         .withBitmapIndex(bitmapWriter)
         .withSpatialIndex(spatialWriter)
         .withByteOrder(IndexIO.BYTE_ORDER);
-    final ColumnDescriptor serdeficator = builder
-        .addSerde(partBuilder.build())
-        .build();
 
     //log.info("Completed dimension column[%s] in %,d millis.", dimensionName, System.currentTimeMillis() - dimStartTime);
 
-    return serdeficator;
+    return builder
+        .addSerde(partBuilder.build())
+        .build();
   }
 
   protected interface IndexSeeker

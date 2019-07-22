@@ -35,6 +35,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -49,7 +51,7 @@ public class SketchHolder
   );
 
   public static final Comparator<Object> COMPARATOR = Ordering.from(
-      new Comparator()
+      new Comparator<Object>()
       {
         @Override
         public int compare(Object o1, Object o2)
@@ -108,7 +110,9 @@ public class SketchHolder
 
   private final Object obj;
 
+  @Nullable
   private volatile Double cachedEstimate = null;
+  @Nullable
   private volatile Sketch cachedSketch = null;
 
   private SketchHolder(Object obj)

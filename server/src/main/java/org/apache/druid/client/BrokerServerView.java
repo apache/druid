@@ -108,25 +108,18 @@ public class BrokerServerView implements TimelineServerView
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
 
-    this.segmentFilter = new Predicate<Pair<DruidServerMetadata, DataSegment>>()
-    {
-      @Override
-      public boolean apply(
-          Pair<DruidServerMetadata, DataSegment> input
-      )
-      {
-        if (segmentWatcherConfig.getWatchedTiers() != null
-            && !segmentWatcherConfig.getWatchedTiers().contains(input.lhs.getTier())) {
-          return false;
-        }
-
-        if (segmentWatcherConfig.getWatchedDataSources() != null
-            && !segmentWatcherConfig.getWatchedDataSources().contains(input.rhs.getDataSource())) {
-          return false;
-        }
-
-        return true;
+    this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
+      if (segmentWatcherConfig.getWatchedTiers() != null
+          && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
+        return false;
       }
+
+      if (segmentWatcherConfig.getWatchedDataSources() != null
+          && !segmentWatcherConfig.getWatchedDataSources().contains(metadataAndSegment.rhs.getDataSource())) {
+        return false;
+      }
+
+      return true;
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
@@ -160,14 +153,9 @@ public class BrokerServerView implements TimelineServerView
 
     baseView.registerServerRemovedCallback(
         exec,
-        new ServerRemovedCallback()
-        {
-          @Override
-          public ServerView.CallbackAction serverRemoved(DruidServer server)
-          {
-            removeServer(server);
-            return ServerView.CallbackAction.CONTINUE;
-          }
+        server -> {
+          removeServer(server);
+          return CallbackAction.CONTINUE;
         }
     );
   }
@@ -195,10 +183,10 @@ public class BrokerServerView implements TimelineServerView
 
   private QueryableDruidServer addServer(DruidServer server)
   {
-    QueryableDruidServer retVal = new QueryableDruidServer(server, makeDirectClient(server));
+    QueryableDruidServer retVal = new QueryableDruidServer<>(server, makeDirectClient(server));
     QueryableDruidServer exists = clients.put(server.getName(), retVal);
     if (exists != null) {
-      log.warn("QueryRunner for server[%s] already existed!? Well it's getting replaced", server);
+      log.warn("QueryRunner for server[%s] already exists!? Well it's getting replaced", server);
     }
 
     return retVal;
@@ -326,7 +314,7 @@ public class BrokerServerView implements TimelineServerView
         log.error("WTF?! No QueryableDruidServer found for %s", server.getName());
         return null;
       }
-      return queryableDruidServer.getClient();
+      return queryableDruidServer.getQueryRunner();
     }
   }
 

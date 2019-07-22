@@ -50,6 +50,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -68,7 +69,6 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -181,9 +181,9 @@ public class DataSourcesResourceTest
     Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(2, result.size());
-    Assert.assertEquals(
-        listDataSources.stream().map(DruidDataSource::toImmutableDruidDataSource).collect(Collectors.toSet()),
-        new HashSet<>(result)
+    ImmutableDruidDataSourceTestUtils.assertEquals(
+        listDataSources.stream().map(DruidDataSource::toImmutableDruidDataSource).collect(Collectors.toList()),
+        new ArrayList<>(result)
     );
 
     response = dataSourcesResource.getQueryableDataSources(null, null, request);
@@ -256,7 +256,10 @@ public class DataSourcesResourceTest
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(1, result.size());
-    Assert.assertEquals(listDataSources.get(0).toImmutableDruidDataSource(), Iterables.getOnlyElement(result));
+    ImmutableDruidDataSourceTestUtils.assertEquals(
+        listDataSources.get(0).toImmutableDruidDataSource(),
+        Iterables.getOnlyElement(result)
+    );
 
     response = dataSourcesResource.getQueryableDataSources(null, null, request);
     List<String> result1 = (List<String>) response.getEntity();
@@ -314,7 +317,7 @@ public class DataSourcesResourceTest
     Response response = dataSourcesResource.getDataSource("datasource1", "full");
     ImmutableDruidDataSource result = (ImmutableDruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(dataSource1.toImmutableDruidDataSource(), result);
+    ImmutableDruidDataSourceTestUtils.assertEquals(dataSource1.toImmutableDruidDataSource(), result);
     EasyMock.verify(inventoryView, server);
   }
 

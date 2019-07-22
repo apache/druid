@@ -26,13 +26,11 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
@@ -41,7 +39,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
-import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
@@ -53,12 +50,14 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -100,33 +99,18 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public QueryRunner<Result<SelectResultValue>> mergeResults(
-      QueryRunner<Result<SelectResultValue>> queryRunner
+  public BinaryOperator<Result<SelectResultValue>> createMergeFn(
+      Query<Result<SelectResultValue>> query
   )
   {
-    return new ResultMergeQueryRunner<Result<SelectResultValue>>(queryRunner)
-    {
-      @Override
-      protected Ordering<Result<SelectResultValue>> makeOrdering(Query<Result<SelectResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((SelectQuery) query).getGranularity(), query.isDescending()
-        );
-      }
+    final SelectQuery selectQuery = (SelectQuery) query;
+    return new SelectBinaryFn(selectQuery.getGranularity(), selectQuery.getPagingSpec(), selectQuery.isDescending());
+  }
 
-      @Override
-      protected BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>> createMergeFn(
-          Query<Result<SelectResultValue>> input
-      )
-      {
-        SelectQuery query = (SelectQuery) input;
-        return new SelectBinaryFn(
-            query.getGranularity(),
-            query.getPagingSpec(),
-            query.isDescending()
-        );
-      }
-    };
+  @Override
+  public Comparator<Result<SelectResultValue>> createResultComparator(Query<Result<SelectResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override

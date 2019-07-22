@@ -148,7 +148,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     int count = 0;
     long sum = 0;
 
-    try (final Firehose firehose = factory.connect(ROW_PARSER, null)) {
+    try (final Firehose firehose = factory.connect(ROW_PARSER, tmpDir)) {
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;
@@ -176,7 +176,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     for (InputSplit<List<WindowedSegmentId>> split : splits) {
       final FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>> splitFactory =
           factory.withSplit(split);
-      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, null)) {
+      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, tmpDir)) {
         while (firehose.hasMore()) {
           final InputRow row = firehose.nextRow();
           count++;
