@@ -189,7 +189,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
               Map<String, String> mapData = getParseMap(key, message);
               if (mapData == null || mapData.isEmpty()) {
-                LOG.error("Bad key/message from topic [%s], msg: [%s]", topic, message);
+                LOG.warn("Bad key/message from topic [%s], msg: [%s]", topic, message);
                 continue;
               }
               doubleEventCount.incrementAndGet();
