@@ -29,6 +29,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
+@SuppressWarnings("SS_SHOULD_BE_STATIC")
 public class WorkerConfig
 {
   @JsonProperty
