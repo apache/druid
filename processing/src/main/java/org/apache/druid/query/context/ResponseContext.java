@@ -31,23 +31,40 @@ import java.util.Map;
  * The context for storing and passing data between chains of {@link org.apache.druid.query.QueryRunner}s.
  * The context is also transferred between Druid nodes with all the data it contains.
  * All the keys associated with data inside the context should be stored here.
+ * CTX_* keys might be aggregated into an enum. Consider refactoring that.
  */
 @PublicApi
 public abstract class ResponseContext
 {
   /**
-   * CTX_* keys might be aggregated into an enum. Consider refactoring that.
+   * Lists intervals for which NO segment is present.
    */
   public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
+  /**
+   * Indicates if the number of uncovered intervals exceeded the limit (true/false).
+   */
   public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
+  /**
+   * Lists missing segments.
+   */
   public static final String CTX_MISSING_SEGMENTS = "missingSegments";
+  /**
+   * Entity tag. A part of HTTP cache validation mechanism.
+   * Is being removed from the context before sending and used as a separate HTTP header.
+   */
   public static final String CTX_ETAG = "ETag";
+  /**
+   * Query total bytes gathered.
+   */
   public static final String CTX_QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
   /**
    * This variable indicates when a running query should be expired,
    * and is effective only when 'timeout' of queryContext has a positive value.
    */
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
+  /**
+   * The number of scanned rows.
+   */
   public static final String CTX_COUNT = "count";
 
   /**
