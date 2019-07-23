@@ -15,7 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # On Mac OS X resolveip may not be available
+  export DOCKER_HOST_IP=$(dig +short $HOSTNAME | awk '{ print ; exit }')
+else
+  export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+fi
 
 cat <<EOT > expired_csr.conf
 [req]
