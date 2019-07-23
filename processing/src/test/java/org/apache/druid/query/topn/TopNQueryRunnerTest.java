@@ -250,11 +250,9 @@ public class TopNQueryRunnerTest
     return retval;
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(
-      TopNQuery query
-  )
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query)
   {
-    return runWithMerge(query);
+    return runWithMerge(query, ResponseContext.createEmpty());
   }
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
