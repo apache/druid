@@ -122,10 +122,8 @@ public class DistinctCountTopNQueryTest
                           .metric("UV")
                           .threshold(10)
                           .aggregators(
-                              Lists.newArrayList(
-                                  QueryRunnerTestHelper.ROWS_COUNT,
-                                  new DistinctCountAggregatorFactory("UV", visitor_id, null)
-                              )
+                              QueryRunnerTestHelper.ROWS_COUNT,
+                              new DistinctCountAggregatorFactory("UV", visitor_id, null)
                           )
                           .build();
 

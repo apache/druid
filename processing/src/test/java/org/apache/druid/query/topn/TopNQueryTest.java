@@ -37,7 +37,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 
 public class TopNQueryTest
 {
@@ -64,7 +63,7 @@ public class TopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT))
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     String json = JSON_MAPPER.writeValueAsString(query);
@@ -116,7 +115,7 @@ public class TopNQueryTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals())
-        .aggregators(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
+        .aggregators(QueryRunnerTestHelper.ROWS_COUNT)
         .build();
     String jsonQuery = "{\n"
                        + "  \"queryType\": \"topN\",\n"

@@ -23,12 +23,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
+
 /**
  *
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  @Nullable
   private ValueType type = null;
+
   private boolean dictionaryEncoded = false;
   private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;

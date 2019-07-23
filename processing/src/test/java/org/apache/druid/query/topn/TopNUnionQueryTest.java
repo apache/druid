@@ -123,16 +123,14 @@ public class TopNUnionQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
-                QueryRunnerTestHelper.DEPENDENT_POST_AGG,
-                QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
-            )
+            QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+            QueryRunnerTestHelper.DEPENDENT_POST_AGG,
+            QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
         )
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(

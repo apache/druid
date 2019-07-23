@@ -142,11 +142,9 @@ public class FixedBucketsHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
                 QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
                 QueryRunnerTestHelper.DEPENDENT_POST_AGG,
                 new QuantilePostAggregator("quantile", "histo", 0.5f)
-            )
         )
         .build();
 

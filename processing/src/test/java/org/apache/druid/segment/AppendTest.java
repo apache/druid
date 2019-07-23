@@ -658,7 +658,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
   }
 
@@ -688,7 +688,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
   }
 

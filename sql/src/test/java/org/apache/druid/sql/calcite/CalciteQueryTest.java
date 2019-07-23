@@ -313,20 +313,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"},
-            new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"},
-            new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"},
-            new Object[]{"druid", "aview", "VIEW"},
-            new Object[]{"druid", "bview", "VIEW"},
-            new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"},
-            new Object[]{"sys", "segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "server_segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "servers", "SYSTEM_TABLE"},
-            new Object[]{"sys", "tasks", "SYSTEM_TABLE"}
-        )
+        ImmutableList.<Object[]>builder()
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
+          .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
+          .add(new Object[]{"druid", "aview", "VIEW"})
+          .add(new Object[]{"druid", "bview", "VIEW"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
+          .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+          .build()
     );
 
     testQuery(
@@ -339,6 +340,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.<Object[]>builder()
             .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
@@ -1495,9 +1497,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(ImmutableList.of(
-                    expressionPostAgg("p0", "substring(\"d0\", 1, -1)")
-                ))
+                .postAggregators(expressionPostAgg("p0", "substring(\"d0\", 1, -1)"))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1532,10 +1532,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(ImmutableList.of(
+                .postAggregators(
                     expressionPostAgg("p0", "substring(\"d0\", 1, -1)"),
                     expressionPostAgg("p1", "strlen(\"d0\")")
-                ))
+                )
                 .metric(new NumericTopNMetricSpec("p1"))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -2542,15 +2542,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("p0")))
-                .aggregators(aggregators(
+                .aggregators(
                     new FloatMinAggregatorFactory("a0", "m1"),
                     new FloatMaxAggregatorFactory("a1", "m1")
-                ))
-                .postAggregators(
-                    ImmutableList.of(
-                        expressionPostAgg("p0", "(\"a0\" + \"a1\")")
-                    )
                 )
+                .postAggregators(expressionPostAgg("p0", "(\"a0\" + \"a1\")"))
                 .threshold(3)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -4650,7 +4646,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
                 .metric(new NumericTopNMetricSpec("a0"))
                 .threshold(2)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -4717,7 +4713,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
                 .metric(new NumericTopNMetricSpec("a0"))
                 .threshold(2)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -5796,6 +5792,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{2L}
         )
+    );
+  }
+
+  @Test
+  public void testFilterOnTimeExtractWithVariousTimeUnits() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo4\n"
+          + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
+          + "AND EXTRACT(MICROSECOND FROM __time) = 946723\n"
+          + "AND EXTRACT(MILLISECOND FROM __time) = 695\n"
+          + "AND EXTRACT(ISODOW FROM __time) = 6\n"
+          + "AND EXTRACT(ISOYEAR FROM __time) = 2000\n"
+          + "AND EXTRACT(DECADE FROM __time) = 200\n"
+          + "AND EXTRACT(CENTURY FROM __time) = 21\n"
+          + "AND EXTRACT(MILLENNIUM FROM __time) = 2\n",
+
+        TIMESERIES_CONTEXT_DEFAULT,
+        ImmutableList.of(
+        Druids.newTimeseriesQueryBuilder()
+          .dataSource(CalciteTests.DATASOURCE4)
+          .intervals(querySegmentSpec(Filtration.eternity()))
+          .granularity(Granularities.ALL)
+          .virtualColumns(
+            expressionVirtualColumn("v0", "timestamp_extract(\"__time\",'YEAR','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v1", "timestamp_extract(\"__time\",'MICROSECOND','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v2", "timestamp_extract(\"__time\",'MILLISECOND','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v3", "timestamp_extract(\"__time\",'ISODOW','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v4", "timestamp_extract(\"__time\",'ISOYEAR','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v5", "timestamp_extract(\"__time\",'DECADE','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v6", "timestamp_extract(\"__time\",'CENTURY','UTC')", ValueType.LONG),
+            expressionVirtualColumn("v7", "timestamp_extract(\"__time\",'MILLENNIUM','UTC')", ValueType.LONG)
+            )
+          .aggregators(aggregators(new CountAggregatorFactory("a0")))
+          .filters(
+            and(
+              selector("v0", "2000", null),
+              selector("v1", "946723", null),
+              selector("v2", "695", null),
+              selector("v3", "6", null),
+              selector("v4", "2000", null),
+              selector("v5", "200", null),
+              selector("v6", "21", null),
+              selector("v7", "2", null)
+            )
+          )
+          .context(TIMESERIES_CONTEXT_DEFAULT)
+          .build()
+      ),
+        ImmutableList.of(
+        new Object[]{1L}
+      )
     );
   }
 
@@ -7582,24 +7633,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT))
                 .filters("dim2", "a")
-                .aggregators(aggregators(
+                .aggregators(
                     new DoubleSumAggregatorFactory("a0:sum", "m2"),
                     new CountAggregatorFactory("a0:count"),
                     new DoubleSumAggregatorFactory("a1", "m1"),
                     new DoubleSumAggregatorFactory("a2", "m2")
-                ))
+                )
                 .postAggregators(
-                    ImmutableList.of(
-                        new ArithmeticPostAggregator(
-                            "a0",
-                            "quotient",
-                            ImmutableList.of(
-                                new FieldAccessPostAggregator(null, "a0:sum"),
-                                new FieldAccessPostAggregator(null, "a0:count")
-                            )
-                        ),
-                        expressionPostAgg("p0", "(\"a1\" + \"a2\")")
-                    )
+                    new ArithmeticPostAggregator(
+                        "a0",
+                        "quotient",
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator(null, "a0:sum"),
+                            new FieldAccessPostAggregator(null, "a0:count")
+                        )
+                    ),
+                    expressionPostAgg("p0", "(\"a1\" + \"a2\")")
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)

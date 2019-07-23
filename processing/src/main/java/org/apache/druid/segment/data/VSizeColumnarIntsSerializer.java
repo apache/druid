@@ -26,6 +26,8 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -46,8 +48,10 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   private final int numBytes;
 
   private final ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES);
-  private WriteOutBytes valuesOut = null;
   private boolean bufPaddingWritten = false;
+
+  @Nullable
+  private WriteOutBytes valuesOut = null;
 
   public VSizeColumnarIntsSerializer(final SegmentWriteOutMedium segmentWriteOutMedium, final int maxValue)
   {

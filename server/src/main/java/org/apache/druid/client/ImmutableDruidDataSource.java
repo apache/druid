@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -30,10 +31,10 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 
 /**
- * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
+ * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data
+ * source.
  *
  * @see DruidDataSource - a mutable counterpart of this class
  */
@@ -120,11 +121,42 @@ public class ImmutableDruidDataSource
            + "'}";
   }
 
+  /**
+   * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
+   * prohibiting/limiting equals() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
+   * https://github.com/apache/incubator-druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
+   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * manually.
+   *
+   * See https://github.com/apache/incubator-druid/issues/7858
+   */
   @Override
   public boolean equals(Object o)
   {
-    // Note: this method is not well-defined. It should instead just throw UnsupportedOperationsException.
-    // See https://github.com/apache/incubator-druid/issues/7858.
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+  }
+
+  /**
+   * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
+   * prohibiting/limiting hashCode() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
+   * https://github.com/apache/incubator-druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
+   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * manually.
+   *
+   * See https://github.com/apache/incubator-druid/issues/7858
+   */
+  @Override
+  public int hashCode()
+  {
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+  }
+
+  /**
+   * This method should only be used in tests.
+   */
+  @VisibleForTesting
+  public boolean equalsForTesting(Object o)
+  {
     if (this == o) {
       return true;
     }
@@ -143,13 +175,5 @@ public class ImmutableDruidDataSource
     }
 
     return this.idToSegments.equals(that.idToSegments);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    // Note: this method is not well-defined. It should instead just throw UnsupportedOperationsException.
-    // See https://github.com/apache/incubator-druid/issues/7858.
-    return Objects.hash(name, properties);
   }
 }

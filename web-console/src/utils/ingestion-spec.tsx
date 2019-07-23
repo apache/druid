@@ -1292,10 +1292,17 @@ export function getIoConfigTuningFormFields(
 
 // ---------------------------------------
 
-function filenameFromPath(path: string | undefined): string | null {
-  if (!path) return null;
+function filterIsFilename(filter: string): boolean {
+  return !/[*?]/.test(filter);
+}
+
+function filenameFromPath(path: string): string | null {
   const m = path.match(/([^\/.]+)[^\/]*?\/?$/);
   return m ? m[1] : null;
+}
+
+function basenameFromFilename(filename: string): string | null {
+  return filename.split('.')[0] || null;
 }
 
 export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
@@ -1315,15 +1322,20 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
 
       switch (firehose.type) {
         case 'local':
-          return filenameFromPath(firehose.baseDir);
+          if (firehose.filter && filterIsFilename(firehose.filter)) {
+            return basenameFromFilename(firehose.filter);
+          } else if (firehose.baseDir) {
+            return filenameFromPath(firehose.baseDir);
+          } else {
+            return null;
+          }
 
         case 'static-s3':
-          return filenameFromPath(
-            (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0],
-          );
+          const s3Path = (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0];
+          return s3Path ? filenameFromPath(s3Path) : null;
 
         case 'http':
-          return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
+          return Array.isArray(firehose.uris) ? filenameFromPath(firehose.uris[0]) : null;
       }
 
       return null;

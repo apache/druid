@@ -153,6 +153,7 @@ public class WorkerTaskMonitorTest
         null,
         false,
         null,
+        null,
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);

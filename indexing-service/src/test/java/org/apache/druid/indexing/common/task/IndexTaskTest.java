@@ -204,7 +204,7 @@ public class IndexTaskTest
           public List<StorageLocationConfig> getLocations()
           {
             return Collections.singletonList(
-                new StorageLocationConfig().setPath(cacheDir)
+                new StorageLocationConfig(cacheDir, null, null)
             );
           }
         },

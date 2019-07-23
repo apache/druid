@@ -85,11 +85,11 @@ public class VarianceTopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT))
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(

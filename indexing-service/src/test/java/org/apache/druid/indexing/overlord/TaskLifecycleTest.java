@@ -540,7 +540,7 @@ public class TaskLifecycleTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
 
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
