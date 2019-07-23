@@ -531,16 +531,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
     synchronized (tasks) {
       for (ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
-        if (taskWorkItem.processHolder != null) {
-          log.info("Closing output stream to task[%s].", taskWorkItem.getTask().getId());
-          try {
-            taskWorkItem.processHolder.process.getOutputStream().close();
-          }
-          catch (Exception e) {
-            log.warn(e, "Failed to close stdout to task[%s]. Destroying task.", taskWorkItem.getTask().getId());
-            taskWorkItem.processHolder.process.destroy();
-          }
-        }
+        shutdownTaskProcess(taskWorkItem);
       }
     }
 
@@ -597,12 +588,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
 
       taskInfo.shutdown = true;
-    }
 
-    if (taskInfo.processHolder != null) {
-      // Will trigger normal failure mechanisms due to process exit
-      log.info("Killing process for task: %s", taskid);
-      taskInfo.processHolder.process.destroy();
+      shutdownTaskProcess(taskInfo);
     }
   }
 
@@ -698,8 +685,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     );
   }
 
-  // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
-  // occur while saving.
+  /**
+   * Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that occur
+   * while saving.
+   */
   @GuardedBy("tasks")
   private void saveRunningTasks()
   {
@@ -715,6 +704,25 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     }
     catch (Exception e) {
       log.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
+    }
+  }
+
+  /**
+   * Close task output stream (input stream of process) sending EOF telling process to terminate, destroying the process
+   * if an exception is encountered.
+   */
+  private void shutdownTaskProcess(ForkingTaskRunnerWorkItem taskInfo)
+  {
+    if (taskInfo.processHolder != null) {
+      // Will trigger normal failure mechanisms due to process exit
+      log.info("Closing output stream to task[%s].", taskInfo.getTask().getId());
+      try {
+        taskInfo.processHolder.process.getOutputStream().close();
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to close stdout to task[%s]. Destroying task.", taskInfo.getTask().getId());
+        taskInfo.processHolder.process.destroy();
+      }
     }
   }
 
