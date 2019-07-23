@@ -32,7 +32,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -250,8 +249,6 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
     );
-    ResponseContext context = ResponseContext.createEmpty();
-
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 }

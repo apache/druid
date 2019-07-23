@@ -118,13 +118,12 @@ public class ChainedExecutionQueryRunnerTest
          runners
         )
     );
-    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .build();
-    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()
@@ -243,14 +242,13 @@ public class ChainedExecutionQueryRunnerTest
             runners
         )
     );
-    ResponseContext context = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
                                   .build();
-    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()

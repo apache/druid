@@ -34,7 +34,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.select.EventHolder;
 import org.apache.druid.query.select.PagingSpec;
 import org.apache.druid.query.select.SelectQuery;
@@ -190,7 +189,7 @@ public class MapVirtualColumnSelectTest
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
-    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ResponseContext.createEmpty()).toList();
+    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
     Assert.assertEquals(1, results.size());
 
     List<EventHolder> events = results.get(0).getValue().getEvents();

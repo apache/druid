@@ -319,8 +319,7 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    Sequence res = runner.run(QueryPlus.wrap(query), context);
+    Sequence res = runner.run(QueryPlus.wrap(query));
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -400,8 +399,7 @@ public class CachingQueryRunnerTest
         }
 
     );
-    ResponseContext context = ResponseContext.createEmpty();
-    List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 

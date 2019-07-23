@@ -42,8 +42,6 @@ import java.util.Collections;
 
 public class TimewarpOperatorTest
 {
-  public static final ResponseContext CONTEXT = ResponseContext.createEmpty();
-
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
       new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
       new Period("P1W"),
@@ -133,7 +131,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
 
 
@@ -182,7 +180,7 @@ public class TimewarpOperatorTest
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
             )
         ),
-        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery), CONTEXT).toList()
+        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList()
     );
 
   }
@@ -243,7 +241,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 
@@ -303,7 +301,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 
@@ -355,7 +353,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 3))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 }

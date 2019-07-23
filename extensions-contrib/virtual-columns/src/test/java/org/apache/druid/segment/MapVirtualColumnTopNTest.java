@@ -30,7 +30,6 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
@@ -105,7 +104,7 @@ public class MapVirtualColumnTopNTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @Test
@@ -129,7 +128,7 @@ public class MapVirtualColumnTopNTest
         null
     );
 
-    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query)).toList();
     final List<Result<TopNResultValue>> expected = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

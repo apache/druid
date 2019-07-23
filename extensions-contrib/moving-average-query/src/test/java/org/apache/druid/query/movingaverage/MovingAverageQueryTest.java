@@ -59,7 +59,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -364,12 +363,11 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final ResponseContext responseContext = ResponseContext.createEmpty();
 
     defineMocks();
 
     QueryPlus queryPlus = QueryPlus.wrap(query);
-    final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);
+    final Sequence<?> res = query.getRunner(walker).run(queryPlus);
 
     List actualResults = new ArrayList();
     actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());

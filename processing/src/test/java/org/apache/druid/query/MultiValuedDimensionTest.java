@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -1035,8 +1034,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = ResponseContext.createEmpty();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -1089,8 +1087,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = ResponseContext.createEmpty();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
                        .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
@@ -1150,8 +1147,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      ResponseContext context = ResponseContext.createEmpty();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
 
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()

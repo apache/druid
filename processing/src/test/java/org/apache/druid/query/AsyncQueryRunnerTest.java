@@ -78,7 +78,7 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
-    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query));
     latch.countDown();
     Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
@@ -107,10 +107,8 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
-    Sequence lazy = asyncRunner.run(
-        QueryPlus.wrap(query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))),
-        ResponseContext.createEmpty()
-    );
+    Sequence lazy =
+        asyncRunner.run(QueryPlus.wrap(query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))));
 
     try {
       lazy.toList();
@@ -133,7 +131,7 @@ public class AsyncQueryRunnerTest
 
     AsyncQueryRunner asyncRunner = new AsyncQueryRunner<>(baseRunner, executor, mock);
 
-    asyncRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    asyncRunner.run(QueryPlus.wrap(query));
     EasyMock.verify(mock);
   }
 }

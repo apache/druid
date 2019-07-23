@@ -113,8 +113,7 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     assertExpectedResults(expectedResults, results);
   }
@@ -217,8 +216,7 @@ public class TimeSeriesUnionQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results =
-        mergingrunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+    Iterable<Result<TimeseriesResultValue>> results = mergingrunner.run(QueryPlus.wrap(query)).toList();
 
     assertExpectedResults(expectedResults, results);
 

@@ -161,9 +161,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
     Assert.assertTrue(Iterables.size(results) > 0);
 
@@ -185,9 +184,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    ResponseContext context = ResponseContext.createEmpty();
     List<Result<TimeBoundaryResultValue>> results =
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
     Assert.assertTrue(Iterables.size(results) == 0);
   }
@@ -200,8 +198,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();

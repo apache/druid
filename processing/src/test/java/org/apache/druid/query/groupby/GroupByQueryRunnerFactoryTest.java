@@ -126,7 +126,7 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query));
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

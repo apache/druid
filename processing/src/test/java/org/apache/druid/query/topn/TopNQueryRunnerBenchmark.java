@@ -31,7 +31,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
@@ -57,8 +56,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
 
   private static final String marketDimension = "market";
   private static final SegmentId segmentId = SegmentId.dummy("testSegment");
-
-  private static final ResponseContext context = ResponseContext.createEmpty();
 
   private static final TopNQuery query = new TopNQueryBuilder()
       .dataSource(QueryRunnerTestHelper.dataSource)
@@ -133,7 +130,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testmMapped()
   {
-    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -141,7 +138,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testrtIndex()
   {
-    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -149,7 +146,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testMerged()
   {
-    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -157,6 +154,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testOffHeap()
   {
-    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query));
   }
 }

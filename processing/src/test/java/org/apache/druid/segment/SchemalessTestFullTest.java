@@ -45,7 +45,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
@@ -1466,8 +1465,7 @@ public class SchemalessTestFullTest
                                   .build();
 
     failMsg += " timeseries ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1497,8 +1495,7 @@ public class SchemalessTestFullTest
                                   .build();
 
     failMsg += " filtered timeseries ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1528,8 +1525,7 @@ public class SchemalessTestFullTest
         .build();
 
     failMsg += " topN ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
 
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
@@ -1561,8 +1557,7 @@ public class SchemalessTestFullTest
         .build();
 
     failMsg += " filtered topN ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1576,8 +1571,7 @@ public class SchemalessTestFullTest
                               .build();
 
     failMsg += " search ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1592,8 +1586,7 @@ public class SchemalessTestFullTest
                               .build();
 
     failMsg += " filtered search ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1608,8 +1601,7 @@ public class SchemalessTestFullTest
                                     .build();
 
     failMsg += " timeBoundary ";
-    ResponseContext context = ResponseContext.createEmpty();
-    Iterable<Result<TimeBoundaryResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeBoundaryResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 }

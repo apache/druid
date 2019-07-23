@@ -38,7 +38,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnionQueryRunner;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -243,7 +242,7 @@ public class MultiSegmentSelectQueryTest
   private void runAllGranularityTest(SelectQuery query, int[][] expectedOffsets)
   {
     for (int[] expected : expectedOffsets) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
       Assert.assertEquals(1, results.size());
 
       SelectResultValue value = results.get(0).getValue();
@@ -285,7 +284,7 @@ public class MultiSegmentSelectQueryTest
   private void runDayGranularityTest(SelectQuery query, int[][] expectedOffsets)
   {
     for (int[] expected : expectedOffsets) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
       Assert.assertEquals(2, results.size());
 
       SelectResultValue value0 = results.get(0).getValue();
@@ -327,12 +326,12 @@ public class MultiSegmentSelectQueryTest
     SelectQuery query = selectQueryBuilder.build();
     QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
 
-    List<Result<SelectResultValue>> results = unionQueryRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+    List<Result<SelectResultValue>> results = unionQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
     query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Collections.singletonList(pagingIdentifiers)), query, 3));
 
-    unionQueryRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+    unionQueryRunner.run(QueryPlus.wrap(query)).toList();
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)
