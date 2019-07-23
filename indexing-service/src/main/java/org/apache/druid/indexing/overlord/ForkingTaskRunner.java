@@ -438,16 +438,7 @@ public class ForkingTaskRunner
 
     synchronized (tasks) {
       for (ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
-        if (taskWorkItem.processHolder != null) {
-          LOGGER.info("Closing output stream to task[%s].", taskWorkItem.getTask().getId());
-          try {
-            taskWorkItem.processHolder.process.getOutputStream().close();
-          }
-          catch (Exception e) {
-            LOGGER.warn(e, "Failed to close stdout to task[%s]. Destroying task.", taskWorkItem.getTask().getId());
-            taskWorkItem.processHolder.process.destroy();
-          }
-        }
+        shutdownTaskProcess(taskWorkItem);
       }
     }
 
@@ -504,12 +495,8 @@ public class ForkingTaskRunner
       }
 
       taskInfo.shutdown = true;
-    }
 
-    if (taskInfo.processHolder != null) {
-      // Will trigger normal failure mechanisms due to process exit
-      LOGGER.info("Killing process for task: %s", taskid);
-      taskInfo.processHolder.process.destroy();
+      shutdownTaskProcess(taskInfo);
     }
   }
 
@@ -595,6 +582,25 @@ public class ForkingTaskRunner
           }
         }
     );
+  }
+
+  /**
+   * Close task output stream (input stream of process) sending EOF telling process to terminate, destroying the process
+   * if an exception is encountered.
+   */
+  private void shutdownTaskProcess(ForkingTaskRunnerWorkItem taskInfo)
+  {
+    if (taskInfo.processHolder != null) {
+      // Will trigger normal failure mechanisms due to process exit
+      LOGGER.info("Closing output stream to task[%s].", taskInfo.getTask().getId());
+      try {
+        taskInfo.processHolder.process.getOutputStream().close();
+      }
+      catch (Exception e) {
+        LOGGER.warn(e, "Failed to close stdout to task[%s]. Destroying task.", taskInfo.getTask().getId());
+        taskInfo.processHolder.process.destroy();
+      }
+    }
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
