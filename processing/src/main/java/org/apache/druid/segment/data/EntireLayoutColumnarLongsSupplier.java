@@ -20,7 +20,6 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.StringUtils;
 
 public class EntireLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {
@@ -53,21 +52,6 @@ public class EntireLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs
     public long get(int index)
     {
       return reader.read(index);
-    }
-
-    @Override
-    public void fill(int index, long[] toFill)
-    {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            StringUtils.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
-      }
-      for (int i = 0; i < toFill.length; i++) {
-        toFill[i] = get(index + i);
-      }
     }
 
     @Override

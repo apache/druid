@@ -256,6 +256,11 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toArray(new VirtualColumn[0]);
   }
 
+  public int size()
+  {
+    return virtualColumns.size();
+  }
+
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
     return new VirtualizedColumnSelectorFactory(baseFactory, this);

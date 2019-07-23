@@ -19,13 +19,23 @@
 
 package org.apache.druid.metadata;
 
+import java.util.Collection;
+
 /**
- * Exception thrown by MetadataSegmentManager when an segment id is unknown.
+ * Exception thrown by {@link MetadataSegmentManager} when a segment id is unknown.
  */
-public class UnknownSegmentIdException extends RuntimeException
+public class UnknownSegmentIdException extends Exception
 {
-  public UnknownSegmentIdException(String message)
+  private final Collection<String> unknownSegmentIds;
+
+  UnknownSegmentIdException(Collection<String> segmentIds)
   {
-    super(message);
+    super("Cannot find segment ids " + segmentIds);
+    this.unknownSegmentIds = segmentIds;
+  }
+
+  public Collection<String> getUnknownSegmentIds()
+  {
+    return unknownSegmentIds;
   }
 }

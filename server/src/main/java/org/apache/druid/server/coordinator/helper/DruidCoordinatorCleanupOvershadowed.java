@@ -46,41 +46,40 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
+    if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
+      return params;
+    }
+
     CoordinatorStats stats = new CoordinatorStats();
 
-    // Delete segments that are old
-    // Unservice old partitions if we've had enough time to make sure we aren't flapping with old data
-    if (params.hasDeletionWaitTimeElapsed()) {
-      DruidCluster cluster = params.getDruidCluster();
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    DruidCluster cluster = params.getDruidCluster();
+    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
 
-      for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
-        for (ServerHolder serverHolder : serverHolders) {
-          ImmutableDruidServer server = serverHolder.getServer();
+    for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
+      for (ServerHolder serverHolder : serverHolders) {
+        ImmutableDruidServer server = serverHolder.getServer();
 
-          for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-            VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
-            if (timeline == null) {
-              timeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-              timelines.put(dataSource.getName(), timeline);
-            }
-
-            VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
-          }
-        }
-      }
-
-      //Remove all segments in db that are overshadowed by served segments
-      for (DataSegment dataSegment : params.getAvailableSegments()) {
-        VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-        if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
-          coordinator.removeSegment(dataSegment);
-          stats.addToGlobalStat("overShadowedCount", 1);
+        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+              .computeIfAbsent(
+                  dataSource.getName(),
+                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+              );
+          VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
         }
       }
     }
-    return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
-                 .build();
+
+    // Mark all segments as unused in db that are overshadowed by served segments
+    for (DataSegment dataSegment : params.getUsedSegments()) {
+      VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+        coordinator.markSegmentAsUnused(dataSegment);
+        stats.addToGlobalStat("overShadowedCount", 1);
+      }
+    }
+
+    return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 }

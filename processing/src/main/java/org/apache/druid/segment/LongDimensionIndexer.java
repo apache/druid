@@ -81,7 +81,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int getCardinality()
   {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

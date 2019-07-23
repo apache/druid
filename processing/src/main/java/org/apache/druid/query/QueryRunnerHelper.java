@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -34,19 +33,19 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
 public class QueryRunnerHelper
 {
-
   public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,
-      List<Interval> queryIntervals,
-      Filter filter,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      Granularity granularity,
+      final List<Interval> queryIntervals,
+      final Filter filter,
+      final VirtualColumns virtualColumns,
+      final boolean descending,
+      final Granularity granularity,
       final Function<Cursor, Result<T>> mapFn
   )
   {
@@ -57,16 +56,9 @@ public class QueryRunnerHelper
     return Sequences.filter(
         Sequences.map(
             adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, null),
-            new Function<Cursor, Result<T>>()
-            {
-              @Override
-              public Result<T> apply(Cursor input)
-              {
-                return mapFn.apply(input);
-              }
-            }
+            mapFn
         ),
-        Predicates.notNull()
+        Objects::nonNull
     );
   }
 

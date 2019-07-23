@@ -255,7 +255,7 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
-    assertFilterMatches(
+    assertFilterMatchesSkipVectorize(
         new JavaScriptDimFilter(LONG_COLUMN, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.of("3", "5")
     );
@@ -363,7 +363,7 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
-    assertFilterMatches(
+    assertFilterMatchesSkipVectorize(
         new JavaScriptDimFilter(LONG_COLUMN, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.of("3", "4")
     );

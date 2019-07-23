@@ -23,15 +23,15 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.joda.time.DateTime;
 
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
-public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
+public class GroupByBinaryFnV2 implements BinaryOperator<Row>
 {
   private final GroupByQuery query;
 
@@ -50,8 +50,7 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
     }
 
     final Map<String, Object> newMap = Maps.newHashMapWithExpectedSize(
-        query.getDimensions().size()
-        + query.getAggregatorSpecs().size()
+        query.getDimensions().size() + query.getAggregatorSpecs().size()
     );
 
     // Add dimensions

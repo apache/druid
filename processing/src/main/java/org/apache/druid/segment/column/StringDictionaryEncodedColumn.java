@@ -37,13 +37,16 @@ import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.BitSet;
 
 /**
-*/
+ */
 public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
   @Nullable
@@ -316,6 +319,164 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       }
       return new SingleValueQueryableDimensionSelector();
     }
+  }
+
+  @Override
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(final ReadableVectorOffset offset)
+  {
+    class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
+    {
+      private final int[] vector = new int[offset.getMaxVectorSize()];
+      private int id = ReadableVectorOffset.NULL_ID;
+
+      @Override
+      public int[] getRowVector()
+      {
+        if (id == offset.getId()) {
+          return vector;
+        }
+
+        if (offset.isContiguous()) {
+          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
+        } else {
+          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
+        }
+
+        id = offset.getId();
+        return vector;
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return getCardinality();
+      }
+
+      @Nullable
+      @Override
+      public String lookupName(final int id)
+      {
+        return StringDictionaryEncodedColumn.this.lookupName(id);
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return this;
+      }
+
+      @Override
+      public int lookupId(@Nullable final String name)
+      {
+        return StringDictionaryEncodedColumn.this.lookupId(name);
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return offset.getCurrentVectorSize();
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return offset.getMaxVectorSize();
+      }
+    }
+
+    return new QueryableSingleValueDimensionVectorSelector();
+  }
+
+  @Override
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(final ReadableVectorOffset offset)
+  {
+    class QueryableMultiValueDimensionVectorSelector implements MultiValueDimensionVectorSelector, IdLookup
+    {
+      private final IndexedInts[] vector = new IndexedInts[offset.getMaxVectorSize()];
+      private int id = ReadableVectorOffset.NULL_ID;
+
+      @Override
+      public IndexedInts[] getRowVector()
+      {
+        if (id == offset.getId()) {
+          return vector;
+        }
+
+        if (offset.isContiguous()) {
+          final int currentOffset = offset.getStartOffset();
+          final int numRows = offset.getCurrentVectorSize();
+
+          for (int i = 0; i < numRows; i++) {
+            // Must use getUnshared, otherwise all elements in the vector could be the same shared object.
+            vector[i] = multiValueColumn.getUnshared(i + currentOffset);
+          }
+        } else {
+          final int[] offsets = offset.getOffsets();
+          final int numRows = offset.getCurrentVectorSize();
+
+          for (int i = 0; i < numRows; i++) {
+            // Must use getUnshared, otherwise all elements in the vector could be the same shared object.
+            vector[i] = multiValueColumn.getUnshared(offsets[i]);
+          }
+        }
+
+        id = offset.getId();
+        return vector;
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return getCardinality();
+      }
+
+      @Nullable
+      @Override
+      public String lookupName(final int id)
+      {
+        return StringDictionaryEncodedColumn.this.lookupName(id);
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return this;
+      }
+
+      @Override
+      public int lookupId(@Nullable final String name)
+      {
+        return StringDictionaryEncodedColumn.this.lookupId(name);
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return offset.getCurrentVectorSize();
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return offset.getMaxVectorSize();
+      }
+    }
+
+    return new QueryableMultiValueDimensionVectorSelector();
   }
 
   @Override

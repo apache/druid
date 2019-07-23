@@ -25,6 +25,7 @@ volumes:
   broker_var: {}
   coordinator_var: {}
   overlord_var: {}
+  router_var: {}
 
 services:
   postgres:
@@ -122,3 +123,18 @@ services:
     env_file:
       - environment
 
+  router:
+    image: druid
+    container_name: router
+    volumes:
+      - router_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "4008:8888"
+    command:
+      - router
+    env_file:
+      - environment
