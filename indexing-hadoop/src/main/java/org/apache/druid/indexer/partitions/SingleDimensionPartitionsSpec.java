@@ -31,7 +31,7 @@ import java.util.Objects;
 
 public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
-  private final int targetPartitionSize;
+  private final int maxRowsPerSegment;
   private final int maxPartitionSize;
   @Nullable
   private final String partitionDimension;
@@ -39,27 +39,26 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
 
   @JsonCreator
   public SingleDimensionPartitionsSpec(
-      @JsonProperty("targetPartitionSize") int targetPartitionSize,
+      @JsonProperty("maxRowsPerSegment") int maxRowsPerSegment,
       @JsonProperty("maxPartitionSize") @Nullable Integer maxPartitionSize,
       @JsonProperty("partitionDimension") @Nullable String partitionDimension,
       @JsonProperty("assumeGrouped") boolean assumeGrouped // false by default
   )
   {
-    Preconditions.checkArgument(targetPartitionSize > 0, "targetPartitionSize must be specified");
-    this.targetPartitionSize = targetPartitionSize;
+    Preconditions.checkArgument(maxRowsPerSegment > 0, "maxRowsPerSegment must be specified");
+    this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxPartitionSize = PartitionsSpec.isEffectivelyNull(maxPartitionSize)
-                            ? Math.multiplyExact(targetPartitionSize, (int) (targetPartitionSize * 0.5))
+                            ? Math.multiplyExact(maxRowsPerSegment, (int) (maxRowsPerSegment * 0.5))
                             : maxPartitionSize;
     this.partitionDimension = partitionDimension;
     this.assumeGrouped = assumeGrouped;
   }
 
-  @Nullable
   @Override
-  @JsonProperty("targetPartitionSize")
+  @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
-    return targetPartitionSize;
+    return maxRowsPerSegment;
   }
 
   @Override
@@ -103,7 +102,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
       return false;
     }
     SingleDimensionPartitionsSpec that = (SingleDimensionPartitionsSpec) o;
-    return targetPartitionSize == that.targetPartitionSize &&
+    return maxRowsPerSegment == that.maxRowsPerSegment &&
            maxPartitionSize == that.maxPartitionSize &&
            assumeGrouped == that.assumeGrouped &&
            Objects.equals(partitionDimension, that.partitionDimension);
@@ -112,14 +111,14 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   @Override
   public int hashCode()
   {
-    return Objects.hash(targetPartitionSize, maxPartitionSize, partitionDimension, assumeGrouped);
+    return Objects.hash(maxRowsPerSegment, maxPartitionSize, partitionDimension, assumeGrouped);
   }
 
   @Override
   public String toString()
   {
     return "SingleDimensionPartitionsSpec{" +
-           "targetPartitionSize=" + targetPartitionSize +
+           "maxRowsPerSegment=" + maxRowsPerSegment +
            ", maxPartitionSize=" + maxPartitionSize +
            ", partitionDimension='" + partitionDimension + '\'' +
            ", assumeGrouped=" + assumeGrouped +

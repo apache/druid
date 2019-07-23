@@ -39,6 +39,13 @@ public class HadoopSingleDimensionPartitionsSpec extends SingleDimensionPartitio
   }
 
   @Override
+  @JsonProperty("targetPartitionSize")
+  public Integer getMaxRowsPerSegment()
+  {
+    return super.getMaxRowsPerSegment();
+  }
+
+  @Override
   public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
   {
     return new DeterminePartitionsJob(config);

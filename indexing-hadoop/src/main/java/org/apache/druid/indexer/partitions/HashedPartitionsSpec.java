@@ -41,7 +41,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
   @JsonCreator
   public HashedPartitionsSpec(
-      @JsonProperty("targetPartitionSize") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions
   )
@@ -100,7 +100,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
   @Nullable
   @Override
-  @JsonProperty("targetPartitionSize")
+  @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
@@ -151,7 +151,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   public String toString()
   {
     return "HashedPartitionsSpec{" +
-           ", maxRowsPerSegment=" + maxRowsPerSegment +
+           "maxRowsPerSegment=" + maxRowsPerSegment +
            ", numShards=" + numShards +
            ", partitionDimensions=" + partitionDimensions +
            '}';

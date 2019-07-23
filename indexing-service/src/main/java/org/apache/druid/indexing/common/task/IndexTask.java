@@ -223,17 +223,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         dataSource,
         context
     );
-    if (ingestionSchema.tuningConfig.partitionsSpec == null) {
-      this.ingestionSchema = new IndexIngestionSpec(
-          ingestionSchema.dataSchema,
-          ingestionSchema.ioConfig,
-          ingestionSchema.tuningConfig.withPartitoinsSpec(
-              ingestionSchema.tuningConfig.getGivenPartitionsSpecOrDefault()
-          )
-      );
-    } else {
-      this.ingestionSchema = ingestionSchema;
-    }
+    this.ingestionSchema = ingestionSchema;
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
@@ -446,7 +436,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       // Initialize maxRowsPerSegment and maxTotalRows lazily
       final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
-      final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
+      final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
+      final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir, partitionsSpec);
       final DataSchema dataSchema;
       final Map<Interval, String> versions;
       if (determineIntervals) {
@@ -482,7 +473,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           versions,
           firehoseFactory,
           firehoseTempDir,
-          tuningConfig.getNonNullPartitionsSpec()
+          partitionsSpec
       );
     }
     catch (Exception e) {
@@ -586,7 +577,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private ShardSpecs determineShardSpecs(
       final TaskToolbox toolbox,
       final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir
+      final File firehoseTempDir,
+      final PartitionsSpec nonNullPartitionsSpec
   ) throws IOException
   {
     final ObjectMapper jsonMapper = toolbox.getObjectMapper();
@@ -599,7 +591,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
-    final boolean determineNumPartitions = tuningConfig.getNonNullPartitionsSpec().needsDeterminePartitions();
+    final boolean determineNumPartitions = nonNullPartitionsSpec.needsDeterminePartitions();
 
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
@@ -608,7 +600,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
           jsonMapper,
           granularitySpec,
           ioConfig,
-          tuningConfig
+          tuningConfig,
+          nonNullPartitionsSpec
       );
     } else {
       // determine intervals containing data and prime HLL collectors
@@ -618,7 +611,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           firehoseFactory,
           firehoseTempDir,
           granularitySpec,
-          tuningConfig,
+          nonNullPartitionsSpec,
           determineIntervals
       );
     }
@@ -628,7 +621,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       ObjectMapper jsonMapper,
       GranularitySpec granularitySpec,
       IndexIOConfig ioConfig,
-      IndexTuningConfig tuningConfig
+      IndexTuningConfig tuningConfig,
+      PartitionsSpec nonNullPartitionsSpec
   )
   {
     final Map<Interval, List<ShardSpec>> shardSpecs = new HashMap<>();
@@ -636,8 +630,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     if (isGuaranteedRollup(ioConfig, tuningConfig)) {
       // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
-      assert tuningConfig.getNonNullPartitionsSpec() instanceof HashedPartitionsSpec;
-      final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
+      assert nonNullPartitionsSpec instanceof HashedPartitionsSpec;
+      final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) nonNullPartitionsSpec;
       final int numShards = partitionsSpec.getNumShards() == null ? 1 : partitionsSpec.getNumShards();
 
       for (Interval interval : intervals) {
@@ -668,7 +662,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
+      PartitionsSpec nonNullPartitionsSpec,
       boolean determineIntervals
   ) throws IOException
   {
@@ -681,6 +675,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         firehoseFactory,
         firehoseTempDir,
         granularitySpec,
+        nonNullPartitionsSpec,
         determineIntervals
     );
 
@@ -689,8 +684,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final Interval interval = entry.getKey();
 
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
-        assert tuningConfig.getNonNullPartitionsSpec() instanceof HashedPartitionsSpec;
-        final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
+        assert nonNullPartitionsSpec instanceof HashedPartitionsSpec;
+        final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) nonNullPartitionsSpec;
 
         final HyperLogLogCollector collector = entry.getValue().orNull();
 
@@ -739,6 +734,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
+      PartitionsSpec nonNullPartitionsSpec,
       boolean determineIntervals
   ) throws IOException
   {
@@ -781,7 +777,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             interval = optInterval.get();
           }
 
-          if (ingestionSchema.tuningConfig.getNonNullPartitionsSpec().needsDeterminePartitions()) {
+          if (nonNullPartitionsSpec.needsDeterminePartitions()) {
             hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(
@@ -1468,7 +1464,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     /**
      * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getNonNullPartitionsSpec()}.
+     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
      */
     @Nullable
     @Override
@@ -1494,7 +1490,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     /**
      * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getNonNullPartitionsSpec()}.
+     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
      */
     @Override
     @Nullable
@@ -1530,14 +1526,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return partitionsSpec;
     }
 
-    public PartitionsSpec getNonNullPartitionsSpec()
+    public PartitionsSpec getGivenOrDefaultPartitionsSpec()
     {
-      return Preconditions.checkNotNull(partitionsSpec, "partitionsSpec");
-    }
-
-    public PartitionsSpec getGivenPartitionsSpecOrDefault()
-    {
-      return partitionsSpec == null ? new DynamicPartitionsSpec(null, null) : partitionsSpec;
+      if (partitionsSpec != null) {
+        return partitionsSpec;
+      }
+      return forceGuaranteedRollup
+             ? new HashedPartitionsSpec(null, null, null)
+             : new DynamicPartitionsSpec(null, null);
     }
 
     @JsonProperty

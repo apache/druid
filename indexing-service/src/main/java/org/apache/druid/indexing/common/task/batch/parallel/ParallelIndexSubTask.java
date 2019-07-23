@@ -298,7 +298,7 @@ public class ParallelIndexSubTask extends AbstractTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getNonNullPartitionsSpec();
+    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);

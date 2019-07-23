@@ -45,6 +45,14 @@ public class HadoopHashedPartitionsSpec extends HashedPartitionsSpec implements 
     super(maxRowsPerSegment, numShards, partitionDimensions);
   }
 
+  @Nullable
+  @Override
+  @JsonProperty("targetPartitionSize")
+  public Integer getMaxRowsPerSegment()
+  {
+    return super.getMaxRowsPerSegment();
+  }
+
   @Override
   public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
   {
