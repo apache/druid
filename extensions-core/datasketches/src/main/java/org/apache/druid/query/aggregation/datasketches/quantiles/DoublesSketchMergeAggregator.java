@@ -24,10 +24,13 @@ import com.yahoo.sketches.quantiles.DoublesUnion;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 public class DoublesSketchMergeAggregator implements Aggregator
 {
 
   private final ColumnValueSelector selector;
+  @Nullable
   private DoublesUnion union;
 
   public DoublesSketchMergeAggregator(final ColumnValueSelector selector, final int k)
