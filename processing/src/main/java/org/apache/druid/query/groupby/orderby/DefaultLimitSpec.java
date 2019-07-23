@@ -248,13 +248,15 @@ public class DefaultLimitSpec implements LimitSpec
         nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
       }
 
-      if (nextOrdering != null) {
-        if (columnSpec.getDirection() == OrderByColumnSpec.Direction.DESCENDING) {
-          nextOrdering = nextOrdering.reverse();
-        }
-
-        ordering = ordering == null ? nextOrdering : ordering.compound(nextOrdering);
+      if (nextOrdering == null) {
+        throw new ISE("Unknown column in order clause[%s]", columnSpec);
       }
+
+      if (columnSpec.getDirection() == OrderByColumnSpec.Direction.DESCENDING) {
+        nextOrdering = nextOrdering.reverse();
+      }
+
+      ordering = ordering == null ? nextOrdering : ordering.compound(nextOrdering);
     }
 
     if (ordering != null) {
