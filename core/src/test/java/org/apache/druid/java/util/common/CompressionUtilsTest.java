@@ -449,7 +449,7 @@ public class CompressionUtilsTest
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assert.assertEquals(
             "Read terminated too soon (bug 7036144)",
-                EXPECTED.length * 3,
+            EXPECTED.length * 3,
             ByteStreams.copy(inputStream, outputStream)
         );
         final byte[] found = outputStream.toByteArray();
@@ -488,7 +488,7 @@ public class CompressionUtilsTest
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assert.assertEquals(
             "Read terminated too soon (7036144)",
-                EXPECTED.length * 3,
+            EXPECTED.length * 3,
             ByteStreams.copy(inputStream, outputStream)
         );
         final byte[] found = outputStream.toByteArray();
@@ -512,7 +512,7 @@ public class CompressionUtilsTest
 
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length * 3)) {
       Assert.assertEquals(
-              EXPECTED.length * 3,
+          EXPECTED.length * 3,
           CompressionUtils.gunzip(
               new ZeroRemainingInputStream(
                   new ByteArrayInputStream(tripleGzByteStream.toByteArray())

@@ -142,11 +142,9 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
-                QueryRunnerTestHelper.DEPENDENT_POST_AGG,
-                new QuantilePostAggregator("quantile", "apphisto", 0.5f)
-            )
+            QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+            QueryRunnerTestHelper.DEPENDENT_POST_AGG,
+            new QuantilePostAggregator("quantile", "apphisto", 0.5f)
         )
         .build();
 
