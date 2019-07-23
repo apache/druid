@@ -73,6 +73,7 @@ public class BasicSecurityDruidModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, "druid.auth.basic.common", BasicAuthCommonCacheConfig.class);
     JsonConfigProvider.bind(binder, "druid.auth.basic.composition", BasicAuthClassCompositionConfig.class);
+    JsonConfigProvider.bind(binder, "druid.auth.basic.ssl", BasicAuthSSLConfig.class);
 
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthorizerMetadataStorageUpdater.class);

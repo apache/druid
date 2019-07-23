@@ -19,20 +19,24 @@
 
 package org.apache.druid.security.basic.authentication.validator;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.inject.Inject;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.security.basic.BasicAuthLDAPConfig;
+import org.apache.druid.security.basic.BasicAuthSSLConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
-import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
 import org.apache.druid.security.basic.authentication.BasicAuthenticatorUserPrincipal;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.TLSCertificateChecker;
+import org.apache.druid.server.security.TLSUtils;
 
 import javax.annotation.Nullable;
 import javax.naming.AuthenticationException;
@@ -46,6 +50,12 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -61,12 +71,17 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private static final Logger LOG = new Logger(LDAPCredentialsValidator.class);
   private static final ReentrantLock LOCK = new ReentrantLock();
 
+  private static BasicAuthSSLConfig basicAuthSSLConfig;
+  private static TLSCertificateChecker certificateChecker;
+
   private final LruBlockCache cache;
 
   private final BasicAuthLDAPConfig ldapConfig;
 
   @JsonCreator
   public LDAPCredentialsValidator(
+      @JacksonInject BasicAuthSSLConfig basicAuthSSLConfig,
+      @JacksonInject TLSCertificateChecker tlsCertificateChecker,
       @JsonProperty("url") String url,
       @JsonProperty("bindUser") String bindUser,
       @JsonProperty("bindPassword") PasswordProvider bindPassword,
@@ -80,6 +95,8 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("credentialCacheSize") Integer credentialCacheSize
   )
   {
+    LDAPCredentialsValidator.basicAuthSSLConfig = basicAuthSSLConfig;
+    LDAPCredentialsValidator.certificateChecker = tlsCertificateChecker;
     this.ldapConfig = new BasicAuthLDAPConfig(
         url,
         bindUser,
@@ -370,6 +387,95 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         LOCK.unlock();
       }
 
+    }
+  }
+
+  public static class BasicSecuritySSLSocketFactory extends SSLSocketFactory
+  {
+    private static final Logger LOG = new Logger(BasicSecuritySSLSocketFactory.class);
+    private SSLSocketFactory sf;
+
+    @Inject
+    TLSCertificateChecker certificateChecker2;
+
+    public BasicSecuritySSLSocketFactory()
+    {
+      SSLContext ctx = new TLSUtils.ClientSSLContextBuilder()
+          .setProtocol(basicAuthSSLConfig.getProtocol())
+          .setTrustStoreType(basicAuthSSLConfig.getTrustStoreType())
+          .setTrustStorePath(basicAuthSSLConfig.getTrustStorePath())
+          .setTrustStoreAlgorithm(basicAuthSSLConfig.getTrustStoreAlgorithm())
+          .setTrustStorePasswordProvider(basicAuthSSLConfig.getTrustStorePasswordProvider())
+          .setKeyStoreType(basicAuthSSLConfig.getKeyStoreType())
+          .setKeyStorePath(basicAuthSSLConfig.getKeyStorePath())
+          .setKeyStoreAlgorithm(basicAuthSSLConfig.getKeyManagerFactoryAlgorithm())
+          .setCertAlias(basicAuthSSLConfig.getCertAlias())
+          .setKeyStorePasswordProvider(basicAuthSSLConfig.getKeyStorePasswordProvider())
+          .setKeyManagerFactoryPasswordProvider(basicAuthSSLConfig.getKeyManagerPasswordProvider())
+          .setValidateHostnames(basicAuthSSLConfig.getValidateHostnames())
+          .setCertificateChecker(certificateChecker)
+          .build();
+
+      sf = ctx.getSocketFactory();
+    }
+
+    public static SocketFactory getDefault()
+    {
+      return new BasicSecuritySSLSocketFactory();
+    }
+
+    @Override
+    public String[] getDefaultCipherSuites()
+    {
+      return sf.getDefaultCipherSuites();
+    }
+
+    @Override
+    public String[] getSupportedCipherSuites()
+    {
+      return sf.getSupportedCipherSuites();
+    }
+
+    @Override
+    public Socket createSocket(
+        Socket s,
+        String host,
+        int port,
+        boolean autoClose) throws IOException
+    {
+      return sf.createSocket(s, host, port, autoClose);
+    }
+
+    @Override
+    public Socket createSocket(String host, int port) throws IOException
+    {
+      return sf.createSocket(host, port);
+    }
+
+    @Override
+    public Socket createSocket(
+        String host,
+        int port,
+        InetAddress localHost,
+        int localPort) throws IOException
+    {
+      return sf.createSocket(host, port, localHost, localPort);
+    }
+
+    @Override
+    public Socket createSocket(InetAddress host, int port) throws IOException
+    {
+      return sf.createSocket(host, port);
+    }
+
+    @Override
+    public Socket createSocket(
+        InetAddress address,
+        int port,
+        InetAddress localAddress,
+        int localPort) throws IOException
+    {
+      return sf.createSocket(address, port, localAddress, localPort);
     }
   }
 }
