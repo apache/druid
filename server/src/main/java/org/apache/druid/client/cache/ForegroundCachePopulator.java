@@ -34,9 +34,7 @@ import java.util.function.Function;
 
 /**
  * {@link CachePopulator} implementation that populates a cache on the same thread that is processing the
- * {@link Sequence}. Used if config "druid.*.cache.numBackgroundThreads" is 0 (the default). This {@link CachePopulator}
- * should be more efficient than {@link BackgroundCachePopulator} if maximum cache entry size, specified by config
- * "druid.*.cache.maxEntrySize", is exceeded.
+ * {@link Sequence}. Used if config "druid.*.cache.numBackgroundThreads" is 0 (the default).
  */
 public class ForegroundCachePopulator implements CachePopulator
 {

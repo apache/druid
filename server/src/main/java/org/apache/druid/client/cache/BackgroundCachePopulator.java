@@ -40,11 +40,7 @@ import java.util.function.Function;
 
 /**
  * {@link CachePopulator} implementation that uses a {@link ExecutorService} thread pool to populate a cache in the
- * background. Used if config "druid.*.cache.numBackgroundThreads" is greater than 0. If maximum cache entry size,
- * specified by config "druid.*.cache.maxEntrySize", is exceeded, this {@link CachePopulator} implementation will
- * be a bit less efficient than {@link ForegroundCachePopulator} which can stop retaining values early, in exchange
- * for interacting with the {@link Cache} in a background thread. Note that there is no load shedding, so this
- * implementation might open the door for oom scenarios depending on background threadpool utilization.
+ * background. Used if config "druid.*.cache.numBackgroundThreads" is greater than 0.
  */
 public class BackgroundCachePopulator implements CachePopulator
 {
