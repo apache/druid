@@ -63,6 +63,7 @@ export interface HomeViewState {
   lookupsCountLoading: boolean;
   lookupsCount: number;
   lookupsCountError: string | null;
+  lookupsUninitialized: boolean;
 
   taskCountLoading: boolean;
   runningTaskCount: number;
@@ -116,6 +117,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       lookupsCountLoading: false,
       lookupsCount: 0,
       lookupsCountError: null,
+      lookupsUninitialized: false,
 
       taskCountLoading: false,
       runningTaskCount: 0,
@@ -317,6 +319,7 @@ GROUP BY 1`,
           lookupsCount: result ? result.lookupsCount : 0,
           lookupsCountLoading: loading,
           lookupsCountError: error,
+          lookupsUninitialized: error === 'Request failed with status code 404',
         });
       },
     });
@@ -486,7 +489,7 @@ GROUP BY 1`,
               <p>{pluralIfNeeded(state.lookupsCount, 'lookup')}</p>
             </>
           ),
-          error: state.lookupsCountError,
+          error: state.lookupsUninitialized ? 'Lookups Uninitialized' : state.lookupsCountError,
         })}
       </div>
     );
