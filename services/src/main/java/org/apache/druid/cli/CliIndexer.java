@@ -41,6 +41,7 @@ import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -136,7 +137,7 @@ public class CliIndexer extends ServerRunnable
 
             Jerseys.addResource(binder, ShuffleResource.class);
 
-            LifecycleModule.register(binder, Server.class);
+            LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
             bindAnnouncer(
                 binder,
