@@ -44,7 +44,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
   private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.available(), left.available());
+      Longs.compare(right.availableSizeBytes(), left.availableSizeBytes());
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;

@@ -97,7 +97,7 @@ public class StorageLocationTest
 
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
-    Assert.assertEquals(maxSize, loc.available());
+    Assert.assertEquals(maxSize, loc.availableSizeBytes());
     for (int i = 0; i <= maxSize; ++i) {
       Assert.assertTrue(String.valueOf(i), loc.canHandle(newSegmentId("2013/2014"), i));
     }
