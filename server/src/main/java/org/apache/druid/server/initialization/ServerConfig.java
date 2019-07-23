@@ -36,6 +36,11 @@ public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
 
+  /**
+   * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
+   *
+   * This constructor is provided for callers that need to create a ServerConfig object with specific field values.
+   */
   public ServerConfig(
       int numThreads,
       int queueSize,

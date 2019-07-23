@@ -430,7 +430,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode indexer = new DiscoveryDruidNode(
-      new DruidNode("s8", "indexerHost", false, 8092, null, true, false),
+      new DruidNode("s8", "indexerHost", false, 8091, null, true, false),
       NodeType.INDEXER,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
@@ -804,9 +804,9 @@ public class SystemSchemaTest extends CalciteTestBase
     );
     verifyServerRow(
         rows.get(2),
-        "indexerHost:8092",
+        "indexerHost:8091",
         "indexerHost",
-        8092,
+        8091,
         -1,
         "indexer",
         null,

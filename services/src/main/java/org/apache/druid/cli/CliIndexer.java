@@ -97,8 +97,8 @@ public class CliIndexer extends ServerRunnable
           public void configure(Binder binder)
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8092);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8292);
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8091);
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 

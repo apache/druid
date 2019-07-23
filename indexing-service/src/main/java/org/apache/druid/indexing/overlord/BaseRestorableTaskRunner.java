@@ -144,24 +144,27 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     }
   }
 
+  /**
+   * The concrete implementation should override this, as the implemention depends on the specifics of the
+   * work item implementation.
+   */
   @Override
-  public Collection<TaskRunnerWorkItem> getRunningTasks()
-  {
-    throw new UOE("Concrete class should implement this, as it depends on TaskRunnerWorkItem implmentation details.");
-  }
+  public abstract Collection<TaskRunnerWorkItem> getRunningTasks();
 
+  /**
+   * The concrete implementation should override this, as the implemention depends on the specifics of the
+   * work item implementation.
+   */
   @Override
-  public Collection<TaskRunnerWorkItem> getPendingTasks()
-  {
-    throw new UOE("Concrete class should implement this, as it depends on TaskRunnerWorkItem implmentation details.");
-  }
+  public abstract Collection<TaskRunnerWorkItem> getPendingTasks();
 
+  /**
+   * The concrete implementation should override this, as the implemention depends on the specifics of the
+   * work item implementation.
+   */
   @Nullable
   @Override
-  public RunnerTaskState getRunnerTaskState(String taskId)
-  {
-    throw new UOE("Concrete class should implement this, as it depends on TaskRunnerWorkItem implmentation details.");
-  }
+  public abstract RunnerTaskState getRunnerTaskState(String taskId);
 
   @Override
   public Collection<TaskRunnerWorkItem> getKnownTasks()

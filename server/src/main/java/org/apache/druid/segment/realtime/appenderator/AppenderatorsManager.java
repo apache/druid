@@ -39,13 +39,13 @@ import org.joda.time.Interval;
 import java.util.concurrent.ExecutorService;
 
 /**
- * This interface defines entities that create and manage potentially multiple Appenderators.
+ * This interface defines entities that create and manage potentially multiple {@link Appenderator} instances.
  *
- * The AppenderatorsManager should be used by a Task running in a Peon or an Indexer process when it needs
+ * The AppenderatorsManager should be used by tasks running in a Peon or an CliIndexer process when it needs
  * an Appenderator.
  *
- * The AppenderatorsManager also provides methods for creating QueryRunners that read the data held by the
- * Appenderators created through the AppenderatorsManager.
+ * The AppenderatorsManager also provides methods for creating {@link QueryRunner} instances that read the data
+ * held by the Appenderators created through the AppenderatorsManager.
  *
  * In later updates, this interface will be used to manage memory usage across multiple Appenderators,
  * useful for the Indexer where all Tasks run in the same process.

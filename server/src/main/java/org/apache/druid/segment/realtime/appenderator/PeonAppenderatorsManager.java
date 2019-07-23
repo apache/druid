@@ -39,6 +39,19 @@ import org.joda.time.Interval;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Manages Appenderators for tasks running within a CliPeon process.
+ *
+ * It provides the ability to create a realtime appenderator or multiple batch appenderators,
+ * and serves queries on the realtime appenderator.
+ *
+ * The implementation contains sanity checks that throw errors if more than one realtime appenderator is created,
+ * or if a task tries to create both realtime and batch appenderators. These checks can be adjusted if these
+ * assumptions are no longer true.
+ *
+ * Because the peon is a separate process that will terminate after task completion, this implementation
+ * relies on process shutdown for resource cleanup.
+ */
 public class PeonAppenderatorsManager implements AppenderatorsManager
 {
   private Appenderator realtimeAppenderator;
@@ -120,7 +133,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
   @Override
   public void removeAppenderatorForTask(String taskId)
   {
-    // only one appenderator and task, and the process will shutdown later, don't need to do anything
+    // the peon only runs one task, and the process will shutdown later, don't need to do anything
   }
 
   @Override
