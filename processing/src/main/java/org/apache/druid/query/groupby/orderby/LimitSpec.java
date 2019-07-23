@@ -32,6 +32,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -66,4 +67,13 @@ public interface LimitSpec extends Cacheable
   );
 
   LimitSpec merge(LimitSpec other);
+
+  /**
+   * Discard sorting columns not contained in given set. This is used when generating new queries, e.g. to process
+   * subtotal spec in GroupBy query.
+   *
+   * @param names columns names to keep
+   * @return new LimitSpec that works with fitlered set of columns
+   */
+  LimitSpec filterColumns(Set<String> names);
 }

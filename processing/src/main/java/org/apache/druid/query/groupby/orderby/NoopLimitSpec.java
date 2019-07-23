@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -65,6 +66,12 @@ public final class NoopLimitSpec implements LimitSpec
   public LimitSpec merge(LimitSpec other)
   {
     return other;
+  }
+
+  @Override
+  public LimitSpec filterColumns(Set<String> names)
+  {
+    return this;
   }
 
   @Override

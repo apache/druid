@@ -70,6 +70,8 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
@@ -79,8 +81,10 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class GroupByStrategyV2 implements GroupByStrategy
@@ -448,12 +452,32 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryDimNames.add(dimSpec.getOutputName());
       }
 
+      // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
+      Set<String> aggsAndPostAggs = null;
+      if (queryWithoutSubtotalsSpec.getLimitSpec() != null && !(queryWithoutSubtotalsSpec.getLimitSpec() instanceof NoopLimitSpec)) {
+        aggsAndPostAggs = getAggregatorAndPostAggregatorNames(queryWithoutSubtotalsSpec);
+      }
+
       for (List<String> subtotalSpec : subtotals) {
-        GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec.withDimensionSpecs(
-            subtotalSpec.stream()
-                        .map(queryDimensionSpecs::get)
-                        .collect(Collectors.toList())
-        );
+
+        // Create appropriate LimitSpec for subtotal query
+        LimitSpec subtotalQueryLimitSpec = NoopLimitSpec.instance();
+        if (queryWithoutSubtotalsSpec.getLimitSpec() != null && !(queryWithoutSubtotalsSpec.getLimitSpec() instanceof NoopLimitSpec)) {
+          Set<String> columns = new HashSet(aggsAndPostAggs);
+          columns.addAll(subtotalSpec);
+
+          subtotalQueryLimitSpec = queryWithoutSubtotalsSpec.getLimitSpec().filterColumns(columns);
+        }
+
+        GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec
+            .withLimitSpec(subtotalQueryLimitSpec)
+            .withDimensionSpecs(
+                subtotalSpec.stream()
+                            .map(queryDimensionSpecs::get)
+                            .collect(Collectors.toList())
+            );
+
+
 
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
           subtotalsResults.add(
@@ -540,6 +564,24 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable));
       throw ex;
     }
+  }
+
+  private Set<String> getAggregatorAndPostAggregatorNames(GroupByQuery query)
+  {
+    Set<String> aggsAndPostAggs = new HashSet();
+    if (query.getAggregatorSpecs() != null) {
+      for (AggregatorFactory af : query.getAggregatorSpecs()) {
+        aggsAndPostAggs.add(af.getName());
+      }
+    }
+
+    if (query.getPostAggregatorSpecs() != null) {
+      for (PostAggregator pa : query.getPostAggregatorSpecs()) {
+        aggsAndPostAggs.add(pa.getName());
+      }
+    }
+
+    return aggsAndPostAggs;
   }
 
   private int numMergeBuffersForSubtotalsSpec(GroupByQuery query)
