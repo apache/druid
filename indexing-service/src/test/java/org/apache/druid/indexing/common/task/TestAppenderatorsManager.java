@@ -46,11 +46,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
 {
   private Appenderator realtimeAppenderator;
 
-  public TestAppenderatorsManager()
-  {
-
-  }
-
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
       String taskId,

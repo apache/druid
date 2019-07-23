@@ -27,7 +27,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -59,10 +58,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 {
-  private static final Logger log = new Logger(UnifiedIndexerAppenderatorsManager.class);
-
   private final ConcurrentHashMap<String, SinkQuerySegmentWalker> datasourceSegmentWalkers = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Appenderator> taskAppenderatorMap = new ConcurrentHashMap<>();
 
   private final ExecutorService queryExecutorService;
   private final Cache cache;
@@ -137,7 +133,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         cache
     );
 
-    taskAppenderatorMap.put(taskId, appenderator);
     return appenderator;
   }
 
@@ -162,14 +157,13 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger
     );
-    taskAppenderatorMap.put(taskId, appenderator);
     return appenderator;
   }
 
   @Override
   public void removeAppenderatorForTask(String taskId)
   {
-    taskAppenderatorMap.remove(taskId);
+    // nothing to remove presently
   }
 
   @Override

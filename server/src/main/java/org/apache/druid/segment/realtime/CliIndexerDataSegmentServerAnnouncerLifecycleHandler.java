@@ -38,7 +38,7 @@ import java.io.IOException;
 @ManageLifecycle
 public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(CliIndexerDataSegmentServerAnnouncerLifecycleHandler.class);
+  private static final EmittingLogger LOG = new EmittingLogger(CliIndexerDataSegmentServerAnnouncerLifecycleHandler.class);
 
   private final DataSegmentServerAnnouncer dataSegmentServerAnnouncer;
 
@@ -63,7 +63,7 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
         return;
       }
 
-      log.info("Starting...");
+      LOG.info("Starting...");
       try {
         dataSegmentServerAnnouncer.announce();
       }
@@ -72,7 +72,7 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
         throw new RuntimeException(e);
       }
       started = true;
-      log.info("Started.");
+      LOG.info("Started.");
     }
   }
 
@@ -84,7 +84,7 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
         return;
       }
 
-      log.info("Stopping...");
+      LOG.info("Stopping...");
       try {
         dataSegmentServerAnnouncer.unannounce();
       }
@@ -94,7 +94,7 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
       finally {
         started = false;
       }
-      log.info("Stopped.");
+      LOG.info("Stopped.");
     }
   }
 
