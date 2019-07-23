@@ -163,8 +163,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
-        loc.addSegment(segment);
-        return new File(loc.getPath(), storageDir);
+        final File localStorageDir = new File(loc.getPath(), storageDir);
+        loc.addSegmentDir(localStorageDir, segment);
+        return localStorageDir;
       }
       finally {
         unlock(segment, lock);
@@ -270,7 +271,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
             // Druid creates folders of the form dataSource/interval/version/partitionNum.
             // We need to clean up all these directories if they are all empty.
             cleanupCacheFiles(location.getPath(), localStorageDir);
-            location.removeSegment(segment);
+            location.removeSegmentDir(localStorageDir, segment);
           }
         }
       }

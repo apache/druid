@@ -28,6 +28,8 @@ import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -59,7 +61,9 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   private ByteBuffer valBuffer;
 
   // Scratch objects used by aggregateVector(). Only set if initVectorized() is called.
+  @Nullable
   private int[] vAggregationPositions = null;
+  @Nullable
   private int[] vAggregationRows = null;
 
   static long requiredBufferCapacity(

@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -193,11 +194,14 @@ public class Projection
       return false;
     }
 
-    // Check if a cast is necessary.
-    final ExprType toExprType = Expressions.exprTypeForValueType(
-        aggregateRowSignature.getColumnType(expression.getDirectColumn())
-    );
+    // We don't really have a way to cast complex type. So might as well not do anything and return.
+    final ValueType columnValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
+    if (columnValueType == ValueType.COMPLEX) {
+      return true;
+    }
 
+    // Check if a cast is necessary.
+    final ExprType toExprType = Expressions.exprTypeForValueType(columnValueType);
     final ExprType fromExprType = Expressions.exprTypeForValueType(
         Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName())
     );
