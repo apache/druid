@@ -7102,8 +7102,8 @@ public class GroupByQueryRunnerTest
             ImmutableList.of()
         ))
         .addOrderByColumn("idx")
-//        .addOrderByColumn("alias")
-//        .addOrderByColumn("market")
+        .addOrderByColumn("alias")
+        .addOrderByColumn("market")
         .setLimit(1)
         .build();
 
