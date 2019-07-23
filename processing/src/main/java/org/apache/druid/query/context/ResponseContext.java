@@ -91,8 +91,7 @@ public abstract class ResponseContext
     return getDelegate().size();
   }
 
-  public String serialize(ObjectMapper objectMapper)
-      throws JsonProcessingException
+  public String serializeWith(ObjectMapper objectMapper) throws JsonProcessingException
   {
     return objectMapper.writeValueAsString(getDelegate());
   }
