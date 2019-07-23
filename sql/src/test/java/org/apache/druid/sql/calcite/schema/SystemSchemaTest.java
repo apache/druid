@@ -429,6 +429,13 @@ public class SystemSchemaTest extends CalciteTestBase
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
   );
 
+  private final DiscoveryDruidNode indexer = new DiscoveryDruidNode(
+      new DruidNode("s8", "indexerHost", false, 8092, null, true, false),
+      NodeType.INDEXER,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
+  );
+
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
       1L,
@@ -694,6 +701,8 @@ public class SystemSchemaTest extends CalciteTestBase
     final DruidNodeDiscovery historicalNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     final DruidNodeDiscovery mmNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     final DruidNodeDiscovery peonNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery indexerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+
 
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.COORDINATOR))
             .andReturn(coordinatorNodeDiscovery)
@@ -709,6 +718,9 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(mmNodeDiscovery)
             .once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
+            .andReturn(indexerNodeDiscovery)
+            .once();
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(peonNodeDiscovery).once();
 
     EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator)).once();
@@ -718,6 +730,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(historicalNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(historical1, historical2)).once();
     EasyMock.expect(mmNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
+    EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
     final DruidServer server1 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName())).andReturn(server1).once();
@@ -734,7 +747,8 @@ public class SystemSchemaTest extends CalciteTestBase
         routerNodeDiscovery,
         historicalNodeDiscovery,
         mmNodeDiscovery,
-        peonNodeDiscovery
+        peonNodeDiscovery,
+        indexerNodeDiscovery
     );
 
     DataContext dataContext = new DataContext()
@@ -765,7 +779,7 @@ public class SystemSchemaTest extends CalciteTestBase
     };
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
-    Assert.assertEquals(10, rows.size());
+    Assert.assertEquals(11, rows.size());
     verifyServerRow(
         rows.get(0),
         "brokerHost:8082",
@@ -790,6 +804,17 @@ public class SystemSchemaTest extends CalciteTestBase
     );
     verifyServerRow(
         rows.get(2),
+        "indexerHost:8092",
+        "indexerHost",
+        8092,
+        -1,
+        "indexer",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(3),
         "localhost:8080",
         "localhost",
         8080,
@@ -800,7 +825,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(3),
+        rows.get(4),
         "localhost:8081",
         "localhost",
         8081,
@@ -811,7 +836,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(4),
+        rows.get(5),
         "localhost:8082",
         "localhost",
         8082,
@@ -822,7 +847,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(5),
+        rows.get(6),
         "localhost:8083",
         "localhost",
         8083,
@@ -833,7 +858,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1000
     );
     verifyServerRow(
-        rows.get(6),
+        rows.get(7),
         "localhost:8090",
         "localhost",
         8090,
@@ -844,7 +869,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(7),
+        rows.get(8),
         "localhost:8888",
         "localhost",
         8888,
@@ -855,7 +880,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(8),
+        rows.get(9),
         "mmHost:8091",
         "mmHost",
         8091,
@@ -866,7 +891,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(9),
+        rows.get(10),
         "peonHost:8080",
         "peonHost",
         8080,
