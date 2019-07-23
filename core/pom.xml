@@ -270,7 +270,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-smile</artifactId>
-      <scope>test</scope> <!-- compile -->
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

@@ -114,6 +114,12 @@
       <groupId>com.101tec</groupId>
       <artifactId>zkclient</artifactId>
       <version>0.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

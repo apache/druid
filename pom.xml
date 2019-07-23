@@ -220,11 +220,6 @@
                 <version>3.7</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.orc</groupId>
-                <artifactId>orc-core</artifactId>
-                <version>1.5.5</version>
-            </dependency>
-            <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-core</artifactId>
                 <version>${aws.sdk.version}</version>
@@ -755,7 +750,7 @@
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-hdfs-client</artifactId>
-                <version>2.8.3</version>
+                <version>${hadoop.compile.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
