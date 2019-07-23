@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -48,18 +49,18 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> segmentIds) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdWithShardSpec>> idsByDataSource = new TreeMap<>();
+    final Map<String, Set<SegmentId>> idsByDataSource = new TreeMap<>();
     for (SegmentIdWithShardSpec segmentId : segmentIds) {
-      idsByDataSource.computeIfAbsent(segmentId.getDataSource(), i -> new HashSet<>()).add(segmentId);
+      idsByDataSource.computeIfAbsent(segmentId.getDataSource(), i -> new HashSet<>()).add(segmentId.asSegmentId());
     }
 
     final Set<DataSegment> usedSegments = new HashSet<>();
 
-    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : idsByDataSource.entrySet()) {
+    for (Map.Entry<String, Set<SegmentId>> entry : idsByDataSource.entrySet()) {
       String dataSource = entry.getKey();
-      Set<SegmentIdWithShardSpec> segmentIdsInDataSource = entry.getValue();
+      Set<SegmentId> segmentIdsInDataSource = entry.getValue();
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(segmentIdsInDataSource, SegmentIdWithShardSpec::getInterval)
+          Iterables.transform(segmentIdsInDataSource, SegmentId::getInterval)
       );
 
       final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(
@@ -67,7 +68,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
       );
 
       for (DataSegment segment : usedSegmentsForIntervals) {
-        if (segmentIds.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
+        if (segmentIdsInDataSource.contains(segment.getId())) {
           usedSegments.add(segment);
         }
       }

@@ -169,7 +169,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           DatasourceIngestionSpec.class
       );
 
-      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForIntervals(
+      List<DataSegment> segmentsList = segmentLister.retrieveUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
           ingestionSpecObj.getIntervals()
       );

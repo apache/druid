@@ -207,9 +207,9 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Sum of sizes of all used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
-|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
-|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
+|`segment/overShadowed/count`|Number of overshadowed segments.||Varies.|
+|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
+|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 

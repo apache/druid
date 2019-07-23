@@ -74,7 +74,7 @@ See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-db
 
 This is dictated by the `druid.metadata.storage.tables.segments` property.
 
-This table stores metadata about the segments that should available in the system. (This set of segments is called
+This table stores metadata about the segments that should be available in the system. (This set of segments is called
 "used segments" elsewhere in the documentation and throughout the project.) The table is polled by the [Coordinator](
 ../design/coordinator.html) to determine the set of segments that should be available for querying in the system. The
 table has two main functional columns, the other columns are for indexing purposes.

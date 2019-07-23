@@ -310,7 +310,8 @@ public class MaterializedViewSupervisor implements Supervisor
         //if the number of running tasks reach the max task count, supervisor won't submit new tasks.
         return;
       }
-      Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildIntervalAndBaseSegments = checkSegments();
+      Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildIntervalAndBaseSegments =
+          checkSegments();
       SortedMap<Interval, String> sortedToBuildVersion = toBuildIntervalAndBaseSegments.lhs;
       Map<Interval, List<DataSegment>> baseSegments = toBuildIntervalAndBaseSegments.rhs;
       missInterval = sortedToBuildVersion.keySet();
@@ -342,11 +343,11 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     // Pair<interval -> version, interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
-        getVersionAndBaseSegments(metadataStorageCoordinator.getUsedSegments(dataSource));
+        getVersionAndBaseSegments(metadataStorageCoordinator.retrieveAllUsedSegments(dataSource));
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
-            metadataStorageCoordinator.getUsedSegmentsAndCreatedDates(spec.getBaseDataSource())
+            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource())
         );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;

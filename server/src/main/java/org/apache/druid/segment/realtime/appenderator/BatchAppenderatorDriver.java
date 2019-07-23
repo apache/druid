@@ -111,9 +111,9 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    *
    * @param pushAndClearTimeoutMs timeout for pushing and dropping segments
    *
-   * @return {@link SegmentsAndMetadata} for pushed and dropped segments
+   * @return {@link SegmentsAndCommitMetadata} for pushed and dropped segments
    */
-  public SegmentsAndMetadata pushAllAndClear(long pushAndClearTimeoutMs)
+  public SegmentsAndCommitMetadata pushAllAndClear(long pushAndClearTimeoutMs)
       throws InterruptedException, ExecutionException, TimeoutException
   {
     final Collection<String> sequences;
@@ -124,7 +124,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     return pushAndClear(sequences, pushAndClearTimeoutMs);
   }
 
-  private SegmentsAndMetadata pushAndClear(
+  private SegmentsAndCommitMetadata pushAndClear(
       Collection<String> sequenceNames,
       long pushAndClearTimeoutMs
   ) throws InterruptedException, ExecutionException, TimeoutException
@@ -132,17 +132,17 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     final Map<SegmentIdWithShardSpec, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
         .collect(Collectors.toMap(SegmentWithState::getSegmentIdentifier, Function.identity()));
 
-    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
+    final ListenableFuture<SegmentsAndCommitMetadata> future = ListenableFutures.transformAsync(
         pushInBackground(null, requestedSegmentIdsForSequences.keySet(), false),
         this::dropInBackground
     );
 
-    final SegmentsAndMetadata segmentsAndMetadata = pushAndClearTimeoutMs == 0L ?
-                                                    future.get() :
-                                                    future.get(pushAndClearTimeoutMs, TimeUnit.MILLISECONDS);
+    final SegmentsAndCommitMetadata segmentsAndCommitMetadata = pushAndClearTimeoutMs == 0L ?
+                                                                future.get() :
+                                                                future.get(pushAndClearTimeoutMs, TimeUnit.MILLISECONDS);
 
     // Sanity check
-    final Map<SegmentIdWithShardSpec, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndMetadata
+    final Map<SegmentIdWithShardSpec, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndCommitMetadata
         .getSegments()
         .stream()
         .collect(Collectors.toMap(SegmentIdWithShardSpec::fromDataSegment, Function.identity()));
@@ -178,7 +178,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       }
     }
 
-    return segmentsAndMetadata;
+    return segmentsAndCommitMetadata;
   }
 
   /**
@@ -188,7 +188,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    *
    * @return a {@link ListenableFuture} for the publish task
    */
-  public ListenableFuture<SegmentsAndMetadata> publishAll(final TransactionalSegmentPublisher publisher)
+  public ListenableFuture<SegmentsAndCommitMetadata> publishAll(final TransactionalSegmentPublisher publisher)
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
@@ -196,7 +196,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     }
 
     return publishInBackground(
-        new SegmentsAndMetadata(
+        new SegmentsAndCommitMetadata(
             snapshot
                 .values()
                 .stream()

@@ -154,7 +154,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     // Read the segments for one day.
     final Interval interval = Intervals.of("2017-12-24/P1D");
     final List<DataSegment> oldSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval);
     Assert.assertEquals(1, oldSegments.size());
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
@@ -162,7 +162,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
 
     // Verify that the segment has been replaced.
     final List<DataSegment> newSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval);
     Assert.assertEquals(1, newSegments.size());
     Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
   }

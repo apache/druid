@@ -595,7 +595,7 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<SegmentsAndMetadata> push(
+  public ListenableFuture<SegmentsAndCommitMetadata> push(
       final Collection<SegmentIdWithShardSpec> identifiers,
       @Nullable final Committer committer,
       final boolean useUniquePath
@@ -617,7 +617,7 @@ public class AppenderatorImpl implements Appenderator
         // We should always persist all segments regardless of the input because metadata should be committed for all
         // segments.
         persistAll(committer),
-        (Function<Object, SegmentsAndMetadata>) commitMetadata -> {
+        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
 
           for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : theSinks.entrySet()) {
@@ -634,7 +634,7 @@ public class AppenderatorImpl implements Appenderator
             }
           }
 
-          return new SegmentsAndMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
         },
         pushExecutor
     );

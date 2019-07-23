@@ -256,7 +256,7 @@ public class MetadataResource
       List<Interval> intervals
   )
   {
-    List<DataSegment> segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
+    List<DataSegment> segments = metadataStorageCoordinator.retrieveUsedSegmentsForIntervals(dataSourceName, intervals);
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {

@@ -79,7 +79,7 @@ import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -976,7 +976,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
-              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+              final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
               log.info("Pushed segments[%s]", pushed.getSegments());
             }
           } else {
@@ -994,10 +994,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
         }
       }
 
-      final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+      final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       log.info("Pushed segments[%s]", pushed.getSegments());
 
-      final SegmentsAndMetadata published = awaitPublish(
+      final SegmentsAndCommitMetadata published = awaitPublish(
           driver.publishAll(publisher),
           pushTimeout
       );
@@ -1086,8 +1086,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private static SegmentsAndMetadata awaitPublish(
-      ListenableFuture<SegmentsAndMetadata> publishFuture,
+  private static SegmentsAndCommitMetadata awaitPublish(
+      ListenableFuture<SegmentsAndCommitMetadata> publishFuture,
       long publishTimeout
   ) throws ExecutionException, InterruptedException, TimeoutException
   {

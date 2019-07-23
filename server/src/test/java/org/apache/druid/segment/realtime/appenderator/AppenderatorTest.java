@@ -120,17 +120,17 @@ public class AppenderatorTest
       Assert.assertTrue(thrown);
 
       // push all
-      final SegmentsAndMetadata segmentsAndMetadata = appenderator.push(
+      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
           appenderator.getSegments(),
           committerSupplier.get(),
           false
       ).get();
-      Assert.assertEquals(ImmutableMap.of("x", "3"), (Map<String, String>) segmentsAndMetadata.getCommitMetadata());
+      Assert.assertEquals(ImmutableMap.of("x", "3"), (Map<String, String>) segmentsAndCommitMetadata.getCommitMetadata());
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
           sorted(
               Lists.transform(
-                  segmentsAndMetadata.getSegments(),
+                  segmentsAndCommitMetadata.getSegments(),
                   new Function<DataSegment, SegmentIdWithShardSpec>()
                   {
                     @Override
@@ -142,7 +142,7 @@ public class AppenderatorTest
               )
           )
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndMetadata.getSegments()));
+      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
 
       // clear
       appenderator.clear();

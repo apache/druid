@@ -299,14 +299,14 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
 
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
+        segmentLister.retrieveUsedSegmentsForIntervals(
             testDatasource,
             Collections.singletonList(jobInterval != null ? jobInterval.overlap(testDatasourceInterval) : null)
         )
     ).andReturn(ImmutableList.of(SEGMENT));
 
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
+        segmentLister.retrieveUsedSegmentsForIntervals(
             testDatasource2,
             Collections.singletonList(jobInterval != null ? jobInterval.overlap(testDatasourceInterval2) : null)
         )

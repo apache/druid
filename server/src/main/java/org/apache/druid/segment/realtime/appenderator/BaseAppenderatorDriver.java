@@ -462,7 +462,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    *
    * @return a future for pushing segments
    */
-  ListenableFuture<SegmentsAndMetadata> pushInBackground(
+  ListenableFuture<SegmentsAndCommitMetadata> pushInBackground(
       @Nullable final WrappedCommitter wrappedCommitter,
       final Collection<SegmentIdWithShardSpec> segmentIdentifiers,
       final boolean useUniquePath
@@ -472,7 +472,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
     return Futures.transform(
         appenderator.push(segmentIdentifiers, wrappedCommitter, useUniquePath),
-        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
+        (Function<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) segmentsAndMetadata -> {
           // Sanity check
           final Set<SegmentIdWithShardSpec> pushedSegments = segmentsAndMetadata.getSegments().stream()
                                                                                 .map(
@@ -502,15 +502,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * Drop segments in background. The segments should be pushed (in batch ingestion) or published (in streaming
    * ingestion) before being dropped.
    *
-   * @param segmentsAndMetadata result of pushing or publishing
+   * @param segmentsAndCommitMetadata result of pushing or publishing
    *
    * @return a future for dropping segments
    */
-  ListenableFuture<SegmentsAndMetadata> dropInBackground(SegmentsAndMetadata segmentsAndMetadata)
+  ListenableFuture<SegmentsAndCommitMetadata> dropInBackground(SegmentsAndCommitMetadata segmentsAndCommitMetadata)
   {
-    log.info("Dropping segments[%s]", segmentsAndMetadata.getSegments());
+    log.info("Dropping segments[%s]", segmentsAndCommitMetadata.getSegments());
     final ListenableFuture<?> dropFuture = Futures.allAsList(
-        segmentsAndMetadata
+        segmentsAndCommitMetadata
             .getSegments()
             .stream()
             .map(segment -> appenderator.drop(SegmentIdWithShardSpec.fromDataSegment(segment)))
@@ -519,10 +519,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
     return Futures.transform(
         dropFuture,
-        (Function<Object, SegmentsAndMetadata>) x -> {
-          final Object metadata = segmentsAndMetadata.getCommitMetadata();
-          return new SegmentsAndMetadata(
-              segmentsAndMetadata.getSegments(),
+        (Function<Object, SegmentsAndCommitMetadata>) x -> {
+          final Object metadata = segmentsAndCommitMetadata.getCommitMetadata();
+          return new SegmentsAndCommitMetadata(
+              segmentsAndCommitMetadata.getSegments(),
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
           );
         }
@@ -533,30 +533,30 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * Publish segments in background. The segments should be dropped (in batch ingestion) or pushed (in streaming
    * ingestion) before being published.
    *
-   * @param segmentsAndMetadata result of dropping or pushing
+   * @param segmentsAndCommitMetadata result of dropping or pushing
    * @param publisher           transactional segment publisher
    *
    * @return a future for publishing segments
    */
-  ListenableFuture<SegmentsAndMetadata> publishInBackground(
-      SegmentsAndMetadata segmentsAndMetadata,
+  ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
+      SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher
   )
   {
     return executor.submit(
         () -> {
-          if (segmentsAndMetadata.getSegments().isEmpty()) {
+          if (segmentsAndCommitMetadata.getSegments().isEmpty()) {
             log.info("Nothing to publish, skipping publish step.");
           } else {
             log.info(
                 "Publishing segments with commitMetadata[%s]: [%s]",
-                segmentsAndMetadata.getCommitMetadata(),
-                Joiner.on(", ").join(segmentsAndMetadata.getSegments())
+                segmentsAndCommitMetadata.getCommitMetadata(),
+                Joiner.on(", ").join(segmentsAndCommitMetadata.getSegments())
             );
 
             try {
-              final Object metadata = segmentsAndMetadata.getCommitMetadata();
-              final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndMetadata.getSegments());
+              final Object metadata = segmentsAndCommitMetadata.getCommitMetadata();
+              final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
               final SegmentPublishResult publishResult = publisher.publishSegments(
                   ourSegments,
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
@@ -574,7 +574,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 //    from the overlord. In this case we do not want to delete the segments we pushed, since they are
                 //    now live!
 
-                final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndMetadata
+                final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
                     .getSegments()
                     .stream()
                     .map(SegmentIdWithShardSpec::fromDataSegment)
@@ -593,11 +593,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   ).isEmpty();
 
                   if (physicallyDisjoint) {
-                    segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                    segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
                   }
                 } else {
                   // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
-                  segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                  segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
                   if (publishResult.getErrorMsg() != null) {
                     throw new ISE("Failed to publish segments because of [%s].", publishResult.getErrorMsg());
@@ -609,13 +609,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
             }
             catch (Exception e) {
               // Must not remove segments here, we aren't sure if our transaction succeeded or not.
-              log.warn(e, "Failed publish, not removing segments: %s", segmentsAndMetadata.getSegments());
+              log.warn(e, "Failed publish, not removing segments: %s", segmentsAndCommitMetadata.getSegments());
               Throwables.propagateIfPossible(e);
               throw new RuntimeException(e);
             }
           }
 
-          return segmentsAndMetadata;
+          return segmentsAndCommitMetadata;
         }
     );
   }

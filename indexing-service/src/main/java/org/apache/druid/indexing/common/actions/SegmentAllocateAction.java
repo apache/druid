@@ -163,7 +163,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       final Interval rowInterval = queryGranularity.bucket(timestamp);
 
       final Set<DataSegment> usedSegmentsForRow = ImmutableSet.copyOf(
-          msc.getUsedSegmentsForInterval(dataSource, rowInterval)
+          msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval)
       );
 
       final SegmentIdWithShardSpec identifier = usedSegmentsForRow.isEmpty() ?
@@ -179,10 +179,10 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       }
 
       // Could not allocate a pending segment. There's a chance that this is because someone else inserted a segment
-      // overlapping with this row between when we called "msc.getUsedSegmentsForInterval" and now. Check it again,
+      // overlapping with this row between when we called "msc.retrieveUsedSegmentsForInterval" and now. Check it again,
       // and if it's different, repeat.
 
-      if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {
+      if (!ImmutableSet.copyOf(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
           final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
           log.debug(

@@ -314,7 +314,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     while (true) {
       try {
         List<Interval> intervals = Collections.singletonList(interval);
-        usedSegments = coordinatorClient.getUsedSegmentsInDataSourceForIntervals(dataSource, intervals);
+        usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(dataSource, intervals);
         break;
       }
       catch (Throwable e) {
@@ -344,7 +344,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         Comparators.intervalsByStartThenEnd()
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds)) {
-      final DataSegment segment = coordinatorClient.getDatabaseSegmentDataSourceSegment(
+      final DataSegment segment = coordinatorClient.fetchSegment(
           dataSource,
           windowedSegmentId.getSegmentId()
       );

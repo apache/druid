@@ -355,34 +355,34 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
       lock.readLock().lock();
       Set<TimelineObjectHolder<VersionType, ObjectType>> retVal = new HashSet<>();
 
-      Map<Interval, Map<VersionType, TimelineEntry>> overShadowed = new HashMap<>();
+      Map<Interval, Map<VersionType, TimelineEntry>> overshadowed = new HashMap<>();
       for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
         @SuppressWarnings("unchecked")
         Map<VersionType, TimelineEntry> versionCopy = (TreeMap) versionEntry.getValue().clone();
-        overShadowed.put(versionEntry.getKey(), versionCopy);
+        overshadowed.put(versionEntry.getKey(), versionCopy);
       }
 
       for (Map.Entry<Interval, TimelineEntry> entry : completePartitionsTimeline.entrySet()) {
-        Map<VersionType, TimelineEntry> versionEntry = overShadowed.get(entry.getValue().getTrueInterval());
+        Map<VersionType, TimelineEntry> versionEntry = overshadowed.get(entry.getValue().getTrueInterval());
         if (versionEntry != null) {
           versionEntry.remove(entry.getValue().getVersion());
           if (versionEntry.isEmpty()) {
-            overShadowed.remove(entry.getValue().getTrueInterval());
+            overshadowed.remove(entry.getValue().getTrueInterval());
           }
         }
       }
 
       for (Map.Entry<Interval, TimelineEntry> entry : incompletePartitionsTimeline.entrySet()) {
-        Map<VersionType, TimelineEntry> versionEntry = overShadowed.get(entry.getValue().getTrueInterval());
+        Map<VersionType, TimelineEntry> versionEntry = overshadowed.get(entry.getValue().getTrueInterval());
         if (versionEntry != null) {
           versionEntry.remove(entry.getValue().getVersion());
           if (versionEntry.isEmpty()) {
-            overShadowed.remove(entry.getValue().getTrueInterval());
+            overshadowed.remove(entry.getValue().getTrueInterval());
           }
         }
       }
 
-      for (Map.Entry<Interval, Map<VersionType, TimelineEntry>> versionEntry : overShadowed.entrySet()) {
+      for (Map.Entry<Interval, Map<VersionType, TimelineEntry>> versionEntry : overshadowed.entrySet()) {
         for (Map.Entry<VersionType, TimelineEntry> entry : versionEntry.getValue().entrySet()) {
           TimelineEntry object = entry.getValue();
           retVal.add(timelineEntryToObjectHolder(object));

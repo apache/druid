@@ -852,7 +852,7 @@ public class TaskLifecycleTest
 
     // manually create local segments files
     List<File> segmentFiles = new ArrayList<>();
-    for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();
       segmentFiles.add(file);

@@ -30,15 +30,14 @@ import java.util.List;
 public interface UsedSegmentLister
 {
   /**
-   * Get all segments which may include any data in the interval and are flagged as used.
+   * Retrieve all segments which may include any data in the interval and are marked as used.
    *
-   * @param dataSource The datasource to query
+   * @param dataSource The data source to query
    * @param intervals  The intervals for which used segments are to be returned
    *
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
-   *
-   * @throws IOException
+   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
+   * requested interval.
    */
-  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
+  List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
       throws IOException;
 }

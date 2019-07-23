@@ -73,7 +73,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -128,7 +128,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private final RealtimeAppenderatorIngestionSpec spec;
 
   @JsonIgnore
-  private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
+  private final Queue<ListenableFuture<SegmentsAndCommitMetadata>> pendingHandoffs;
 
   @JsonIgnore
   private volatile Appenderator appenderator = null;
@@ -607,7 +607,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       String sequenceName
   )
   {
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = driver.publish(
         publisher,
         committerSupplier.get(),
         Collections.singletonList(sequenceName)

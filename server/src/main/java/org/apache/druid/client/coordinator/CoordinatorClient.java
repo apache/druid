@@ -126,7 +126,7 @@ public class CoordinatorClient
     }
   }
 
-  public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
+  public List<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
@@ -157,7 +157,7 @@ public class CoordinatorClient
     }
   }
 
-  public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+  public DataSegment fetchSegment(String dataSource, String segmentId)
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(

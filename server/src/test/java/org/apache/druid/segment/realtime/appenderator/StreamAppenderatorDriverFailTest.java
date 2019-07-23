@@ -225,7 +225,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
       Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
-    final SegmentsAndMetadata published = driver.publish(
+    final SegmentsAndCommitMetadata published = driver.publish(
         StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
@@ -467,7 +467,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
-    public ListenableFuture<SegmentsAndMetadata> push(
+    public ListenableFuture<SegmentsAndCommitMetadata> push(
         Collection<SegmentIdWithShardSpec> identifiers,
         Committer committer,
         boolean useUniquePath
@@ -491,21 +491,21 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
                                                       .collect(Collectors.toList());
         return Futures.transform(
             persistAll(committer),
-            (Function<Object, SegmentsAndMetadata>) commitMetadata -> new SegmentsAndMetadata(segments, commitMetadata)
+            (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> new SegmentsAndCommitMetadata(segments, commitMetadata)
         );
       } else {
         if (interruptPush) {
-          return new AbstractFuture<SegmentsAndMetadata>()
+          return new AbstractFuture<SegmentsAndCommitMetadata>()
           {
             @Override
-            public SegmentsAndMetadata get(long timeout, TimeUnit unit)
+            public SegmentsAndCommitMetadata get(long timeout, TimeUnit unit)
                 throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }
 
             @Override
-            public SegmentsAndMetadata get() throws InterruptedException
+            public SegmentsAndCommitMetadata get() throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }

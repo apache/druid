@@ -2880,7 +2880,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private Set<SegmentDescriptor> publishedDescriptors()
   {
     return FluentIterable.from(
-        metadataStorageCoordinator.getUsedSegmentsForInterval(
+        metadataStorageCoordinator.retrieveUsedSegmentsForInterval(
             DATA_SCHEMA.getDataSource(),
             Intervals.of("0000/3000")
         )

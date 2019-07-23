@@ -71,31 +71,31 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
   
   @Override
-  public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+  public List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
   {
     return ImmutableList.of();
   }
 
   @Override
-  public List<DataSegment> getUsedSegments(String dataSource)
+  public List<DataSegment> retrieveAllUsedSegments(String dataSource)
   {
     return ImmutableList.of();
   }
 
   @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentsAndCreatedDates(String dataSource)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
   {
     return ImmutableList.of();
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
+  public List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
   {
     return ImmutableList.of();
   }
 
   @Override
-  public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
   {
     synchronized (unusedSegments) {
       return ImmutableList.copyOf(unusedSegments);

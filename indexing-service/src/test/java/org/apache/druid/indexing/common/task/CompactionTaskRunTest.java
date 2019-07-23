@@ -113,9 +113,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
+      public List<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());

@@ -115,7 +115,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndCommitMetadata published = driver.publishAll(makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );
@@ -151,7 +151,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
       checkSegmentStates(++i, SegmentState.PUSHED_AND_DROPPED);
     }
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndCommitMetadata published = driver.publishAll(makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );

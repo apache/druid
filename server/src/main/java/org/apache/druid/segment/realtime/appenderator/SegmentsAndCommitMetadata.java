@@ -27,14 +27,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class SegmentsAndMetadata
+public class SegmentsAndCommitMetadata
 {
-  private static final SegmentsAndMetadata NIL = new SegmentsAndMetadata(Collections.emptyList(), null);
+  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null);
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
 
-  public SegmentsAndMetadata(
+  public SegmentsAndCommitMetadata(
       List<DataSegment> segments,
       @Nullable Object commitMetadata
   )
@@ -63,7 +63,7 @@ public class SegmentsAndMetadata
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SegmentsAndMetadata that = (SegmentsAndMetadata) o;
+    SegmentsAndCommitMetadata that = (SegmentsAndCommitMetadata) o;
     return Objects.equals(commitMetadata, that.commitMetadata) &&
            Objects.equals(segments, that.segments);
   }
@@ -77,13 +77,13 @@ public class SegmentsAndMetadata
   @Override
   public String toString()
   {
-    return "SegmentsAndMetadata{" +
+    return getClass().getSimpleName() + "{" +
            "commitMetadata=" + commitMetadata +
            ", segments=" + segments +
            '}';
   }
 
-  public static SegmentsAndMetadata nil()
+  public static SegmentsAndCommitMetadata nil()
   {
     return NIL;
   }

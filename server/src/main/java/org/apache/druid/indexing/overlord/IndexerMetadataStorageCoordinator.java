@@ -34,49 +34,64 @@ import java.util.Set;
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Get all segments which may include any data in the interval and are marked as used.
+   * Retrieve all segments which may include any data in the interval and are marked as used from the metadata store.
    *
-   * @param dataSource The datasource to query
-   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
+   * @param dataSource The data source to query
+   * @param interval   The interval for which all applicable and used segments are requested. Start is inclusive,
    *                   end is exclusive
    *
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
    * requested interval.
    */
-  default List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+  default List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
   {
-    return getUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval));
+    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval));
   }
 
   /**
-   * Get all used segments in the data source.
+   * Retrieve all used segments in the data source from the metadata store.
    *
    * @param dataSource The data source to query
    *
    * @return all segments belonging to the given data source
-   * @see #getUsedSegmentsForInterval(String, Interval) similar to this method but also accepts data interval.
+   * @see #retrieveUsedSegmentsForInterval(String, Interval) similar to this method but also accepts data interval.
    */
-  List<DataSegment> getUsedSegments(String dataSource);
+  List<DataSegment> retrieveAllUsedSegments(String dataSource);
 
   /**
-   * Get all used segments and the created_date of these segments belonging to the given data source.
+   * Retrieve all used segments and the created_date of these segments belonging to the given data source from the
+   * metadata store.
    *
-   * @param dataSource The datasource to query
+   * @param dataSource The data source to query
    *
    * @return DataSegments and the related created_date of segments
    */
-  List<Pair<DataSegment, String>> getUsedSegmentsAndCreatedDates(String dataSource);
+  List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
 
   /**
-   * Get all segments which may include any data in the interval and are flagged as used.
+   * Retrieve all segments which may include any data in the given intervals and are marked as used from the metadata
+   * store.
    *
-   * @param dataSource The datasource to query
-   * @param intervals  The intervals for which all applicable and used datasources are requested.
+   * @param dataSource The data source to query
+   * @param intervals  The intervals for which all applicable and used segments are requested.
    *
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   * requested interval.
+   * requested intervals.
    */
-  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals);
+  List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> intervals);
+
+  /**
+   * Retrieve all segments which include ONLY data within the given interval and are marked as unused from the metadata
+   * store.
+   *
+   * @param dataSource The data source the segments belong to
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is
+   *                   inclusive, end is exclusive
+   *
+   * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
+   * returned here may include data in the interval
+   */
+  List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval);
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -122,7 +137,7 @@ public interface IndexerMetadataStorageCoordinator
    * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
    *
    * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interva
-   * parameters in some other methods in this class, such as {@link #getUsedSegmentsForInterval} (where the interval
+   * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the interval
    * is about the time column value in rows belonging to the segment).
    *
    * @param dataSource     dataSource
@@ -207,14 +222,4 @@ public interface IndexerMetadataStorageCoordinator
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);
-
-  /**
-   * Get all segments which include ONLY data within the given interval and are not flagged as used.
-   *
-   * @param dataSource The datasource the segments belong to
-   * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is inclusive, end is exclusive
-   *
-   * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
-   */
-  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
 }

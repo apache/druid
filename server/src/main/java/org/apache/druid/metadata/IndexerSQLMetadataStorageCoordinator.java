@@ -113,24 +113,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
+  public List<DataSegment> retrieveUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
     }
-    return doGetUsedSegments(dataSource, intervals);
+    return doRetrieveUsedSegments(dataSource, intervals);
   }
 
   @Override
-  public List<DataSegment> getUsedSegments(String dataSource)
+  public List<DataSegment> retrieveAllUsedSegments(String dataSource)
   {
-    return doGetUsedSegments(dataSource, Collections.emptyList());
+    return doRetrieveUsedSegments(dataSource, Collections.emptyList());
   }
 
   /**
    * @param intervals empty list means unrestricted interval.
    */
-  private List<DataSegment> doGetUsedSegments(final String dataSource, final List<Interval> intervals)
+  private List<DataSegment> doRetrieveUsedSegments(final String dataSource, final List<Interval> intervals)
   {
     return connector.retryWithHandle(
         handle -> {
@@ -147,6 +147,88 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .collect(Collectors.toList());
         }
     );
+  }
+
+  @Override
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  {
+    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
+    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
+    return connector.retryWithHandle(
+        handle -> {
+          Query<Map<String, Object>> query = handle
+              .createQuery(queryString)
+              .bind("dataSource", dataSource);
+          return query
+              .map((int index, ResultSet r, StatementContext ctx) -> {
+                try {
+                  return new Pair<>(
+                      jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
+                      r.getString("created_date")
+                  );
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              })
+              .list();
+        }
+    );
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
+  {
+    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+        new TransactionCallback<List<DataSegment>>()
+        {
+          @Override
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status)
+          {
+            // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
+            // Some databases can only use an index on one of the columns. An additional condition provides
+            // explicit knowledge that 'start' cannot be greater than 'end'.
+            return handle
+                .createQuery(
+                    StringUtils.format(
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
+                        + "and start <= :end and %2$send%2$s <= :end and used = false",
+                        dbTables.getSegmentsTable(), connector.getQuoteString()
+                    )
+                )
+                .setFetchSize(connector.getStreamingFetchSize())
+                .bind("dataSource", dataSource)
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString())
+                .map(ByteArrayMapper.FIRST)
+                .fold(
+                    new ArrayList<>(),
+                    new Folder3<List<DataSegment>, byte[]>()
+                    {
+                      @Override
+                      public List<DataSegment> fold(
+                          List<DataSegment> accumulator,
+                          byte[] payload,
+                          FoldController foldController,
+                          StatementContext statementContext
+                      )
+                      {
+                        try {
+                          accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
+                          return accumulator;
+                        }
+                        catch (Exception e) {
+                          throw new RuntimeException(e);
+                        }
+                      }
+                    }
+                );
+          }
+        }
+    );
+
+    log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    return matchingSegments;
   }
 
   private List<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
@@ -234,14 +316,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  /**
-   * Attempts to insert a set of segments to the database. Returns the set of segments actually added (segments
-   * with identifiers already in the database will not be added).
-   *
-   * @param segments set of segments to add
-   *
-   * @return set of segments actually added
-   */
   @Override
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
@@ -1091,107 +1165,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       log.error(e, "Exception inserting into DB");
       throw e;
     }
-  }
-
-  @Override
-  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
-  {
-    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
-        {
-          @Override
-          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status)
-          {
-            // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
-            // Some databases can only use an index on one of the columns. An additional condition provides
-            // explicit knowledge that 'start' cannot be greater than 'end'.
-            return handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
-                        + "and start <= :end and %2$send%2$s <= :end and used = false",
-                        dbTables.getSegmentsTable(), connector.getQuoteString()
-                    )
-                )
-                .setFetchSize(connector.getStreamingFetchSize())
-                .bind("dataSource", dataSource)
-                .bind("start", interval.getStart().toString())
-                .bind("end", interval.getEnd().toString())
-                .map(ByteArrayMapper.FIRST)
-                .fold(
-                    new ArrayList<>(),
-                    new Folder3<List<DataSegment>, byte[]>()
-                    {
-                      @Override
-                      public List<DataSegment> fold(
-                          List<DataSegment> accumulator,
-                          byte[] payload,
-                          FoldController foldController,
-                          StatementContext statementContext
-                      )
-                      {
-                        try {
-                          accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
-                          return accumulator;
-                        }
-                        catch (Exception e) {
-                          throw new RuntimeException(e);
-                        }
-                      }
-                    }
-                );
-          }
-        }
-    );
-
-    log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
-    return matchingSegments;
-  }
-
-  @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentsAndCreatedDates(String dataSource)
-  {
-    return doGetUsedSegmentsAndCreatedDates(dataSource, null);
-  }
-
-  /**
-   * @param interval if null, assumed unrestricted interval
-   */
-  private List<Pair<DataSegment, String>> doGetUsedSegmentsAndCreatedDates(
-      String dataSource,
-      @Nullable Interval interval
-  )
-  {
-    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
-    if (interval != null) {
-      rawQueryString += StringUtils.format(" AND start >= :start AND %1$send%1$s <= :end", connector.getQuoteString());
-    }
-    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
-    return connector.retryWithHandle(
-        handle -> {
-          Query<Map<String, Object>> query = handle
-              .createQuery(queryString)
-              .bind("dataSource", dataSource);
-          if (interval != null) {
-            query = query
-                .bind("start", interval.getStart().toString())
-                .bind("end", interval.getEnd().toString());
-          }
-          return query
-              .map((int index, ResultSet r, StatementContext ctx) -> {
-                try {
-                  return new Pair<>(
-                      jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
-                      r.getString("created_date")
-                  );
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              })
-              .list();
-        }
-    );
   }
 
   @Override
