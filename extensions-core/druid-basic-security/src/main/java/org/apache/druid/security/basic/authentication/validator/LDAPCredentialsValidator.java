@@ -175,10 +175,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
           }
           userDn = new LdapName(userResult.getNameInNamespace());
           groups = getGroupsFromLdap(this.ldapConfig, userResult);
-          if (groups == null || groups.isEmpty()) {
-            LOG.debug("User is not mapped to any groups: %s", username);
-            return null;
-          }
         }
         finally {
           try {
