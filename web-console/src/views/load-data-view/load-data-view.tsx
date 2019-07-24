@@ -696,6 +696,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 this.setState({
                   spec: updateIngestionType(spec, selectedComboType as any),
                 });
+                this.updateSpec(updateIngestionType(spec, selectedComboType as any));
                 setTimeout(() => {
                   this.updateStep('connect');
                 }, 10);
