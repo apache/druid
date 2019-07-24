@@ -283,6 +283,8 @@ export interface LoadDataViewState {
   selectedDimensionSpec: DimensionSpec | null;
   selectedMetricSpecIndex: number;
   selectedMetricSpec: MetricSpec | null;
+
+  continueToSpec: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -343,6 +345,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedDimensionSpec: null,
       selectedMetricSpecIndex: -1,
       selectedMetricSpec: null,
+
+      continueToSpec: false,
     };
   }
 
@@ -360,6 +364,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.updateStep('welcome');
     } else {
       this.updateStep('connect');
+    }
+
+    if (isEmptyIngestionSpec(spec)) {
+      this.setState({ continueToSpec: true });
     }
   }
 
@@ -408,11 +416,37 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   render() {
-    const { step } = this.state;
+    const { step, continueToSpec } = this.state;
+    if (!continueToSpec) {
+      return (
+        <div className={classNames('load-data-continue-view')}>
+          <Card className={'spec-card'} interactive onClick={this.handleResetConfirm}>
+            <Icon iconSize={30} icon={IconNames.ASTERISK} />
+            <div className={'spec-card-header'}>
+              Start a new spec
+              <div className={'spec-card-caption'}>start a new spec something something</div>
+            </div>
+          </Card>
+          <Card
+            className={'spec-card'}
+            interactive
+            onClick={() => this.setState({ continueToSpec: true })}
+          >
+            <Icon icon={IconNames.REPEAT} iconSize={30} />
+            <div className={'spec-card-header'}>
+              Continue from previous spec
+              <div className={'spec-card-caption'}>
+                Continue from most recent spec you were working on
+              </div>
+            </div>
+          </Card>
+          {this.renderResetConfirm()}
+        </div>
+      );
+    }
     return (
       <div className={classNames('load-data-view', 'app-view', step)}>
         {this.renderStepNav()}
-
         {step === 'welcome' && this.renderWelcomeStep()}
         {step === 'connect' && this.renderConnectStep()}
         {step === 'parser' && this.renderParserStep()}
@@ -537,7 +571,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
-            <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
+            <Button icon={IconNames.RESET} text="Reset sspec" onClick={this.handleResetConfirm} />
           )}
         </div>
       </>
@@ -746,7 +780,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         isOpen
         onCancel={() => this.setState({ showResetConfirm: false })}
         onConfirm={() => {
-          this.setState({ showResetConfirm: false });
+          this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
           this.updateSpec({} as any);
         }}
       >
