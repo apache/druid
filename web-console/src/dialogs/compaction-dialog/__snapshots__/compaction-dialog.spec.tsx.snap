@@ -240,7 +240,7 @@ exports[`compaction dialog matches snapshot 1`] = `
               class="bp3-form-content"
             >
               <div
-                class="bp3-input-group"
+                class="bp3-input-group suggestible-input"
               >
                 <input
                   class="bp3-input"

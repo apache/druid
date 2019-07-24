@@ -19,13 +19,12 @@
 
 package org.apache.druid.storage.google;
 
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-
-import static org.easymock.EasyMock.expect;
 
 public class GoogleByteSourceTest extends EasyMockSupport
 {
@@ -37,7 +36,7 @@ public class GoogleByteSourceTest extends EasyMockSupport
     GoogleStorage storage = createMock(GoogleStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(storage.get(bucket, path)).andReturn(stream);
+    EasyMock.expect(storage.get(bucket, path)).andReturn(stream);
 
     replayAll();
 
@@ -55,7 +54,7 @@ public class GoogleByteSourceTest extends EasyMockSupport
     final String path = "/path/to/file";
     GoogleStorage storage = createMock(GoogleStorage.class);
 
-    expect(storage.get(bucket, path)).andThrow(new IOException(""));
+    EasyMock.expect(storage.get(bucket, path)).andThrow(new IOException(""));
 
     replayAll();
 

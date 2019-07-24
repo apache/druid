@@ -23,18 +23,18 @@ import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
 
 import './query-plan-dialog.scss';
 
-export interface QueryPlanDialogProps extends React.Props<any> {
+export interface QueryPlanDialogProps {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   explainError: Error | null;
   onClose: () => void;
 }
 
-export interface QueryPlanDialogState {
+export interface QueryPlanDialogState {}
 
-}
-
-export class QueryPlanDialog extends React.PureComponent<QueryPlanDialogProps, QueryPlanDialogState> {
-
+export class QueryPlanDialog extends React.PureComponent<
+  QueryPlanDialogProps,
+  QueryPlanDialogState
+> {
   constructor(props: QueryPlanDialogProps) {
     super(props);
     this.state = {};
@@ -48,92 +48,97 @@ export class QueryPlanDialog extends React.PureComponent<QueryPlanDialogProps, Q
     if (explainError) {
       content = <div>{explainError.message}</div>;
     } else if (explainResult == null) {
-      content = <div/>;
+      content = <div />;
     } else if ((explainResult as BasicQueryExplanation).query) {
-
       let signature: JSX.Element | null = null;
       if ((explainResult as BasicQueryExplanation).signature) {
         const signatureContent = (explainResult as BasicQueryExplanation).signature || '';
-        signature = <FormGroup
-          label="Signature"
-        >
-          <InputGroup defaultValue={signatureContent} readOnly/>
-        </FormGroup>;
+        signature = (
+          <FormGroup label="Signature">
+            <InputGroup defaultValue={signatureContent} readOnly />
+          </FormGroup>
+        );
       }
 
-      content = <div className="one-query">
-        <FormGroup
-          label="Query"
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify((explainResult as BasicQueryExplanation).query[0], undefined, 2)}
-          />
-        </FormGroup>
-        {signature}
-      </div>;
-    } else if ((explainResult as SemiJoinQueryExplanation).mainQuery && (explainResult as SemiJoinQueryExplanation).subQueryRight) {
-
+      content = (
+        <div className="one-query">
+          <FormGroup label="Query">
+            <TextArea
+              readOnly
+              value={JSON.stringify(
+                (explainResult as BasicQueryExplanation).query[0],
+                undefined,
+                2,
+              )}
+            />
+          </FormGroup>
+          {signature}
+        </div>
+      );
+    } else if (
+      (explainResult as SemiJoinQueryExplanation).mainQuery &&
+      (explainResult as SemiJoinQueryExplanation).subQueryRight
+    ) {
       let mainSignature: JSX.Element | null = null;
       let subSignature: JSX.Element | null = null;
       if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
-        const signatureContent = (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
-        mainSignature = <FormGroup
-          label="Signature"
-        >
-          <InputGroup defaultValue={signatureContent} readOnly/>
-        </FormGroup>;
+        const signatureContent =
+          (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
+        mainSignature = (
+          <FormGroup label="Signature">
+            <InputGroup defaultValue={signatureContent} readOnly />
+          </FormGroup>
+        );
       }
       if ((explainResult as SemiJoinQueryExplanation).subQueryRight.signature) {
-        const signatureContent = (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || '';
-        subSignature = <FormGroup
-          label="Signature"
-        >
-          <InputGroup defaultValue={signatureContent} readOnly/>
-        </FormGroup>;
+        const signatureContent =
+          (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || '';
+        subSignature = (
+          <FormGroup label="Signature">
+            <InputGroup defaultValue={signatureContent} readOnly />
+          </FormGroup>
+        );
       }
 
-      content = <div className="two-queries">
-        <FormGroup
-          label="Main query"
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify((explainResult as SemiJoinQueryExplanation).mainQuery.query, undefined, 2)}
-          />
-        </FormGroup>
-        {mainSignature}
-        <FormGroup
-          label="Sub query"
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify((explainResult as SemiJoinQueryExplanation).subQueryRight.query, undefined, 2)}
-          />
-        </FormGroup>
-        {subSignature}
-      </div>;
+      content = (
+        <div className="two-queries">
+          <FormGroup label="Main query">
+            <TextArea
+              readOnly
+              value={JSON.stringify(
+                (explainResult as SemiJoinQueryExplanation).mainQuery.query,
+                undefined,
+                2,
+              )}
+            />
+          </FormGroup>
+          {mainSignature}
+          <FormGroup label="Sub query">
+            <TextArea
+              readOnly
+              value={JSON.stringify(
+                (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
+                undefined,
+                2,
+              )}
+            />
+          </FormGroup>
+          {subSignature}
+        </div>
+      );
     } else {
       content = <div>{explainResult}</div>;
     }
 
-    return <Dialog
-      className="query-plan-dialog"
-      isOpen
-      onClose={onClose}
-      title="Query plan"
-    >
-      <div className={Classes.DIALOG_BODY}>
-        {content}
-      </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Close"
-            onClick={onClose}
-          />
+    return (
+      <Dialog className="query-plan-dialog" isOpen onClose={onClose} title="Query plan">
+        <div className={Classes.DIALOG_BODY}>{content}</div>
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button text="Close" onClick={onClose} />
+          </div>
         </div>
-      </div>
-    </Dialog>;
+      </Dialog>
+    );
   }
 }

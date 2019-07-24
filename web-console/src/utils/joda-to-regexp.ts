@@ -64,7 +64,7 @@ const JODA_FRAGMENT_TO_REG_EXP_STRING: Record<string, string> = {
   SS: '[0-9]{2,3}',
   SSS: '[0-9]{3}',
   z: TEXT,
-  Z: TEXT
+  Z: TEXT,
 };
 
 export function jodaFormatToRegExp(jodaFormat: string): RegExp {

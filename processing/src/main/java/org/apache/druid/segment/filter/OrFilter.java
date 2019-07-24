@@ -29,9 +29,14 @@ import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
+import org.apache.druid.query.filter.vector.ReadableVectorMatch;
+import org.apache.druid.query.filter.vector.VectorMatch;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,6 +83,23 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    final VectorValueMatcher[] matchers = new VectorValueMatcher[filters.size()];
+
+    for (int i = 0; i < filters.size(); i++) {
+      matchers[i] = filters.get(i).makeVectorMatcher(factory);
+    }
+    return makeVectorMatcher(matchers);
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return filters.stream().allMatch(Filter::canVectorizeMatcher);
+  }
+
+  @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
@@ -103,39 +125,6 @@ public class OrFilter implements BooleanFilter
     }
 
     return makeMatcher(matchers.toArray(AndFilter.EMPTY_VALUE_MATCHER_ARRAY));
-  }
-
-
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
-  {
-    Preconditions.checkState(baseMatchers.length > 0);
-
-    if (baseMatchers.length == 1) {
-      return baseMatchers[0];
-    }
-
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        for (ValueMatcher matcher : baseMatchers) {
-          if (matcher.matches()) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("firstBaseMatcher", baseMatchers[0]);
-        inspector.visit("secondBaseMatcher", baseMatchers[1]);
-        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
-        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
-      }
-    };
   }
 
   @Override
@@ -181,5 +170,75 @@ public class OrFilter implements BooleanFilter
   public String toString()
   {
     return StringUtils.format("(%s)", OR_JOINER.join(filters));
+  }
+
+  private static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
+    Preconditions.checkState(baseMatchers.length > 0);
+
+    if (baseMatchers.length == 1) {
+      return baseMatchers[0];
+    }
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        for (ValueMatcher matcher : baseMatchers) {
+          if (matcher.matches()) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("firstBaseMatcher", baseMatchers[0]);
+        inspector.visit("secondBaseMatcher", baseMatchers[1]);
+        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
+        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
+      }
+    };
+  }
+
+  private static VectorValueMatcher makeVectorMatcher(final VectorValueMatcher[] baseMatchers)
+  {
+    Preconditions.checkState(baseMatchers.length > 0);
+    if (baseMatchers.length == 1) {
+      return baseMatchers[0];
+    }
+
+    return new BaseVectorValueMatcher(baseMatchers[0])
+    {
+      final VectorMatch currentMask = VectorMatch.wrap(new int[getMaxVectorSize()]);
+      final VectorMatch scratch = VectorMatch.wrap(new int[getMaxVectorSize()]);
+      final VectorMatch retVal = VectorMatch.wrap(new int[getMaxVectorSize()]);
+
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      {
+        ReadableVectorMatch currentMatch = baseMatchers[0].match(mask);
+
+        currentMask.copyFrom(mask);
+        retVal.copyFrom(currentMatch);
+
+        for (int i = 1; i < baseMatchers.length; i++) {
+          if (retVal.isAllTrue(getCurrentVectorSize())) {
+            // Short-circuit if the entire vector is true.
+            break;
+          }
+
+          currentMask.removeAll(currentMatch);
+          currentMatch = baseMatchers[i].match(currentMask);
+          retVal.addAll(currentMatch, scratch);
+        }
+
+        assert retVal.isValid(mask);
+        return retVal;
+      }
+    };
   }
 }

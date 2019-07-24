@@ -16,16 +16,48 @@
  * limitations under the License.
  */
 
-import { alphanumericCompare, sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, sortWithPrefixSuffix, sqlQueryCustomTableFilter } from './general';
 
 describe('general', () => {
   describe('sortWithPrefixSuffix', () => {
     it('works in simple case', () => {
-      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gef'.split(''), 'ba'.split(''), alphanumericCompare).join('')).toEqual('gefcdhba');
+      expect(
+        sortWithPrefixSuffix(
+          'abcdefgh'.split('').reverse(),
+          'gef'.split(''),
+          'ba'.split(''),
+          alphanumericCompare,
+        ).join(''),
+      ).toEqual('gefcdhba');
     });
 
     it('dedupes', () => {
-      expect(sortWithPrefixSuffix('abcdefgh'.split('').reverse(), 'gefgef'.split(''), 'baba'.split(''), alphanumericCompare).join('')).toEqual('gefcdhba');
+      expect(
+        sortWithPrefixSuffix(
+          'abcdefgh'.split('').reverse(),
+          'gefgef'.split(''),
+          'baba'.split(''),
+          alphanumericCompare,
+        ).join(''),
+      ).toEqual('gefcdhba');
+    });
+  });
+
+  describe('sqlQueryCustomTableFilter', () => {
+    it('works', () => {
+      expect(
+        sqlQueryCustomTableFilter({
+          id: 'datasource',
+          value: `hello`,
+        }),
+      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('hello%')"`);
+
+      expect(
+        sqlQueryCustomTableFilter({
+          id: 'datasource',
+          value: `"hello"`,
+        }),
+      ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
     });
   });
 });

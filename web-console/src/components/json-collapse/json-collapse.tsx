@@ -17,10 +17,9 @@
  */
 
 import { Button, Collapse, TextArea } from '@blueprintjs/core';
-import classNames from 'classnames';
 import React from 'react';
 
-interface JSONCollapseProps extends React.Props<any> {
+interface JSONCollapseProps {
   stringValue: string;
   buttonText: string;
 }
@@ -33,29 +32,28 @@ export class JSONCollapse extends React.PureComponent<JSONCollapseProps, JSONCol
   constructor(props: any) {
     super(props);
     this.state = {
-      isOpen: false
+      isOpen: false,
     };
   }
 
   render() {
-    const { stringValue, buttonText} = this.props;
+    const { stringValue, buttonText } = this.props;
     const { isOpen } = this.state;
     const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-    return <div className="json-collapse">
-      <Button
-        minimal
-        active={isOpen}
-        onClick={() => this.setState({isOpen: !isOpen})}
-        text={buttonText}
-      />
-      <div>
-        <Collapse isOpen={isOpen}>
-          <TextArea
-            readOnly
-            value={prettyValue}
-          />
-        </Collapse>
+    return (
+      <div className="json-collapse">
+        <Button
+          minimal
+          active={isOpen}
+          onClick={() => this.setState({ isOpen: !isOpen })}
+          text={buttonText}
+        />
+        <div>
+          <Collapse isOpen={isOpen}>
+            <TextArea readOnly value={prettyValue} />
+          </Collapse>
+        </div>
       </div>
-    </div>;
+    );
   }
 }

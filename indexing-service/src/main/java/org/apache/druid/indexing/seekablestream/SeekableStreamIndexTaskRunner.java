@@ -80,6 +80,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -353,7 +354,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Set up FireDepartmentMetrics
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
         task.getDataSchema(),
-        new RealtimeIOConfig(null, null, null),
+        new RealtimeIOConfig(null, null),
         null
     );
     FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
@@ -1274,8 +1275,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
       throws IOException
   {
-    Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap = outOfRangePartitions
-        .entrySet().stream().collect(Collectors.toMap(x -> x.getKey().getPartitionId(), Map.Entry::getValue));
+    Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap = CollectionUtils.mapKeys(
+        outOfRangePartitions,
+        StreamPartition::getPartitionId
+    );
 
     boolean result = taskToolbox
         .getTaskActionClient()

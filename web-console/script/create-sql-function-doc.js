@@ -23,7 +23,45 @@ const fs = require('fs-extra');
 const readfile = '../docs/content/querying/sql.md';
 const writefile = 'lib/sql-function-doc.ts';
 
-const heading = `/*
+const readDoc = async () => {
+  const data = await fs.readFile(readfile, 'utf-8');
+  const lines = data.split('\n');
+
+  const functionDocs = [];
+  const dataTypeDocs = [];
+  for (let line of lines) {
+    const functionMatch = line.match(/^\|`(.+\(.*\))`\|(.+)\|$/);
+    if (functionMatch) {
+      functionDocs.push({
+        syntax: functionMatch[1],
+        description: functionMatch[2],
+      });
+    }
+
+    const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|(.*)\|(.*)\|$/);
+    if (dataTypeMatch) {
+      dataTypeDocs.push({
+        syntax: dataTypeMatch[1],
+        description: dataTypeMatch[4] || `Druid runtime type: ${dataTypeMatch[2]}`,
+      });
+    }
+  }
+
+  // Make sure there are at least 10 functions for sanity
+  if (functionDocs.length < 10) {
+    throw new Error(
+      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length})`,
+    );
+  }
+
+  // Make sure there are at least 5 data types for sanity
+  if (dataTypeDocs.length < 10) {
+    throw new Error(
+      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`,
+    );
+  }
+
+  const content = `/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,65 +81,19 @@ const heading = `/*
 
 // This file is auto generated and should not be modified
 
-export interface FunctionDescription {
+export interface SyntaxDescription {
   syntax: string;
   description: string;
 }
 
-/* tslint:disable:quotemark */
+// prettier-ignore
+export const SQL_FUNCTIONS: SyntaxDescription[] = ${JSON.stringify(functionDocs, null, 2)};
 
-export const SQLFunctionDoc: FunctionDescription[] = `;
+// prettier-ignore
+export const SQL_DATE_TYPES: SyntaxDescription[] = ${JSON.stringify(dataTypeDocs, null, 2)};
+`;
 
-const readDoc = async () => {
-  try {
-    const data = await fs.readFile(readfile, 'utf-8');
-    const sections = data.split("##");
-
-    let entries = [];
-    sections.forEach((section) => {
-      if (!/^#.*function/.test(section)) return;
-
-      entries = entries.concat(
-        section.split('\n').map(line => {
-          if (line.startsWith('|`')) {
-            const rawSyntax = line.match(/\|`(.*)`\|/);
-            if (rawSyntax == null) return null;
-            const syntax = rawSyntax[1]
-              .replace(/\\/g,'')
-              .replace(/&#124;/g,'|');
-
-            // Must have an uppercase letter
-            if (!/[A-Z]/.test(syntax)) return null;
-
-            const rawDescription = line.match(/`\|(.*)\|/);
-            if (rawDescription == null) return null;
-            const description = rawDescription[1];
-
-            return {
-              syntax: syntax,
-              description: description
-            };
-          }
-        }).filter(Boolean)
-      );
-    });
-
-    // Make sure there are at least 10 functions for sanity
-    if (entries.length < 10) {
-      throw new Error(`Did not find any entries did the structure of '${readfile}' change?`);
-    }
-
-    const content = heading + JSON.stringify(entries, null, 2) + ';\n';
-
-    try {
-      await fs.writeFile(writefile, content, 'utf-8');
-    } catch (e) {
-      console.log(`Error when writing to ${writefile}: `, e);
-    }
-
-  } catch (e) {
-    console.log(`Error when reading ${readfile}: `, e);
-  }
-}
+  await fs.writeFile(writefile, content, 'utf-8');
+};
 
 readDoc();

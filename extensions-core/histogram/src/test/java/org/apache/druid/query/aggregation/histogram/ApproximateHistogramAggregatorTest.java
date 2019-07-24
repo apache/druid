@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.junit.Assert;
@@ -44,7 +45,7 @@ public class ApproximateHistogramAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
-        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, false
     );
     ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution);
 
@@ -73,5 +74,42 @@ public class ApproximateHistogramAggregatorTest
     Assert.assertEquals("getMax value doesn't match expected getMax", 45, h.max(), 0);
 
     Assert.assertEquals("bin count doesn't match expected bin count", 5, h.binCount());
+  }
+
+  @Test
+  public void testFinalize() throws Exception
+  {
+    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+
+    final float[] values = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45};
+    final int resolution = 5;
+    final int numBuckets = 5;
+
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+
+    ApproximateHistogramAggregatorFactory humanReadableFactory = new ApproximateHistogramAggregatorFactory(
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, false
+    );
+
+    ApproximateHistogramAggregatorFactory binaryFactory = new ApproximateHistogramAggregatorFactory(
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, true
+    );
+
+    ApproximateHistogramAggregator agg = new ApproximateHistogramAggregator(selector, resolution, 0, 100);
+    agg.aggregate();
+
+    Object finalizedObjectHumanReadable = humanReadableFactory.finalizeComputation(agg.get());
+    String finalStringHumanReadable = objectMapper.writeValueAsString(finalizedObjectHumanReadable);
+    Assert.assertEquals(
+        "{\"breaks\":[23.0,23.0,23.0,23.0,23.0,23.0],\"counts\":[0.0,0.0,0.0,0.0,0.0]}",
+        finalStringHumanReadable
+    );
+
+    Object finalizedObjectBinary = binaryFactory.finalizeComputation(agg.get());
+    String finalStringBinary = objectMapper.writeValueAsString(finalizedObjectBinary);
+    Assert.assertEquals(
+        "\"//sBQbgAAA==\"",
+        finalStringBinary
+    );
   }
 }

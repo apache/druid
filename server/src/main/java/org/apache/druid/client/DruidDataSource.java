@@ -30,12 +30,13 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 /**
  * A mutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
  *
- * Concurrency: could be updated concurrently via {@link #addSegment} and {@link #removeSegment}, and accessed
- * concurrently (e. g. via {@link #getSegments}) as well.
+ * Concurrency: could be updated concurrently via {@link #addSegment}, {@link #removeSegment}, and {@link
+ * #removeSegmentsIf}, and accessed concurrently (e. g. via {@link #getSegments}) as well.
  *
  * @see ImmutableDruidDataSource - an immutable counterpart of this class
  */
@@ -44,10 +45,7 @@ public class DruidDataSource
   private final String name;
   private final Map<String, String> properties;
   /**
-   * This map needs to be concurrent because it should be possible to iterate the segments of the data source
-   * (indirectly via {@link #getSegments} or in {@link #toString}) concurrently updates via {@link #addSegment} or
-   * {@link #removeSegment}. Concurrent updates are also supported incidentally, though this is not needed for the use
-   * cases of DruidDataSource.
+   * This map needs to be concurrent to support concurrent iteration and updates.
    */
   private final ConcurrentMap<SegmentId, DataSegment> idToSegmentMap = new ConcurrentHashMap<>();
 
@@ -80,6 +78,14 @@ public class DruidDataSource
     return Collections.unmodifiableCollection(idToSegmentMap.values());
   }
 
+  /**
+   * Removes segments for which the given filter returns true.
+   */
+  public void removeSegmentsIf(Predicate<DataSegment> filter)
+  {
+    idToSegmentMap.values().removeIf(filter);
+  }
+
   public DruidDataSource addSegment(DataSegment dataSegment)
   {
     idToSegmentMap.put(dataSegment.getId(), dataSegment);
@@ -99,7 +105,7 @@ public class DruidDataSource
    * Returns the removed segment, or null if there was no segment with the given {@link SegmentId} in this
    * DruidDataSource.
    */
-  public DataSegment removeSegment(SegmentId segmentId)
+  public @Nullable DataSegment removeSegment(SegmentId segmentId)
   {
     return idToSegmentMap.remove(segmentId);
   }
@@ -126,7 +132,6 @@ public class DruidDataSource
   @Override
   public boolean equals(Object o)
   {
-    //noinspection Contract
     throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 

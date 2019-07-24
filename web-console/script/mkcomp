@@ -44,14 +44,14 @@ fs.ensureDirSync(path);
 console.log('Making path:', path);
 
 const spaceName = name.replace(/-/g, ' ');
-const camelName = name.replace(/(^|-)[a-z]/g, (s) => s.replace('-', '').toUpperCase());
+const camelName = name.replace(/(^|-)[a-z]/g, s => s.replace('-', '').toUpperCase());
 const snakeName = camelName[0].toLowerCase() + camelName.substr(1);
 
 function writeFile(path, data) {
   try {
     return fs.writeFileSync(path, data, {
       flag: 'wx', // x = fail if file exists
-      encoding: 'utf8'
+      encoding: 'utf8',
     });
   } catch (error) {
     return console.log(`Skipping ${path}`);
@@ -59,8 +59,9 @@ function writeFile(path, data) {
 }
 
 // Make the TypeScript file
-writeFile(path + name + '.tsx',
-`/*
+writeFile(
+  path + name + '.tsx',
+  `/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,7 +86,7 @@ import React from 'react';
 
 import './${name}.scss';
 
-export interface ${camelName}Props extends React.Props<any> {
+export interface ${camelName}Props {
 }
 
 export interface ${camelName}State {
@@ -100,15 +101,17 @@ export class ${camelName} extends React.PureComponent<${camelName}Props, ${camel
 
   render() {
     return <div className="${name}">
-    
+      Stuff...
     </div>;
   }
 }
-`);
+`,
+);
 
 // Make the SASS file
-writeFile(path + name + '.scss',
-`/*
+writeFile(
+  path + name + '.scss',
+  `/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -129,10 +132,12 @@ writeFile(path + name + '.scss',
 .${name} {
 
 }
-`);
+`,
+);
 
 // Make the spec test file
-writeFile(path + name + '.spec.tsx',
+writeFile(
+  path + name + '.spec.tsx',
   `/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -165,4 +170,5 @@ describe('${spaceName}', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 });
-`);
+`,
+);

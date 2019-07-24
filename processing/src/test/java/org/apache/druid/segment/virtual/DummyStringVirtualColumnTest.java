@@ -360,9 +360,7 @@ public class DummyStringVirtualColumnTest
         .dimension(VSTRING_DIM)
         .metric(COUNT)
         .threshold(1)
-        .aggregators(
-            Collections.singletonList(new CountAggregatorFactory(COUNT))
-        )
+        .aggregators(new CountAggregatorFactory(COUNT))
         .virtualColumns(new DummyStringVirtualColumn(
             QueryRunnerTestHelper.marketDimension,
             VSTRING_DIM,

@@ -25,7 +25,7 @@ import { ActionIcon } from '../action-icon/action-icon';
 
 import './action-cell.scss';
 
-export interface ActionCellProps extends React.Props<any> {
+export interface ActionCellProps {
   onDetail?: () => void;
   actions?: BasicAction[];
 }
@@ -43,20 +43,15 @@ export class ActionCell extends React.PureComponent<ActionCellProps> {
     const { onDetail, actions } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 
-    return <div className="action-cell">
-      {
-        onDetail &&
-        <ActionIcon
-          icon={IconNames.SEARCH_TEMPLATE}
-          onClick={onDetail}
-        />
-      }
-      {
-        actionsMenu &&
-        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
-          <ActionIcon icon={IconNames.WRENCH}/>
-        </Popover>
-      }
-    </div>;
+    return (
+      <div className="action-cell">
+        {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
+        {actionsMenu && (
+          <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+            <ActionIcon icon={IconNames.WRENCH} />
+          </Popover>
+        )}
+      </div>
+    );
   }
 }

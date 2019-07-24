@@ -29,11 +29,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.ResponseContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This iterator supports iteration through a Sequence returned by a ScanResultValue QueryRunner.  Its behaviour
@@ -60,7 +60,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
   public ScanQueryLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
       QueryPlus<ScanResultValue> queryPlus,
-      Map<String, Object> responseContext
+      ResponseContext responseContext
   )
   {
     this.query = (ScanQuery) queryPlus.getQuery();

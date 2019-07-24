@@ -161,8 +161,7 @@ public class StatusResource
       for (DruidModule module : druidModules) {
         String artifact = module.getClass().getPackage().getImplementationTitle();
         String version = module.getClass().getPackage().getImplementationVersion();
-
-        moduleVersions.add(new ModuleVersion(module.getClass().getCanonicalName(), artifact, version));
+        moduleVersions.add(new ModuleVersion(module.getClass().getName(), artifact, version));
       }
       return moduleVersions;
     }

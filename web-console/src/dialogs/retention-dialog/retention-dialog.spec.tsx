@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
-import { RetentionDialog } from './retention-dialog';
+import { reorderArray, RetentionDialog } from './retention-dialog';
 
 describe('retention dialog', () => {
   it('matches snapshot', () => {
-    const retentionDialog =
+    const retentionDialog = (
       <RetentionDialog
         datasource={'test'}
         rules={[null]}
@@ -31,8 +31,44 @@ describe('retention dialog', () => {
         onEditDefaults={() => null}
         onCancel={() => null}
         onSave={() => null}
-      />;
-    const { container } = render(retentionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+      />
+    );
+    render(retentionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+
+  describe('reorderArray', () => {
+    it('works when nothing changes', () => {
+      const array = ['a', 'b', 'c', 'd', 'e'];
+
+      const newArray = reorderArray(array, 0, 0);
+
+      expect(newArray).toEqual(['a', 'b', 'c', 'd', 'e']);
+      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    it('works upward', () => {
+      const array = ['a', 'b', 'c', 'd', 'e'];
+
+      let newArray = reorderArray(array, 2, 1);
+      expect(newArray).toEqual(['a', 'c', 'b', 'd', 'e']);
+      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+      newArray = reorderArray(array, 2, 0);
+      expect(newArray).toEqual(['c', 'a', 'b', 'd', 'e']);
+      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    it('works downward', () => {
+      const array = ['a', 'b', 'c', 'd', 'e'];
+
+      let newArray = reorderArray(array, 2, 3);
+      expect(newArray).toEqual(['a', 'b', 'c', 'd', 'e']);
+      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+      newArray = reorderArray(array, 2, 4);
+      expect(newArray).toEqual(['a', 'b', 'd', 'c', 'e']);
+      expect(array).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
   });
 });

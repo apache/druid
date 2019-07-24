@@ -16,24 +16,26 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { QueryExtraInfo } from './query-extra-info';
 
 describe('query extra info', () => {
   it('matches snapshot', () => {
-    const queryExtraInfo = <QueryExtraInfo
-      queryExtraInfo={{
-        queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
-        sqlQueryId: null,
-        startTime: new Date('1986-04-26T01:23:40+03:00'),
-        endTime: new Date('1986-04-26T01:23:48+03:00'),
-        numResults: 2000,
-        wrappedLimit: 2000
-      }}
-      onDownload={() => null}
-    />;
+    const queryExtraInfo = (
+      <QueryExtraInfo
+        queryExtraInfo={{
+          queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
+          sqlQueryId: null,
+          startTime: new Date('1986-04-26T01:23:40+03:00'),
+          endTime: new Date('1986-04-26T01:23:48+03:00'),
+          numResults: 2000,
+          wrappedLimit: 2000,
+        }}
+        onDownload={() => null}
+      />
+    );
 
     const { container } = render(queryExtraInfo);
     expect(container.firstChild).toMatchSnapshot();

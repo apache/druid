@@ -24,33 +24,32 @@ import { HeaderRows } from '../../../utils';
 
 import './query-output.scss';
 
-export interface QueryOutputProps extends React.Props<any> {
+export interface QueryOutputProps {
   loading: boolean;
   result: HeaderRows | null;
   error: string | null;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
-
   render() {
     const { result, loading, error } = this.props;
 
-    return <div className="query-output">
-      <ReactTable
-        data={result ? result.rows : []}
-        loading={loading}
-        noDataText={!loading && result && !result.rows.length ? 'No results' : (error || '')}
-        sortable={false}
-        columns={
-          (result ? result.header : []).map((h: any, i) => {
+    return (
+      <div className="query-output">
+        <ReactTable
+          data={result ? result.rows : []}
+          loading={loading}
+          noDataText={!loading && result && !result.rows.length ? 'No results' : error || ''}
+          sortable={false}
+          columns={(result ? result.header : []).map((h: any, i) => {
             return {
               Header: h,
               accessor: String(i),
-              Cell: row => <TableCell value={row.value}/>
+              Cell: row => <TableCell value={row.value} />,
             };
-          })
-        }
-      />
-    </div>;
+          })}
+        />
+      </div>
+    );
   }
 }

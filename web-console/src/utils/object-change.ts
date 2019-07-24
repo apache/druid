@@ -49,7 +49,7 @@ export function parsePath(path: string): string[] {
 }
 
 export function makePath(parts: string[]): string {
-  return parts.map(p => p.includes('.') ? `{${p}}` : p).join('.');
+  return parts.map(p => (p.includes('.') ? `{${p}}` : p)).join('.');
 }
 
 function isAppend(key: string): boolean {
@@ -97,7 +97,6 @@ export function deepDelete<T extends Record<string, any>>(value: T, path: string
     } else {
       delete valueCopy[firstKey];
     }
-
   } else {
     if (Array.isArray(valueCopy) && !isNaN(Number(firstKey))) {
       valueCopy.splice(Number(firstKey), 1);

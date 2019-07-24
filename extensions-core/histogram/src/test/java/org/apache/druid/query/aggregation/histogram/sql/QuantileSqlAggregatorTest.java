@@ -139,7 +139,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                                              null,
                                                              null,
                                                              null,
-                                                             null
+                                                             null,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -239,18 +240,18 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                   )
               )
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null),
+                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null, false),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
+                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null, false),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null),
+                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   ),
-                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null)
+                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null, false)
               ))
               .postAggregators(
                   new QuantilePostAggregator("a0", "a0:agg", 0.01f),
@@ -300,14 +301,14 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
               .granularity(Granularities.ALL)
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
-                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),
+                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
+                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null, false),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null),
+                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null, false),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null),
+                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null, false),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   )
               ))
@@ -376,7 +377,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                             null,
                             null,
                             null,
-                            null
+                            null,
+                            false
                         )
                     )
                     .setPostAggregatorSpecs(

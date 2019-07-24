@@ -43,17 +43,17 @@ public class ClientCompactQueryTuningConfig
   private final Long pushTimeout;
 
   public static ClientCompactQueryTuningConfig from(
-      @Nullable UserCompactTuningConfig userCompactTuningConfig,
+      @Nullable UserCompactTuningConfig userCompactionTaskQueryTuningConfig,
       @Nullable Integer maxRowsPerSegment
   )
   {
     return new ClientCompactQueryTuningConfig(
         maxRowsPerSegment,
-        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxRowsInMemory(),
-        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxTotalRows(),
-        userCompactTuningConfig == null ? null : userCompactTuningConfig.getIndexSpec(),
-        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxPendingPersists(),
-        userCompactTuningConfig == null ? null : userCompactTuningConfig.getPushTimeout()
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getIndexSpec(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPushTimeout()
     );
   }
 
@@ -150,7 +150,7 @@ public class ClientCompactQueryTuningConfig
   @Override
   public String toString()
   {
-    return "ClientCompactQueryTuningConfig{" +
+    return getClass().getSimpleName() + "{" +
            "maxRowsPerSegment=" + maxRowsPerSegment +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxTotalRows=" + maxTotalRows +

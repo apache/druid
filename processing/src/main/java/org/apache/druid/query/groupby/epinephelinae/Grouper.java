@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -36,9 +37,11 @@ import java.util.function.ToIntFunction;
  * Groupers aggregate metrics from rows that they typically get from a ColumnSelectorFactory, under
  * grouping keys that some outside driver is passing in. They can also iterate over the grouped
  * rows after the aggregation is done.
- * <p>
+ *
  * They work sort of like a map of KeyType to aggregated values, except they don't support
  * random lookups.
+ *
+ * See {@link VectorGrouper} for a vectorized version.
  *
  * @param <KeyType> type of the key that will be passed in
  */
@@ -89,7 +92,7 @@ public interface Grouper<KeyType> extends Closeable
 
   default ToIntFunction<KeyType> hashFunction()
   {
-    return Groupers::hash;
+    return Groupers::hashObject;
   }
 
   /**
@@ -247,6 +250,7 @@ public interface Grouper<KeyType> extends Closeable
      *
      * @return serialized key, or null if we are unable to serialize more keys due to resource limits
      */
+    @Nullable
     ByteBuffer toByteBuffer(T key);
 
     /**

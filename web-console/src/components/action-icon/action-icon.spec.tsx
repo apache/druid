@@ -17,14 +17,14 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ActionIcon } from './action-icon';
 
 describe('action icon', () => {
   it('matches snapshot', () => {
-    const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD}/>;
+    const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD} />;
     const { container } = render(actionIcon);
     expect(container.firstChild).toMatchSnapshot();
   });

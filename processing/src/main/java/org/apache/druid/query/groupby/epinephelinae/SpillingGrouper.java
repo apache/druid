@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -41,6 +42,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,11 +57,12 @@ import java.util.Set;
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(SpillingGrouper.class);
-
-  private final Grouper<KeyType> grouper;
-  private static final AggregateResult DISK_FULL = AggregateResult.failure(
+  private static final AggregateResult DISK_FULL = AggregateResult.partial(
+      0,
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
   );
+
+  private final Grouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
@@ -96,8 +99,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       LimitedBufferHashGrouper<KeyType> limitGrouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,
-          columnSelectorFactory,
-          aggregatorFactories,
+          AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
           bufferGrouperInitialBuckets,
@@ -119,8 +121,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         this.grouper = new BufferHashGrouper<>(
             bufferSupplier,
             keySerde,
-            columnSelectorFactory,
-            aggregatorFactories,
+            AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
             bufferGrouperMaxSize,
             bufferGrouperMaxLoadFactor,
             bufferGrouperInitialBuckets,
@@ -133,8 +134,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       this.grouper = new BufferHashGrouper<>(
           bufferSupplier,
           keySerde,
-          columnSelectorFactory,
-          aggregatorFactories,
+          AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
           bufferGrouperInitialBuckets,
@@ -168,6 +168,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     if (result.isOk() || !spillingAllowed || temporaryStorage.maxSize() <= 0) {
       return result;
     } else {
+      // Expecting all-or-nothing behavior.
+      assert result.getCount() == 0;
+
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();

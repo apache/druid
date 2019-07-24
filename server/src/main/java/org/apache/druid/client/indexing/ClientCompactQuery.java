@@ -29,6 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Client representation of org.apache.druid.indexing.common.task.CompactionTask. JSON serialization fields of
+ * this class must correspond to those of org.apache.druid.indexing.common.task.CompactionTask.
+ */
 public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
@@ -136,7 +140,7 @@ public class ClientCompactQuery implements ClientQuery
   @Override
   public String toString()
   {
-    return "ClientCompactQuery{" +
+    return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
            ", interval=" + interval +

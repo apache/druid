@@ -54,14 +54,14 @@ begin with a digit. To escape other special characters, you can quote it with do
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string
 type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-Multi-value string dimensions are supported and may be treated as either scalar or array typed values. When treated as
-a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the
-multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native
-Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_
-the 'array', behaving similar to the `unnest` operator available in many SQL dialects. However, by using the
-`array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the
-complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the
-stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.html) are supported and may be treated as either
+scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply
+the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in
+arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string
+dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL
+dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the
+complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator,
+allows transforming the stringified dimension back into the true native array type.
 
 
 The following built-in functions are available.
@@ -168,27 +168,30 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 | function | description |
 | --- | --- |
-| `array_length(arr)` | returns length of array expression |
-| `array_offset(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
-| `array_ordinal(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
-| `array_contains(arr,expr)` | returns true if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array |
-| `array_overlap(arr1,arr2)` | returns true if arr1 and arr2 have any elements in common |
-| `array_offset_of(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
-| `array_ordinal_of(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
-| `array_append(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
-| `array_concat(arr1,arr2)` | concatenates 2 arrays, the resulting array type determined by the type of the first array |
-| `array_to_string(arr,str)` | joins all elements of arr by the delimiter specified by str |
-| `string_to_array(str1,str2)` | splits str1 into an array on the delimiter specified by str2 |
+| array(expr1,expr ...) | constructs an array from the expression arguments, using the type of the first argument as the output array type |
+| array_length(arr) | returns length of array expression |
+| array_offset(arr,long) | returns the array element at the 0 based index supplied, or null for an out of range index|
+| array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
+| array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
+| array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
+| array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
+| array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
+| array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
+| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
 ## Apply Functions
 
 | function | description |
 | --- | --- |
-| `map(lambda,arr)` | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
-| `cartesian_map(lambda,arr1,arr2,...)` | applies a transform specified by a multi argument lambda expression to all elements of the cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
-| `filter(lambda,arr)` | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
-| `fold(lambda,arr)` | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
-| `cartesian_fold(lambda,arr1,arr2,...)` | folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
-| `any(lambda,arr)` | returns true if any element in the array matches the lambda expression |
-| `all(lambda,arr)` | returns true if all elements in the array matches the lambda expression |
+| map(lambda,arr) | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
+| cartesian_map(lambda,arr1,arr2,...) | applies a transform specified by a multi argument lambda expression to all elements of the cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
+| filter(lambda,arr) | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
+| fold(lambda,arr) | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
+| cartesian_fold(lambda,arr1,arr2,...) | folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
+| all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |

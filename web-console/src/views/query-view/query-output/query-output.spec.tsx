@@ -16,18 +16,14 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const queryOutput = <QueryOutput
-      loading={false}
-      result={null}
-      error="lol"
-    />;
+    const queryOutput = <QueryOutput loading={false} result={null} error="lol" />;
 
     const { container } = render(queryOutput);
     expect(container.firstChild).toMatchSnapshot();

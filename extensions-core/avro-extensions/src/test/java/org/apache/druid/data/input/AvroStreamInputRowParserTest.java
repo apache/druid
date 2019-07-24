@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.schemarepo.InMemoryRepository;
@@ -67,8 +68,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import static org.junit.Assert.assertEquals;
 
 public class AvroStreamInputRowParserTest
 {
@@ -123,9 +122,9 @@ public class AvroStreamInputRowParserTest
   private static final long SUB_LONG_VALUE = 1543698L;
   private static final int SUB_INT_VALUE = 4892;
   private static final MySubRecord SOME_RECORD_VALUE = MySubRecord.newBuilder()
-                                                                 .setSubInt(SUB_INT_VALUE)
-                                                                 .setSubLong(SUB_LONG_VALUE)
-                                                                 .build();
+                                                                  .setSubInt(SUB_INT_VALUE)
+                                                                  .setSubLong(SUB_LONG_VALUE)
+                                                                  .build();
   private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1");
   private static final List<Integer> SOME_INT_ARRAY_VALUE = Arrays.asList(1, 2, 4, 8);
   private static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
@@ -181,7 +180,7 @@ public class AvroStreamInputRowParserTest
         ByteBufferInputRowParser.class
     );
 
-    assertEquals(parser, parser2);
+    Assert.assertEquals(parser, parser2);
   }
 
   @Test
@@ -204,7 +203,7 @@ public class AvroStreamInputRowParserTest
 
     // encode schema id
     Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
-    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<Integer, Schema, String>(
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<>(
         repository,
         new IntegerConverter(),
         new AvroSchemaConverter(),
@@ -269,25 +268,28 @@ public class AvroStreamInputRowParserTest
 
   static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions)
   {
-    assertEquals(expectedDimensions, inputRow.getDimensions());
-    assertEquals(1543698L, inputRow.getTimestampFromEpoch());
+    Assert.assertEquals(expectedDimensions, inputRow.getDimensions());
+    Assert.assertEquals(1543698L, inputRow.getTimestampFromEpoch());
 
     // test dimensions
-    assertEquals(Collections.singletonList(EVENT_TYPE_VALUE), inputRow.getDimension(EVENT_TYPE));
-    assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
-    assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
-    assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
-    assertEquals(
+    Assert.assertEquals(Collections.singletonList(EVENT_TYPE_VALUE), inputRow.getDimension(EVENT_TYPE));
+    Assert.assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
+    Assert.assertEquals(
+        Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)),
+        inputRow.getDimension(SOME_OTHER_ID)
+    );
+    Assert.assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
+    Assert.assertEquals(
         Lists.transform(SOME_INT_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someIntArray")
     );
-    assertEquals(
+    Assert.assertEquals(
         Lists.transform(SOME_STRING_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someStringArray")
     );
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
-    assertEquals(1, inputRow.getDimension("someIntValueMap").size());
-    assertEquals(
+    Assert.assertEquals(1, inputRow.getDimension("someIntValueMap").size());
+    Assert.assertEquals(
         SOME_INT_VALUE_MAP_VALUE,
         new HashMap<CharSequence, Integer>(
             Maps.transformValues(
@@ -307,7 +309,7 @@ public class AvroStreamInputRowParserTest
             )
         )
     );
-    assertEquals(
+    Assert.assertEquals(
         SOME_STRING_VALUE_MAP_VALUE,
         new HashMap<CharSequence, CharSequence>(
             Splitter
@@ -316,43 +318,46 @@ public class AvroStreamInputRowParserTest
                 .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll(""))
         )
     );
-    assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
-    assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
-    assertEquals(SOME_FIXED_VALUE, inputRow.getRaw("someFixed"));
-    assertEquals(
+    Assert.assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
+    Assert.assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
+    Assert.assertEquals(SOME_FIXED_VALUE, inputRow.getRaw("someFixed"));
+    Assert.assertEquals(
         Arrays.toString(SOME_BYTES_VALUE.array()),
         Arrays.toString((byte[]) (inputRow.getRaw("someBytes")))
     );
-    assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
-    assertEquals(Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)), inputRow.getDimension("someRecord"));
+    Assert.assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
+    Assert.assertEquals(
+        Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)),
+        inputRow.getDimension("someRecord")
+    );
 
     // test metrics
-    assertEquals(SOME_FLOAT_VALUE, inputRow.getMetric("someFloat").floatValue(), 0);
-    assertEquals(SOME_LONG_VALUE, inputRow.getMetric("someLong"));
-    assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
+    Assert.assertEquals(SOME_FLOAT_VALUE, inputRow.getMetric("someFloat").floatValue(), 0);
+    Assert.assertEquals(SOME_LONG_VALUE, inputRow.getMetric("someLong"));
+    Assert.assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
   public static SomeAvroDatum buildSomeAvroDatum()
   {
     return SomeAvroDatum.newBuilder()
-                                   .setTimestamp(DATE_TIME.getMillis())
-                                   .setEventType(EVENT_TYPE_VALUE)
-                                   .setId(ID_VALUE)
-                                   .setSomeOtherId(SOME_OTHER_ID_VALUE)
-                                   .setIsValid(true)
-                                   .setSomeFloat(SOME_FLOAT_VALUE)
-                                   .setSomeInt(SOME_INT_VALUE)
-                                   .setSomeLong(SOME_LONG_VALUE)
-                                   .setSomeIntArray(SOME_INT_ARRAY_VALUE)
-                                   .setSomeStringArray(SOME_STRING_ARRAY_VALUE)
-                                   .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
-                                   .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
-                                   .setSomeUnion(SOME_UNION_VALUE)
-                                   .setSomeFixed(SOME_FIXED_VALUE)
-                                   .setSomeBytes(SOME_BYTES_VALUE)
-                                   .setSomeNull(null)
-                                   .setSomeEnum(MyEnum.ENUM1)
-                                   .setSomeRecord(SOME_RECORD_VALUE)
-                                   .build();
+                        .setTimestamp(DATE_TIME.getMillis())
+                        .setEventType(EVENT_TYPE_VALUE)
+                        .setId(ID_VALUE)
+                        .setSomeOtherId(SOME_OTHER_ID_VALUE)
+                        .setIsValid(true)
+                        .setSomeFloat(SOME_FLOAT_VALUE)
+                        .setSomeInt(SOME_INT_VALUE)
+                        .setSomeLong(SOME_LONG_VALUE)
+                        .setSomeIntArray(SOME_INT_ARRAY_VALUE)
+                        .setSomeStringArray(SOME_STRING_ARRAY_VALUE)
+                        .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
+                        .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
+                        .setSomeUnion(SOME_UNION_VALUE)
+                        .setSomeFixed(SOME_FIXED_VALUE)
+                        .setSomeBytes(SOME_BYTES_VALUE)
+                        .setSomeNull(null)
+                        .setSomeEnum(MyEnum.ENUM1)
+                        .setSomeRecord(SOME_RECORD_VALUE)
+                        .build();
   }
 }

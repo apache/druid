@@ -20,7 +20,7 @@ import { deepDelete, deepSet } from './object-change';
 
 export interface QueryContext {
   useCache?: boolean | undefined;
-  populateCache?: boolean  | undefined;
+  populateCache?: boolean | undefined;
   useApproximateCountDistinct?: boolean | undefined;
   useApproximateTopN?: boolean | undefined;
 }
@@ -55,7 +55,10 @@ export function getUseApproximateCountDistinct(context: QueryContext): boolean {
   return typeof useApproximateCountDistinct === 'boolean' ? useApproximateCountDistinct : true;
 }
 
-export function setUseApproximateCountDistinct(context: QueryContext, useApproximateCountDistinct: boolean): QueryContext {
+export function setUseApproximateCountDistinct(
+  context: QueryContext,
+  useApproximateCountDistinct: boolean,
+): QueryContext {
   if (useApproximateCountDistinct) {
     return deepDelete(context, 'useApproximateCountDistinct');
   } else {
@@ -70,7 +73,10 @@ export function getUseApproximateTopN(context: QueryContext): boolean {
   return typeof useApproximateTopN === 'boolean' ? useApproximateTopN : true;
 }
 
-export function setUseApproximateTopN(context: QueryContext, useApproximateTopN: boolean): QueryContext {
+export function setUseApproximateTopN(
+  context: QueryContext,
+  useApproximateTopN: boolean,
+): QueryContext {
   if (useApproximateTopN) {
     return deepDelete(context, 'useApproximateTopN');
   } else {

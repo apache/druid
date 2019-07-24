@@ -16,23 +16,24 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TaskTableActionDialog } from './task-table-action-dialog';
 
-const basicAction = {title: 'test', onAction: () => null};
+const basicAction = { title: 'test', onAction: () => null };
 describe('task table action dialog', () => {
   it('matches snapshot', () => {
-    const taskTableActionDialog =
+    const taskTableActionDialog = (
       <TaskTableActionDialog
         status={'RUNNING'}
         taskId={'test'}
         actions={[basicAction]}
         onClose={() => null}
         isOpen
-      />;
-    const { container } = render(taskTableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+      />
+    );
+    render(taskTableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

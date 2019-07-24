@@ -25,7 +25,7 @@ export class QueryState<T> {
   public error?: string | null;
   public data?: T | null;
 
-  constructor(opts: { loading?: boolean, error?: string, data?: T }) {
+  constructor(opts: { loading?: boolean; error?: string; data?: T }) {
     if (opts.error) {
       if (opts.data) {
         throw new Error('can not have both error and data');

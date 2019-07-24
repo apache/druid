@@ -28,12 +28,16 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
   decodeRune,
-  downloadFile, getDruidErrorMessage,
+  downloadFile,
+  getDruidErrorMessage,
   HeaderRows,
-  localStorageGet, LocalStorageKeys,
-  localStorageSet, parseQueryPlan,
-  queryDruidSql, QueryManager,
-  SemiJoinQueryExplanation
+  localStorageGet,
+  LocalStorageKeys,
+  localStorageSet,
+  parseQueryPlan,
+  queryDruidSql,
+  QueryManager,
+  SemiJoinQueryExplanation,
 } from '../../utils';
 import { ColumnMetadata } from '../../utils/column-metadata';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
@@ -52,8 +56,8 @@ interface QueryWithContext {
   wrapQuery?: boolean;
 }
 
-export interface QueryViewProps extends React.Props<any> {
-  initQuery: string | null;
+export interface QueryViewProps {
+  initQuery: string | undefined;
 }
 
 export interface QueryViewState {
@@ -102,16 +106,25 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   static formatStr(s: string | number, format: 'csv' | 'tsv') {
     if (format === 'csv') {
       // remove line break, single quote => double quote, handle ','
-      return `"${String(s).replace(/(?:\r\n|\r|\n)/g, ' ').replace(/"/g, '""')}"`;
-    } else { // tsv
+      return `"${String(s)
+        .replace(/(?:\r\n|\r|\n)/g, ' ')
+        .replace(/"/g, '""')}"`;
+    } else {
+      // tsv
       // remove line break, single quote => double quote, \t => ''
-      return String(s).replace(/(?:\r\n|\r|\n)/g, ' ').replace(/\t/g, '').replace(/"/g, '""');
+      return String(s)
+        .replace(/(?:\r\n|\r|\n)/g, ' ')
+        .replace(/\t/g, '')
+        .replace(/"/g, '""');
     }
   }
 
-  private metadataQueryManager: QueryManager<string, ColumnMetadata[]>;
+  private metadataQueryManager: QueryManager<null, ColumnMetadata[]>;
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
-  private explainQueryManager: QueryManager<QueryWithContext, BasicQueryExplanation | SemiJoinQueryExplanation | string>;
+  private explainQueryManager: QueryManager<
+    QueryWithContext,
+    BasicQueryExplanation | SemiJoinQueryExplanation | string
+  >;
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
@@ -131,36 +144,32 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       explainDialogOpen: false,
       loadingExplain: false,
       explainResult: null,
-      explainError: null
+      explainError: null,
     };
-  }
 
-  componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async () => {
         return await queryDruidSql<ColumnMetadata>({
-          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`
+          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
         });
       },
       onStateChange: ({ result, loading, error }) => {
         if (error) {
           AppToaster.show({
             message: 'Could not load SQL metadata',
-            intent: Intent.DANGER
+            intent: Intent.DANGER,
           });
         }
         this.setState({
           columnMetadataLoading: loading,
           columnMetadata: result,
-          columnMetadataError: error
+          columnMetadataError: error,
         });
-      }
+      },
     });
 
-    this.metadataQueryManager.runQuery('dummy');
-
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (queryWithContext: QueryWithContext) => {
+      processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
         let queryId: string | null = null;
         let sqlQueryId: string | null = null;
@@ -186,18 +195,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           }
 
           queryResult = decodeRune(runeQuery, runeResult);
-
         } else {
-          const actualQuery = wrapQuery ?
-            `SELECT * FROM (${QueryView.trimSemicolon(queryString)}\n) LIMIT 1000` :
-            queryString;
+          const actualQuery = wrapQuery
+            ? `SELECT * FROM (${QueryView.trimSemicolon(queryString)}\n) LIMIT 1000`
+            : queryString;
 
           if (wrapQuery) wrappedLimit = 1000;
 
           const queryPayload: Record<string, any> = {
             query: actualQuery,
             resultFormat: 'array',
-            header: true
+            header: true,
           };
 
           if (!isEmptyContext(queryContext)) queryPayload.context = queryContext;
@@ -212,8 +220,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           }
 
           queryResult = {
-            header: (sqlResult && sqlResult.length) ? sqlResult[0] : [],
-            rows: (sqlResult && sqlResult.length) ? sqlResult.slice(1) : []
+            header: sqlResult && sqlResult.length ? sqlResult[0] : [],
+            rows: sqlResult && sqlResult.length ? sqlResult.slice(1) : [],
           };
         }
 
@@ -225,8 +233,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             startTime,
             endTime,
             numResults: queryResult.rows.length,
-            wrappedLimit
-          }
+            wrappedLimit,
+          },
         };
       },
       onStateChange: ({ result, loading, error }) => {
@@ -234,9 +242,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           result: result ? result.queryResult : null,
           queryExtraInfo: result ? result.queryExtraInfo : null,
           loading,
-          error
+          error,
         });
-      }
+      },
     });
 
     this.explainQueryManager = new QueryManager({
@@ -244,7 +252,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         const { queryString, queryContext } = queryWithContext;
         const explainPayload: Record<string, any> = {
           query: `EXPLAIN PLAN FOR (${QueryView.trimSemicolon(queryString)}\n)`,
-          resultFormat: 'object'
+          resultFormat: 'object',
         };
 
         if (!isEmptyContext(queryContext)) explainPayload.context = queryContext;
@@ -256,10 +264,14 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         this.setState({
           explainResult: result,
           loadingExplain: loading,
-          explainError: error !== null ? new Error(error) : null
+          explainError: error !== null ? new Error(error) : null,
         });
-      }
+      },
     });
+  }
+
+  componentDidMount(): void {
+    this.metadataQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
@@ -277,8 +289,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (format === 'csv' || format === 'tsv') {
       separator = format === 'csv' ? ',' : '\t';
       lines.push(result.header.map(str => QueryView.formatStr(str, format)).join(separator));
-      lines = lines.concat(result.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)));
-    } else { // json
+      lines = lines.concat(
+        result.rows.map(r => r.map(cell => QueryView.formatStr(cell, format)).join(separator)),
+      );
+    } else {
+      // json
       lines = result.rows.map(r => {
         const outputObject: Record<string, any> = {};
         for (let k = 0; k < r.length; k++) {
@@ -293,71 +308,77 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     const lineBreak = '\n';
     downloadFile(lines.join(lineBreak), format, filename);
-  }
+  };
 
   renderExplainDialog() {
-    const {explainDialogOpen, explainResult, loadingExplain, explainError} = this.state;
+    const { explainDialogOpen, explainResult, loadingExplain, explainError } = this.state;
     if (!loadingExplain && explainDialogOpen) {
-      return <QueryPlanDialog
-        explainResult={explainResult}
-        explainError={explainError}
-        onClose={() => this.setState({explainDialogOpen: false})}
-      />;
+      return (
+        <QueryPlanDialog
+          explainResult={explainResult}
+          explainError={explainError}
+          onClose={() => this.setState({ explainDialogOpen: false })}
+        />
+      );
     }
     return null;
   }
 
   renderMainArea() {
-    const { queryString, queryContext, loading, result, queryExtraInfo, error, columnMetadata } = this.state;
+    const {
+      queryString,
+      queryContext,
+      loading,
+      result,
+      queryExtraInfo,
+      error,
+      columnMetadata,
+    } = this.state;
     const runeMode = QueryView.isRune(queryString);
 
-    return <SplitterLayout
-      vertical
-      percentage
-      secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60}
-      primaryMinSize={30}
-      secondaryMinSize={30}
-      onSecondaryPaneSizeChange={this.handleSecondaryPaneSizeChange}
-    >
-      <div className="control-pane">
-        <QueryInput
-          queryString={queryString}
-          onQueryStringChange={this.handleQueryStringChange}
-          runeMode={runeMode}
-          columnMetadata={columnMetadata}
-        />
-        <div className="control-bar">
-          <RunButton
+    return (
+      <SplitterLayout
+        vertical
+        percentage
+        secondaryInitialSize={
+          Number(localStorageGet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE) as string) || 60
+        }
+        primaryMinSize={30}
+        secondaryMinSize={30}
+        onSecondaryPaneSizeChange={this.handleSecondaryPaneSizeChange}
+      >
+        <div className="control-pane">
+          <QueryInput
+            queryString={queryString}
+            onQueryStringChange={this.handleQueryStringChange}
             runeMode={runeMode}
-            queryContext={queryContext}
-            onQueryContextChange={this.handleQueryContextChange}
-            onRun={this.handleRun}
-            onExplain={this.handleExplain}
+            columnMetadata={columnMetadata}
           />
-          {
-            queryExtraInfo &&
-            <QueryExtraInfo
-              queryExtraInfo={queryExtraInfo}
-              onDownload={this.handleDownload}
+          <div className="control-bar">
+            <RunButton
+              runeMode={runeMode}
+              queryContext={queryContext}
+              onQueryContextChange={this.handleQueryContextChange}
+              onRun={this.handleRun}
+              onExplain={this.handleExplain}
             />
-          }
+            {queryExtraInfo && (
+              <QueryExtraInfo queryExtraInfo={queryExtraInfo} onDownload={this.handleDownload} />
+            )}
+          </div>
         </div>
-      </div>
-      <QueryOutput
-        loading={loading}
-        result={result}
-        error={error}
-      />
-    </SplitterLayout>;
+        <QueryOutput loading={loading} result={result} error={error} />
+      </SplitterLayout>
+    );
   }
 
   private handleQueryStringChange = (queryString: string): void => {
     this.setState({ queryString });
-  }
+  };
 
   private handleQueryContextChange = (queryContext: QueryContext) => {
     this.setState({ queryContext });
-  }
+  };
 
   private handleRun = (wrapQuery: boolean) => {
     const { queryString, queryContext } = this.state;
@@ -366,32 +387,35 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
     this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQuery });
-  }
+  };
 
   private handleExplain = () => {
     const { queryString, queryContext } = this.state;
     this.setState({ explainDialogOpen: true });
     this.explainQueryManager.runQuery({ queryString, queryContext });
-  }
+  };
 
   private handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
-  }
+  };
 
   render() {
     const { columnMetadata, columnMetadataLoading, columnMetadataError } = this.state;
 
-    return <div className={classNames('query-view app-view', { 'hide-column-tree': columnMetadataError })}>
-      {
-        !columnMetadataError &&
-        <ColumnTree
-          columnMetadataLoading={columnMetadataLoading}
-          columnMetadata={columnMetadata}
-          onQueryStringChange={this.handleQueryStringChange}
-        />
-      }
-      {this.renderMainArea()}
-      {this.renderExplainDialog()}
-    </div>;
+    return (
+      <div
+        className={classNames('query-view app-view', { 'hide-column-tree': columnMetadataError })}
+      >
+        {!columnMetadataError && (
+          <ColumnTree
+            columnMetadataLoading={columnMetadataLoading}
+            columnMetadata={columnMetadata}
+            onQueryStringChange={this.handleQueryStringChange}
+          />
+        )}
+        {this.renderMainArea()}
+        {this.renderExplainDialog()}
+      </div>
+    );
   }
 }

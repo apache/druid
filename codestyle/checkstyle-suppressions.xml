@@ -29,9 +29,6 @@
   <!-- Code copied from TestNG to apply a bugfix -->
   <suppress checks="AvoidStaticImport" files="[\\/]org[\\/]testng[\\/]" />
 
-  <!-- Our tests have many legacy usages of static imports; enforcement is impratical until those are removed. -->
-  <suppress checks="AvoidStaticImport" files="[\\/]src[\\/]test[\\/]" />
-
   <suppress checks="Header" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="NeedBraces" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="UnusedImports" files="[\\/]target[\\/]generated-test-sources[\\/]" />

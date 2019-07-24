@@ -20,14 +20,13 @@
 package org.apache.druid.storage.azure;
 
 import com.microsoft.azure.storage.StorageException;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
-
-import static org.easymock.EasyMock.expect;
 
 public class AzureByteSourceTest extends EasyMockSupport
 {
@@ -40,7 +39,7 @@ public class AzureByteSourceTest extends EasyMockSupport
     AzureStorage azureStorage = createMock(AzureStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(azureStorage.getBlobInputStream(containerName, blobPath)).andReturn(stream);
+    EasyMock.expect(azureStorage.getBlobInputStream(containerName, blobPath)).andReturn(stream);
 
     replayAll();
 
@@ -58,7 +57,7 @@ public class AzureByteSourceTest extends EasyMockSupport
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
 
-    expect(azureStorage.getBlobInputStream(containerName, blobPath)).andThrow(
+    EasyMock.expect(azureStorage.getBlobInputStream(containerName, blobPath)).andThrow(
         new StorageException(
             "",
             "",

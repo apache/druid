@@ -23,7 +23,7 @@ import { AutoForm } from '../../components';
 
 import './compaction-dialog.scss';
 
-export interface CompactionDialogProps extends React.Props<any> {
+export interface CompactionDialogProps {
   onClose: () => void;
   onSave: (config: any) => void;
   onDelete: () => void;
@@ -36,12 +36,15 @@ export interface CompactionDialogState {
   allJSONValid: boolean;
 }
 
-export class CompactionDialog extends React.PureComponent<CompactionDialogProps, CompactionDialogState> {
+export class CompactionDialog extends React.PureComponent<
+  CompactionDialogProps,
+  CompactionDialogState
+> {
   constructor(props: CompactionDialogProps) {
     super(props);
     this.state = {
       currentConfig: null,
-      allJSONValid: true
+      allJSONValid: true,
     };
   }
 
@@ -55,81 +58,80 @@ export class CompactionDialog extends React.PureComponent<CompactionDialogProps,
       targetCompactionSizeBytes: 419430400,
       taskContext: null,
       taskPriority: 25,
-      tuningConfig: null
+      tuningConfig: null,
     };
     if (configData !== undefined) {
       config = configData;
     }
     this.setState({
-      currentConfig: config
+      currentConfig: config,
     });
   }
 
   render() {
     const { onClose, onSave, onDelete, datasource, configData } = this.props;
     const { currentConfig, allJSONValid } = this.state;
-    return <Dialog
-      className="compaction-dialog"
-      isOpen
-      onClose={onClose}
-      canOutsideClickClose={false}
-      title={`Compaction config: ${datasource}`}
-    >
-      <AutoForm
-        fields={[
-          {
-            name: 'inputSegmentSizeBytes',
-            type: 'number'
-          },
-          {
-            name: 'maxNumSegmentsToCompact',
-            type: 'number'
-          },
-          {
-            name: 'skipOffsetFromLatest',
-            type: 'string'
-          },
-          {
-            name: 'targetCompactionSizeBytes',
-            type: 'number'
-          },
-          {
-            name: 'taskContext',
-            type: 'json'
-          },
-          {
-            name: 'taskPriority',
-            type: 'number'
-          },
-          {
-            name: 'tuningConfig',
-            type: 'json'
-          }
-        ]}
-        model={currentConfig}
-        onChange={m => this.setState({currentConfig: m})}
-        updateJSONValidity={e => this.setState({allJSONValid: e})}
-      />
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Delete"
-            intent={Intent.DANGER}
-            onClick={onDelete}
-            disabled={configData === undefined}
-          />
-          <Button
-            text="Close"
-            onClick={onClose}
-          />
-          <Button
-            text="Submit"
-            intent={Intent.PRIMARY}
-            onClick={() => onSave(currentConfig)}
-            disabled={currentConfig === null || !allJSONValid}
-          />
+    return (
+      <Dialog
+        className="compaction-dialog"
+        isOpen
+        onClose={onClose}
+        canOutsideClickClose={false}
+        title={`Compaction config: ${datasource}`}
+      >
+        <AutoForm
+          fields={[
+            {
+              name: 'inputSegmentSizeBytes',
+              type: 'number',
+            },
+            {
+              name: 'maxNumSegmentsToCompact',
+              type: 'number',
+            },
+            {
+              name: 'skipOffsetFromLatest',
+              type: 'string',
+            },
+            {
+              name: 'targetCompactionSizeBytes',
+              type: 'number',
+            },
+            {
+              name: 'taskContext',
+              type: 'json',
+            },
+            {
+              name: 'taskPriority',
+              type: 'number',
+            },
+            {
+              name: 'tuningConfig',
+              type: 'json',
+            },
+          ]}
+          model={currentConfig}
+          onChange={m => this.setState({ currentConfig: m })}
+          updateJSONValidity={e => this.setState({ allJSONValid: e })}
+        />
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button
+              text="Delete"
+              intent={Intent.DANGER}
+              onClick={onDelete}
+              disabled={configData === undefined}
+            />
+            <Button text="Close" onClick={onClose} />
+            <Button
+              text="Submit"
+              intent={Intent.PRIMARY}
+              onClick={() => onSave(currentConfig)}
+              disabled={currentConfig === null || !allJSONValid}
+            />
+          </div>
         </div>
-      </div>
-    </Dialog>;
+      </Dialog>
+    );
   }
 }

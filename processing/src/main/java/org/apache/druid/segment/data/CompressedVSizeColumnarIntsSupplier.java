@@ -289,7 +289,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** buffer's position must be 0 */
+    /**
+     * buffer's position must be 0
+     */
     ByteBuffer buffer;
     boolean bigEndian;
 
@@ -320,6 +322,66 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
       }
 
       return _get(buffer, bigEndian, bufferIndex);
+    }
+
+    @Override
+    public void get(int[] out, int start, int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = (start + p) >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = start + i;
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
+    }
+
+    @Override
+    public void get(final int[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = indexes[p] >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = indexes[i];
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
     }
 
     /**

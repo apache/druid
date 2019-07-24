@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -24,44 +24,46 @@ import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
 import './table-column-selector.scss';
 
-interface TableColumnSelectorProps extends React.Props<any> {
+interface TableColumnSelectorProps {
   columns: string[];
   onChange: (column: string) => void;
   tableColumnsHidden: string[];
 }
 
-interface TableColumnSelectorState {
+interface TableColumnSelectorState {}
 
-}
-
-export class TableColumnSelector extends React.PureComponent<TableColumnSelectorProps, TableColumnSelectorState> {
-
+export class TableColumnSelector extends React.PureComponent<
+  TableColumnSelectorProps,
+  TableColumnSelectorState
+> {
   constructor(props: TableColumnSelectorProps) {
     super(props);
-    this.state = {
-
-    };
+    this.state = {};
   }
 
   render() {
     const { columns, onChange, tableColumnsHidden } = this.props;
-    const checkboxes = <Menu className="table-column-selector-menu">
-      {columns.map(column => (
-        <MenuCheckbox
-          label={column}
-          key={column}
-          checked={!tableColumnsHidden.includes(column)}
-          onChange={() => onChange(column)}
-        />
-      ))}
-    </Menu>;
+    const checkboxes = (
+      <Menu className="table-column-selector-menu">
+        {columns.map(column => (
+          <MenuCheckbox
+            label={column}
+            key={column}
+            checked={!tableColumnsHidden.includes(column)}
+            onChange={() => onChange(column)}
+          />
+        ))}
+      </Menu>
+    );
 
-    return <Popover
-      className="table-column-selector"
-      content={checkboxes}
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button rightIcon={IconNames.CARET_DOWN} text="Columns"/>
-    </Popover>;
+    return (
+      <Popover
+        className="table-column-selector"
+        content={checkboxes}
+        position={Position.BOTTOM_RIGHT}
+      >
+        <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
+      </Popover>
+    );
   }
 }

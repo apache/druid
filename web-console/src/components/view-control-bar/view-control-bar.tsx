@@ -32,9 +32,11 @@ export class ViewControlBar extends React.PureComponent<ViewControlBarProps> {
   render() {
     const { label, children } = this.props;
 
-    return <div className="view-control-bar">
-      <div className="control-label">{label}</div>
-      {children}
-    </div>;
+    return (
+      <div className="view-control-bar">
+        <div className="control-label">{label}</div>
+        {children}
+      </div>
+    );
   }
 }

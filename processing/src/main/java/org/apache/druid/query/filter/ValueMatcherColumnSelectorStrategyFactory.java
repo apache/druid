@@ -49,7 +49,7 @@ public class ValueMatcherColumnSelectorStrategyFactory
     ValueType type = capabilities.getType();
     switch (type) {
       case STRING:
-        return new StringValueMatcherColumnSelectorStrategy();
+        return new StringValueMatcherColumnSelectorStrategy(capabilities.hasMultipleValues());
       case LONG:
         return new LongValueMatcherColumnSelectorStrategy();
       case FLOAT:

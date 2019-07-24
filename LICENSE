@@ -304,7 +304,7 @@ SOURCE/WEB-CONSOLE
 
 SOURCE/JAVA-CORE
     This product contains Porter stemmer adapted from a Javascript Porter Stemmer (https://github.com/kristopolous/Porter-Stemmer)
-     which is available under a BSD-3-Clause License.
+     which is available under a BSD-3-Clause License. For details, see licenses/src/porter-stemmer.BSD3.
       * processing/src/test/java/org/apache/druid/query/extraction/JavaScriptExtractionFnTest.java
 
 Public Domain

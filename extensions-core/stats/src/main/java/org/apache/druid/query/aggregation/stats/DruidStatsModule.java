@@ -65,9 +65,6 @@ public class DruidStatsModule implements DruidModule
       SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSampSqlAggregator.class);
       SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSqlAggregator.class);
     }
-
-    if (ComplexMetrics.getSerdeForType("variance") == null) {
-      ComplexMetrics.registerSerde("variance", new VarianceSerde());
-    }
+    ComplexMetrics.registerSerde("variance", new VarianceSerde());
   }
 }

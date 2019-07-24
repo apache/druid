@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TableColumnSelector } from './table-column-selector';
 
 describe('table column', () => {
   it('matches snapshot', () => {
-    const tableColumn =
+    const tableColumn = (
       <TableColumnSelector
         columns={['a', 'b', 'c']}
-        onChange={(column: string) => {}}
+        onChange={() => {}}
         tableColumnsHidden={['a', 'b', 'c']}
-      />;
+      />
+    );
     const { container } = render(tableColumn);
     expect(container.firstChild).toMatchSnapshot();
   });
