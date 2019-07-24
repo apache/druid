@@ -80,7 +80,7 @@ class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 
       for (SegmentIdWithShardSpec segmentIdentifier : idsPerInterval) {
         shardSpecMap.computeIfAbsent(interval, k -> new ArrayList<>()).add(segmentIdentifier.getShardSpec());
-        // The shardSpecs for partitinoing and publishing can be different if isExtendableShardSpecs = true.
+        // The shardSpecs for partitioning and publishing can be different if isExtendableShardSpecs = true.
         sequenceNameToSegmentId.put(getSequenceName(interval, segmentIdentifier.getShardSpec()), segmentIdentifier);
       }
     }

@@ -55,8 +55,8 @@ import java.util.stream.StreamSupport;
 
 /**
  * Abstract class for batch tasks like {@link IndexTask}.
- * Provides some methods ({@link #determineSegmentGranularity} and {@link #determineSegmentGranularity}) for easily acquiring task
- * locks.
+ * Provides some methods such as {@link #determineSegmentGranularity}, {@link #findInputSegments},
+ * and {@link #determineLockGranularityandTryLock} for easily acquiring task locks.
  */
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
@@ -155,7 +155,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
     } else {
       if (!intervals.isEmpty()) {
-        final LockGranularityDeterminResult result = determineSegmentGranularity(client, intervals);
+        final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
         useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
         return tryLockWithDetermineResult(client, result);
       } else {
@@ -179,19 +179,19 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
       );
     } else {
-      final LockGranularityDeterminResult result = determineSegmentGranularity(segments);
+      final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
       useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
       return tryLockWithDetermineResult(client, result);
     }
   }
 
-  private LockGranularityDeterminResult determineSegmentGranularity(TaskActionClient client, List<Interval> intervals)
+  private LockGranularityDetermineResult determineSegmentGranularity(TaskActionClient client, List<Interval> intervals)
       throws IOException
   {
     if (requireLockExistingSegments()) {
       if (isPerfectRollup()) {
-        log.info("Using timeChunk lock for perfrect rollup");
-        return new LockGranularityDeterminResult(LockGranularity.TIME_CHUNK, intervals, null);
+        log.info("Using timeChunk lock for perfect rollup");
+        return new LockGranularityDetermineResult(LockGranularity.TIME_CHUNK, intervals, null);
       } else if (!intervals.isEmpty()) {
         // This method finds segments falling in all given intervals and then tries to lock those segments.
         // Thus, there might be a race between calling findSegmentsToLock() and determineSegmentGranularity(),
@@ -202,15 +202,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         return determineSegmentGranularity(findSegmentsToLock(client, intervals));
       } else {
         log.info("Using segment lock for empty intervals");
-        return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
+        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, Collections.emptyList());
       }
     } else {
       log.info("Using segment lock since we don't have to lock existing segments");
-      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
+      return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
   }
 
-  private boolean tryLockWithDetermineResult(TaskActionClient client, LockGranularityDeterminResult result)
+  private boolean tryLockWithDetermineResult(TaskActionClient client, LockGranularityDetermineResult result)
       throws IOException
   {
     if (result.lockGranularity == LockGranularity.TIME_CHUNK) {
@@ -245,13 +245,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return true;
   }
 
-  private LockGranularityDeterminResult determineSegmentGranularity(List<DataSegment> segments)
+  private LockGranularityDetermineResult determineSegmentGranularity(List<DataSegment> segments)
   {
     if (segments.isEmpty()) {
       log.info("Using segment lock for empty segments");
       // Set useSegmentLock even though we don't get any locks.
       // Note that we should get any lock before data ingestion if we are supposed to use timChunk lock.
-      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
+      return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
 
     if (requireLockExistingSegments()) {
@@ -269,7 +269,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         // 2) Segment granularity in ingestion spec is different from the one of existig segments.
         // 3) Some existing segments are not aligned with the segment granularity in the ingestion spec.
         log.info("Detected segmentGranularity change. Using timeChunk lock");
-        return new LockGranularityDeterminResult(LockGranularity.TIME_CHUNK, intervals, null);
+        return new LockGranularityDetermineResult(LockGranularity.TIME_CHUNK, intervals, null);
       } else {
         // Use segment lock
         // Create a timeline to find latest segments only
@@ -285,13 +285,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             .map(PartitionChunk::getObject)
             .collect(Collectors.toList());
         log.info("No segmentGranularity change detected and it's not perfect rollup. Using segment lock");
-        return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, segmentsToLock);
+        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, segmentsToLock);
       }
     } else {
       // Set useSegmentLock even though we don't get any locks.
       // Note that we should get any lock before data ingestion if we are supposed to use timChunk lock.
       log.info("Using segment lock since we don't have to lock existing segments");
-      return new LockGranularityDeterminResult(LockGranularity.SEGMENT, null, Collections.emptyList());
+      return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, Collections.emptyList());
     }
   }
 
@@ -362,7 +362,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  private static class LockGranularityDeterminResult
+  private static class LockGranularityDetermineResult
   {
     private final LockGranularity lockGranularity;
     @Nullable
@@ -370,7 +370,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     @Nullable
     private final List<DataSegment> segments; // null for timeChunkLock
 
-    private LockGranularityDeterminResult(
+    private LockGranularityDetermineResult(
         LockGranularity lockGranularity,
         @Nullable List<Interval> intervals,
         @Nullable List<DataSegment> segments
