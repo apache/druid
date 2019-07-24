@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.select.SelectQueryConfig;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -64,9 +65,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -124,52 +123,52 @@ public class CachingClusteredClientFunctionalityTest
                                                             3
                                                         ));
 
-    Map<String, Object> responseContext = new HashMap<>();
+    ResponseContext responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
     builder.intervals("2015-01-01/2015-01-03");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 
-  private void assertUncovered(Map<String, Object> context, boolean uncoveredIntervalsOverflowed, String... intervals)
+  private void assertUncovered(ResponseContext context, boolean uncoveredIntervalsOverflowed, String... intervals)
   {
     List<Interval> expectedList = Lists.newArrayListWithExpectedSize(intervals.length);
     for (String interval : intervals) {
@@ -321,7 +320,7 @@ public class CachingClusteredClientFunctionalityTest
   private static <T> Sequence<T> runQuery(
       CachingClusteredClient client,
       final Query<T> query,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     return client.getQueryRunnerForIntervals(query, query.getIntervals()).run(

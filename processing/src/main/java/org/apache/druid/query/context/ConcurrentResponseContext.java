@@ -17,24 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.context;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.guice.annotations.PublicApi;
 
-@ExtensionPoint
-public interface QueryRunner<T>
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The implementation of {@link ResponseContext} with a {@link ConcurrentHashMap} as a delegate
+ */
+@PublicApi
+public class ConcurrentResponseContext extends ResponseContext
 {
-  /**
-   * Runs the given query and returns results in a time-ordered sequence.
-   */
-  Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext);
-  
-  @VisibleForTesting
-  default Sequence<T> run(QueryPlus<T> queryPlus)
+  public static ConcurrentResponseContext createEmpty()
   {
-    return this.run(queryPlus, ResponseContext.createEmpty());
+    return new ConcurrentResponseContext();
+  }
+
+  private final ConcurrentHashMap<String, Object> delegate = new ConcurrentHashMap<>();
+
+  @Override
+  protected Map<String, Object> getDelegate()
+  {
+    return delegate;
   }
 }

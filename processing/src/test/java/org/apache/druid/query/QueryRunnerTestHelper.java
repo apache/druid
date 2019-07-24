@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -430,7 +431,7 @@ public class QueryRunnerTestHelper
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
       {
         return runner.run(queryPlus, responseContext);
       }
@@ -454,7 +455,7 @@ public class QueryRunnerTestHelper
             new QueryRunner<T>()
             {
               @Override
-              public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+              public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
               {
                 Query<T> query = queryPlus.getQuery();
                 List<TimelineObjectHolder> segments = new ArrayList<>();
@@ -497,7 +498,7 @@ public class QueryRunnerTestHelper
         return new QueryRunner<T>()
         {
           @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {
             return delegate.run(queryPlus, responseContext);
           }
