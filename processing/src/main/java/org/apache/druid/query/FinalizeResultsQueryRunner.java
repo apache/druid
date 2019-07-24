@@ -27,8 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
  */
@@ -47,7 +46,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     final Query<T> query = queryPlus.getQuery();
     final boolean isBySegment = QueryContexts.isBySegment(query);

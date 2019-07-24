@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
@@ -61,7 +62,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -108,7 +108,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final QueryPlus<Row> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<Row> run(final QueryPlus<Row> queryPlus, final ResponseContext responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);

@@ -60,6 +60,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.server.QueryResource;
@@ -148,7 +149,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
         return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline);
       }
@@ -161,7 +162,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
    */
   private <T> Sequence<T> run(
       final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext,
+      final ResponseContext responseContext,
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
@@ -174,7 +175,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
         return CachingClusteredClient.this.run(
             queryPlus,
@@ -207,7 +208,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private class SpecificQueryRunnable<T>
   {
     private final QueryPlus<T> queryPlus;
-    private final Map<String, Object> responseContext;
+    private final ResponseContext responseContext;
     private final Query<T> query;
     private final QueryToolChest<T, Query<T>> toolChest;
     @Nullable
@@ -220,7 +221,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final List<Interval> intervals;
 
-    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
     {
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
@@ -357,8 +358,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // Which is not necessarily an indication that the data doesn't exist or is
         // incomplete. The data could exist and just not be loaded yet.  In either
         // case, though, this query will not include any data from the identified intervals.
-        responseContext.put("uncoveredIntervals", uncoveredIntervals);
-        responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
+        responseContext.put(ResponseContext.CTX_UNCOVERED_INTERVALS, uncoveredIntervals);
+        responseContext.put(ResponseContext.CTX_UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
       }
     }
 
@@ -395,7 +396,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
 
         String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
-        responseContext.put(QueryResource.HEADER_ETAG, currEtag);
+        responseContext.put(ResponseContext.CTX_ETAG, currEtag);
         return currEtag;
       } else {
         return null;

@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
@@ -32,7 +33,6 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -67,7 +67,7 @@ public class QueryRunnerHelper
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
       {
         return Sequences.withBaggage(runner.run(queryPlus, responseContext), closeable);
       }

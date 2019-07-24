@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.ObjLongConsumer;
 
@@ -83,7 +83,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();

@@ -39,6 +39,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -56,7 +57,6 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class GroupByStrategyV1 implements GroupByStrategy
@@ -112,7 +112,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     final IncrementalIndex index = GroupByQueryHelper.makeIncrementalIndex(

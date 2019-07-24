@@ -232,8 +232,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
-  private SortedDimensionDictionary sortedLookup;
   private boolean hasMultipleValues = false;
+
+  @Nullable
+  private SortedDimensionDictionary sortedLookup;
 
   public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
   {
@@ -252,7 +254,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       final int nullId = dimLookup.getId(null);
       encodedDimensionValues = nullId == ABSENT_VALUE_ID ? new int[]{dimLookup.add(null)} : new int[]{nullId};
     } else if (dimValues instanceof List) {
-      List<Object> dimValuesList = (List) dimValues;
+      List<Object> dimValuesList = (List<Object>) dimValues;
       if (dimValuesList.isEmpty()) {
         dimLookup.add(null);
         encodedDimensionValues = IntArrays.EMPTY_ARRAY;
