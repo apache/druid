@@ -406,7 +406,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   }
 
   @Override
-  public boolean isOvershadow(Sink other)
+  public boolean overshadows(Sink other)
   {
     // Sink is currently used in timeline only for querying stream data.
     // In this case, sinks never overshadow each other.

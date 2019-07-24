@@ -188,14 +188,22 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return findOvershadowedBy(rangeKeyOfGivenAug, aug.getMinorVersion(), fromState);
   }
 
+  /**
+   * Find all atomicUpdateGroups of the given state overshadowed by the given rootPartitionRange and minorVersion.
+   * The atomicUpdateGroup of a higher minorVersion can have a wider RootPartitionRange.
+   * To find all atomicUpdateGroups overshadowed by the given rootPartitionRange and minorVersion,
+   * we first need to find the first key contained by the given rootPartitionRange.
+   * Once we find such key, then we go through the entire map until we see an atomicUpdateGroup of which
+   * rootRangePartition is not contained by the given rootPartitionRange.
+   */
   private List<Short2ObjectMap.Entry<AtomicUpdateGroup<T>>> findOvershadowedBy(
       RootPartitionRange rangeOfAug,
       short minorVersion,
       State fromState
   )
   {
-    Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = getStateMap(fromState)
-        .floorEntry(rangeOfAug);
+    final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap = getStateMap(fromState);
+    Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = stateMap.floorEntry(rangeOfAug);
 
     if (current == null) {
       return Collections.emptyList();
@@ -203,8 +211,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
     // Find the first key for searching for overshadowed atomicUpdateGroup
     while (true) {
-      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> lowerEntry = getStateMap(fromState)
-          .lowerEntry(current.getKey());
+      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> lowerEntry = stateMap.lowerEntry(
+          current.getKey()
+      );
       if (lowerEntry != null && lowerEntry.getKey().startPartitionId == rangeOfAug.startPartitionId) {
         current = lowerEntry;
       } else {
@@ -212,11 +221,20 @@ class OvershadowableManager<T extends Overshadowable<T>>
       }
     }
 
+    // Going through the map to find all entries of the RootPartitionRange contained by the given rangeOfAug.
+    // Note that RootPartitionRange of entries are always consecutive.
     final List<Short2ObjectMap.Entry<AtomicUpdateGroup<T>>> found = new ArrayList<>();
     while (current != null && rangeOfAug.contains(current.getKey())) {
+      // versionToGroup is sorted by minorVersion.
+      // versionToGroup.subMap(firstKey, minorVersion) below returns a map containing all entries of lower minorVersions
+      // than the given minorVersion.
       final Short2ObjectSortedMap<AtomicUpdateGroup<T>> versionToGroup = current.getValue();
+      // Short2ObjectRBTreeMap.SubMap.short2ObjectEntrySet() implementation, especially size(), is not optimized.
+      // Note that size() is indirectly called in ArrayList.addAll() when ObjectSortedSet.toArray() is called.
+      // See AbstractObjectCollection.toArray().
+      // If you see performance degradation here, probably we need to improve the below line.
       found.addAll(versionToGroup.subMap(versionToGroup.firstShortKey(), minorVersion).short2ObjectEntrySet());
-      current = getStateMap(fromState).higherEntry(current.getKey());
+      current = stateMap.higherEntry(current.getKey());
     }
     return found;
   }
@@ -296,7 +314,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
               .values()
               .stream()
               .flatMap(map -> map.values().stream())
-              .anyMatch(group -> group.isOvershadow(newAtomicUpdateGroup));
+              .anyMatch(group -> group.overshadows(newAtomicUpdateGroup));
 
           if (overshadowed) {
             addAtomicUpdateGroupWithState(newAtomicUpdateGroup, State.OVERSHADOWED);

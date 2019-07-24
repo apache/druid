@@ -259,7 +259,7 @@ public class NumberedShardSpecTest
     }
 
     @Override
-    public boolean isOvershadow(OvershadowableString other)
+    public boolean overshadows(OvershadowableString other)
     {
       return false;
     }

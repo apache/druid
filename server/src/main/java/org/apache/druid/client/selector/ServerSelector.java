@@ -172,11 +172,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
   }
 
   @Override
-  public boolean isOvershadow(ServerSelector other)
+  public boolean overshadows(ServerSelector other)
   {
     final DataSegment thisSegment = segment.get();
     final DataSegment thatSegment = other.getSegment();
-    return thisSegment.isOvershadow(thatSegment);
+    return thisSegment.overshadows(thatSegment);
   }
 
   @Override

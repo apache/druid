@@ -938,10 +938,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       log.info("Pushed segments[%s]", pushed.getSegments());
 
-      // Probably we can publish atomicUpdateGroup along with segments.
+      // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
+      // it will just overwrite all segments overlapped with the new segments.
       final Set<DataSegment> inputSegments = isUseSegmentLock()
                                              ? getSegmentLockHelper().getLockedExistingSegments()
                                              : null;
+      // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
 
       ingestionState = IngestionState.COMPLETED;

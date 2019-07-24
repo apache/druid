@@ -583,7 +583,7 @@ public class SchemalessIndexTest
     }
 
     @Override
-    public boolean isOvershadow(OvershadowableFile other)
+    public boolean overshadows(OvershadowableFile other)
     {
       return false;
     }

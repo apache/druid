@@ -419,7 +419,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
         if (majorVersionCompare == 0) {
           for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
-            if (chunk.getObject().isOvershadow(object)) {
+            if (chunk.getObject().overshadows(object)) {
               return true;
             }
           }
@@ -454,7 +454,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (versionCompare > 0) {
           return false;
         } else if (versionCompare == 0) {
-          if (timelineEntry.partitionHolder.stream().noneMatch(chunk -> chunk.getObject().isOvershadow(object))) {
+          if (timelineEntry.partitionHolder.stream().noneMatch(chunk -> chunk.getObject().overshadows(object))) {
             return false;
           }
         }

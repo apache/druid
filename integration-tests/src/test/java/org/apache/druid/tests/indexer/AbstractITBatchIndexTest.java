@@ -206,7 +206,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
                 .stream()
                 .flatMap(holder -> holder.getObject().stream())
                 .anyMatch(chunk -> oldVersions.stream()
-                                              .anyMatch(oldSegment -> chunk.getObject().isOvershadow(oldSegment)));
+                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
           },
           "See a new version"
       );

@@ -97,9 +97,9 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   }
 
   @Override
-  public boolean isOvershadow(SegmentLoadInfo other)
+  public boolean overshadows(SegmentLoadInfo other)
   {
-    return segment.isOvershadow(other.segment);
+    return segment.overshadows(other.segment);
   }
 
   @Override

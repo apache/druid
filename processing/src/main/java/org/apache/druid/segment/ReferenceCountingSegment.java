@@ -179,7 +179,7 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
   }
 
   @Override
-  public boolean isOvershadow(ReferenceCountingSegment other)
+  public boolean overshadows(ReferenceCountingSegment other)
   {
     if (baseSegment.getId().getDataSource().equals(other.baseSegment.getId().getDataSource())
         && baseSegment.getId().getInterval().overlaps(other.baseSegment.getId().getInterval())) {

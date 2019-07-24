@@ -2932,7 +2932,7 @@ public class CachingClusteredClientTest
       }
 
       @Override
-      public boolean isOvershadow(DataSegment other)
+      public boolean overshadows(DataSegment other)
       {
         if (getDataSource().equals(other.getDataSource())
             && getInterval().overlaps(other.getInterval())

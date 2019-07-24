@@ -30,9 +30,9 @@ package org.apache.druid.timeline;
 public interface Overshadowable<T extends Overshadowable>
 {
   /**
-   * Returns true if this segment overshadows the other segment.
+   * Returns true if this overshadowable overshadows the other.
    */
-  default boolean isOvershadow(T other)
+  default boolean overshadows(T other)
   {
     final int majorVersionCompare = getVersion().compareTo(other.getVersion());
     if (majorVersionCompare == 0) {
