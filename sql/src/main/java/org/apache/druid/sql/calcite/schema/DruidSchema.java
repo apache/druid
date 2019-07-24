@@ -57,6 +57,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -359,14 +360,12 @@ public class DruidSchema extends AbstractSchema
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
       if (segmentMetadata == null) {
-        // segmentReplicatable is used to determine if segments are served by realtime servers or not
+        // segmentReplicatable is used to determine if segments are served by historical or realtime servers
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
-
-        final Set<String> servers = ImmutableSet.of(server.getName());
         segmentMetadata = AvailableSegmentMetadata.builder(
             segment,
             isRealtime,
-            servers,
+            ImmutableSet.of(server),
             null,
             DEFAULT_NUM_ROWS
         ).build();
@@ -380,10 +379,10 @@ public class DruidSchema extends AbstractSchema
           log.debug("Added new immutable segment[%s].", segment.getId());
         }
       } else {
-        final Set<String> segmentServers = segmentMetadata.getReplicas();
-        final ImmutableSet<String> servers = new ImmutableSet.Builder<String>()
+        final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+        final ImmutableSet<DruidServerMetadata> servers = new ImmutableSet.Builder<DruidServerMetadata>()
             .addAll(segmentServers)
-            .add(server.getName())
+            .add(server)
             .build();
         final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
             .from(segmentMetadata)
@@ -431,19 +430,27 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
-  private void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+  @VisibleForTesting
+  void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
-      final Set<String> segmentServers = segmentMetadata.getReplicas();
-      final ImmutableSet<String> servers = FluentIterable.from(segmentServers)
-                                                         .filter(Predicates.not(Predicates.equalTo(server.getName())))
-                                                         .toSet();
+      final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+      final ImmutableSet<DruidServerMetadata> servers = FluentIterable.from(segmentServers)
+                                                                      .filter(Predicates.not(Predicates.equalTo(server)))
+                                                                      .toSet();
+      DruidServerMetadata realtimeServer = servers.stream()
+                                                  .filter(metadata -> metadata.getType().equals(ServerType.REALTIME))
+                                                  .findAny()
+                                                  .orElse(null);
+      // if there is no realtime server in the replicas, isRealtime flag should be unset
+      long isRealtime = realtimeServer == null ? 0 : 1;
       final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
           .from(segmentMetadata)
           .withReplicas(servers)
+          .withRealtime(isRealtime)
           .build();
       knownSegments.put(segment.getId(), metadataWithNumReplicas);
       lock.notifyAll();

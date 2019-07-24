@@ -43,6 +43,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -54,6 +55,7 @@ import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -168,8 +170,20 @@ public class DruidSchemaTest extends CalciteTestBase
                    .build(),
         index2
     );
-
-    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    final DataSegment segment1 = new DataSegment(
+        "foo3",
+        Intervals.of("2012/2013"),
+        "version3",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(2, 3),
+        1,
+        100L,
+        DataSegment.PruneLoadSpecHolder.DEFAULT
+    );
+    final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
 
     schema = new DruidSchema(
@@ -253,14 +267,14 @@ public class DruidSchemaTest extends CalciteTestBase
    * is called more than once for same segment
    */
   @Test
-  public void testSegmentMetadataHolderNumRows()
+  public void testAvailableSegmentMetadataNumRows()
   {
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(3, segments.size());
+    Assert.assertEquals(4, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
@@ -309,7 +323,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(segments.size(), 3);
+    Assert.assertEquals(segments.size(), 4);
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
@@ -321,7 +335,7 @@ public class DruidSchemaTest extends CalciteTestBase
 
     // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 2);
+    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 3);
   }
 
   @Test
@@ -332,7 +346,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(segments.size(), 3);
+    Assert.assertEquals(segments.size(), 4);
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
@@ -343,7 +357,58 @@ public class DruidSchemaTest extends CalciteTestBase
 
     // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 2);
+    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 3);
+  }
+
+  @Test
+  public void testAvailableSegmentMetadataIsRealtime()
+  {
+    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentsMetadata.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    // find the only realtime segment with datasource "foo3"
+    final DataSegment existingSegment = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo3"))
+                                                .findFirst()
+                                                .orElse(null);
+
+    final AvailableSegmentMetadata metadata = segmentsMetadata.get(existingSegment.getId());
+    Assert.assertEquals(metadata.isRealtime(), 1L);
+    // get the historical server
+    ImmutableDruidServer historicalServer = druidServers.stream()
+                                                        .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                        .findAny()
+                                                        .orElse(null);
+
+    Assert.assertNotNull(historicalServer);
+    final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
+
+    // add existingSegment to historical
+    schema.addSegment(historicalServerMetadata, existingSegment);
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    // get the segment with datasource "foo3"
+    DataSegment currentSegment = segments.stream()
+                                         .filter(segment -> segment.getDataSource().equals("foo3"))
+                                         .findFirst()
+                                         .orElse(null);
+    AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
+    Assert.assertEquals(currentMetadata.isRealtime(), 1L);
+
+    ImmutableDruidServer realtimeServer = druidServers.stream()
+                                                      .filter(s -> s.getType().equals(ServerType.REALTIME))
+                                                      .findAny()
+                                                      .orElse(null);
+    // drop existingSegment from realtime task
+    schema.removeServerSegment(realtimeServer.getMetadata(), existingSegment);
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    currentSegment = segments.stream()
+                             .filter(segment -> segment.getDataSource().equals("foo3"))
+                             .findFirst()
+                             .orElse(null);
+    currentMetadata = segmentsMetadata.get(currentSegment.getId());
+    Assert.assertEquals(currentMetadata.isRealtime(), 0L);
   }
 
 }
