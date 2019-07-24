@@ -37,6 +37,7 @@ If you have questions on tuning Druid for specific use cases, or questions on co
 #### Heap sizing
 
 The biggest contributions to heap usage on Historicals are:
+
 - Partial unmerged query results from segments
 - The stored maps for [lookups](../querying/lookups.html).
 
@@ -63,6 +64,7 @@ Be sure to add `(2 * total size of all loaded lookups)` to your heap size in add
 Please see the [General Guidelines for Processing Threads and Buffers](#general-guidelines-for-processing-threads-and-buffers) section for an overview of processing thread/buffer configuration.
 
 On Historicals:
+
 - `druid.processing.numThreads` should generally be set to `(number of cores - 1)`: a smaller value can result in CPU underutilization, while going over the number of cores can result in unnecessary CPU contention.
 - `druid.processing.buffer.sizeBytes` can be set to 500MB.
 - `druid.processing.numMergeBuffers`, a 1:4 ratio of  merge buffers to processing threads is a reasonable choice for general use.
