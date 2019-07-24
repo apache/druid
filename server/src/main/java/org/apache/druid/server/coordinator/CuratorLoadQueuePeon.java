@@ -334,8 +334,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
     queuedSize.set(0L);
     failedAssignCount.set(0);
-    processingExecutor.shutdown();
-    callBackExecutor.shutdown();
   }
 
   private void entryRemoved(SegmentHolder segmentHolder, String path)

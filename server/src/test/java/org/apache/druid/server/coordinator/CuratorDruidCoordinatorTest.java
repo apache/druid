@@ -73,7 +73,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -116,6 +118,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private volatile CountDownLatch segmentRemovedLatch;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
+
+  private ScheduledExecutorService peonExec = Execs.scheduledSingleThreaded("Master-PeonExec--%d");
+  private ExecutorService callbackExec = Execs.multiThreaded(4, "LoadQueuePeon-callbackexec--%d");
 
   public CuratorDruidCoordinatorTest()
   {
@@ -186,16 +191,16 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         curator,
         SOURCE_LOAD_PATH,
         objectMapper,
-        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_src_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_src-%d"),
+        peonExec,
+        callbackExec,
         druidCoordinatorConfig
     );
     destinationLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         DESTINATION_LOAD_PATH,
         objectMapper,
-        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_dest_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_dest-%d"),
+        peonExec,
+        callbackExec,
         druidCoordinatorConfig
     );
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
@@ -259,6 +264,15 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
+
+  @Test
+  public void testStopDoesntKillPoolItDoesntOwn() throws Exception
+  {
+    setupView();
+    sourceLoadQueuePeon.stop();
+    Assert.assertFalse(peonExec.isShutdown());
+    Assert.assertFalse(callbackExec.isShutdown());
+  }
 
   @Test
   public void testMoveSegment() throws Exception
