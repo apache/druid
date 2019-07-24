@@ -440,7 +440,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     Interval interval;
     String version;
     if (bucketIntervals.isPresent()) {
-      // If granularity spec has explicit intervals, we just need to find the version accociated to the interval.
+      // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
       // This is because we should have gotten all required locks up front when the task starts up.
       final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
       if (!maybeInterval.isPresent()) {
