@@ -44,9 +44,11 @@ public class WorkerConfig
   private final int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   @JsonProperty
+  @Min(0)
   private final long intermediaryPartitionDiscoveryPeriodSec = 60L;
 
   @JsonProperty
+  @Min(0)
   private final long intermediaryPartitionCleanupPeriodSec = 300L;
 
   @JsonProperty
