@@ -406,8 +406,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  // TODO: add test for timeChunkLock without bucket intervals in granularitySpec
-
   /**
    * Allocate a new segment for the given timestamp locally.
    * Since the segments returned by this method overwrites any existing segments, this method should be called only

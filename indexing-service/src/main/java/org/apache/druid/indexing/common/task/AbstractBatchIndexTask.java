@@ -98,7 +98,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * If this task is intend to overwrite only some segments in those intervals, this method should return only those
    * segments instead of entire segments in those intervals.
    */
-  // TODO: remove this
   public abstract List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException;
 
