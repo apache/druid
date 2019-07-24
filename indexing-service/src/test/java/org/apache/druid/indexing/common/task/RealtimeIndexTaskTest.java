@@ -1020,8 +1020,7 @@ public class RealtimeIndexTaskTest
                                   .intervals("2000/3000")
                                   .build();
 
-    List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    List<Result<TimeseriesResultValue>> results = task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
     if (results.isEmpty()) {
       return 0L;
     } else {

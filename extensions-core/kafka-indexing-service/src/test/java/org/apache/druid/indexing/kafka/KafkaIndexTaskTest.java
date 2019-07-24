@@ -2363,7 +2363,7 @@ public class KafkaIndexTaskTest
   {
     ScanQuery query = new Druids.ScanQueryBuilder().dataSource(
         DATA_SCHEMA.getDataSource()).intervals(spec).build();
-    return task.getQueryRunner(query).run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    return task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
   }
 
   private void insertData() throws ExecutionException, InterruptedException
@@ -2778,8 +2778,7 @@ public class KafkaIndexTaskTest
                                   .intervals("0000/3000")
                                   .build();
 
-    List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    List<Result<TimeseriesResultValue>> results = task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }

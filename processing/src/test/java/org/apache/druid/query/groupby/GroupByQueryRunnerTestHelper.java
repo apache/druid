@@ -54,7 +54,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query));
     return queryResult.toList();
   }
 
