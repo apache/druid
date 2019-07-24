@@ -24,40 +24,42 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 /**
  */
-@SuppressWarnings("SS_SHOULD_BE_STATIC")
 public class WorkerConfig
 {
   @JsonProperty
   @NotNull
   private final String ip = DruidNode.getDefaultHost();
 
-  @JsonProperty
+  @JsonProperty(defaultValue = "0")
   @NotNull
-  private final String version = "0";
+  private String version;
 
   @JsonProperty
   @Min(1)
   private final int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
-  @JsonProperty
-  private final long intermediaryPartitionDiscoveryPeriodSec = 60L;
+  @JsonProperty(defaultValue = "60")
+  private long intermediaryPartitionDiscoveryPeriodSec;
 
-  @JsonProperty
-  private final long intermediaryPartitionCleanupPeriodSec = 300L;
+  @JsonProperty(defaultValue = "300")
+  private long intermediaryPartitionCleanupPeriodSec;
 
-  @JsonProperty
-  private final Period intermediaryPartitionTimeout = new Period("P1D");
+  @JsonProperty(defaultValue = "P1D")
+  private Period intermediaryPartitionTimeout;
 
+  @Nonnull
   public String getIp()
   {
     return ip;
   }
 
+  @Nonnull
   public String getVersion()
   {
     return version;
