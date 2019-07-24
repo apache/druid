@@ -343,8 +343,11 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (partitionsSpec.isSegmentFull(addResult.getNumRowsInSegment())
-                || partitionsSpec.isAppenderatorFull(addResult.getTotalNumRowsInAppenderator())) {
+            final boolean isPushRequired = addResult.isPushRequired(
+                partitionsSpec.getMaxRowsPerSegment(),
+                partitionsSpec.getMaxTotalRows()
+            );
+            if (isPushRequired) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.

@@ -27,8 +27,6 @@ import java.util.Objects;
 
 /**
  * Dynamically determine partitions in the middle of indexing.
- * {@link #isSegmentFull(int)} and {@link #isAppenderatorFull(long)} methods could be used to determine when to create
- * a new partition.
  */
 public class DynamicPartitionsSpec implements PartitionsSpec
 {
@@ -66,16 +64,6 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   public boolean needsDeterminePartitions()
   {
     return false;
-  }
-
-  public boolean isSegmentFull(int numRowsInSegment)
-  {
-    return numRowsInSegment >= maxRowsPerSegment;
-  }
-
-  public boolean isAppenderatorFull(long numTotalRowsInAppenderator)
-  {
-    return numTotalRowsInAppenderator >= maxTotalRows;
   }
 
   @Override

@@ -986,14 +986,18 @@ public class IndexTask extends AbstractTask implements ChatHandler
           if (addResult.isOk()) {
 
             // incremental segment publishment is allowed only when rollup don't have to be perfect.
-            if (dynamicPartitionsSpec != null
-                && (dynamicPartitionsSpec.isSegmentFull(addResult.getNumRowsInSegment())
-                    || dynamicPartitionsSpec.isAppenderatorFull(addResult.getTotalNumRowsInAppenderator()))) {
-              // There can be some segments waiting for being published even though any rows won't be added to them.
-              // If those segments are not published here, the available space in appenderator will be kept to be small
-              // which makes the size of segments smaller.
-              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-              log.info("Pushed segments[%s]", pushed.getSegments());
+            if (dynamicPartitionsSpec != null) {
+              final boolean isPushRequired = addResult.isPushRequired(
+                  dynamicPartitionsSpec.getMaxRowsPerSegment(),
+                  dynamicPartitionsSpec.getMaxTotalRows()
+              );
+              if (isPushRequired) {
+                // There can be some segments waiting for being published even though any rows won't be added to them.
+                // If those segments are not published here, the available space in appenderator will be kept to be
+                // small which makes the size of segments smaller.
+                final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+                log.info("Pushed segments[%s]", pushed.getSegments());
+              }
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -1442,7 +1446,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
     }
 
-    public IndexTuningConfig withPartitoinsSpec(PartitionsSpec partitionsSpec)
+    public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new IndexTuningConfig(
           maxRowsInMemory,

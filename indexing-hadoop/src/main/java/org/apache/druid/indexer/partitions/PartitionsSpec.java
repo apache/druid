@@ -50,7 +50,7 @@ public interface PartitionsSpec
   Integer getMaxRowsPerSegment();
 
   /**
-   * Returns true if this partitionsSpec needs to determine the number of partitions to start data ingetsion.
+   * Returns true if this partitionsSpec needs to determine the number of partitions to start data ingestion.
    * It should usually return true if perfect rollup is enforced but number of partitions is not specified.
    */
   boolean needsDeterminePartitions();

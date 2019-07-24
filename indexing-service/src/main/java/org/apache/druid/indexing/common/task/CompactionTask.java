@@ -824,9 +824,9 @@ public class CompactionTask extends AbstractTask
                                                        ? IndexTuningConfig.createDefault()
                                                        : tuningConfig;
         if (newTuningConfig.isForceGuaranteedRollup()) {
-          return newTuningConfig.withPartitoinsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
+          return newTuningConfig.withPartitionsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
         } else {
-          return newTuningConfig.withPartitoinsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, Long.MAX_VALUE));
+          return newTuningConfig.withPartitionsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, Long.MAX_VALUE));
         }
       } else {
         return tuningConfig;
