@@ -18,9 +18,7 @@
     "moduleResolution": "node",
     "lib": ["dom", "es2016"],
     "jsx": "react",
-    "rootDirs": ["lib", "src"],
-
-    "outDir": "build"
+    "rootDirs": ["lib", "src"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "lib/sql-function-doc.ts"]
 }
