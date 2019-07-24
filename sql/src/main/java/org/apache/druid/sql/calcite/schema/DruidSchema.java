@@ -441,7 +441,7 @@ public class DruidSchema extends AbstractSchema
       final ImmutableSet<DruidServerMetadata> servers = FluentIterable.from(segmentServers)
                                                                       .filter(Predicates.not(Predicates.equalTo(server)))
                                                                       .toSet();
-      DruidServerMetadata realtimeServer = servers.stream()
+      final DruidServerMetadata realtimeServer = servers.stream()
                                                   .filter(metadata -> metadata.getType().equals(ServerType.REALTIME))
                                                   .findAny()
                                                   .orElse(null);

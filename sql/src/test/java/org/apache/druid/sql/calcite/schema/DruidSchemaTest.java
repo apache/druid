@@ -377,7 +377,7 @@ public class DruidSchemaTest extends CalciteTestBase
     final AvailableSegmentMetadata metadata = segmentsMetadata.get(existingSegment.getId());
     Assert.assertEquals(metadata.isRealtime(), 1L);
     // get the historical server
-    ImmutableDruidServer historicalServer = druidServers.stream()
+    final ImmutableDruidServer historicalServer = druidServers.stream()
                                                         .filter(s -> s.getType().equals(ServerType.HISTORICAL))
                                                         .findAny()
                                                         .orElse(null);
