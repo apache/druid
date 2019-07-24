@@ -45,7 +45,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
 /**
- * Base class for {@link ForkingTaskRunner} and {@link ThreadingTaskRunner} which support task restoration.
+ * Base class for {@link ForkingTaskRunner} and {@link ThreadingTaskRunner} which support task rest
+ * oration.
  */
 public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWorkItem> implements TaskRunner
 {
@@ -173,8 +174,10 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     }
   }
 
-  // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
-  // occur while saving.
+  /**
+   * Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
+   * occur while saving.
+   */
   @GuardedBy("tasks")
   protected void saveRunningTasks()
   {
