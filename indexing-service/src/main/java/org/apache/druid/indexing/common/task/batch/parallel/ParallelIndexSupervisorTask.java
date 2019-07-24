@@ -109,6 +109,9 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
 
   private volatile ParallelIndexTaskRunner runner;
+  private volatile IndexTask sequentialIndexTask;
+
+  private boolean stopped = false;
 
   // toolbox is initlized when run() is called, and can be used for processing HTTP endpoint requests.
   private volatile TaskToolbox toolbox;
@@ -243,8 +246,13 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    synchronized (this) {
+      stopped = true;
+    }
     if (runner != null) {
       runner.stopGracefully();
+    } else if (sequentialIndexTask != null) {
+      sequentialIndexTask.stopGracefully(taskConfig);
     }
   }
 
@@ -302,28 +310,39 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    createRunner(toolbox);
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      }
+      createRunner(toolbox);
+    }
     return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox)
   {
-    return new IndexTask(
-        getId(),
-        getGroupId(),
-        getTaskResource(),
-        getDataSource(),
-        new IndexIngestionSpec(
-            getIngestionSchema().getDataSchema(),
-            getIngestionSchema().getIOConfig(),
-            convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
-        ),
-        getContext(),
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory,
-        appenderatorsManager
-    ).run(toolbox);
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      }
+      sequentialIndexTask = new IndexTask(
+          getId(),
+          getGroupId(),
+          getTaskResource(),
+          getDataSource(),
+          new IndexIngestionSpec(
+              getIngestionSchema().getDataSchema(),
+              getIngestionSchema().getIOConfig(),
+              convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
+          ),
+          getContext(),
+          authorizerMapper,
+          chatHandlerProvider,
+          rowIngestionMetersFactory,
+          appenderatorsManager
+      );
+    }
+    return sequentialIndexTask.run(toolbox);
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)

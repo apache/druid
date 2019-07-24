@@ -124,6 +124,13 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @JsonIgnore
   private String errorMsg;
 
+  @JsonIgnore
+  private Thread runThread;
+
+  @JsonIgnore
+  private boolean stopped = false;
+
+
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
@@ -231,6 +238,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public TaskStatus run(TaskToolbox toolbox)
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
     try {
       taskConfig = toolbox.getConfig();
       if (chatHandlerProvider.isPresent()) {
@@ -429,6 +444,13 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    synchronized (this) {
+      stopped = true;
+      if (runThread == null) {
+        // didn't actually start, just return
+        return;
+      }
+    }
     // To avoid issue of kill command once the ingestion task is actually completed
     if (!ingestionState.equals(IngestionState.COMPLETED)) {
       final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
@@ -463,9 +485,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
       finally {
         Thread.currentThread().setContextClassLoader(oldLoader);
+        runThread.interrupt();
       }
     }
-
   }
 
   @GET

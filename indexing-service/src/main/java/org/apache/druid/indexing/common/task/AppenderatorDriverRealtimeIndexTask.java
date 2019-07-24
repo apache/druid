@@ -435,6 +435,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    } else {
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          // If task restore is not enabled, just interrupt immediately.
+          gracefullyStopped = true;
+          runThread.interrupt();
+        }
+      }
     }
   }
 

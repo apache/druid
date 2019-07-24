@@ -182,6 +182,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     if (taskConfig.isRestoreTasksOnRestart()) {
       getRunner().stopGracefully();
+    } else {
+      getRunner().stopForcefully();
     }
   }
 

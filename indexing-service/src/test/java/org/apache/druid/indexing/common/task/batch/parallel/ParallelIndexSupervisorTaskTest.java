@@ -27,6 +27,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -119,7 +120,8 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           spec.getIngestionSpec(),
           spec.getContext(),
           indexingServiceClient,
-          null
+          null,
+          new TestAppenderatorsManager()
       );
       final TaskActionClient subTaskActionClient = createActionClient(subTask);
       prepareTaskForLocking(subTask);
@@ -457,7 +459,8 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           getIngestionSpec(),
           getContext(),
           null,
-          new LocalParallelIndexTaskClientFactory(supervisorTask)
+          new LocalParallelIndexTaskClientFactory(supervisorTask),
+          new TestAppenderatorsManager()
       );
     }
   }

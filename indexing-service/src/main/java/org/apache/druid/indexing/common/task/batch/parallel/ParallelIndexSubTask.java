@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -58,7 +59,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -93,6 +94,11 @@ public class ParallelIndexSubTask extends AbstractTask
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final AppenderatorsManager appenderatorsManager;
+
+  private Appenderator appenderator;
+  private Thread runThread;
+  private boolean stopped = false;
 
   @JsonCreator
   public ParallelIndexSubTask(
@@ -105,7 +111,8 @@ public class ParallelIndexSubTask extends AbstractTask
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -125,6 +132,7 @@ public class ParallelIndexSubTask extends AbstractTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -182,6 +190,14 @@ public class ParallelIndexSubTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -308,6 +324,7 @@ public class ParallelIndexSubTask extends AbstractTask
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
+      this.appenderator = appenderator;
       driver.startJob();
 
       final List<DataSegment> pushedSegments = new ArrayList<>();
@@ -377,14 +394,15 @@ public class ParallelIndexSubTask extends AbstractTask
     }
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -407,5 +425,19 @@ public class ParallelIndexSubTask extends AbstractTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      if (appenderator != null) {
+        appenderator.closeNow();
+      }
+      if (runThread != null) {
+        runThread.interrupt();
+      }
+    }
   }
 }

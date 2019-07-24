@@ -1336,6 +1336,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return rowIngestionMeters;
   }
 
+  public void stopForcefully()
+  {
+    log.info("Stopping forcefully (status: [%s])", status);
+    stopRequested.set(true);
+    runThread.interrupt();
+  }
 
   public void stopGracefully()
   {
