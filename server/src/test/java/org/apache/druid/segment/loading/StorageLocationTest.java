@@ -72,32 +72,32 @@ public class StorageLocationTest
 
     final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
 
-    loc.reserve(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail -= 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.reserve(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.reserve(new File("test2"), secondSegment);
+    loc.reserve("test2", secondSegment);
     expectedAvail -= 23;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail += 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test2"), secondSegment);
+    loc.removeSegmentDir(new File("/tmp/test2"), secondSegment);
     expectedAvail += 23;
     verifyLoc(expectedAvail, loc);
   }
 
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
-    Assert.assertEquals(maxSize, loc.available());
+    Assert.assertEquals(maxSize, loc.availableSizeBytes());
     for (int i = 0; i <= maxSize; ++i) {
       Assert.assertTrue(String.valueOf(i), loc.canHandle(newSegmentId("2013/2014").toString(), i));
     }

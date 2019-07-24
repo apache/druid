@@ -44,7 +44,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
   private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.available(), left.available());
+      Longs.compare(right.availableSizeBytes(), left.availableSizeBytes());
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
@@ -179,8 +179,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
     for (StorageLocation loc : locations) {
-      File storageDir = new File(loc.getPath(), storageDirStr);
-      if (loc.reserve(storageDir, segment)) {
+      File storageDir = loc.reserve(storageDirStr, segment);
+      if (storageDir != null) {
         try {
           loadInLocationWithStartMarker(segment, storageDir);
           return loc;
