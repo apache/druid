@@ -21,6 +21,7 @@ package org.apache.druid.query.context;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -42,14 +43,14 @@ public class ResponseContextTest
     ctx.merge(ResponseContext.Key.ETAG, "new-dummy-etag");
     Assert.assertEquals("new-dummy-etag", ctx.get(ResponseContext.Key.ETAG));
 
-    final Interval interval01 = new Interval(0L, 1L);
+    final Interval interval01 = Intervals.of("2019-01-01/P1D");
     ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval01));
     Assert.assertArrayEquals(
         Collections.singletonList(interval01).toArray(),
         ((List) ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
     );
-    final Interval interval12 = new Interval(1L, 2L);
-    final Interval interval23 = new Interval(2L, 3L);
+    final Interval interval12 = Intervals.of("2019-01-02/P1D");
+    final Interval interval23 = Intervals.of("2019-01-03/P1D");
     ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(interval12, interval23));
     Assert.assertArrayEquals(
         Arrays.asList(interval01, interval12, interval23).toArray(),
@@ -90,13 +91,13 @@ public class ResponseContextTest
   {
     final ResponseContext ctx1 = ResponseContext.createEmpty();
     ctx1.put(ResponseContext.Key.ETAG, "dummy-etag-1");
-    final Interval interval01 = new Interval(0L, 1L);
+    final Interval interval01 = Intervals.of("2019-01-01/P1D");
     ctx1.put(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval01));
     ctx1.put(ResponseContext.Key.COUNT, 1L);
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     ctx2.put(ResponseContext.Key.ETAG, "dummy-etag-2");
-    final Interval interval12 = new Interval(1L, 2L);
+    final Interval interval12 = Intervals.of("2019-01-02/P1D");
     ctx2.put(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval12));
     final SegmentDescriptor sd01 = new SegmentDescriptor(interval01, "01", 0);
     ctx2.put(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));
