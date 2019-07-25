@@ -59,6 +59,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -480,7 +481,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new QueryRunner<Row>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -549,7 +550,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query));
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -613,7 +614,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new QueryRunner<Row>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -670,7 +671,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query));
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -790,7 +791,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         return new QueryRunner<T>()
         {
           @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {
             return delegate.run(queryPlus, responseContext);
           }

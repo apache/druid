@@ -123,4 +123,14 @@ public class NumberedPartitionChunk<T> implements PartitionChunk<T>
   {
     return Objects.hashCode(chunks, chunkNumber);
   }
+
+  @Override
+  public String toString()
+  {
+    return "NumberedPartitionChunk{" +
+           "chunkNumber=" + chunkNumber +
+           ", chunks=" + chunks +
+           ", object=" + object +
+           '}';
+  }
 }

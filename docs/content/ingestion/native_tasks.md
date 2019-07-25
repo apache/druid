@@ -55,6 +55,7 @@ the implementation of splittable firehoses. Please note that multiple tasks can 
 if one of them fails.
 
 You may want to consider the below points:
+
 - Since this task doesn't shuffle intermediate data, it isn't available for [perfect rollup](../ingestion/index.html#roll-up-modes).
 - The number of tasks for parallel ingestion is decided by `maxNumSubTasks` in the tuningConfig.
   Since the supervisor task creates up to `maxNumSubTasks` worker tasks regardless of the available task slots,

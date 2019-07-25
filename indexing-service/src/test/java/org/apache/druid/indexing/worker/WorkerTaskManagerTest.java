@@ -259,6 +259,6 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 }
