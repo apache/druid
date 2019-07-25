@@ -105,12 +105,14 @@ public class CoordinatorBasicAuthorizerResourceTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             AUTHORIZER_NAME2,
             new BasicRoleBasedAuthorizer(
                 null,
                 AUTHORIZER_NAME2,
+                null,
                 null,
                 null,
                 null,
@@ -124,6 +126,7 @@ public class CoordinatorBasicAuthorizerResourceTest
                 null,
                 null,
                 "adminGroupMapping",
+                null,
                 null,
                 null
             )
@@ -955,15 +958,10 @@ public class CoordinatorBasicAuthorizerResourceTest
       final int innerI = i;
       String roleName = "druidRole-" + i;
       addRoleCallables.add(
-          new Callable<Void>()
-          {
-            @Override
-            public Void call() throws Exception
-            {
-              Response response = resource.assignRoleToUser(req, AUTHORIZER_NAME, "druid", roleName);
-              responseCodesAssign[innerI] = response.getStatus();
-              return null;
-            }
+          () -> {
+            Response response12 = resource.assignRoleToUser(req, AUTHORIZER_NAME, "druid", roleName);
+            responseCodesAssign[innerI] = response12.getStatus();
+            return null;
           }
       );
     }
@@ -998,15 +996,10 @@ public class CoordinatorBasicAuthorizerResourceTest
       final int innerI = i;
       String roleName = "druidRole-" + i;
       removeRoleCallables.add(
-          new Callable<Void>()
-          {
-            @Override
-            public Void call() throws Exception
-            {
-              Response response = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid", roleName);
-              responseCodesRemove[innerI] = response.getStatus();
-              return null;
-            }
+          () -> {
+            Response response1 = resource.unassignRoleFromUser(req, AUTHORIZER_NAME, "druid", roleName);
+            responseCodesRemove[innerI] = response1.getStatus();
+            return null;
           }
       );
     }

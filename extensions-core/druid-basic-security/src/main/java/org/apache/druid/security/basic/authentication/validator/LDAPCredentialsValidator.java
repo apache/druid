@@ -262,9 +262,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       if (allowedLdapGroup(ln, groupFilters)) {
         groups.add(ln);
       }
-
-      // valid group name, get roles for it
-      // addGroups(groups, ln);
     }
 
     return groups;
