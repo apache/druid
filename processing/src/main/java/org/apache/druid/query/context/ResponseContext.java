@@ -234,7 +234,7 @@ public abstract class ResponseContext
    * This structure has a reduced serialization result along with full result and boolean property
    * indicating if some fields were removed from the context.
    */
-  public class SerializationResult
+  public static class SerializationResult
   {
     private final String result;
     private final String fullResult;
