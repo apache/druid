@@ -197,9 +197,9 @@ public class KafkaRecordSupplierTest
         kafkaServer.consumerProperties(), objectMapper);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
-
+    
     recordSupplier.assign(partitions);
-
+    
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(0, 1), recordSupplier.getPartitionIds(topic));
 
