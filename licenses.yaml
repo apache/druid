@@ -2328,6 +2328,26 @@ license_file_path: licenses/bin/@types-dom4.MIT
 
 ---
 
+name: "@types/lodash.compact"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 3.0.6
+license_file_path: licenses/bin/@types-lodash.compact.MIT
+
+---
+
+name: "@types/lodash"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 4.14.136
+license_file_path: licenses/bin/@types-lodash.MIT
+
+---
+
 name: "asap"
 license_category: binary
 module: web-console
@@ -2623,6 +2643,16 @@ license_name: MIT License
 copyright: Simon Lydell
 version: 4.0.0
 license_file_path: licenses/bin/js-tokens.MIT
+
+---
+
+name: "lodash.compact"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 3.0.1
+license_file_path: licenses/bin/lodash.compact.MIT
 
 ---
 
