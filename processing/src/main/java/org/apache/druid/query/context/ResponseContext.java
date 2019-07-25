@@ -23,49 +23,98 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.SegmentDescriptor;
+import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
  * The context for storing and passing data between chains of {@link org.apache.druid.query.QueryRunner}s.
  * The context is also transferred between Druid nodes with all the data it contains.
- * All the keys associated with data inside the context should be stored here.
- * CTX_* keys might be aggregated into an enum. Consider refactoring that.
  */
 @PublicApi
 public abstract class ResponseContext
 {
   /**
-   * Lists intervals for which NO segment is present.
+   * Keys associated with objects in the context.
    */
-  public static final String CTX_UNCOVERED_INTERVALS = "uncoveredIntervals";
-  /**
-   * Indicates if the number of uncovered intervals exceeded the limit (true/false).
-   */
-  public static final String CTX_UNCOVERED_INTERVALS_OVERFLOWED = "uncoveredIntervalsOverflowed";
-  /**
-   * Lists missing segments.
-   */
-  public static final String CTX_MISSING_SEGMENTS = "missingSegments";
-  /**
-   * Entity tag. A part of HTTP cache validation mechanism.
-   * Is being removed from the context before sending and used as a separate HTTP header.
-   */
-  public static final String CTX_ETAG = "ETag";
-  /**
-   * Query total bytes gathered.
-   */
-  public static final String CTX_QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
-  /**
-   * This variable indicates when a running query should be expired,
-   * and is effective only when 'timeout' of queryContext has a positive value.
-   */
-  public static final String CTX_TIMEOUT_AT = "timeoutAt";
-  /**
-   * The number of scanned rows.
-   */
-  public static final String CTX_COUNT = "count";
+  public enum Key
+  {
+    /**
+     * Lists intervals for which NO segment is present.
+     */
+    UNCOVERED_INTERVALS(
+        "uncoveredIntervals",
+            (oldValue, newValue) -> {
+              ((List<Interval>) oldValue).addAll((List<Interval>) newValue);
+              return oldValue;
+            }
+    ),
+    /**
+     * Indicates if the number of uncovered intervals exceeded the limit (true/false).
+     */
+    UNCOVERED_INTERVALS_OVERFLOWED(
+        "uncoveredIntervalsOverflowed",
+            (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
+    ),
+    /**
+     * Lists missing segments.
+     */
+    MISSING_SEGMENTS(
+        "missingSegments",
+            (oldValue, newValue) -> {
+              ((List<SegmentDescriptor>) oldValue).addAll((List<SegmentDescriptor>) newValue);
+              return oldValue;
+            }
+    ),
+    /**
+     * Entity tag. A part of HTTP cache validation mechanism.
+     * Is being removed from the context before sending and used as a separate HTTP header.
+     */
+    ETAG("ETag"),
+    /**
+     * Query fail time (current time + timeout).
+     */
+    QUERY_FAIL_TIME("queryFailTime"),
+    /**
+     * Query total bytes gathered.
+     */
+    QUERY_TOTAL_BYTES_GATHERED("queryTotalBytesGathered"),
+    /**
+     * This variable indicates when a running query should be expired,
+     * and is effective only when 'timeout' of queryContext has a positive value.
+     */
+    TIMEOUT_AT("timeoutAt"),
+    /**
+     * The number of scanned rows.
+     */
+    COUNT(
+        "count",
+            (oldValue, newValue) -> (long) oldValue + (long) newValue
+    );
+
+    private final String name;
+    /**
+     * Merge function associated with a key: Object (Object oldValue, Object newValue)
+     */
+    private final BiFunction<Object, Object, Object> mergeFunction;
+
+    Key(String name)
+    {
+      this.name = name;
+      this.mergeFunction = (oldValue, newValue) -> newValue;
+    }
+
+    Key(String name, BiFunction<Object, Object, Object> mergeFunction)
+    {
+      this.name = name;
+      this.mergeFunction = mergeFunction;
+    }
+
+  }
 
   /**
    * Create an empty DefaultResponseContext instance
@@ -78,29 +127,41 @@ public abstract class ResponseContext
 
   protected abstract Map<String, Object> getDelegate();
 
-  public Object put(String key, Object value)
+  public Object put(Key key, Object value)
   {
-    return getDelegate().put(key, value);
+    return getDelegate().put(key.name, value);
   }
 
-  public Object get(String key)
+  public Object get(Key key)
   {
-    return getDelegate().get(key);
+    return getDelegate().get(key.name);
   }
 
-  public Object remove(String key)
+  public Object remove(Key key)
   {
-    return getDelegate().remove(key);
+    return getDelegate().remove(key.name);
   }
 
-  public void putAll(Map<? extends String, ?> m)
+  /**
+   * Merges a new value associated with a key with an old value.
+   */
+  public Object merge(Key key, Object value)
   {
-    getDelegate().putAll(m);
+    return getDelegate().merge(key.name, value, key.mergeFunction);
   }
 
-  public void putAll(ResponseContext responseContext)
+  /**
+   * Merges a response context into current.
+   * This method merges only keys from the enum {@link Key}.
+   */
+  public void merge(ResponseContext responseContext)
   {
-    getDelegate().putAll(responseContext.getDelegate());
+    for (Key key : Key.values()) {
+      final Object newValue = responseContext.get(key);
+      if (newValue != null) {
+        merge(key, newValue);
+      }
+    }
   }
 
   public int size()

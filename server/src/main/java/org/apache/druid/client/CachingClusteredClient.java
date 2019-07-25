@@ -358,8 +358,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // Which is not necessarily an indication that the data doesn't exist or is
         // incomplete. The data could exist and just not be loaded yet.  In either
         // case, though, this query will not include any data from the identified intervals.
-        responseContext.put(ResponseContext.CTX_UNCOVERED_INTERVALS, uncoveredIntervals);
-        responseContext.put(ResponseContext.CTX_UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
+        responseContext.merge(ResponseContext.Key.UNCOVERED_INTERVALS, uncoveredIntervals);
+        responseContext.merge(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
       }
     }
 
@@ -396,7 +396,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
 
         String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
-        responseContext.put(ResponseContext.CTX_ETAG, currEtag);
+        responseContext.put(ResponseContext.Key.ETAG, currEtag);
         return currEtag;
       } else {
         return null;

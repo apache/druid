@@ -101,13 +101,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
    */
   public static void removeMagicResponseContextFields(ResponseContext responseContext)
   {
-    responseContext.remove(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED);
+    responseContext.remove(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED);
   }
 
   public static ResponseContext makeResponseContextForQuery()
   {
     final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
-    responseContext.put(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+    responseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
     return responseContext;
   }
 
@@ -156,7 +156,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long requestStartTimeNs = System.nanoTime();
       final long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
-      final AtomicLong totalBytesGathered = (AtomicLong) context.get(ResponseContext.CTX_QUERY_TOTAL_BYTES_GATHERED);
+      final AtomicLong totalBytesGathered = (AtomicLong) context.get(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED);
       final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, 0);
       final boolean usingBackpressure = maxQueuedBytes > 0;
 
@@ -230,7 +230,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
             // context may be null in case of error or query timeout
             if (responseContext != null) {
-              context.putAll(ResponseContext.deserialize(responseContext, objectMapper));
+              context.merge(ResponseContext.deserialize(responseContext, objectMapper));
             }
             continueReading = enqueue(response.getContent(), 0L);
           }

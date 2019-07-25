@@ -67,10 +67,6 @@ import java.util.stream.Collectors;
  */
 public class MovingAverageQueryRunner implements QueryRunner<Row>
 {
-
-  public static final String QUERY_FAIL_TIME = "queryFailTime";
-  public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
-
   private final QuerySegmentWalker walker;
   private final RequestLogger requestLogger;
 
@@ -126,8 +122,11 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       GroupByQuery gbq = builder.build();
 
       ResponseContext gbqResponseContext = ResponseContext.createEmpty();
-      gbqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
-      gbqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      gbqResponseContext.put(
+          ResponseContext.Key.QUERY_FAIL_TIME,
+          System.currentTimeMillis() + QueryContexts.getTimeout(gbq)
+      );
+      gbqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
       try {
@@ -164,8 +163,11 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           maq.getContext()
       );
       ResponseContext tsqResponseContext = ResponseContext.createEmpty();
-      tsqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
-      tsqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      tsqResponseContext.put(
+          ResponseContext.Key.QUERY_FAIL_TIME,
+          System.currentTimeMillis() + QueryContexts.getTimeout(tsq)
+      );
+      tsqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponseContext);
       try {

@@ -67,14 +67,14 @@ public class ScanQueryEngine
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "WTF?! Expected non-null legacy");
 
-    if (responseContext.get(ResponseContext.CTX_COUNT) != null) {
-      long count = (long) responseContext.get(ResponseContext.CTX_COUNT);
+    if (responseContext.get(ResponseContext.Key.COUNT) != null) {
+      long count = (long) responseContext.get(ResponseContext.Key.COUNT);
       if (count >= query.getLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
-    final long timeoutAt = (long) responseContext.get(ResponseContext.CTX_TIMEOUT_AT);
+    final long timeoutAt = (long) responseContext.get(ResponseContext.Key.TIMEOUT_AT);
     final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -121,9 +121,7 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
 
-    if (responseContext.get(ResponseContext.CTX_COUNT) == null) {
-      responseContext.put(ResponseContext.CTX_COUNT, 0L);
-    }
+    responseContext.merge(ResponseContext.Key.COUNT, 0L);
     final long limit = calculateLimit(query, responseContext);
     return Sequences.concat(
             adapter
@@ -187,13 +185,10 @@ public class ScanQueryEngine
                             } else {
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
-                            responseContext.put(
-                                ResponseContext.CTX_COUNT,
-                                (long) responseContext.get(ResponseContext.CTX_COUNT) + (offset - lastOffset)
-                            );
+                            responseContext.merge(ResponseContext.Key.COUNT, offset - lastOffset);
                             if (hasTimeout) {
                               responseContext.put(
-                                  ResponseContext.CTX_TIMEOUT_AT,
+                                  ResponseContext.Key.TIMEOUT_AT,
                                   timeoutAt - (System.currentTimeMillis() - start)
                               );
                             }
@@ -266,7 +261,7 @@ public class ScanQueryEngine
   private long calculateLimit(ScanQuery query, ResponseContext responseContext)
   {
     if (query.getOrder().equals(ScanQuery.Order.NONE)) {
-      return query.getLimit() - (long) responseContext.get(ResponseContext.CTX_COUNT);
+      return query.getLimit() - (long) responseContext.get(ResponseContext.Key.COUNT);
     }
     return query.getLimit();
   }
