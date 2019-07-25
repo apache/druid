@@ -21,8 +21,8 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterators;
-import com.google.common.primitives.Longs;
+import com.google.common.collect.ImmutableList;
+
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -35,7 +35,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,8 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
-  private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.available(), left.available());
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
@@ -80,6 +77,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private final ConcurrentHashMap<DataSegment, ReferenceCountingLock> segmentLocks = new ConcurrentHashMap<>();
 
+  private final StorageLocationSelectorStrategy strategy;
+
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
   // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
   // directories rather than statically configured directories.
@@ -104,9 +103,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           )
       );
     }
-    locations.sort(COMPARATOR);
-    // cyclicIterator remembers the marker internally
-    cyclicIterator = Iterators.cycle(locations);
+    this.strategy = config.getStorageLocationSelectorStrategy();
+    this.strategy.setStorageLocations(ImmutableList.copyOf(locations));
   }
 
   @Override
@@ -185,9 +183,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    StorageLocationSelectorStrategy strategy = config.getStorageLocationSelectorStrategy();
-
-    StorageLocation selectedLoc = strategy.select(segment, locations);
+    StorageLocation selectedLoc = strategy.select(segment);
 
     if (null != selectedLoc) {
       File storageDir = new File(selectedLoc.getPath(), storageDirStr);

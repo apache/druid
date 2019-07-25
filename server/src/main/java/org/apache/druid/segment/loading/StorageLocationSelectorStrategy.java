@@ -19,21 +19,34 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
 
 /**
- *
+ * Interface which represents a strategy to select a {@link StorageLocation} from available segment cache locations
+ * for segment distribution.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
+@JsonSubTypes(value = {
+  @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
+  @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class)
+})
 public interface StorageLocationSelectorStrategy
 {
   /**
-   *
    *  Find the best {@link StorageLocation} to load the given {@link DataSegment} into according to the location selector strategy.
    *
-   * @param storageLocations list of available locations from which a location needs to be picked by the strategy.
    * @return The storage location to load the given segment into or null if no location has the capacity to store the given segment.
    */
-  StorageLocation select(DataSegment dataSegment, List<StorageLocation> storageLocations);
+  StorageLocation select(DataSegment dataSegment);
+
+  /**
+   * Sets the storage locations list  with the supplied storage locations.
+   * @param storageLocations storage locations list to be used.
+   */
+  void setStorageLocations(ImmutableList<StorageLocation> storageLocations);
 }
