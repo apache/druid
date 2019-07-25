@@ -131,5 +131,26 @@ exports[`home view matches snapshot 1`] = `
       </p>
     </Blueprint3.Card>
   </a>
+  <a
+    href="#lookups"
+  >
+    <Blueprint3.Card
+      className="status-card"
+      elevation={0}
+      interactive={true}
+    >
+      <Component>
+        <Blueprint3.Icon
+          color="#bfccd5"
+          icon="properties"
+        />
+         
+        Lookups
+      </Component>
+      <p>
+        Loading...
+      </p>
+    </Blueprint3.Card>
+  </a>
 </div>
 `;
