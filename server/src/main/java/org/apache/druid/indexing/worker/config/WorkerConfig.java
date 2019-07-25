@@ -52,6 +52,9 @@ public class WorkerConfig
   @JsonProperty
   private final Period intermediaryPartitionTimeout = new Period("P1D");
 
+  @JsonProperty
+  private final long globalIngestionHeapLimitBytes = (long) (Runtime.getRuntime().maxMemory() * 0.6);
+
   public String getIp()
   {
     return ip;
@@ -80,5 +83,10 @@ public class WorkerConfig
   public Period getIntermediaryPartitionTimeout()
   {
     return intermediaryPartitionTimeout;
+  }
+
+  public long getGlobalIngestionHeapLimitBytes()
+  {
+    return globalIngestionHeapLimitBytes;
   }
 }
