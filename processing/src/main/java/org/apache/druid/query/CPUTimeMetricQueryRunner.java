@@ -84,6 +84,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
+                responseContext.merge(ResponseContext.Key.CPU_CONSUMED, cpuTimeNs);
                 queryWithMetrics.getQueryMetrics().reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }

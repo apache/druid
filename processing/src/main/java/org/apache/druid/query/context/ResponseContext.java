@@ -21,14 +21,19 @@ package org.apache.druid.query.context;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.function.BiFunction;
 
 /**
@@ -49,8 +54,9 @@ public abstract class ResponseContext
     UNCOVERED_INTERVALS(
         "uncoveredIntervals",
             (oldValue, newValue) -> {
-              ((List<Interval>) oldValue).addAll((List<Interval>) newValue);
-              return oldValue;
+              final ArrayList<Interval> result = new ArrayList<Interval>((List) oldValue);
+              result.addAll((List) newValue);
+              return result;
             }
     ),
     /**
@@ -66,8 +72,9 @@ public abstract class ResponseContext
     MISSING_SEGMENTS(
         "missingSegments",
             (oldValue, newValue) -> {
-              ((List<SegmentDescriptor>) oldValue).addAll((List<SegmentDescriptor>) newValue);
-              return oldValue;
+              final ArrayList<SegmentDescriptor> result = new ArrayList<SegmentDescriptor>((List) oldValue);
+              result.addAll((List) newValue);
+              return result;
             }
     ),
     /**
@@ -94,6 +101,13 @@ public abstract class ResponseContext
     COUNT(
         "count",
             (oldValue, newValue) -> (long) oldValue + (long) newValue
+    ),
+    /**
+     * CPU consumed while processing a request.
+     */
+    CPU_CONSUMED(
+        "cpuConsumed",
+        (oldValue, newValue) -> (long) oldValue + (long) newValue
     );
 
     private final String name;
@@ -113,7 +127,6 @@ public abstract class ResponseContext
       this.name = name;
       this.mergeFunction = mergeFunction;
     }
-
   }
 
   /**
@@ -123,6 +136,22 @@ public abstract class ResponseContext
   public static ResponseContext createEmpty()
   {
     return DefaultResponseContext.createEmpty();
+  }
+
+  public static ResponseContext deserialize(String responseContext, ObjectMapper objectMapper) throws IOException
+  {
+    final Map<String, Object> delegate = objectMapper.readValue(
+        responseContext,
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    return new ResponseContext()
+    {
+      @Override
+      protected Map<String, Object> getDelegate()
+      {
+        return delegate;
+      }
+    };
   }
 
   protected abstract Map<String, Object> getDelegate();
@@ -174,19 +203,73 @@ public abstract class ResponseContext
     return objectMapper.writeValueAsString(getDelegate());
   }
 
-  public static ResponseContext deserialize(String responseContext, ObjectMapper objectMapper) throws IOException
+  /**
+   * Serializes the context given that the resulting string length is less than the provided limit.
+   * The method removes max-length fields one by one if the resulting string length is greater than the limit.
+   * The resulting string might be correctly deserialized as a {@link ResponseContext}.
+   */
+  public SerializationResult serializeWith(ObjectMapper objectMapper, int maxLength) throws JsonProcessingException
   {
-    final Map<String, Object> delegate = objectMapper.readValue(
-        responseContext,
-        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
-    return new ResponseContext()
-    {
-      @Override
-      protected Map<String, Object> getDelegate()
-      {
-        return delegate;
+    final String fullSerializedString = objectMapper.writeValueAsString(getDelegate());
+    if (fullSerializedString.length() <= maxLength) {
+      return new SerializationResult(fullSerializedString, fullSerializedString, false);
+    } else {
+      final HashMap<String, Object> copiedMap = new HashMap<>(getDelegate());
+      final PriorityQueue<Pair<String, String>> serializedPairs = new PriorityQueue<>((o1, o2) -> {
+        Preconditions.checkNotNull(o1.rhs);
+        Preconditions.checkNotNull(o2.rhs);
+        return o2.rhs.length() - o1.rhs.length();
+      });
+      for (Map.Entry<String, Object> e : copiedMap.entrySet()) {
+        serializedPairs.add(new Pair<>(e.getKey(), objectMapper.writeValueAsString(e.getValue())));
       }
-    };
+      while (!copiedMap.isEmpty()) {
+        final Pair<String, String> maxLengthPair = serializedPairs.poll();
+        Preconditions.checkNotNull(maxLengthPair);
+        copiedMap.remove(maxLengthPair.lhs);
+        final String reducedSerializedString = objectMapper.writeValueAsString(copiedMap);
+        if (reducedSerializedString.length() <= maxLength) {
+          return new SerializationResult(reducedSerializedString, fullSerializedString, true);
+        }
+      }
+      final String serializedEmptyMap = objectMapper.writeValueAsString(copiedMap);
+      return new SerializationResult(serializedEmptyMap, fullSerializedString, true);
+    }
+  }
+
+  /**
+   * Serialization result of {@link ResponseContext}.
+   * Response context might be serialized using max legth limit, in this case the context might be reduced
+   * by removing max-length fields one by one unless serialization result length is less than the limit.
+   * This structure has a reduced serialization result along with full result and boolean property
+   * indicating if some fields were removed from the context.
+   */
+  public class SerializationResult
+  {
+    private final String result;
+    private final String fullResult;
+    private final Boolean isReduced;
+
+    SerializationResult(String result, String fullResult, Boolean isReduced)
+    {
+      this.result = result;
+      this.fullResult = fullResult;
+      this.isReduced = isReduced;
+    }
+
+    public String getResult()
+    {
+      return result;
+    }
+
+    public String getFullResult()
+    {
+      return fullResult;
+    }
+
+    public Boolean isReduced()
+    {
+      return isReduced;
+    }
   }
 }

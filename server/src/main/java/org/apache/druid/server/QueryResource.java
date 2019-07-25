@@ -262,14 +262,20 @@ public class QueryResource implements QueryCountStatsProvider
         //Limit the response-context header, see https://github.com/apache/incubator-druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
         //and encodes the string using ASCII, so 1 char is = 1 byte
-        String responseCtxString = responseContext.serializeWith(jsonMapper);
-        if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
-          log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
-          responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
+        final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
+            jsonMapper,
+            RESPONSE_CTX_HEADER_LEN_LIMIT
+        );
+        if (serializationResult.isReduced()) {
+          log.warn(
+              "Response Context truncated for id [%s] . Full context is [%s].",
+              queryId,
+              serializationResult.getFullResult()
+          );
         }
 
         return builder
-            .header(HEADER_RESPONSE_CONTEXT, responseCtxString)
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
             .build();
       }
       catch (Exception e) {
