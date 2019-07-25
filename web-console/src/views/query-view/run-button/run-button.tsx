@@ -137,7 +137,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { runeMode, onRun } = this.props;
     const { wrapQuery } = this.state;
 

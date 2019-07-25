@@ -38,9 +38,9 @@ const DEFAULT_LOOKUP_TIER: string = '__default';
 export interface LookupsViewProps {}
 
 export interface LookupsViewState {
-  lookups: {}[] | null;
+  lookups?: any[];
   loadingLookups: boolean;
-  lookupsError: string | null;
+  lookupsError?: string;
   lookupsUninitialized: boolean;
   lookupEditDialogOpen: boolean;
   lookupEditName: string;
@@ -50,8 +50,8 @@ export interface LookupsViewState {
   isEdit: boolean;
   allLookupTiers: string[];
 
-  deleteLookupName: string | null;
-  deleteLookupTier: string | null;
+  deleteLookupName?: string;
+  deleteLookupTier?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
 }
@@ -64,7 +64,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     this.state = {
       lookups: [],
       loadingLookups: true,
-      lookupsError: null,
       lookupsUninitialized: false,
       lookupEditDialogOpen: false,
       lookupEditTier: '',
@@ -73,9 +72,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditSpec: '',
       isEdit: false,
       allLookupTiers: [],
-
-      deleteLookupTier: null,
-      deleteLookupName: null,
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
@@ -110,11 +106,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          lookups: result ? result.lookupEntries : null,
+          lookups: result ? result.lookupEntries : undefined,
           loadingLookups: loading,
           lookupsError: error,
           lookupsUninitialized: error === 'Request failed with status code 404',
-          allLookupTiers: result === null ? [] : result.tiers,
+          allLookupTiers: result ? result.tiers : [],
         });
       },
     });
@@ -249,7 +245,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         failText="Could not delete lookup"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ deleteLookupTier: null, deleteLookupName: null });
+          this.setState({ deleteLookupTier: undefined, deleteLookupName: undefined });
         }}
         onSuccess={() => {
           this.lookupsQueryManager.rerunLastQuery();
@@ -367,7 +363,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { lookupsError, hiddenColumns } = this.state;
 
     return (

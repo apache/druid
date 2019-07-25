@@ -112,7 +112,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
     onClose();
   };
 
-  render() {
+  render(): JSX.Element {
     const { onClose } = this.props;
     const { dynamicConfig, historyRecords } = this.state;
 

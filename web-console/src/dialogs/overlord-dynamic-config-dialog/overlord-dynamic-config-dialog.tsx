@@ -114,7 +114,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
     onClose();
   };
 
-  render() {
+  render(): JSX.Element {
     const { onClose } = this.props;
     const { dynamicConfig, allJSONValid, historyRecords } = this.state;
 

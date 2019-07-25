@@ -94,7 +94,7 @@ export class LookupEditDialog extends React.PureComponent<
     }
   }
 
-  render() {
+  render(): JSX.Element {
     const {
       isOpen,
       onClose,

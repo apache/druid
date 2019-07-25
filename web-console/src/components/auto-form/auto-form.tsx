@@ -283,7 +283,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
     return (
       <div className="auto-form">

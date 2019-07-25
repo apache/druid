@@ -32,7 +32,7 @@ export interface CompactionDialogProps {
 }
 
 export interface CompactionDialogState {
-  currentConfig: Record<string, any> | null;
+  currentConfig?: Record<string, any>;
   allJSONValid: boolean;
 }
 
@@ -43,7 +43,6 @@ export class CompactionDialog extends React.PureComponent<
   constructor(props: CompactionDialogProps) {
     super(props);
     this.state = {
-      currentConfig: null,
       allJSONValid: true,
     };
   }
@@ -68,7 +67,7 @@ export class CompactionDialog extends React.PureComponent<
     });
   }
 
-  render() {
+  render(): JSX.Element {
     const { onClose, onSave, onDelete, datasource, configData } = this.props;
     const { currentConfig, allJSONValid } = this.state;
     return (
@@ -110,7 +109,7 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
             },
           ]}
-          model={currentConfig}
+          model={currentConfig || null}
           onChange={m => this.setState({ currentConfig: m })}
           updateJSONValidity={e => this.setState({ allJSONValid: e })}
         />
@@ -127,7 +126,7 @@ export class CompactionDialog extends React.PureComponent<
               text="Submit"
               intent={Intent.PRIMARY}
               onClick={() => onSave(currentConfig)}
-              disabled={currentConfig === null || !allJSONValid}
+              disabled={!currentConfig || !allJSONValid}
             />
           </div>
         </div>

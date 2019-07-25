@@ -19,9 +19,9 @@
 import debounce from 'lodash.debounce';
 
 export interface QueryStateInt<R> {
-  result: R | null;
+  result?: R;
   loading: boolean;
-  error: string | null;
+  error?: string;
 }
 
 export interface QueryManagerOptions<Q, R> {
@@ -44,9 +44,7 @@ export class QueryManager<Q, R> {
   private lastIntermediateQuery: any;
   private actuallyLoading = false;
   private state: QueryStateInt<R> = {
-    result: null,
     loading: false,
-    error: null,
   };
   private currentQueryId = 0;
 
@@ -91,14 +89,14 @@ export class QueryManager<Q, R> {
         this.setState({
           result,
           loading: false,
-          error: null,
+          error: undefined,
         });
       },
       (e: Error) => {
         if (this.currentQueryId !== myQueryId) return;
         this.actuallyLoading = false;
         this.setState({
-          result: null,
+          result: undefined,
           loading: false,
           error: e.message,
         });
@@ -110,9 +108,9 @@ export class QueryManager<Q, R> {
     const currentActuallyLoading = this.actuallyLoading;
 
     this.setState({
-      result: null,
+      result: undefined,
       loading: true,
-      error: null,
+      error: undefined,
     });
 
     if (currentActuallyLoading) {

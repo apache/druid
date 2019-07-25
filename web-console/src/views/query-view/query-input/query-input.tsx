@@ -37,14 +37,14 @@ export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
-  columnMetadata: ColumnMetadata[] | null;
+  columnMetadata?: ColumnMetadata[];
 }
 
 export interface QueryInputState {
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
-  prevColumnMetadata: ColumnMetadata[] | null;
+  prevColumnMetadata?: ColumnMetadata[];
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
@@ -87,7 +87,6 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     super(props, context);
     this.state = {
       editorHeight: 200,
-      prevColumnMetadata: null,
     };
   }
 
@@ -175,7 +174,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
-  render() {
+  render(): JSX.Element {
     const { queryString, runeMode, onQueryStringChange } = this.props;
     const { editorHeight } = this.state;
 
