@@ -31,14 +31,13 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -57,7 +56,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> input, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
     final QueryPlus<T> queryPlus = input.withQuerySegmentSpec(specificSpec);
     final Query<T> query = queryPlus.getQuery();
@@ -151,12 +150,13 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     );
   }
 
-  private void appendMissingSegment(Map<String, Object> responseContext)
+  private void appendMissingSegment(ResponseContext responseContext)
   {
-    List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
+    List<SegmentDescriptor> missingSegments =
+        (List<SegmentDescriptor>) responseContext.get(ResponseContext.CTX_MISSING_SEGMENTS);
     if (missingSegments == null) {
       missingSegments = new ArrayList<>();
-      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
+      responseContext.put(ResponseContext.CTX_MISSING_SEGMENTS, missingSegments);
     }
     missingSegments.add(specificSpec.getDescriptor());
   }

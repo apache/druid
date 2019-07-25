@@ -44,12 +44,16 @@ import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
@@ -84,6 +88,7 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.servlet.http.HttpServletRequest;
@@ -94,6 +99,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -161,6 +167,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private final AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
+  private final LockGranularity lockGranularity;
+
+  @JsonIgnore
   private IngestionState ingestionState;
 
   @JsonIgnore
@@ -195,6 +204,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     this.ingestionState = IngestionState.NOT_STARTED;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.lockGranularity = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
+                           ? LockGranularity.TIME_CHUNK
+                           : LockGranularity.SEGMENT;
   }
 
   @Override
@@ -274,7 +286,34 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
-      driver.startJob();
+      driver.startJob(
+          segmentId -> {
+            try {
+              if (lockGranularity == LockGranularity.SEGMENT) {
+                return toolbox.getTaskActionClient().submit(
+                    new SegmentLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        segmentId.getVersion(),
+                        segmentId.getShardSpec().getPartitionNum(),
+                        1000L
+                    )
+                ).isOk();
+              } else {
+                return toolbox.getTaskActionClient().submit(
+                    new TimeChunkLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        1000L
+                    )
+                ) != null;
+              }
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
@@ -289,8 +328,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+          throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+        }
+        final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
+            segments,
+            null,
+            null
+        );
         return toolbox.getTaskActionClient().submit(action);
       };
 
@@ -730,7 +776,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 schema.getGranularitySpec().getSegmentGranularity(),
                 sequenceName,
                 previousSegmentId,
-                skipSegmentLineageCheck
+                skipSegmentLineageCheck,
+                NumberedShardSpecFactory.instance(),
+                LockGranularity.TIME_CHUNK
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

@@ -74,6 +74,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -432,7 +433,7 @@ public class CachingClusteredClientBenchmark
         .applyPostMergeDecoration();
 
     //noinspection unchecked
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
     return queryResult.toList();
   }
@@ -528,7 +529,7 @@ public class CachingClusteredClientBenchmark
     }
 
     @Override
-    public Sequence<Object> run(QueryPlus<Object> queryPlus, Map<String, Object> responseContext)
+    public Sequence<Object> run(QueryPlus<Object> queryPlus, ResponseContext responseContext)
     {
       final QueryRunnerFactory factory = conglomerate.findFactory(queryPlus.getQuery());
       //noinspection unchecked

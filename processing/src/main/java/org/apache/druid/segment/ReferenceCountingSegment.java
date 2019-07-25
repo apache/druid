@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -33,11 +35,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * until that. So ReferenceCountingSegment implements something like automatic reference count-based resource
  * management.
  */
-public class ReferenceCountingSegment extends AbstractSegment
+public class ReferenceCountingSegment extends AbstractSegment implements Overshadowable<ReferenceCountingSegment>
 {
   private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegment.class);
 
   private final Segment baseSegment;
+  private final short startRootPartitionId;
+  private final short endRootPartitionId;
+  private final short minorVersion;
+  private final short atomicUpdateGroupSize;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final Phaser referents = new Phaser(1)
   {
@@ -66,7 +72,28 @@ public class ReferenceCountingSegment extends AbstractSegment
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
+    this(
+        Preconditions.checkNotNull(baseSegment, "baseSegment"),
+        baseSegment.getId().getPartitionNum(),
+        (baseSegment.getId().getPartitionNum() + 1),
+        (short) 0,
+        (short) 1
+    );
+  }
+
+  public ReferenceCountingSegment(
+      Segment baseSegment,
+      int startRootPartitionId,
+      int endRootPartitionId,
+      short minorVersion,
+      short atomicUpdateGroupSize
+  )
+  {
     this.baseSegment = baseSegment;
+    this.startRootPartitionId = (short) startRootPartitionId;
+    this.endRootPartitionId = (short) endRootPartitionId;
+    this.minorVersion = minorVersion;
+    this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
 
   public Segment getBaseSegment()
@@ -149,5 +176,57 @@ public class ReferenceCountingSegment extends AbstractSegment
   public <T> T as(Class<T> clazz)
   {
     return getBaseSegment().as(clazz);
+  }
+
+  @Override
+  public boolean overshadows(ReferenceCountingSegment other)
+  {
+    if (baseSegment.getId().getDataSource().equals(other.baseSegment.getId().getDataSource())
+        && baseSegment.getId().getInterval().overlaps(other.baseSegment.getId().getInterval())) {
+      final int majorVersionCompare = baseSegment.getId().getVersion()
+                                                 .compareTo(other.baseSegment.getId().getVersion());
+      if (majorVersionCompare > 0) {
+        return true;
+      } else if (majorVersionCompare == 0) {
+        return includeRootPartitions(other) && getMinorVersion() > other.getMinorVersion();
+      }
+    }
+    return false;
+  }
+
+  private boolean includeRootPartitions(ReferenceCountingSegment other)
+  {
+    return startRootPartitionId <= other.startRootPartitionId
+           && endRootPartitionId >= other.endRootPartitionId;
+  }
+
+  @Override
+  public int getStartRootPartitionId()
+  {
+    return startRootPartitionId;
+  }
+
+  @Override
+  public int getEndRootPartitionId()
+  {
+    return endRootPartitionId;
+  }
+
+  @Override
+  public String getVersion()
+  {
+    return baseSegment.getId().getVersion();
+  }
+
+  @Override
+  public short getMinorVersion()
+  {
+    return minorVersion;
+  }
+
+  @Override
+  public short getAtomicUpdateGroupSize()
+  {
+    return atomicUpdateGroupSize;
   }
 }

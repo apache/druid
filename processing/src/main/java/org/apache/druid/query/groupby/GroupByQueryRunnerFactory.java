@@ -31,11 +31,11 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -70,7 +70,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
       {
         QueryRunner<Row> rowQueryRunner = strategySelector.strategize((GroupByQuery) queryPlus.getQuery()).mergeRunners(
             queryExecutor,
@@ -99,7 +99,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+    public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
     {
       Query<Row> query = queryPlus.getQuery();
       if (!(query instanceof GroupByQuery)) {

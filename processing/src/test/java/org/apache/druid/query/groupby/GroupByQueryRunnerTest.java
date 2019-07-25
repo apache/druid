@@ -81,6 +81,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
@@ -2922,7 +2923,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2953,7 +2954,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
@@ -3009,10 +3010,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3052,10 +3052,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3106,10 +3105,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3204,7 +3202,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3223,8 +3221,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
@@ -3256,7 +3253,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
 
@@ -3348,7 +3345,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3385,7 +3382,7 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "technology", 2L, 178.24917602539062D}
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3429,7 +3426,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3950,7 +3947,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3969,8 +3966,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
@@ -4251,7 +4247,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4270,8 +4266,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
@@ -4352,7 +4347,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4371,7 +4366,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     // add an extra layer of merging, simulate broker forwarding query to historical
     TestHelper.assertExpectedObjects(
         expectedResults,
@@ -4523,8 +4518,7 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
   @Test
@@ -4575,9 +4569,8 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
   // A subquery identical to the query should yield identical results
@@ -7960,7 +7953,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment"
     );
     exec.shutdownNow();
@@ -8029,7 +8022,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment"
     );
     exec.shutdownNow();
@@ -8094,7 +8087,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment-dim-extraction"
     );
     exec.shutdownNow();
@@ -8601,7 +8594,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment-filter"
     );
     exec.shutdownNow();
@@ -10017,7 +10010,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10041,7 +10034,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
@@ -10052,7 +10044,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
         "merged"
     );
   }
@@ -10083,7 +10075,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10107,7 +10099,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
@@ -10117,7 +10108,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10152,7 +10143,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10176,7 +10167,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -10236,7 +10226,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10284,7 +10274,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10308,7 +10298,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -10368,7 +10357,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 

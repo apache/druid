@@ -22,18 +22,21 @@ package org.apache.druid.tests.indexer;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 
 public class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
@@ -165,7 +168,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForNewVersion)
   {
-    final Set<String> oldVersions = waitForNewVersion ? coordinator.getSegmentVersions(dataSourceName) : null;
+    final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
 
     long startSubTaskCount = -1;
     final boolean assertRunsSubTasks = taskSpec.contains("index_parallel");
@@ -193,7 +196,19 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     // original segments have loaded.
     if (waitForNewVersion) {
       RetryUtil.retryUntilTrue(
-          () -> !oldVersions.containsAll(coordinator.getSegmentVersions(dataSourceName)), "See a new version"
+          () -> {
+            final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+                coordinator.getAvailableSegments(dataSourceName)
+            );
+
+            final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(Intervals.ETERNITY);
+            return holders
+                .stream()
+                .flatMap(holder -> holder.getObject().stream())
+                .anyMatch(chunk -> oldVersions.stream()
+                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
+          },
+          "See a new version"
       );
     }
 
