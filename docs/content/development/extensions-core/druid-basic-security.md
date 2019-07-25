@@ -25,6 +25,7 @@ title: "Basic Security"
 # Druid Basic Security
 
 This Apache Druid (incubating) extension adds:
+
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using database or LDAP as its credentials store
 - an Authorizer which implements basic role-based access control for database and LDAP users and groups
 
@@ -427,6 +428,7 @@ Unassign role {roleName} from group mapping {groupMappingName}
 Set the permissions of {roleName}. This replaces the previous set of permissions on the role.
 
 Content: List of JSON Resource-Action objects, e.g.:
+
 ```
 [
 {

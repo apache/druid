@@ -115,7 +115,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(QueryPlus.wrap(query), new HashMap<>());
+    ).run(QueryPlus.wrap(query));
     return results.toList();
   }
 

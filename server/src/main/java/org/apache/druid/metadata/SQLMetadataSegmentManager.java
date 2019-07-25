@@ -546,7 +546,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   {
     List<String> segmentIdsToMarkAsUsed = new ArrayList<>();
     for (DataSegment segment : unusedSegments) {
-      if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion())) {
+      if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment)) {
         continue;
       }
       segmentIdsToMarkAsUsed.add(segment.getId().toString());

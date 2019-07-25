@@ -23,10 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s.
@@ -153,7 +153,7 @@ public final class QueryPlus<T>
     return new QueryPlus<>(replacementQuery, queryMetrics, identity);
   }
 
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
+  public Sequence<T> run(QuerySegmentWalker walker, ResponseContext context)
   {
     return query.getRunner(walker).run(this, context);
   }

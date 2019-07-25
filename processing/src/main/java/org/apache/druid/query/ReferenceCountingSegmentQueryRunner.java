@@ -21,9 +21,8 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.ReferenceCountingSegment;
-
-import java.util.Map;
 
 /**
  */
@@ -45,7 +44,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     if (adapter.increment()) {
       try {

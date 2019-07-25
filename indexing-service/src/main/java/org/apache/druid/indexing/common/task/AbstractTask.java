@@ -188,7 +188,7 @@ public abstract class AbstractTask implements Task
     return ID_JOINER.join(objects);
   }
 
-  static String joinId(Object...objects)
+  static String joinId(Object... objects)
   {
     return ID_JOINER.join(objects);
   }

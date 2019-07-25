@@ -32,9 +32,18 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -48,10 +57,12 @@ import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -181,7 +192,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class);
+    mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
@@ -840,6 +851,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegment()
   {
+    final ShardSpecFactory shardSpecFactory = NumberedShardSpecFactory.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -847,6 +859,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         null,
         interval,
+        shardSpecFactory,
         "version",
         false
     );
@@ -858,6 +871,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier.toString(),
         interval,
+        shardSpecFactory,
         identifier.getVersion(),
         false
     );
@@ -869,6 +883,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier1.toString(),
         interval,
+        shardSpecFactory,
         identifier1.getVersion(),
         false
     );
@@ -880,6 +895,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier1.toString(),
         interval,
+        shardSpecFactory,
         identifier1.getVersion(),
         false
     );
@@ -892,6 +908,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq1",
         null,
         interval,
+        shardSpecFactory,
         "version",
         false
     );
@@ -902,6 +919,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDeletePendingSegment() throws InterruptedException
   {
+    final ShardSpecFactory shardSpecFactory = NumberedShardSpecFactory.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     String prevSegmentId = null;
@@ -914,6 +932,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
+          shardSpecFactory,
           "version",
           false
       );
@@ -928,6 +947,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
+          shardSpecFactory,
           "version",
           false
       );
@@ -936,5 +956,166 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final int numDeleted = coordinator.deletePendingSegments(dataSource, new Interval(begin, secondBegin));
     Assert.assertEquals(10, numDeleted);
+  }
+
+  @Test
+  public void testAllocatePendingSegmentsWithOvershadowingSegments() throws IOException
+  {
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    String prevSegmentId = null;
+
+    for (int i = 0; i < 10; i++) {
+      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+          dataSource,
+          "seq",
+          prevSegmentId,
+          interval,
+          new NumberedOverwritingShardSpecFactory(0, 1, (short) (i + 1)),
+          "version",
+          false
+      );
+      Assert.assertEquals(
+          StringUtils.format(
+              "ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version%s",
+              "_" + (i + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID)
+          ),
+          identifier.toString()
+      );
+      prevSegmentId = identifier.toString();
+      final Set<DataSegment> toBeAnnounced = Collections.singleton(
+          new DataSegment(
+              identifier.getDataSource(),
+              identifier.getInterval(),
+              identifier.getVersion(),
+              null,
+              Collections.emptyList(),
+              Collections.emptyList(),
+              ((NumberedOverwriteShardSpec) identifier.getShardSpec()).withAtomicUpdateGroupSize(1),
+              0,
+              10L
+          )
+      );
+      final Set<DataSegment> announced = coordinator.announceHistoricalSegments(toBeAnnounced);
+
+      Assert.assertEquals(toBeAnnounced, announced);
+    }
+
+    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline
+        .forSegments(coordinator.getUsedSegmentsForInterval(dataSource, interval));
+
+    final List<DataSegment> visibleSegments = timeline
+        .lookup(interval)
+        .stream()
+        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+        .map(PartitionChunk::getObject)
+        .collect(Collectors.toList());
+
+    Assert.assertEquals(1, visibleSegments.size());
+    Assert.assertEquals(
+        new DataSegment(
+            dataSource,
+            interval,
+            "version",
+            null,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            new NumberedOverwriteShardSpec(
+                9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+                0,
+                1,
+                (short) 9,
+                (short) 1
+            ),
+            0,
+            10L
+        ),
+        visibleSegments.get(0)
+    );
+  }
+
+  @Test
+  public void testAllocatePendingSegmentsForHashBasedNumberedShardSpec() throws IOException
+  {
+    final ShardSpecFactory shardSpecFactory = new HashBasedNumberedShardSpecFactory(
+        null,
+        5
+    );
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+
+    SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        null,
+        interval,
+        shardSpecFactory,
+        "version",
+        true
+    );
+
+    HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
+    Assert.assertEquals(0, shardSpec.getPartitionNum());
+    Assert.assertEquals(5, shardSpec.getPartitions());
+
+    coordinator.announceHistoricalSegments(
+        Collections.singleton(
+            new DataSegment(
+                id.getDataSource(),
+                id.getInterval(),
+                id.getVersion(),
+                null,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                id.getShardSpec(),
+                0,
+                10L
+            )
+        )
+    );
+
+    id = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq2",
+        null,
+        interval,
+        shardSpecFactory,
+        "version",
+        true
+    );
+
+    shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
+    Assert.assertEquals(1, shardSpec.getPartitionNum());
+    Assert.assertEquals(5, shardSpec.getPartitions());
+
+    coordinator.announceHistoricalSegments(
+        Collections.singleton(
+            new DataSegment(
+                id.getDataSource(),
+                id.getInterval(),
+                id.getVersion(),
+                null,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                id.getShardSpec(),
+                0,
+                10L
+            )
+        )
+    );
+
+    id = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq3",
+        null,
+        interval,
+        new HashBasedNumberedShardSpecFactory(null, 3),
+        "version",
+        true
+    );
+
+    shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
+    Assert.assertEquals(2, shardSpec.getPartitionNum());
+    Assert.assertEquals(3, shardSpec.getPartitions());
   }
 }

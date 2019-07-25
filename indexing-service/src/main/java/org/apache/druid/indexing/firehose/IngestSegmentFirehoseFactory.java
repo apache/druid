@@ -159,12 +159,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @JsonProperty
+  @Nullable
   public Interval getInterval()
   {
     return interval;
   }
 
   @JsonProperty
+  @Nullable
   public List<WindowedSegmentId> getSegments()
   {
     return segmentIds;

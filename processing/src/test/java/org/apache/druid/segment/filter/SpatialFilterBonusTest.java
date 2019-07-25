@@ -68,7 +68,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -516,8 +515,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -604,8 +602,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -698,8 +695,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

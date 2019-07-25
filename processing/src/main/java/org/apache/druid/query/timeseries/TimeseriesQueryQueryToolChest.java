@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.joda.time.DateTime;
 
@@ -108,7 +109,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       public Sequence<Result<TimeseriesResultValue>> doRun(
           QueryRunner<Result<TimeseriesResultValue>> baseRunner,
           QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         int limit = ((TimeseriesQuery) queryPlus.getQuery()).getLimit();
