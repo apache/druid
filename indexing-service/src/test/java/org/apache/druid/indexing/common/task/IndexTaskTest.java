@@ -141,8 +141,6 @@ public class IndexTaskTest extends IngestionTestBase
 
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
-  private volatile int segmentAllocatePartitionCounter;
-  private File reportsFile;
   private AppenderatorsManager appenderatorsManager;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -162,11 +160,7 @@ public class IndexTaskTest extends IngestionTestBase
   public void setup() throws IOException
   {
     appenderatorsManager = new TestAppenderatorsManager();
-    reportsFile = temporaryFolder.newFile(
-        StringUtils.format("IndexTaskTestReports-%s.json", System.currentTimeMillis())
-    );
 
-    final File deepStorageDir = temporaryFolder.newFolder();
     final File cacheDir = temporaryFolder.newFolder();
     segmentLoader = new SegmentLoaderLocalCacheManager(
         indexIO,
