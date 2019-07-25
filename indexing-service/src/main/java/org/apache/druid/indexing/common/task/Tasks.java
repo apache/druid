@@ -19,20 +19,12 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -44,23 +36,11 @@ public class Tasks
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
+  public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
-
-  public static Map<Interval, TaskLock> tryAcquireExclusiveLocks(TaskActionClient client, SortedSet<Interval> intervals)
-      throws IOException
-  {
-    final Map<Interval, TaskLock> lockMap = new HashMap<>();
-    for (Interval interval : computeCompactIntervals(intervals)) {
-      final TaskLock lock = Preconditions.checkNotNull(
-          client.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
-          "Cannot acquire a lock for interval[%s]", interval
-      );
-      lockMap.put(interval, lock);
-    }
-    return lockMap;
-  }
+  public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
 
   public static SortedSet<Interval> computeCompactIntervals(SortedSet<Interval> intervals)
   {

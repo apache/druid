@@ -49,7 +49,7 @@ The startup scripts for the tutorial will expect the contents of the Tranquility
 ## Enable Tranquility Server
 
 - In your `conf/supervise/single-server/micro-quickstart.conf`, uncomment the `tranquility-server` line.
-- Stop your *bin/supervise* command (CTRL-C) and then restart it by again running `bin/supervise -c conf/supervise/single-server/micro-quickstart.conf`.
+- Stop *micro-quickstart* cluster command (CTRL-C) then restart it again by running `bin/start-micro-quickstart`
 
 As part of the output of *supervise* you should see something like:
 

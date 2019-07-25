@@ -32,9 +32,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -66,14 +64,12 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
-
-    final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          intervals,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {

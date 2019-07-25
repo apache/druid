@@ -20,39 +20,25 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.LockResult;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-
-public class LockTryAcquireAction implements TaskAction<TaskLock>
+/**
+ * TaskAction to release a {@link org.apache.druid.indexing.common.SegmentLock}.
+ * Used by batch tasks when they fail to acquire all necessary locks.
+ */
+public class SegmentLockReleaseAction implements TaskAction<Void>
 {
-  @JsonIgnore
-  private final TaskLockType type;
-
-  @JsonIgnore
   private final Interval interval;
+  private final int partitionId;
 
   @JsonCreator
-  public LockTryAcquireAction(
-      @JsonProperty("lockType") @Nullable TaskLockType type, // nullable for backward compatibility
-      @JsonProperty("interval") Interval interval
-  )
+  public SegmentLockReleaseAction(@JsonProperty Interval interval, @JsonProperty int partitionId)
   {
-    this.type = type == null ? TaskLockType.EXCLUSIVE : type;
     this.interval = interval;
-  }
-
-  @JsonProperty("lockType")
-  public TaskLockType getType()
-  {
-    return type;
+    this.partitionId = partitionId;
   }
 
   @JsonProperty
@@ -61,19 +47,25 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
     return interval;
   }
 
-  @Override
-  public TypeReference<TaskLock> getReturnTypeReference()
+  @JsonProperty
+  public int getPartitionId()
   {
-    return new TypeReference<TaskLock>()
+    return partitionId;
+  }
+
+  @Override
+  public TypeReference<Void> getReturnTypeReference()
+  {
+    return new TypeReference<Void>()
     {
     };
   }
 
   @Override
-  public TaskLock perform(Task task, TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    final LockResult result = toolbox.getTaskLockbox().tryLock(type, task, interval);
-    return result.isOk() ? result.getTaskLock() : null;
+    toolbox.getTaskLockbox().unlock(task, interval, partitionId);
+    return null;
   }
 
   @Override
@@ -85,9 +77,9 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
   @Override
   public String toString()
   {
-    return "LockTryAcquireAction{" +
-           "lockType=" + type +
-           ", interval=" + interval +
+    return "SegmentLockReleaseAction{" +
+           "interval=" + interval +
+           ", partitionId=" + partitionId +
            '}';
   }
 }
