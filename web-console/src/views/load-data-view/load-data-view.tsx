@@ -406,11 +406,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!continueToSpec) {
       return (
         <div className={classNames('load-data-continue-view load-data-view')}>
-          <Card className={'spec-card'} interactive onClick={this.handleResetConfirm}>
-            <Icon iconSize={30} icon={IconNames.ASTERISK} />
+          <Card className={'spec-card'} interactive onClick={this.handleResetSpec}>
+            <Icon className="spec-card-icon" icon={IconNames.ASTERISK} iconSize={30} />
             <div className={'spec-card-header'}>
               Start a new spec
-              <div className={'spec-card-caption'}>start a new spec something something</div>
+              <div className={'spec-card-caption'}>Start a new ingestion flow</div>
             </div>
           </Card>
           <Card
@@ -418,7 +418,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             interactive
             onClick={() => this.setState({ continueToSpec: true })}
           >
-            <Icon icon={IconNames.REPEAT} iconSize={30} />
+            <Icon className="spec-card-icon" icon={IconNames.REPEAT} iconSize={30} />
             <div className={'spec-card-header'}>
               Continue from previous spec
               <div className={'spec-card-caption'}>
@@ -754,6 +754,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({ showResetConfirm: true });
   };
 
+  private handleResetSpec = () => {
+    this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
+    this.updateSpec({} as any);
+  };
+
   renderResetConfirm() {
     const { showResetConfirm } = this.state;
     if (!showResetConfirm) return null;
@@ -766,10 +771,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         intent={Intent.DANGER}
         isOpen
         onCancel={() => this.setState({ showResetConfirm: false })}
-        onConfirm={() => {
-          this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
-          this.updateSpec({} as any);
-        }}
+        onConfirm={this.handleResetSpec}
       >
         <p>This will discard the current progress in the spec.</p>
       </Alert>
@@ -923,7 +925,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1200,7 +1202,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const timestampSpec =
       deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1369,7 +1371,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1593,7 +1595,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1898,7 +1900,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const dimensionsSpec: DimensionsSpec =
       deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || EMPTY_OBJECT;
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {

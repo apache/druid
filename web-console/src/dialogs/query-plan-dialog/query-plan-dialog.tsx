@@ -79,8 +79,8 @@ export class QueryPlanDialog extends React.PureComponent<
       (explainResult as SemiJoinQueryExplanation).mainQuery &&
       (explainResult as SemiJoinQueryExplanation).subQueryRight
     ) {
-      let mainSignature: JSX.Element | null = null;
-      let subSignature: JSX.Element | null = null;
+      let mainSignature: JSX.Element | undefined;
+      let subSignature: JSX.Element | undefined;
       if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
         const signatureContent =
           (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';

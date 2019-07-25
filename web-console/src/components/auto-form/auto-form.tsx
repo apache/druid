@@ -42,7 +42,7 @@ export interface Field<T> {
 
 export interface AutoFormProps<T> {
   fields: Field<T>[];
-  model: T | null;
+  model: T | undefined;
   onChange: (newModel: T) => void;
   showCustom?: (model: T) => boolean;
   updateJSONValidity?: (jsonValidity: boolean) => void;

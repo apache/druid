@@ -270,7 +270,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         <div className="init-div">
           <Button
             icon={IconNames.BUILD}
-            text="Initialize lookup"
+            text="Initialize lookups"
             onClick={() => this.initializeLookup()}
           />
         </div>

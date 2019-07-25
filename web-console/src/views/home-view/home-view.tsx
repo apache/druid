@@ -34,7 +34,7 @@ export interface CardOptions {
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
-  error?: string | null;
+  error?: string;
 }
 
 export interface HomeViewProps {
@@ -60,11 +60,6 @@ export interface HomeViewState {
   suspendedSupervisorCount: number;
   supervisorCountError?: string;
 
-  lookupsCountLoading: boolean;
-  lookupsCount: number;
-  lookupsCountError: string | null;
-  lookupsUninitialized: boolean;
-
   taskCountLoading: boolean;
   runningTaskCount: number;
   pendingTaskCount: number;
@@ -82,6 +77,11 @@ export interface HomeViewState {
   middleManagerCount: number;
   peonCount: number;
   serverCountError?: string;
+
+  lookupsCountLoading: boolean;
+  lookupsCount: number;
+  lookupsUninitialized: boolean;
+  lookupsCountError?: string;
 }
 
 export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> {
@@ -110,11 +110,6 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       runningSupervisorCount: 0,
       suspendedSupervisorCount: 0,
 
-      lookupsCountLoading: false,
-      lookupsCount: 0,
-      lookupsCountError: null,
-      lookupsUninitialized: false,
-
       taskCountLoading: false,
       runningTaskCount: 0,
       pendingTaskCount: 0,
@@ -130,6 +125,10 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       historicalCount: 0,
       middleManagerCount: 0,
       peonCount: 0,
+
+      lookupsCountLoading: false,
+      lookupsCount: 0,
+      lookupsUninitialized: false,
     };
 
     this.versionQueryManager = new QueryManager({
@@ -311,9 +310,9 @@ GROUP BY 1`,
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           lookupsCount: result ? result.lookupsCount : 0,
+          lookupsUninitialized: error === 'Request failed with status code 404',
           lookupsCountLoading: loading,
           lookupsCountError: error,
-          lookupsUninitialized: error === 'Request failed with status code 404',
         });
       },
     });
@@ -487,7 +486,7 @@ GROUP BY 1`,
               </p>
             </>
           ),
-          error: !state.lookupsUninitialized ? state.lookupsCountError : null,
+          error: !state.lookupsUninitialized ? state.lookupsCountError : undefined,
         })}
       </div>
     );

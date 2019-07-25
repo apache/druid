@@ -109,7 +109,7 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
             },
           ]}
-          model={currentConfig || null}
+          model={currentConfig}
           onChange={m => this.setState({ currentConfig: m })}
           updateJSONValidity={e => this.setState({ allJSONValid: e })}
         />

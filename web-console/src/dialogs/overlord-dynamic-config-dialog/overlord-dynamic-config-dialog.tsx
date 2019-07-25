@@ -33,7 +33,7 @@ export interface OverlordDynamicConfigDialogProps {
 }
 
 export interface OverlordDynamicConfigDialogState {
-  dynamicConfig: Record<string, any> | null;
+  dynamicConfig?: Record<string, any>;
   allJSONValid: boolean;
   historyRecords: any[];
 }
@@ -47,7 +47,6 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
   constructor(props: OverlordDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null,
       allJSONValid: true,
       historyRecords: [],
     };
@@ -72,7 +71,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
   }
 
   async getConfig() {
-    let config: Record<string, any> | null = null;
+    let config: Record<string, any> | undefined;
     try {
       const configResp = await axios.get('/druid/indexer/v1/worker');
       config = configResp.data || {};

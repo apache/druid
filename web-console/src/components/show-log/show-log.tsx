@@ -39,7 +39,7 @@ export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
-  status: string | null;
+  status?: string;
 }
 
 export interface ShowLogState {

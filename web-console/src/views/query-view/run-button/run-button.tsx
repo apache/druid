@@ -47,7 +47,7 @@ export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: ((wrapQuery: boolean) => void) | null;
+  onRun: (wrapQuery: boolean) => void;
   onExplain: () => void;
 }
 

@@ -88,8 +88,8 @@ export interface ServersViewState {
   serverFilter: Filter[];
   groupServersBy?: 'server_type' | 'tier';
 
-  middleManagerDisableWorkerHost: string | null;
-  middleManagerEnableWorkerHost: string | null;
+  middleManagerDisableWorkerHost?: string;
+  middleManagerEnableWorkerHost?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
 }
@@ -183,9 +183,6 @@ ORDER BY "rank" DESC, "server" DESC`;
     this.state = {
       serversLoading: true,
       serverFilter: [],
-
-      middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null,
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
@@ -573,7 +570,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not disable worker"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ middleManagerDisableWorkerHost: null });
+          this.setState({ middleManagerDisableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
@@ -602,7 +599,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not enable worker"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ middleManagerEnableWorkerHost: null });
+          this.setState({ middleManagerEnableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
