@@ -18,30 +18,6 @@
 
 @import '../../variables';
 
-.load-data-continue-view {
-  display: grid;
-  justify-content: center;
-  grid-gap: $standard-padding;
-  grid-template-columns: 500px 500px;
-
-  .spec-card {
-    height: 100px;
-    display: grid;
-    grid-gap: $standard-padding;
-    grid-template-columns: 30px 1fr;
-
-    .spec-card-header {
-      font-size: 25px;
-      line-height: 30px;
-      .spec-card-caption {
-        font-size: 15px;
-        line-height: 20px;
-      }
-    }
-  }
-}
-
-
 .load-data-view {
   height: 100%;
   display: grid;
@@ -52,6 +28,29 @@
     'navi navi'
     'main ctrl'
     'main next';
+
+  &.load-data-continue-view {
+    display: grid;
+    justify-content: center;
+    grid-gap: $standard-padding;
+    grid-template-columns: 500px 500px;
+
+    .spec-card {
+      height: 100px;
+      display: grid;
+      grid-gap: $standard-padding;
+      grid-template-columns: 30px 1fr;
+
+      .spec-card-header {
+        font-size: 25px;
+        line-height: 30px;
+        .spec-card-caption {
+          font-size: 15px;
+          line-height: 20px;
+        }
+      }
+    }
+  }
 
   &.welcome {
     .main {

@@ -419,7 +419,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { step, continueToSpec } = this.state;
     if (!continueToSpec) {
       return (
-        <div className={classNames('load-data-continue-view')}>
+        <div className={classNames('load-data-continue-view load-data-view')}>
           <Card className={'spec-card'} interactive onClick={this.handleResetConfirm}>
             <Icon iconSize={30} icon={IconNames.ASTERISK} />
             <div className={'spec-card-header'}>
@@ -571,7 +571,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
-            <Button icon={IconNames.RESET} text="Reset sspec" onClick={this.handleResetConfirm} />
+            <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
           )}
         </div>
       </>
