@@ -50,9 +50,9 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AllowAllAuthorizer;
@@ -69,8 +69,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -231,18 +231,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               }
             }
         ),
-        new DataSegmentKiller()
-        {
-          @Override
-          public void kill(DataSegment segment)
-          {
-          }
-
-          @Override
-          public void killAll()
-          {
-          }
-        },
+        new NoopDataSegmentKiller(),
         null,
         null,
         null,
@@ -377,9 +366,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
+    public void report(String supervisorTaskId, Set<DataSegment> oldSegments, Set<DataSegment> pushedSegments)
     {
-      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), pushedSegments));
+      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), oldSegments, pushedSegments));
     }
   }
 }

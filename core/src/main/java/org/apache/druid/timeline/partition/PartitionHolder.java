@@ -20,30 +20,32 @@
 package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
+import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Spliterator;
-import java.util.TreeMap;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * An object that clumps together multiple other objects which each represent a shard of some space.
  */
-public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
+public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<PartitionChunk<T>>
 {
-  private final TreeMap<PartitionChunk<T>, PartitionChunk<T>> holderMap;
+  private final OvershadowableManager<T> overshadowableManager;
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
-    this.holderMap = new TreeMap<>();
+    this.overshadowableManager = new OvershadowableManager<>();
     add(initialChunk);
   }
 
   public PartitionHolder(List<PartitionChunk<T>> initialChunks)
   {
-    this.holderMap = new TreeMap<>();
+    this.overshadowableManager = new OvershadowableManager<>();
     for (PartitionChunk<T> chunk : initialChunks) {
       add(chunk);
     }
@@ -51,33 +53,32 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionHolder(PartitionHolder<T> partitionHolder)
   {
-    this.holderMap = new TreeMap<>();
-    this.holderMap.putAll(partitionHolder.holderMap);
+    this.overshadowableManager = new OvershadowableManager<>(partitionHolder.overshadowableManager);
   }
 
   public boolean add(PartitionChunk<T> chunk)
   {
-    return holderMap.putIfAbsent(chunk, chunk) == null;
+    return overshadowableManager.addChunk(chunk);
   }
 
   @Nullable
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    return holderMap.remove(chunk);
+    return overshadowableManager.removeChunk(chunk);
   }
 
   public boolean isEmpty()
   {
-    return holderMap.isEmpty();
+    return overshadowableManager.isEmpty();
   }
 
   public boolean isComplete()
   {
-    if (holderMap.isEmpty()) {
+    if (overshadowableManager.isEmpty()) {
       return false;
     }
 
-    Iterator<PartitionChunk<T>> iter = holderMap.keySet().iterator();
+    Iterator<PartitionChunk<T>> iter = iterator();
 
     PartitionChunk<T> curr = iter.next();
 
@@ -86,7 +87,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
     }
 
     if (curr.isEnd()) {
-      return true;
+      return overshadowableManager.isComplete();
     }
 
     while (iter.hasNext()) {
@@ -96,7 +97,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
       }
 
       if (next.isEnd()) {
-        return true;
+        return overshadowableManager.isComplete();
       }
       curr = next;
     }
@@ -106,24 +107,29 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionChunk<T> getChunk(final int partitionNum)
   {
-    final Iterator<PartitionChunk<T>> retVal = Iterators.filter(
-        holderMap.keySet().iterator(),
-        input -> input.getChunkNumber() == partitionNum
-    );
-
-    return retVal.hasNext() ? retVal.next() : null;
+    return overshadowableManager.getChunk(partitionNum);
   }
 
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return holderMap.keySet().iterator();
+    return overshadowableManager.getVisibles().iterator();
   }
 
   @Override
   public Spliterator<PartitionChunk<T>> spliterator()
   {
-    return holderMap.keySet().spliterator();
+    return overshadowableManager.getVisibles().spliterator();
+  }
+
+  public Stream<PartitionChunk<T>> stream()
+  {
+    return StreamSupport.stream(spliterator(), false);
+  }
+
+  public List<PartitionChunk<T>> getOvershadowed()
+  {
+    return overshadowableManager.getOvershadowed();
   }
 
   public Iterable<T> payloads()
@@ -140,27 +146,21 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    PartitionHolder that = (PartitionHolder) o;
-
-    if (!holderMap.equals(that.holderMap)) {
-      return false;
-    }
-
-    return true;
+    PartitionHolder<?> that = (PartitionHolder<?>) o;
+    return Objects.equals(overshadowableManager, that.overshadowableManager);
   }
 
   @Override
   public int hashCode()
   {
-    return holderMap.hashCode();
+    return Objects.hash(overshadowableManager);
   }
 
   @Override
   public String toString()
   {
     return "PartitionHolder{" +
-           "holderMap=" + holderMap +
+           "overshadowableManager=" + overshadowableManager +
            '}';
   }
 }

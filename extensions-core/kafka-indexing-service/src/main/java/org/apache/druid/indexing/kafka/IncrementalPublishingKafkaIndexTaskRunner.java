@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -72,7 +73,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,
       RowIngestionMetersFactory rowIngestionMetersFactory,
-      AppenderatorsManager appenderatorsManager
+      AppenderatorsManager appenderatorsManager,
+      LockGranularity lockGranularityToUse
   )
   {
     super(
@@ -82,7 +84,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         chatHandlerProvider,
         savedParseExceptions,
         rowIngestionMetersFactory,
-        appenderatorsManager
+        appenderatorsManager,
+        lockGranularityToUse
     );
     this.task = task;
   }

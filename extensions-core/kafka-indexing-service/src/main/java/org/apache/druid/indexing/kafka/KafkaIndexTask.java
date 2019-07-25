@@ -139,7 +139,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         chatHandlerProvider,
         savedParseExceptions,
         rowIngestionMetersFactory,
-        appenderatorsManager
+        appenderatorsManager,
+        lockGranularityToUse
     );
   }
 

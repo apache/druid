@@ -97,14 +97,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-public class CompactionTask extends AbstractTask
+public class CompactionTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
@@ -230,6 +228,7 @@ public class CompactionTask extends AbstractTask
 
   @JsonProperty
   @Nullable
+  @Override
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
@@ -261,25 +260,37 @@ public class CompactionTask extends AbstractTask
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
   }
 
-  @VisibleForTesting
-  SegmentProvider getSegmentProvider()
-  {
-    return segmentProvider;
-  }
-
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
-    intervals.add(segmentProvider.interval);
-    return IndexTask.isReady(taskActionClient, intervals);
+    final List<DataSegment> segments = segmentProvider.checkAndGetSegments(taskActionClient);
+    return determineLockGranularityandTryLockWithSegments(taskActionClient, segments);
+  }
+
+  @Override
+  public boolean requireLockExistingSegments()
+  {
+    return true;
+  }
+
+  @Override
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
+      throws IOException
+  {
+    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     if (indexTaskSpecs == null) {
-      indexTaskSpecs = createIngestionSchema(
+      final List<IndexIngestionSpec> ingestionSpecs = createIngestionSchema(
           toolbox,
           segmentProvider,
           partitionConfigurationManager,
@@ -290,20 +301,23 @@ public class CompactionTask extends AbstractTask
           coordinatorClient,
           segmentLoaderFactory,
           retryPolicyFactory
-      ).stream()
-       .map(spec -> new IndexTask(
-           getId(),
-           getGroupId(),
-           getTaskResource(),
-           getDataSource(),
-           spec,
-           getContext(),
-           authorizerMapper,
-           chatHandlerProvider,
-           rowIngestionMetersFactory,
-           appenderatorsManager
-       ))
-       .collect(Collectors.toList());
+      );
+      indexTaskSpecs = IntStream
+          .range(0, ingestionSpecs.size())
+          .mapToObj(i -> new IndexTask(
+              createIndexTaskSpecId(i),
+              getGroupId(),
+              getTaskResource(),
+              getDataSource(),
+              ingestionSpecs.get(i),
+              getContext(),
+              authorizerMapper,
+              chatHandlerProvider,
+              rowIngestionMetersFactory,
+              appenderatorsManager
+
+          ))
+          .collect(Collectors.toList());
     }
 
     if (indexTaskSpecs.isEmpty()) {
@@ -319,10 +333,15 @@ public class CompactionTask extends AbstractTask
         log.info("Running indexSpec: " + json);
 
         try {
-          final TaskStatus eachResult = eachSpec.run(toolbox);
-          if (!eachResult.isSuccess()) {
+          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
+            final TaskStatus eachResult = eachSpec.run(toolbox);
+            if (!eachResult.isSuccess()) {
+              failCnt++;
+              log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+            }
+          } else {
             failCnt++;
-            log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+            log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
           }
         }
         catch (Exception e) {
@@ -334,6 +353,11 @@ public class CompactionTask extends AbstractTask
       log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
+  }
+
+  private String createIndexTaskSpecId(int i)
+  {
+    return StringUtils.format("%s_%d", getId(), i);
   }
 
   /**
@@ -367,6 +391,7 @@ public class CompactionTask extends AbstractTask
     }
 
     // find metadata for interval
+    // queryableIndexAndSegments is sorted by the interval of the dataSegment
     final List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
         timelineSegments,
         segmentFileMap,
@@ -394,7 +419,6 @@ public class CompactionTask extends AbstractTask
         final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
-            interval,
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
@@ -423,7 +447,6 @@ public class CompactionTask extends AbstractTask
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
           segmentProvider.dataSource,
-          segmentProvider.interval,
           queryableIndexAndSegments,
           dimensionsSpec,
           metricsSpec,
@@ -481,7 +504,7 @@ public class CompactionTask extends AbstractTask
       SegmentProvider segmentProvider
   ) throws IOException, SegmentLoadingException
   {
-    final List<DataSegment> usedSegments = segmentProvider.checkAndGetSegments(toolbox);
+    final List<DataSegment> usedSegments = segmentProvider.checkAndGetSegments(toolbox.getTaskActionClient());
     final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
         .forSegments(usedSegments)
@@ -491,7 +514,6 @@ public class CompactionTask extends AbstractTask
 
   private static DataSchema createDataSchema(
       String dataSource,
-      Interval totalInterval,
       List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
@@ -514,6 +536,10 @@ public class CompactionTask extends AbstractTask
       final Boolean isRollup = pair.lhs.getMetadata().isRollup();
       return isRollup != null && isRollup;
     });
+
+    final Interval totalInterval = JodaUtils.umbrellaInterval(
+        queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
+    );
 
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
         Preconditions.checkNotNull(segmentGranularity),
@@ -700,6 +726,7 @@ public class CompactionTask extends AbstractTask
   {
     private final String dataSource;
     private final Interval interval;
+    @Nullable
     private final List<DataSegment> segments;
 
     SegmentProvider(String dataSource, Interval interval)
@@ -717,21 +744,22 @@ public class CompactionTask extends AbstractTask
           segments.stream().allMatch(segment -> segment.getDataSource().equals(dataSource)),
           "segments should have the same dataSource"
       );
-      this.segments = segments;
       this.dataSource = dataSource;
+      this.segments = segments;
       this.interval = JodaUtils.umbrellaInterval(
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
       );
     }
 
+    @Nullable
     List<DataSegment> getSegments()
     {
       return segments;
     }
 
-    List<DataSegment> checkAndGetSegments(TaskToolbox toolbox) throws IOException
+    List<DataSegment> checkAndGetSegments(TaskActionClient actionClient) throws IOException
     {
-      final List<DataSegment> usedSegments = toolbox.getTaskActionClient().submit(
+      final List<DataSegment> usedSegments = actionClient.submit(
           new SegmentListUsedAction(dataSource, interval, null)
       );
       final TimelineLookup<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(usedSegments);

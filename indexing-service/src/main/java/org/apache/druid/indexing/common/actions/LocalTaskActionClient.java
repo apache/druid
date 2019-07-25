@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -26,14 +27,19 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class LocalTaskActionClient implements TaskActionClient
 {
+  private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
+
+  private final ConcurrentHashMap<Class<? extends TaskAction>, AtomicInteger> actionCountMap = new ConcurrentHashMap<>();
+
   private final Task task;
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
   private final TaskAuditLogConfig auditLogConfig;
-
-  private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
   public LocalTaskActionClient(
       Task task,
@@ -73,7 +79,15 @@ public class LocalTaskActionClient implements TaskActionClient
     final long performStartTime = System.currentTimeMillis();
     final RetType result = taskAction.perform(task, toolbox);
     emitTimerMetric("task/action/run/time", System.currentTimeMillis() - performStartTime);
+    actionCountMap.computeIfAbsent(taskAction.getClass(), k -> new AtomicInteger()).incrementAndGet();
     return result;
+  }
+
+  @VisibleForTesting
+  public int getActionCount(Class<? extends TaskAction> actionClass)
+  {
+    final AtomicInteger count = actionCountMap.get(actionClass);
+    return count == null ? 0 : count.get();
   }
 
   private void emitTimerMetric(final String metric, final long time)

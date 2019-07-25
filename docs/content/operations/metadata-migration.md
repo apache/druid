@@ -61,6 +61,7 @@ Update your Druid runtime properties with the new metadata configuration.
 Druid provides a `metadata-init` tool for creating Druid's metadata tables. After initializing the Druid database, you can run the commands shown below from the root of the Druid package to initialize the tables.
 
 In the example commands below:
+
 - `lib` is the the Druid lib directory
 - `extensions` is the Druid extensions directory
 - `base` corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
