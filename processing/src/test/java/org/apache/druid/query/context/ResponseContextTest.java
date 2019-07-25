@@ -11,8 +11,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.*;
-
 public class ResponseContextTest
 {
 
@@ -105,13 +103,13 @@ public class ResponseContextTest
     ctx.put(ResponseContext.Key.COUNT, 100L);
     ctx.put(ResponseContext.Key.ETAG, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final String fullString = ctx.serializeWith(objectMapper);
+    final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, 1000);
     Assert.assertEquals(fullString, res1.getResult());
     final ResponseContext reducedCtx = ResponseContext.createEmpty();
     reducedCtx.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 20);
     reducedCtx.remove(ResponseContext.Key.ETAG);
-    Assert.assertEquals(reducedCtx.serializeWith(objectMapper), res2.getResult());
+    Assert.assertEquals(objectMapper.writeValueAsString(reducedCtx.getDelegate()), res2.getResult());
   }
 }

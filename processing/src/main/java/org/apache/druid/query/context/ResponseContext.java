@@ -193,16 +193,6 @@ public abstract class ResponseContext
     }
   }
 
-  public int size()
-  {
-    return getDelegate().size();
-  }
-
-  public String serializeWith(ObjectMapper objectMapper) throws JsonProcessingException
-  {
-    return objectMapper.writeValueAsString(getDelegate());
-  }
-
   /**
    * Serializes the context given that the resulting string length is less than the provided limit.
    * The method removes max-length fields one by one if the resulting string length is greater than the limit.
