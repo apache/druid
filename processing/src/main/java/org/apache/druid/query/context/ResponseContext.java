@@ -107,7 +107,7 @@ public abstract class ResponseContext
      */
     CPU_CONSUMED(
         "cpuConsumed",
-        (oldValue, newValue) -> (long) oldValue + (long) newValue
+            (oldValue, newValue) -> (long) oldValue + (long) newValue
     );
 
     private final String name;
