@@ -199,7 +199,7 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
-  public void testAdd(Blackhole blackhole)
+  public void benchAdd(Blackhole blackhole)
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments);
     for (DataSegment newSegment : newSegments) {
@@ -212,7 +212,7 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
-  public void testRemove(Blackhole blackhole)
+  public void benchRemove(Blackhole blackhole)
   {
     final List<DataSegment> segmentsCopy = new ArrayList<>(segments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segmentsCopy);
@@ -230,7 +230,7 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
-  public void testLookup(Blackhole blackhole)
+  public void benchLookup(Blackhole blackhole)
   {
     final int intervalIndex = ThreadLocalRandom.current().nextInt(intervals.size() - 2);
     final Interval queryInterval = new Interval(
@@ -241,14 +241,14 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
-  public void testIsOvershadowed(Blackhole blackhole)
+  public void benchIsOvershadowed(Blackhole blackhole)
   {
     final DataSegment segment = segments.get(ThreadLocalRandom.current().nextInt(segments.size()));
     blackhole.consume(timeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment));
   }
 
   @Benchmark
-  public void testFindFullyOvershadowed(Blackhole blackhole)
+  public void benchFindFullyOvershadowed(Blackhole blackhole)
   {
     blackhole.consume(timeline.findFullyOvershadowed());
   }
