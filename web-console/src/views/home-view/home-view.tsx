@@ -486,10 +486,14 @@ GROUP BY 1`,
           loading: state.lookupsCountLoading,
           content: (
             <>
-              <p>{pluralIfNeeded(state.lookupsCount, 'lookup')}</p>
+              <p>
+                {!state.lookupsUninitialized
+                  ? pluralIfNeeded(state.lookupsCount, 'lookup')
+                  : 'Lookups uninitialized'}
+              </p>
             </>
           ),
-          error: state.lookupsUninitialized ? 'Lookups Uninitialized' : state.lookupsCountError,
+          error: !state.lookupsUninitialized ? state.lookupsCountError : null,
         })}
       </div>
     );
