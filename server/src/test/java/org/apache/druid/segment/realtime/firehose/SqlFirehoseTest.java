@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,7 +27,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.transform.ExpressionTransform;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.TransformingStringInputRowParser;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,7 +62,7 @@ public class SqlFirehoseTest
   private static File TEST_DIR;
   private List<Map<String, Object>> inputs;
   private List<FileInputStream> fileList;
-  private MapInputRowParser parser;
+  private InputRowParser parser;
   private ObjectMapper objectMapper;
 
 
@@ -83,10 +93,12 @@ public class SqlFirehoseTest
     }
 
     this.fileList = testFile;
-    parser = new MapInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+    parser = TransformSpec.NONE.decorate(
+        new MapInputRowParser(
+            new TimeAndDimsParseSpec(
+                new TimestampSpec("timestamp", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+            )
         )
     );
 
@@ -136,12 +148,14 @@ public class SqlFirehoseTest
                 .map(s -> new JsonIterator<Map<String, Object>>(TYPE_REF, s, closeable, objectMapper))
                 .collect(Collectors.toList());
 
-    final InputRowParser stringParser = new StringInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
-        ),
-        Charset.defaultCharset().name()
+    final InputRowParser stringParser = TransformSpec.NONE.decorate(
+        new StringInputRowParser(
+          new TimeAndDimsParseSpec(
+              new TimestampSpec("timestamp", "auto", null),
+              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+          ),
+          Charset.defaultCharset().name()
+        )
     );
     try (final SqlFirehose firehose = new SqlFirehose(lineIterators.iterator(), stringParser, closeable)) {
       final List<Object> results = new ArrayList<>();
@@ -152,6 +166,50 @@ public class SqlFirehoseTest
           results.add(null);
         } else {
           results.add(inputRow.getDimension("x").get(0));
+        }
+      }
+
+      Assert.assertEquals(expectedResults, results);
+    }
+  }
+
+  @Test
+  public void testFirehoseTransformingParser() throws Exception
+  {
+    final TestCloseable closeable = new TestCloseable();
+    List<Object> expectedResults = new ArrayList<>();
+    for (Map<String, Object> map : inputs) {
+      expectedResults.add(map.get("x") + "foo");
+    }
+
+    final List<JsonIterator<Map<String, Object>>> lineIterators =
+        fileList.stream()
+                .map(s -> new JsonIterator<Map<String, Object>>(TYPE_REF, s, closeable, objectMapper))
+                .collect(Collectors.toList());
+
+    final InputRowParser stringParser = new TransformingStringInputRowParser(
+        new TimeAndDimsParseSpec(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+        ),
+        Charset.defaultCharset().name(),
+        new TransformSpec(
+            null,
+            ImmutableList.of(
+                new ExpressionTransform("xfoo", "concat(x,'foo')", ExprMacroTable.nil())
+            )
+        )
+    );
+
+    try (final SqlFirehose firehose = new SqlFirehose(lineIterators.iterator(), stringParser, closeable)) {
+      final List<Object> results = new ArrayList<>();
+
+      while (firehose.hasMore()) {
+        final InputRow inputRow = firehose.nextRow();
+        if (inputRow == null) {
+          results.add(null);
+        } else {
+          results.add(inputRow.getDimension("xfoo").get(0));
         }
       }
 

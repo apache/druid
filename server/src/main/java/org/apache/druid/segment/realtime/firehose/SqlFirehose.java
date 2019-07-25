@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.Transformer;
 import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -37,6 +41,7 @@ public class SqlFirehose implements Firehose
   private final MapInputRowParser parser;
   private final Closeable closer;
   private JsonIterator<Map<String, Object>> lineIterator = null;
+  private final Transformer transformer;
 
   public SqlFirehose(
       Iterator<JsonIterator<Map<String, Object>>> lineIterators,
@@ -46,6 +51,8 @@ public class SqlFirehose implements Firehose
   {
     this.resultIterator = lineIterators;
     this.parser = new MapInputRowParser(parser.getParseSpec());
+    // transformer is created from the original decorated parser (which should always be decorated)
+    this.transformer = TransformSpec.fromInputRowParser(parser).toTransformer();
     this.closer = closer;
   }
 
@@ -64,7 +71,7 @@ public class SqlFirehose implements Firehose
   public InputRow nextRow()
   {
     final Map<String, Object> mapToParse = lineIterator.next();
-    return Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator());
+    return transformer.transform(Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator()));
   }
 
   private JsonIterator<Map<String, Object>> getNextLineIterator()

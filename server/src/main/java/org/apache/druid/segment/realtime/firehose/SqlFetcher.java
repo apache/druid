@@ -17,7 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl.prefetch;
+package org.apache.druid.segment.realtime.firehose;
+
+import org.apache.druid.data.input.impl.prefetch.CacheManager;
+import org.apache.druid.data.input.impl.prefetch.Fetcher;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.data.input.impl.prefetch.OpenedObject;
+import org.apache.druid.data.input.impl.prefetch.PrefetchConfig;
 
 import javax.annotation.Nullable;
 import java.io.File;
