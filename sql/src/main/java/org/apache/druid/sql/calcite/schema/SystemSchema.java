@@ -555,7 +555,7 @@ public class SystemSchema extends AbstractSchema
       for (ImmutableDruidServer druidServer : druidServers) {
         final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
             authenticationResult,
-            druidServer.getLazyAllSegments(),
+            druidServer.iterateAllSegments(),
             SEGMENT_RA_GENERATOR,
             authorizerMapper
         );

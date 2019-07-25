@@ -18,6 +18,23 @@ exports[`segments-view matches snapshot 1`] = `
         onClick={[Function]}
         text="Go to SQL"
       />
+      <Component>
+        Group by
+      </Component>
+      <Blueprint3.ButtonGroup>
+        <Blueprint3.Button
+          active={true}
+          onClick={[Function]}
+        >
+          None
+        </Blueprint3.Button>
+        <Blueprint3.Button
+          active={false}
+          onClick={[Function]}
+        >
+          Interval
+        </Blueprint3.Button>
+      </Blueprint3.ButtonGroup>
       <TableColumnSelector
         columns={
           Array [
@@ -109,6 +126,14 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Datasource",
             "accessor": "datasource",
             "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Interval",
+            "accessor": "interval",
+            "defaultSortDesc": true,
+            "show": false,
+            "width": 120,
           },
           Object {
             "Cell": [Function],
@@ -209,7 +234,7 @@ exports[`segments-view matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={50}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -287,6 +312,7 @@ exports[`segments-view matches snapshot 1`] = `
       }
       pageText="Page"
       pages={10000000}
+      pivotBy={Array []}
       pivotDefaults={Object {}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
@@ -305,20 +331,5 @@ exports[`segments-view matches snapshot 1`] = `
       subRowsKey="_subRows"
     />
   </div>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Drop Segment"
-    failText="Could not drop segment"
-    intent="danger"
-    onClose={[Function]}
-    successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
-  >
-    <p>
-      Are you sure you want to drop segment 'null'?
-    </p>
-    <p>
-      This action is not reversible.
-    </p>
-  </AsyncActionDialog>
 </Fragment>
 `;

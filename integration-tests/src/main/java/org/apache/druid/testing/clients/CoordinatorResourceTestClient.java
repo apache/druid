@@ -41,12 +41,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CoordinatorResourceTestClient
 {
@@ -65,7 +62,7 @@ public class CoordinatorResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   private String getCoordinatorURL()
@@ -135,13 +132,12 @@ public class CoordinatorResourceTestClient
   }
 
   // return a set of the segment versions for the specified datasource
-  public Set<String> getSegmentVersions(final String dataSource)
+  public List<DataSegment> getAvailableSegments(final String dataSource)
   {
-    ArrayList<DataSegment> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
 
-      segments = jsonMapper.readValue(
+      return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
@@ -150,7 +146,6 @@ public class CoordinatorResourceTestClient
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return segments.stream().map(s -> s.getVersion()).collect(Collectors.toSet());
   }
 
   private Map<String, Integer> getLoadStatus()

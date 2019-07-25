@@ -45,7 +45,6 @@ import java.util.Map;
 public class EventReceiverFirehoseTestClient
 {
   private final String host;
-  private final StatusResponseHandler responseHandler;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String chatID;
@@ -61,7 +60,6 @@ public class EventReceiverFirehoseTestClient
   {
     this.host = host;
     this.jsonMapper = jsonMapper;
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
     this.httpClient = httpClient;
     this.chatID = chatID;
     this.smileMapper = smileMapper;
@@ -89,7 +87,7 @@ public class EventReceiverFirehoseTestClient
       StatusResponseHolder response = httpClient.go(
           new Request(HttpMethod.POST, new URL(getURL()))
               .setContent(mediaType, objectMapper.writeValueAsBytes(events)),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {

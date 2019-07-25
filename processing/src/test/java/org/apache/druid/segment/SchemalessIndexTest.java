@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -42,6 +41,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -94,7 +94,7 @@ public class SchemalessIndexTest
   private static QueryableIndex mergedIndex = null;
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
   private final IndexMerger indexMerger;
@@ -473,14 +473,14 @@ public class SchemalessIndexTest
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
-      VersionedIntervalTimeline<Integer, File> timeline = new VersionedIntervalTimeline<Integer, File>(
+      VersionedIntervalTimeline<Integer, OvershadowableFile> timeline = new VersionedIntervalTimeline<>(
           Comparators.naturalNullsFirst()
       );
 
       ShardSpec noneShardSpec = NoneShardSpec.instance();
 
       for (int i = 0; i < intervals.size(); i++) {
-        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)));
+        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(i, filesToMap.get(i))));
       }
 
       final List<IndexableAdapter> adapters = Lists.newArrayList(
@@ -488,23 +488,23 @@ public class SchemalessIndexTest
               // TimelineObjectHolder is actually an iterable of iterable of indexable adapters
               Iterables.transform(
                   timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
-                  new Function<TimelineObjectHolder<Integer, File>, Iterable<IndexableAdapter>>()
+                  new Function<TimelineObjectHolder<Integer, OvershadowableFile>, Iterable<IndexableAdapter>>()
                   {
                     @Override
-                    public Iterable<IndexableAdapter> apply(final TimelineObjectHolder<Integer, File> timelineObjectHolder)
+                    public Iterable<IndexableAdapter> apply(final TimelineObjectHolder<Integer, OvershadowableFile> timelineObjectHolder)
                     {
                       return Iterables.transform(
                           timelineObjectHolder.getObject(),
 
                           // Each chunk can be used to build the actual IndexableAdapter
-                          new Function<PartitionChunk<File>, IndexableAdapter>()
+                          new Function<PartitionChunk<OvershadowableFile>, IndexableAdapter>()
                           {
                             @Override
-                            public IndexableAdapter apply(PartitionChunk<File> chunk)
+                            public IndexableAdapter apply(PartitionChunk<OvershadowableFile> chunk)
                             {
                               try {
                                 return new RowFilteringIndexAdapter(
-                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject())),
+                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject().file)),
                                     rowPointer -> timelineObjectHolder.getInterval().contains(rowPointer.getTimestamp())
                                 );
                               }
@@ -568,6 +568,54 @@ public class SchemalessIndexTest
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private static class OvershadowableFile implements Overshadowable<OvershadowableFile>
+  {
+    private final String majorVersion;
+    private final File file;
+
+    OvershadowableFile(int majorVersion, File file)
+    {
+      this.majorVersion = Integer.toString(majorVersion);
+      this.file = file;
+    }
+
+    @Override
+    public boolean overshadows(OvershadowableFile other)
+    {
+      return false;
+    }
+
+    @Override
+    public int getStartRootPartitionId()
+    {
+      return 0;
+    }
+
+    @Override
+    public int getEndRootPartitionId()
+    {
+      return 0;
+    }
+
+    @Override
+    public String getVersion()
+    {
+      return majorVersion;
+    }
+
+    @Override
+    public short getMinorVersion()
+    {
+      return 0;
+    }
+
+    @Override
+    public short getAtomicUpdateGroupSize()
+    {
+      return 0;
     }
   }
 }

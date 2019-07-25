@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
+import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
 
 /**
@@ -31,6 +32,14 @@ public interface ImmutableBitmap
    * @return an iterator over the set bits of this bitmap
    */
   IntIterator iterator();
+
+  /**
+   * @return a batched iterator over the set bits of this bitmap
+   */
+  default BatchIterator batchIterator()
+  {
+    return new BatchIteratorAdapter(iterator());
+  }
 
   /**
    * @return The number of bits set to true in this bitmap

@@ -61,7 +61,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
@@ -272,7 +271,7 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList();
+    List<String> persistReasons = new ArrayList<>();
 
     if (!sink.canAppendRow()) {
       persist = true;
@@ -627,7 +626,11 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue(), useUniquePath);
+            final DataSegment dataSegment = mergeAndPush(
+                entry.getKey(),
+                entry.getValue(),
+                useUniquePath
+            );
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
@@ -746,7 +749,8 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              sink.getSegment()
+                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
               useUniquePath
           ),
           exception -> exception instanceof Exception,
@@ -1260,12 +1264,11 @@ public class AppenderatorImpl implements Appenderator
 
         final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);
-        final IndexSpec indexSpec = tuningConfig.getIndexSpec();
         persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
-            indexSpec,
+            tuningConfig.getIndexSpecForIntermediatePersists(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
 

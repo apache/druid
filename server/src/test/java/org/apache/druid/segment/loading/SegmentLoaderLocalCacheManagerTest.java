@@ -88,9 +88,7 @@ public class SegmentLoaderLocalCacheManagerTest
     localSegmentCacheFolder = tmpFolder.newFolder("segment_cache_folder");
 
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
-    locationConfig.setPath(localSegmentCacheFolder);
-    locationConfig.setMaxSize(10000000000L);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheFolder, 10000000000L, null);
     locations.add(locationConfig);
 
     manager = new SegmentLoaderLocalCacheManager(
@@ -157,14 +155,10 @@ public class SegmentLoaderLocalCacheManagerTest
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
 
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
-    locationConfig.setPath(localStorageFolder);
-    locationConfig.setMaxSize(10000000000L);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localStorageFolder, 10000000000L, null);
     locations.add(locationConfig);
-    final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
     final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
-    locationConfig2.setPath(localStorageFolder2);
-    locationConfig2.setMaxSize(1000000000L);
+    final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 1000000000L, null);
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
@@ -207,17 +201,13 @@ public class SegmentLoaderLocalCacheManagerTest
   public void testRetrySuccessAtSecondLocation() throws Exception
   {
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     // mock can't write in first location
     localStorageFolder.setWritable(false);
-    locationConfig.setPath(localStorageFolder);
-    locationConfig.setMaxSize(1000000000L);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localStorageFolder, 1000000000L, null);
     locations.add(locationConfig);
-    final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
     final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
-    locationConfig2.setPath(localStorageFolder2);
-    locationConfig2.setMaxSize(10000000L);
+    final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
@@ -260,19 +250,15 @@ public class SegmentLoaderLocalCacheManagerTest
   public void testRetryAllFail() throws Exception
   {
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     // mock can't write in first location
     localStorageFolder.setWritable(false);
-    locationConfig.setPath(localStorageFolder);
-    locationConfig.setMaxSize(1000000000L);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localStorageFolder, 1000000000L, null);
     locations.add(locationConfig);
-    final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
     final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
     // mock can't write in second location
     localStorageFolder2.setWritable(false);
-    locationConfig2.setPath(localStorageFolder2);
-    locationConfig2.setMaxSize(10000000L);
+    final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
@@ -316,17 +302,13 @@ public class SegmentLoaderLocalCacheManagerTest
   public void testEmptyToFullOrder() throws Exception
   {
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     localStorageFolder.setWritable(true);
-    locationConfig.setPath(localStorageFolder);
-    locationConfig.setMaxSize(10L);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localStorageFolder, 10L, null);
     locations.add(locationConfig);
-    final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
     final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
     localStorageFolder2.setWritable(true);
-    locationConfig2.setPath(localStorageFolder2);
-    locationConfig2.setMaxSize(10L);
+    final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10L, null);
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(

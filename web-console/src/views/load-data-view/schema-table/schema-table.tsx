@@ -75,7 +75,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
         className="schema-table -striped -highlight"
         data={headerAndRows.rows}
         columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
           const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
           const metricSpec = metricsSpec[metricSpecIndex];

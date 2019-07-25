@@ -60,8 +60,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
-  private volatile Map<String, ColumnSelectorFactory> selectors;
 
+  @Nullable
+  private volatile Map<String, ColumnSelectorFactory> selectors;
+  @Nullable
   private String outOfRowsReason = null;
 
   OnheapIncrementalIndex(

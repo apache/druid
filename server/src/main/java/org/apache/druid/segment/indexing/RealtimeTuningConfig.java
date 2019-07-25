@@ -82,6 +82,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         defaultMaxPendingPersists,
         defaultShardSpec,
         defaultIndexSpec,
+        defaultIndexSpec,
         true,
         0,
         0,
@@ -103,6 +104,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final int persistThreadPriority;
   private final int mergeThreadPriority;
   private final boolean reportParseExceptions;
@@ -125,6 +127,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
@@ -152,6 +155,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.mergeThreadPriority = mergeThreadPriority;
     this.persistThreadPriority = persistThreadPriority;
     this.reportParseExceptions = reportParseExceptions == null
@@ -233,6 +238,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return indexSpec;
   }
 
+  @JsonProperty
+  @Override
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
+  }
+
   /**
    * Always returns true, doesn't affect the version being built.
    */
@@ -302,6 +314,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         maxPendingPersists,
         shardSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         true,
         persistThreadPriority,
         mergeThreadPriority,
@@ -326,6 +339,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         maxPendingPersists,
         shardSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         true,
         persistThreadPriority,
         mergeThreadPriority,

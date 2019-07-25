@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -52,6 +53,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -64,12 +66,14 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -114,28 +118,35 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public QueryRunner<Row> mergeResults(final QueryRunner<Row> runner)
   {
-    return new QueryRunner<Row>()
-    {
-      @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-      {
-        if (QueryContexts.isBySegment(queryPlus.getQuery())) {
-          return runner.run(queryPlus, responseContext);
-        }
-
-        final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-        if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
-          return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
-        }
+    return (queryPlus, responseContext) -> {
+      if (QueryContexts.isBySegment(queryPlus.getQuery())) {
         return runner.run(queryPlus, responseContext);
       }
+
+      final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
+      if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
+        return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      }
+      return runner.run(queryPlus, responseContext);
     };
+  }
+
+  @Override
+  public BinaryOperator<Row> createMergeFn(Query<Row> query)
+  {
+    return strategySelector.strategize((GroupByQuery) query).createMergeFn(query);
+  }
+
+  @Override
+  public Comparator<Row> createResultComparator(Query<Row> query)
+  {
+    return strategySelector.strategize((GroupByQuery) query).createResultComparator(query);
   }
 
   private Sequence<Row> initAndMergeGroupByResults(
       final GroupByQuery query,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
@@ -149,7 +160,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     if (isNestedQueryPushDown(query, groupByStrategy)) {
@@ -163,7 +174,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
@@ -244,7 +255,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     Sequence<Row> pushDownQueryResults = groupByStrategy.mergeResults(runner, query, context);
@@ -407,7 +418,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
             if (groupByQuery.getDimFilter() != null) {

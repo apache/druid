@@ -30,10 +30,10 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -92,7 +92,7 @@ public class TimeseriesQueryRunnerFactory
     @Override
     public Sequence<Result<TimeseriesResultValue>> run(
         QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<TimeseriesResultValue>> input = queryPlus.getQuery();

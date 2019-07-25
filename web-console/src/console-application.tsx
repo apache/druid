@@ -25,7 +25,6 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { UrlBaser } from './singletons/url-baser';
 import { QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import {
@@ -45,9 +44,6 @@ type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
-  baseURL?: string;
-  customHeaderName?: string;
-  customHeaderValue?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -62,7 +58,7 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
-  private capabilitiesQueryManager: QueryManager<string, Capabilities>;
+  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
   static async discoverCapabilities(): Promise<Capabilities> {
     try {
@@ -125,14 +121,6 @@ export class ConsoleApplication extends React.PureComponent<
       capabilitiesLoading: true,
     };
 
-    if (props.baseURL) {
-      axios.defaults.baseURL = props.baseURL;
-      UrlBaser.baseURL = props.baseURL;
-    }
-    if (props.customHeaderName && props.customHeaderValue) {
-      axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
-    }
-
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
         const capabilities = await ConsoleApplication.discoverCapabilities();
@@ -151,7 +139,7 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    this.capabilitiesQueryManager.runQuery('dummy');
+    this.capabilitiesQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {

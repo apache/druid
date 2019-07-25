@@ -76,6 +76,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         true,
         null,
+        null,
         null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -126,7 +127,7 @@ public class SingleTaskBackgroundRunnerTest
   {
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
     );
   }
 
@@ -134,7 +135,7 @@ public class SingleTaskBackgroundRunnerTest
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
     );
     runner.stop();
     Assert.assertEquals(

@@ -59,6 +59,7 @@ JVM Flags:
 Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
 Additionally, for large jvm heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
+
 - Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
 - On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )

@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ import java.util.stream.Stream;
 /**
  * An implementation of {@link ParallelIndexTaskRunner} to support best-effort roll-up. This runner can submit and
  * monitor multiple {@link ParallelIndexSubTask}s.
- *
+ * <p>
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
@@ -81,7 +82,9 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSubTask>> taskCompleteEvents =
       new LinkedBlockingDeque<>();
 
-  /** subTaskId -> report */
+  /**
+   * subTaskId -> report
+   */
   private final ConcurrentHashMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
   private volatile boolean subTaskScheduleAndMonitorStopped;
@@ -115,7 +118,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
       log.warn("There's no input split to process");
       return TaskState.SUCCESS;
     }
-    
+
     final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
 
@@ -269,7 +272,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     segmentsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
       if (prevReport != null) {
         Preconditions.checkState(
-            prevReport.getSegments().equals(report.getSegments()),
+            prevReport.getNewSegments().equals(report.getNewSegments()),
             "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
             taskId,
             prevReport,
@@ -400,34 +403,37 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
 
   private void publish(TaskToolbox toolbox) throws IOException
   {
-    final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
-      return toolbox.getTaskActionClient().submit(action);
-    };
     final UsedSegmentChecker usedSegmentChecker = new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient());
-    final Set<DataSegment> segmentsToPublish = segmentsMap
+    final Set<DataSegment> oldSegments = new HashSet<>();
+    final Set<DataSegment> newSegments = new HashSet<>();
+    segmentsMap
         .values()
-        .stream()
-        .flatMap(report -> report.getSegments().stream())
-        .collect(Collectors.toSet());
-    final boolean published = segmentsToPublish.isEmpty()
-                              || publisher.publishSegments(segmentsToPublish, null).isSuccess();
+        .forEach(report -> {
+          oldSegments.addAll(report.getOldSegments());
+          newSegments.addAll(report.getNewSegments());
+        });
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+        toolbox.getTaskActionClient().submit(
+            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
+        );
+    final boolean published = newSegments.isEmpty()
+                              || publisher.publishSegments(oldSegments, newSegments, null).isSuccess();
 
     if (published) {
-      log.info("Published [%d] segments", segmentsToPublish.size());
+      log.info("Published [%d] segments", newSegments.size());
     } else {
       log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
       final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsMap
           .values()
           .stream()
-          .flatMap(report -> report.getSegments().stream())
+          .flatMap(report -> report.getNewSegments().stream())
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
       if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
-                            .equals(segmentsToPublish)) {
+                            .equals(newSegments)) {
         log.info("Our segments really do exist, awaiting handoff.");
       } else {
-        throw new ISE("Failed to publish segments[%s]", segmentsToPublish);
+        throw new ISE("Failed to publish segments[%s]", newSegments);
       }
     }
   }

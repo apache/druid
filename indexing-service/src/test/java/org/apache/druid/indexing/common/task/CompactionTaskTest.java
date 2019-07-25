@@ -288,6 +288,7 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
+        null,
         5000,
         true,
         true,
@@ -462,6 +463,7 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
+        null,
         5000,
         true,
         true,
@@ -522,6 +524,7 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
+        null,
         5000,
         true,
         true,
@@ -582,6 +585,7 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
+        null,
         5000,
         true,
         true,
@@ -846,6 +850,7 @@ public class CompactionTaskTest
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
         ),
+        null,
         5000,
         true,
         true,
@@ -1006,7 +1011,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
@@ -1034,6 +1039,7 @@ public class CompactionTaskTest
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
+            null,
             5000,
             true,
             true,
@@ -1049,7 +1055,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,

@@ -235,25 +235,24 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
   renderDeleteLookupAction() {
     const { deleteLookupTier, deleteLookupName } = this.state;
+    if (!deleteLookupTier) return;
 
     return (
       <AsyncActionDialog
-        action={
-          deleteLookupTier
-            ? async () => {
-                await axios.delete(
-                  `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
-                );
-              }
-            : null
-        }
+        action={async () => {
+          await axios.delete(
+            `/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`,
+          );
+        }}
         confirmButtonText="Delete lookup"
         successText="Lookup was deleted"
         failText="Could not delete lookup"
         intent={Intent.DANGER}
-        onClose={success => {
+        onClose={() => {
           this.setState({ deleteLookupTier: null, deleteLookupName: null });
-          if (success) this.lookupsQueryManager.rerunLastQuery();
+        }}
+        onSuccess={() => {
+          this.lookupsQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to delete the lookup '${deleteLookupName}'?`}</p>

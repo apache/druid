@@ -23,7 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -43,10 +46,43 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
+  public static final Vectorize DEFAULT_VECTORIZE = Vectorize.FALSE;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
+
+  @SuppressWarnings("unused") // Used by Jackson serialization
+  public enum Vectorize
+  {
+    FALSE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        return false;
+      }
+    },
+    TRUE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        return canVectorize;
+      }
+    },
+    FORCE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        if (!canVectorize) {
+          throw new ISE("Cannot vectorize!");
+        }
+
+        return true;
+      }
+    };
+
+    public abstract boolean shouldVectorize(boolean canVectorize);
+  }
 
   public static <T> boolean isBySegment(Query<T> query)
   {
@@ -111,6 +147,16 @@ public class QueryContexts
   public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
+  }
+
+  public static <T> Vectorize getVectorize(Query<T> query)
+  {
+    return parseEnum(query, "vectorize", Vectorize.class, DEFAULT_VECTORIZE);
+  }
+
+  public static <T> int getVectorSize(Query<T> query)
+  {
+    return parseInt(query, "vectorSize", QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
@@ -238,5 +284,20 @@ public class QueryContexts
 
   private QueryContexts()
   {
+  }
+
+  static <T, E extends Enum<E>> E parseEnum(Query<T> query, String key, Class<E> clazz, E defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
+    } else if (val instanceof Boolean) {
+      return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
   }
 }

@@ -20,44 +20,65 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SQLMetadataSegmentManager;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.loading.LocalDataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.timeline.DataSegment;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 public abstract class IngestionTestBase
 {
-  public static final String DATA_SOURCE = "test";
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -66,25 +87,41 @@ public abstract class IngestionTestBase
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
+  private MetadataSegmentManager segmentManager;
   private TaskLockbox lockbox;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
+    temporaryFolder.create();
+
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
+    connector.createSegmentTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector()
     );
-    lockbox = new TaskLockbox(taskStorage);
+    segmentManager = new SQLMetadataSegmentManager(
+        objectMapper,
+        MetadataSegmentManagerConfig::new,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        derbyConnectorRule.getConnector()
+    );
+    lockbox = new TaskLockbox(taskStorage, storageCoordinator);
   }
 
-  public LocalTaskActionClient createActionClient(Task task)
+  @After
+  public void tearDown()
   {
-    return new LocalTaskActionClient(task, taskStorage, createTaskActionToolbox(), new TaskAuditLogConfig(false));
+    temporaryFolder.delete();
+  }
+
+  public TestLocalTaskActionClient createActionClient(Task task)
+  {
+    return new TestLocalTaskActionClient(task);
   }
 
   public void prepareTaskForLocking(Task task) throws EntryExistsException
@@ -108,6 +145,16 @@ public abstract class IngestionTestBase
     return taskStorage;
   }
 
+  public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()
+  {
+    return storageCoordinator;
+  }
+
+  public MetadataSegmentManager getMetadataSegmentManager()
+  {
+    return segmentManager;
+  }
+
   public TaskLockbox getLockbox()
   {
     return lockbox;
@@ -116,6 +163,11 @@ public abstract class IngestionTestBase
   public IndexerSQLMetadataStorageCoordinator getStorageCoordinator()
   {
     return storageCoordinator;
+  }
+
+  public RowIngestionMetersFactory getRowIngestionMetersFactory()
+  {
+    return testUtils.getRowIngestionMetersFactory();
   }
 
   public TaskActionToolbox createTaskActionToolbox()
@@ -140,53 +192,167 @@ public abstract class IngestionTestBase
     return testUtils.getTestIndexMergerV9();
   }
 
-  public IndexTask.IndexIngestionSpec createIngestionSpec(
-      File baseDir,
-      ParseSpec parseSpec,
-      GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
-      boolean appendToExisting
-  )
+  public class TestLocalTaskActionClient extends LocalTaskActionClient
   {
-    return createIngestionSpec(baseDir, parseSpec, TransformSpec.NONE, granularitySpec, tuningConfig, appendToExisting);
+    private final Set<DataSegment> publishedSegments = new HashSet<>();
+
+    private TestLocalTaskActionClient(Task task)
+    {
+      super(task, taskStorage, createTaskActionToolbox(), new TaskAuditLogConfig(false));
+    }
+
+    @Override
+    public <RetType> RetType submit(TaskAction<RetType> taskAction)
+    {
+      final RetType result = super.submit(taskAction);
+      if (taskAction instanceof SegmentTransactionalInsertAction) {
+        publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
+      } else if (taskAction instanceof SegmentInsertAction) {
+        publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
+      }
+      return result;
+    }
+
+    public Set<DataSegment> getPublishedSegments()
+    {
+      return publishedSegments;
+    }
   }
 
-  public IndexTask.IndexIngestionSpec createIngestionSpec(
-      File baseDir,
-      ParseSpec parseSpec,
-      TransformSpec transformSpec,
-      GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
-      boolean appendToExisting
-  )
+  public class TestTaskRunner implements TaskRunner
   {
-    return new IndexTask.IndexIngestionSpec(
-        new DataSchema(
-            DATA_SOURCE,
-            objectMapper.convertValue(
-                new StringInputRowParser(parseSpec, null),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                Collections.singletonList(Intervals.of("2014/2015"))
-            ),
-            transformSpec,
-            objectMapper
-        ),
-        new IndexTask.IndexIOConfig(
-            new LocalFirehoseFactory(
-                baseDir,
-                "druid*",
-                null
-            ),
-            appendToExisting
-        ),
-        tuningConfig
-    );
+    private TestLocalTaskActionClient taskActionClient;
+    private File taskReportsFile;
+
+    @Override
+    public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void start()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerListener(TaskRunnerListener listener, Executor executor)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void unregisterListener(String listenerId)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    public TestLocalTaskActionClient getTaskActionClient()
+    {
+      return taskActionClient;
+    }
+
+    public File getTaskReportsFile()
+    {
+      return taskReportsFile;
+    }
+
+    public List<DataSegment> getPublishedSegments()
+    {
+      final List<DataSegment> segments = new ArrayList<>(taskActionClient.getPublishedSegments());
+      Collections.sort(segments);
+      return segments;
+    }
+
+    @Override
+    public ListenableFuture<TaskStatus> run(Task task)
+    {
+      try {
+        lockbox.add(task);
+        taskStorage.insert(task, TaskStatus.running(task.getId()));
+        taskActionClient = createActionClient(task);
+        taskReportsFile = temporaryFolder.newFile(
+            StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
+        );
+
+        final TaskToolbox box = new TaskToolbox(
+            null,
+            taskActionClient,
+            null,
+            new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
+            new NoopDataSegmentKiller(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            objectMapper,
+            temporaryFolder.newFolder(),
+            getIndexIO(),
+            null,
+            null,
+            null,
+            getIndexMerger(),
+            null,
+            null,
+            null,
+            null,
+            new TaskReportFileWriter(taskReportsFile)
+        );
+
+        if (task.isReady(box.getTaskActionClient())) {
+          return Futures.immediateFuture(task.run(box));
+        } else {
+          throw new ISE("task is not ready");
+        }
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        lockbox.remove(task);
+      }
+    }
+
+    @Override
+    public void shutdown(String taskid, String reason)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void stop()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<? extends TaskRunnerWorkItem> getRunningTasks()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<? extends TaskRunnerWorkItem> getPendingTasks()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<ScalingStats> getScalingStats()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
