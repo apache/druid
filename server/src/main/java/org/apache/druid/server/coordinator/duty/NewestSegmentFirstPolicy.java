@@ -17,28 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
- *
+ * This policy searches segments for compaction from the newest one to oldest one.
  */
-public interface DruidCoordinatorHelper
+public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 {
-  /**
-   * Implementations of this method run various activities performed by the coordinator.
-   * Input params can be used and modified. They are typically in a list and returned
-   * DruidCoordinatorRuntimeParams is passed to the next helper.
-   *
-   * @param params
-   *
-   * @return same as input or a modified value to be used by next helper. Null return
-   * values will prevent future DruidCoordinatorHelpers from running until the next
-   * cycle.
-   */
-  @Nullable
-  DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
+  @Override
+  public CompactionSegmentIterator reset(
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, List<Interval>> skipIntervals
+  )
+  {
+    return new NewestSegmentFirstIterator(compactionConfigs, dataSources, skipIntervals);
+  }
 }

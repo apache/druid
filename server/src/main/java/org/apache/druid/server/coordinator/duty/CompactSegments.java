@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -47,7 +47,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
+public class CompactSegments implements CoordinatorDuty
 {
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
@@ -55,7 +55,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   /** Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE. */
   private static final String COMPACTION_TASK_TYPE = "compact";
 
-  private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
+  private static final Logger LOG = new Logger(CompactSegments.class);
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
   private final IndexingServiceClient indexingServiceClient;
@@ -63,7 +63,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private Object2LongMap<String> remainingSegmentSizeBytes;
 
   @Inject
-  public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
+  public CompactSegments(IndexingServiceClient indexingServiceClient)
   {
     this.indexingServiceClient = indexingServiceClient;
   }

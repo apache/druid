@@ -114,7 +114,7 @@ public class CompactionTask extends AbstractTask
   private static final Logger log = new Logger(CompactionTask.class);
   /**
    * Must be synced with {@link
-   * org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentCompactor#COMPACTION_TASK_TYPE}.
+   * org.apache.druid.server.coordinator.duty.CompactSegments#COMPACTION_TASK_TYPE}.
    */
   private static final String TYPE = "compact";
 

@@ -21,14 +21,14 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
-public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
+public class BalanceSegmentsTester extends BalanceSegments
 {
 
-  public DruidCoordinatorBalancerTester(DruidCoordinator coordinator)
+  public BalanceSegmentsTester(DruidCoordinator coordinator)
   {
     super(coordinator);
   }

@@ -26,22 +26,22 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class DruidCoordinatorKillStalePendingSegments implements DruidCoordinatorHelper
+public class KillStalePendingSegments implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(DruidCoordinatorKillStalePendingSegments.class);
+  private static final Logger log = new Logger(KillStalePendingSegments.class);
   private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
 
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
-  public DruidCoordinatorKillStalePendingSegments(IndexingServiceClient indexingServiceClient)
+  public KillStalePendingSegments(IndexingServiceClient indexingServiceClient)
   {
     this.indexingServiceClient = indexingServiceClient;
   }

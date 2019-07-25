@@ -17,57 +17,66 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.Set;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.SortedSet;
 
-/**
- * Unloads segments that are no longer marked as used from Historical servers.
- */
-public class DruidCoordinatorUnloadUnusedSegments implements DruidCoordinatorHelper
+public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(DruidCoordinatorUnloadUnusedSegments.class);
+  private final DruidCoordinator coordinator;
+
+  public MarkAsUnusedOvershadowedSegments(DruidCoordinator coordinator)
+  {
+    this.coordinator = coordinator;
+  }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
+    if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
+      return params;
+    }
+
     CoordinatorStats stats = new CoordinatorStats();
-    Set<DataSegment> usedSegments = params.getUsedSegments();
+
     DruidCluster cluster = params.getDruidCluster();
+    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
 
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          for (DataSegment segment : dataSource.getSegments()) {
-            if (!usedSegments.contains(segment)) {
-              LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
-
-              if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-                queuePeon.dropSegment(segment, () -> {});
-                stats.addToTieredStat("unneededCount", server.getTier(), 1);
-                log.info(
-                    "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-                    segment.getId(),
-                    server.getName(),
-                    server.getTier()
-                );
-              }
-            }
-          }
+          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+              .computeIfAbsent(
+                  dataSource.getName(),
+                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+              );
+          VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
         }
+      }
+    }
+
+    // Mark all segments as unused in db that are overshadowed by served segments
+    for (DataSegment dataSegment : params.getUsedSegments()) {
+      VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+        coordinator.markSegmentAsUnused(dataSegment);
+        stats.addToGlobalStat("overShadowedCount", 1);
       }
     }
 

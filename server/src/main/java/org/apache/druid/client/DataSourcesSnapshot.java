@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * An immutable snapshot information about used segments and overshadowed segments for
+ * An immutable snapshot of metadata information about used segments and overshadowed segments, coming from
  * {@link org.apache.druid.metadata.SqlSegmentsMetadata}.
  */
 public class DataSourcesSnapshot

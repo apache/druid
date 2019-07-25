@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -35,7 +35,7 @@ import java.util.List;
 
 /**
  */
-public class DruidCoordinatorUnusedSegmentsKillerTest
+public class KillUnusedSegmentsTest
 {
   @Test
   public void testFindIntervalForKill()
@@ -98,7 +98,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
     EasyMock.replay(segmentsMetadata);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
-    DruidCoordinatorUnusedSegmentsKiller unusedSegmentsKiller = new DruidCoordinatorUnusedSegmentsKiller(
+    KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
         segmentsMetadata,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(

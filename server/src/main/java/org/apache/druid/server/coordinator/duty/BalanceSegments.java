@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -46,19 +46,16 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
+public class BalanceSegments implements CoordinatorDuty
 {
-
-  protected static final EmittingLogger log = new EmittingLogger(DruidCoordinatorBalancer.class);
+  protected static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
 
   protected final DruidCoordinator coordinator;
 
   protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
 
-  public DruidCoordinatorBalancer(
-      DruidCoordinator coordinator
-  )
+  public BalanceSegments(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
   }
@@ -198,8 +195,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadata, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
       // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
-      // discrepancies eventually via DruidCoordinatorUnloadUnusedSegments). Therefore the picked segmentToMoveHolder's
-      // segment may not need to be balanced.
+      // discrepancies eventually via UnloadUnusedSegments). Therefore the picked segmentToMoveHolder's segment may not
+      // need to be balanced.
       boolean needToBalancePickedSegment = params.getUsedSegments().contains(segmentToMoveHolder.getSegment());
       if (needToBalancePickedSegment) {
         final DataSegment segmentToMove = segmentToMoveHolder.getSegment();

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -36,13 +36,14 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 /**
+ * Emits stats of the cluster and metrics of the coordination (including segment balancing) process.
  */
-public class DruidCoordinatorLogger implements DruidCoordinatorHelper
+public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(DruidCoordinatorLogger.class);
+  private static final Logger log = new Logger(EmitClusterStatsAndMetrics.class);
   private final DruidCoordinator coordinator;
 
-  public DruidCoordinatorLogger(DruidCoordinator coordinator)
+  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
   }
@@ -243,7 +244,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "compact/task/count",
-            stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
+            stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
         )
     );
 

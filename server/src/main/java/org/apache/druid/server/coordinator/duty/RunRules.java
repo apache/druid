@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,16 +38,16 @@ import java.util.Set;
 
 /**
  */
-public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
+public class RunRules implements CoordinatorDuty
 {
-  private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
   private final DruidCoordinator coordinator;
 
-  public DruidCoordinatorRuleRunner(DruidCoordinator coordinator)
+  public RunRules(DruidCoordinator coordinator)
   {
     this(
         new ReplicationThrottler(
@@ -58,7 +58,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     );
   }
 
-  public DruidCoordinatorRuleRunner(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
+  public RunRules(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
   {
     this.replicatorThrottler = replicatorThrottler;
     this.coordinator = coordinator;
@@ -82,8 +82,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
     // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
-    // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
-    // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
+    // as unused in MarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to Historical nodes
+    // to unload such segments in UnloadUnusedSegments.
     Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     for (String tier : cluster.getTierNames()) {

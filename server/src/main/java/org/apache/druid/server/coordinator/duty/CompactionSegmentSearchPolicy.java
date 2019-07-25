@@ -17,20 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.joda.time.Interval;
 
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
+/**
+ * Segment searching policy used by {@link CompactSegments}.
+ */
+public interface CompactionSegmentSearchPolicy
 {
-  long UNKNOWN_REMAINING_SEGMENT_SIZE = -1L;
   /**
-   * Return a map of (dataSource, total size of remaining segments) for all dataSources.
-   * This method should consider all segments except the segments returned by {@link #next()}.
+   * Reset the current states of this policy. This method should be called whenever iterating starts.
    */
-  Object2LongOpenHashMap<String> remainingSegmentSizeBytes();
+  CompactionSegmentIterator reset(
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, List<Interval>> skipIntervals
+  );
 }

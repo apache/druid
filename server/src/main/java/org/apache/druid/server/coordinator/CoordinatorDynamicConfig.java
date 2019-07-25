@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorUnusedSegmentsKiller;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,11 +58,11 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
-  /** If true {@link DruidCoordinatorUnusedSegmentsKiller} sends kill tasks for unused segments in all data sources. */
+  /** If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources. */
   private final boolean killUnusedSegmentsInAllDataSources;
 
   /**
-   * List of specific data sources for which kill tasks are sent in {@link DruidCoordinatorUnusedSegmentsKiller}.
+   * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
   private final Set<String> decommissioningNodes;
@@ -70,10 +70,10 @@ public class CoordinatorDynamicConfig
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@link
-   * DruidCoordinatorKillStalePendingSegments}. In other words, segments in these data sources are "protected".
+   * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
    *
    * Pending segments are considered "stale" when their created_time is older than {@link
-   * DruidCoordinatorKillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
+   * KillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
    */
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 

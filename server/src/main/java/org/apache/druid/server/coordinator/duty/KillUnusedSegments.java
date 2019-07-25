@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -41,9 +41,9 @@ import java.util.List;
  *
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
-public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHelper
+public class KillUnusedSegments implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(DruidCoordinatorUnusedSegmentsKiller.class);
+  private static final Logger log = new Logger(KillUnusedSegments.class);
 
   private final long period;
   private final long retainDuration;
@@ -54,7 +54,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
-  public DruidCoordinatorUnusedSegmentsKiller(
+  public KillUnusedSegments(
       SegmentsMetadata segmentsMetadata,
       IndexingServiceClient indexingServiceClient,
       DruidCoordinatorConfig config

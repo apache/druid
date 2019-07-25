@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
@@ -47,7 +47,7 @@ import java.util.Map;
 /**
  * TODO convert benchmarks to JMH
  */
-public class DruidCoordinatorBalancerProfiler
+public class BalanceSegmentsProfiler
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
   private DruidCoordinator coordinator;
@@ -151,8 +151,8 @@ public class DruidCoordinatorBalancerProfiler
         .withReplicationManager(new ReplicationThrottler(2, 500))
         .build();
 
-    DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
-    DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(coordinator);
+    BalanceSegmentsTester tester = new BalanceSegmentsTester(coordinator);
+    RunRules runner = new RunRules(coordinator);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -207,7 +207,7 @@ public class DruidCoordinatorBalancerProfiler
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .build();
-    DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
+    BalanceSegmentsTester tester = new BalanceSegmentsTester(coordinator);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     System.out.println(watch.stop());

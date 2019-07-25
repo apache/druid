@@ -43,7 +43,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.CoordinatorIndexingServiceHelper;
+import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -64,10 +64,10 @@ import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorKillStalePendingSegments;
+import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorUnusedSegmentsKiller;
+import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
@@ -206,11 +206,11 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            final ConditionalMultibind<DruidCoordinatorHelper> conditionalMultibind = ConditionalMultibind.create(
+            final ConditionalMultibind<CoordinatorDuty> conditionalMultibind = ConditionalMultibind.create(
                 properties,
                 binder,
-                DruidCoordinatorHelper.class,
-                CoordinatorIndexingServiceHelper.class
+                CoordinatorDuty.class,
+                CoordinatorIndexingServiceDuty.class
             );
 
             if (conditionalMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
@@ -218,20 +218,18 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for more "
-                  + "details about compaction."
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for "
+                  + "more details about compaction."
               );
             }
 
-            conditionalMultibind.addConditionBinding(
-                "druid.coordinator.kill.on",
-                Predicates.equalTo("true"),
-                DruidCoordinatorUnusedSegmentsKiller.class
-            ).addConditionBinding(
-                "druid.coordinator.kill.pendingSegments.on",
-                Predicates.equalTo("true"),
-                DruidCoordinatorKillStalePendingSegments.class
-            );
+            conditionalMultibind
+                .addConditionBinding("druid.coordinator.kill.on", Predicates.equalTo("true"), KillUnusedSegments.class)
+                .addConditionBinding(
+                    "druid.coordinator.kill.pendingSegments.on",
+                    Predicates.equalTo("true"),
+                    KillStalePendingSegments.class
+                );
 
             bindAnnouncer(
                 binder,

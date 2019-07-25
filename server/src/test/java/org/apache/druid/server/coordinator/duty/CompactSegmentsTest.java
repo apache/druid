@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class DruidCoordinatorSegmentCompactorTest
+public class CompactSegmentsTest
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
@@ -174,7 +174,7 @@ public class DruidCoordinatorSegmentCompactorTest
   @Test
   public void testRun()
   {
-    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    final CompactSegments compactor = new CompactSegments(indexingServiceClient);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -246,7 +246,7 @@ public class DruidCoordinatorSegmentCompactorTest
     assertLastSegmentNotCompacted(compactor);
   }
 
-  private CoordinatorStats runCompactor(DruidCoordinatorSegmentCompactor compactor)
+  private CoordinatorStats runCompactor(CompactSegments compactor)
   {
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
@@ -257,7 +257,7 @@ public class DruidCoordinatorSegmentCompactorTest
   }
 
   private void assertCompactSegments(
-      DruidCoordinatorSegmentCompactor compactor,
+      CompactSegments compactor,
       Interval expectedInterval,
       int expectedRemainingSegments,
       int expectedCompactTaskCount,
@@ -268,7 +268,7 @@ public class DruidCoordinatorSegmentCompactorTest
       final CoordinatorStats stats = runCompactor(compactor);
       Assert.assertEquals(
           expectedCompactTaskCount,
-          stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
+          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
       );
 
       // One of dataSource is compacted
@@ -276,9 +276,9 @@ public class DruidCoordinatorSegmentCompactorTest
         // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
         // compaction.
         long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT)
+            .getDataSources(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT)
             .stream()
-            .mapToLong(ds -> stats.getDataSourceStat(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT, ds))
+            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT, ds))
             .filter(stat -> stat == expectedRemainingSegments)
             .count();
         Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);
@@ -286,7 +286,7 @@ public class DruidCoordinatorSegmentCompactorTest
         // Otherwise, we check how many dataSources are in the coordinator stats.
         Assert.assertEquals(
             2 - i,
-            stats.getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT).size()
+            stats.getDataSources(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT).size()
         );
       }
     }
@@ -303,7 +303,7 @@ public class DruidCoordinatorSegmentCompactorTest
     }
   }
 
-  private void assertLastSegmentNotCompacted(DruidCoordinatorSegmentCompactor compactor)
+  private void assertLastSegmentNotCompacted(CompactSegments compactor)
   {
     // Segments of the latest interval should not be compacted
     for (int i = 0; i < 3; i++) {
@@ -329,7 +329,7 @@ public class DruidCoordinatorSegmentCompactorTest
     CoordinatorStats stats = runCompactor(compactor);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
+        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
     );
 
     addMoreData(dataSource, 10);
@@ -337,7 +337,7 @@ public class DruidCoordinatorSegmentCompactorTest
     stats = runCompactor(compactor);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
+        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
     );
   }
 

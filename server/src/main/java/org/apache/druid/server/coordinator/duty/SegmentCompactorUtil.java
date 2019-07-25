@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
 
 /**
- * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
+ * Util class used by {@link CompactSegments} and {@link CompactionSegmentSearchPolicy}.
  */
 class SegmentCompactorUtil
 {

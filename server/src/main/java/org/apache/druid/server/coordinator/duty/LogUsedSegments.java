@@ -17,18 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.helper;
+package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
-public class DruidCoordinatorUsedSegmentsLogger implements DruidCoordinatorHelper
+public class LogUsedSegments implements CoordinatorDuty
 {
-  private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorUsedSegmentsLogger.class);
+  private static final EmittingLogger log = new EmittingLogger(LogUsedSegments.class);
 
-  public DruidCoordinatorUsedSegmentsLogger()
+  public LogUsedSegments()
   {
   }
 

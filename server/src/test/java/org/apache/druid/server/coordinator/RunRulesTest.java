@@ -33,7 +33,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -57,7 +57,7 @@ import java.util.concurrent.Executors;
 
 /**
  */
-public class DruidCoordinatorRuleRunnerTest
+public class RunRulesTest
 {
   public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
       CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build();
@@ -65,7 +65,7 @@ public class DruidCoordinatorRuleRunnerTest
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
   private List<DataSegment> usedSegments;
-  private DruidCoordinatorRuleRunner ruleRunner;
+  private RunRules ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
   private SegmentsMetadata segmentsMetadata;
@@ -99,7 +99,7 @@ public class DruidCoordinatorRuleRunnerTest
       start = start.plusHours(1);
     }
 
-    ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator);
+    ruleRunner = new RunRules(new ReplicationThrottler(24, 1), coordinator);
   }
 
   @After
@@ -891,7 +891,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
-    DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(7, 1), coordinator);
+    RunRules runner = new RunRules(new ReplicationThrottler(7, 1), coordinator);
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
