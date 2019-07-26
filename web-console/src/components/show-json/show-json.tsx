@@ -21,7 +21,7 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { Loader } from '..';
+import { Loader } from '../loader/loader';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { downloadFile } from '../../utils';
@@ -75,7 +75,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
               <Button
-                disabled={!jsonValue ? true : false}
+                disabled={!jsonValue}
                 text="Save"
                 minimal
                 onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
@@ -83,7 +83,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
             )}
             <Button
               text="Copy"
-              disabled={!jsonValue ? true : false}
+              disabled={!jsonValue}
               minimal
               onClick={() => {
                 copy(jsonValue, { format: 'text/plain' });
@@ -95,7 +95,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
             />
             <Button
               text="View raw"
-              disabled={!jsonValue ? true : false}
+              disabled={!jsonValue}
               minimal
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
