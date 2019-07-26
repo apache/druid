@@ -62,7 +62,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
               <ShowJson
                 defaultValue={JSON.stringify(version.spec, undefined, 2)}
                 transform={transform}
-                downloadFilename={downloadFilename}
+                downloadFilename={downloadFilename + 'version-' + version.version}
                 endpoint={endpoint}
               />
             }
