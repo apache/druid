@@ -1011,7 +1011,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
@@ -1055,7 +1055,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,

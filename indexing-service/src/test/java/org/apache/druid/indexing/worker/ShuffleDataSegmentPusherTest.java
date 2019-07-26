@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
@@ -44,6 +43,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -106,7 +106,7 @@ public class ShuffleDataSegmentPusherTest
     unzippedFiles.sort(Comparator.comparing(File::getName));
     final File dataFile = unzippedFiles.get(0);
     Assert.assertEquals("test", dataFile.getName());
-    Assert.assertEquals("test data.", Files.readFirstLine(dataFile, StringUtils.UTF8));
+    Assert.assertEquals("test data.", Files.readFirstLine(dataFile, StandardCharsets.UTF_8));
     final File versionFile = unzippedFiles.get(1);
     Assert.assertEquals("version.bin", versionFile.getName());
     Assert.assertArrayEquals(Ints.toByteArray(0x9), Files.toByteArray(versionFile));
@@ -117,7 +117,7 @@ public class ShuffleDataSegmentPusherTest
     // Each file size is 138 bytes after compression
     final File segmentDir = temporaryFolder.newFolder();
     Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(0x9));
-    FileUtils.write(new File(segmentDir, "test"), "test data.", StringUtils.UTF8);
+    FileUtils.write(new File(segmentDir, "test"), "test data.", StandardCharsets.UTF_8);
     return segmentDir;
   }
 

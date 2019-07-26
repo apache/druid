@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -27,6 +26,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -156,7 +156,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   {
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
-    FileUtils.write(new File(segmentDir, fileName), "test data.", StringUtils.UTF8);
+    FileUtils.write(new File(segmentDir, fileName), "test data.", StringUtils.UTF8_STRING);
     return segmentDir;
   }
 

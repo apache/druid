@@ -22,18 +22,21 @@ package org.apache.druid.tests.indexer;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
-import org.junit.Assert;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.testng.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 
 public class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
@@ -132,7 +135,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName,
           "2013-08-31T00:00:00.000Z/2013-09-10T00:00:00.000Z"
       );
-      Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
+      Assert.assertFalse(dimensions.contains("robot"), "dimensions : " + dimensions);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -165,7 +168,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForNewVersion)
   {
-    final Set<String> oldVersions = waitForNewVersion ? coordinator.getSegmentVersions(dataSourceName) : null;
+    final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
 
     long startSubTaskCount = -1;
     final boolean assertRunsSubTasks = taskSpec.contains("index_parallel");
@@ -180,10 +183,12 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (assertRunsSubTasks) {
       final long newSubTasks = countCompleteSubTasks(dataSourceName) - startSubTaskCount;
       Assert.assertTrue(
+          newSubTasks > 0,
           StringUtils.format(
               "The supervisor task[%s] didn't create any sub tasks. Was it executed in the parallel mode?",
               taskID
-          ), newSubTasks > 0);
+          )
+      );
     }
 
     // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
@@ -193,7 +198,19 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     // original segments have loaded.
     if (waitForNewVersion) {
       RetryUtil.retryUntilTrue(
-          () -> !oldVersions.containsAll(coordinator.getSegmentVersions(dataSourceName)), "See a new version"
+          () -> {
+            final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+                coordinator.getAvailableSegments(dataSourceName)
+            );
+
+            final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(Intervals.ETERNITY);
+            return holders
+                .stream()
+                .flatMap(holder -> holder.getObject().stream())
+                .anyMatch(chunk -> oldVersions.stream()
+                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
+          },
+          "See a new version"
       );
     }
 

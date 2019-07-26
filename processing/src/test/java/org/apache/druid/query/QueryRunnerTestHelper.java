@@ -58,6 +58,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -445,7 +446,7 @@ public class QueryRunnerTestHelper
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final VersionedIntervalTimeline<String, Segment> timeline,
+      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
@@ -463,7 +464,7 @@ public class QueryRunnerTestHelper
                   segments.addAll(timeline.lookup(interval));
                 }
                 List<Sequence<T>> sequences = new ArrayList<>();
-                for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
+                for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
                   QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(
                       new SpecificSegmentSpec(
