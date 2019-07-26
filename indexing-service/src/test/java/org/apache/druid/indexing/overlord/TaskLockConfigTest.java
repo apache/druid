@@ -77,6 +77,21 @@ public class TaskLockConfigTest
     Assert.assertFalse(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
   }
 
+  @Test
+  public void testOverwriteDefault() throws EntryExistsException
+  {
+    final TaskQueue taskQueue = createTaskQueue(null);
+    taskQueue.start();
+    final Task task = NoopTask.create();
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false);
+    Assert.assertTrue(taskQueue.add(task));
+    taskQueue.stop();
+    final Optional<Task> optionalTask = taskStorage.getTask(task.getId());
+    Assert.assertTrue(optionalTask.isPresent());
+    final Task fromTaskStorage = optionalTask.get();
+    Assert.assertFalse(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+  }
+
   private TaskQueue createTaskQueue(@Nullable Boolean forceTimeChunkLock)
   {
     final TaskLockConfig lockConfig;
