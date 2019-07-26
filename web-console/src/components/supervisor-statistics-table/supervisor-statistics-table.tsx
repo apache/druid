@@ -25,7 +25,7 @@ import ReactTable from 'react-table';
 import { Loader } from '..';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile } from '../../utils';
+import { downloadFile, QueryManager } from '../../utils';
 
 import './supervisor-statistics-table.scss';
 
@@ -38,50 +38,64 @@ export interface SupervisorStatisticsTableProps {
 export interface SupervisorStatisticsTableState {
   data: JSON[];
   jsonValue: string;
+  loading: boolean;
+  error: string | null;
 }
 
 export class SupervisorStatisticsTable extends React.PureComponent<
   SupervisorStatisticsTableProps,
   SupervisorStatisticsTableState
 > {
+  private supervisorStatisticsTableQueryManager: QueryManager<null, SupervisorStatisticsTableState>;
   constructor(props: SupervisorStatisticsTableProps, context: any) {
     super(props, context);
     this.state = {
       data: [],
       jsonValue: '',
+      loading: true,
+      error: null,
     };
-
-    this.getJsonInfo();
-  }
-
-  private getJsonInfo = async (): Promise<void> => {
-    const { endpoint, transform } = this.props;
-
-    try {
-      const resp = await axios.get(endpoint);
-      let data = resp.data;
-      if (transform) data = transform(data);
-      const dataArray = this.getDataArray(data);
-      this.setState({
-        jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2),
-        data: dataArray,
-      });
-    } catch (e) {
-      this.setState({
-        jsonValue: `Error: ` + e.response.data,
-      });
-    }
-  };
-
-  getDataArray(jsonValue: any) {
-    const data: any[] = [];
-    Object.keys(jsonValue).forEach(key => {
-      data.push(jsonValue[key]);
+    this.supervisorStatisticsTableQueryManager = new QueryManager({
+      processQuery: async () => {
+        const { endpoint, transform } = this.props;
+        const resp = await axios.get(endpoint);
+        let data = resp.data;
+        if (transform) data = transform(data);
+        return data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        const dataArray: JSON[] = [];
+        if (result) {
+          Object.keys(result).forEach(key => {
+            dataArray.push(result[key]);
+          });
+        }
+        this.setState({
+          jsonValue: result ? JSON.stringify(result) : '',
+          data: dataArray,
+          loading,
+          error,
+        });
+      },
     });
-    return data;
   }
 
-  renderTable() {
+  componentDidMount(): void {
+    this.supervisorStatisticsTableQueryManager.runQuery(null);
+  }
+
+  renderCell(data: any) {
+    return (
+      <div>
+        <div>{`Processed: ${data.processed.toFixed(1)}`}</div>
+        <div>{`Unparseable: ${data.unparseable.toFixed(1)}`}</div>
+        <div>{`ThrownAway: ${data.thrownAway.toFixed(1)}`}</div>
+        <div>{`ProcessedWithError: ${data.processedWithError.toFixed(1)}`}</div>
+      </div>
+    );
+  }
+
+  renderTable(error: string | null) {
     const columns = [
       {
         Header: 'Task Id',
@@ -93,14 +107,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         id: 'totals',
         accessor: (d: any) => d[Object.keys(d)[0]].totals.buildSegments,
         Cell: (d: any) => {
-          return (
-            <div>
-              <div> Processed : {d.value.processed.toFixed(1)} </div>
-              <div> Unparseable : {d.value.unparseable.toFixed(1)} </div>
-              <div> ThrownAway : {d.value.thrownAway.toFixed(1)} </div>
-              <div> ProcessedWithError : {d.value.processedWithError.toFixed(1)} </div>
-            </div>
-          );
+          return this.renderCell(d.value);
         },
       },
       {
@@ -108,14 +115,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         id: '1m',
         accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['1m'],
         Cell: (d: any) => {
-          return (
-            <div>
-              <div> Processed : {d.value.processed.toFixed(1)} </div>
-              <div> Unparseable : {d.value.unparseable.toFixed(1)} </div>
-              <div> ThrownAway : {d.value.thrownAway.toFixed(1)} </div>
-              <div> ProcessedWithError : {d.value.processedWithError.toFixed(1)} </div>
-            </div>
-          );
+          return this.renderCell(d.value);
         },
       },
       {
@@ -123,14 +123,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         id: '5m',
         accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['5m'],
         Cell: (d: any) => {
-          return (
-            <div>
-              <div> Processed : {d.value.processed.toFixed(1)} </div>
-              <div> Unparseable : {d.value.unparseable.toFixed(1)} </div>
-              <div> ThrownAway : {d.value.thrownAway.toFixed(1)} </div>
-              <div> ProcessedWithError : {d.value.processedWithError.toFixed(1)} </div>
-            </div>
-          );
+          return this.renderCell(d.value);
         },
       },
       {
@@ -138,32 +131,25 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         id: '15m',
         accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['15m'],
         Cell: (d: any) => {
-          return (
-            <div>
-              <div> Processed : {d.value.processed.toFixed(1)} </div>
-              <div> Unparseable : {d.value.unparseable.toFixed(1)} </div>
-              <div> ThrownAway : {d.value.thrownAway.toFixed(1)} </div>
-              <div> ProcessedWithError : {d.value.processedWithError.toFixed(1)} </div>
-            </div>
-          );
+          return this.renderCell(d.value);
         },
       },
     ];
 
     return (
       <ReactTable
-        data={this.state.data}
+        data={this.state.data ? this.state.data : []}
         showPagination={false}
         defaultPageSize={6}
         columns={columns}
-        noDataText={'No statistics data found'}
+        noDataText={error ? error : 'No statistics data found'}
       />
     );
   }
 
   render() {
     const { endpoint, downloadFilename } = this.props;
-    const { jsonValue } = this.state;
+    const { jsonValue, loading, error } = this.state;
     return (
       <div className="supervisor-statistics-table">
         <div className="top-actions">
@@ -173,7 +159,9 @@ export class SupervisorStatisticsTable extends React.PureComponent<
                 disabled={!jsonValue}
                 text="Save"
                 minimal
-                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+                onClick={() =>
+                  jsonValue ? downloadFile(jsonValue, 'json', downloadFilename) : null
+                }
               />
             )}
             <Button
@@ -181,7 +169,9 @@ export class SupervisorStatisticsTable extends React.PureComponent<
               disabled={!jsonValue}
               minimal
               onClick={() => {
-                copy(jsonValue, { format: 'text/plain' });
+                if (jsonValue != null) {
+                  copy(jsonValue, { format: 'text/plain' });
+                }
                 AppToaster.show({
                   message: 'JSON copied to clipboard',
                   intent: Intent.SUCCESS,
@@ -197,8 +187,8 @@ export class SupervisorStatisticsTable extends React.PureComponent<
           </ButtonGroup>
         </div>
         <div className="main-area">
-          {!jsonValue && <Loader loadingText="" loading />}
-          {jsonValue && this.renderTable()}
+          {loading && <Loader loadingText="" loading />}
+          {!loading && this.renderTable(error)}
         </div>
       </div>
     );
