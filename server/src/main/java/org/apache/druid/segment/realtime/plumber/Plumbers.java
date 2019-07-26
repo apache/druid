@@ -30,6 +30,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
+import java.io.IOException;
+
 public class Plumbers
 {
   private static final Logger log = new Logger(Plumbers.class);
@@ -51,9 +53,9 @@ public class Plumbers
     try {
       inputRow = firehose.nextRow();
     }
-    catch (ParseException e) {
-      if (reportParseExceptions) {
-        throw e;
+    catch (ParseException | IOException e) {
+      if (e instanceof ParseException && reportParseExceptions) {
+        throw (ParseException) e;
       } else {
         log.debug(e, "Discarded row due to exception, considering unparseable.");
         metrics.incrementUnparseable();
