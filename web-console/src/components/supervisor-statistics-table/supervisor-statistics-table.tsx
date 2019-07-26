@@ -156,7 +156,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         showPagination={false}
         defaultPageSize={6}
         columns={columns}
-        noDataText={'No data found'}
+        noDataText={'No statistics data found'}
       />
     );
   }
