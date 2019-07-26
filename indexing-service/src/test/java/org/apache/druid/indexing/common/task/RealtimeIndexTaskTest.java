@@ -882,7 +882,7 @@ public class RealtimeIndexTaskTest
   )
   {
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -1020,8 +1020,7 @@ public class RealtimeIndexTaskTest
                                   .intervals("2000/3000")
                                   .build();
 
-    List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    List<Result<TimeseriesResultValue>> results = task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
     if (results.isEmpty()) {
       return 0L;
     } else {

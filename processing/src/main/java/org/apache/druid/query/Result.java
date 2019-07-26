@@ -34,9 +34,6 @@ import java.util.function.Function;
 @PublicApi
 public class Result<T> implements Comparable<Result<T>>
 {
-  public static final String MISSING_SEGMENTS_KEY = "missingSegments";
-
-  @Nullable
   private final DateTime timestamp;
   private final T value;
 

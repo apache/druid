@@ -68,7 +68,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
-
   @Override
   protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
   {
@@ -79,7 +78,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        lockGranularityToUse
     );
   }
 

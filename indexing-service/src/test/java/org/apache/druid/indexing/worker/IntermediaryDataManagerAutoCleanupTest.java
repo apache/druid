@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -43,6 +42,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -127,7 +127,7 @@ public class IntermediaryDataManagerAutoCleanupTest
   private File generateSegmentFile() throws IOException
   {
     final File segmentFile = tempDir.newFile();
-    FileUtils.write(segmentFile, "test data.", StringUtils.UTF8);
+    FileUtils.write(segmentFile, "test data.", StandardCharsets.UTF_8);
     return segmentFile;
   }
 

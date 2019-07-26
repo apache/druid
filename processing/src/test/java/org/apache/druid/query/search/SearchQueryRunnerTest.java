@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -68,7 +69,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -166,7 +166,7 @@ public class SearchQueryRunnerTest
           @Override
           public Sequence<Result<SearchResultValue>> run(
               QueryPlus<Result<SearchResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -789,7 +789,7 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
-    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
     List<SearchHit> copy = new ArrayList<>(expectedResults);
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

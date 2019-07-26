@@ -80,10 +80,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -442,7 +440,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -597,8 +595,7 @@ public class IncrementalIndexTest
                         factory.createRunner(incrementalIndexSegment),
                         factory.getToolchest()
                     );
-                    Map<String, Object> context = new HashMap<String, Object>();
-                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
+                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query));
 
                     Double[] results = sequence.accumulate(
                         new Double[0],
@@ -653,8 +650,7 @@ public class IncrementalIndexTest
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(

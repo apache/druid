@@ -40,6 +40,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -69,7 +70,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
@@ -91,7 +91,7 @@ public class QueryResourceTest
       return new QueryRunner<T>()
       {
         @Override
-        public Sequence<T> run(QueryPlus<T> query, Map<String, Object> responseContext)
+        public Sequence<T> run(QueryPlus<T> query, ResponseContext responseContext)
         {
           return Sequences.empty();
         }

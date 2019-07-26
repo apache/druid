@@ -68,7 +68,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -185,8 +184,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -210,8 +208,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -235,8 +232,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -260,8 +256,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -285,8 +280,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -310,8 +304,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -357,8 +350,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -405,8 +397,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -435,8 +426,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -455,8 +445,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -479,8 +468,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -501,8 +489,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -522,8 +509,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -544,8 +530,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -586,8 +571,7 @@ public class AppendTest
                                   .postAggregators(addRowsIndexConstant)
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   private TimeseriesQuery makeTimeseriesQuery()

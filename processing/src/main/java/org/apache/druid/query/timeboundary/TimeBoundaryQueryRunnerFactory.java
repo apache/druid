@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
@@ -46,7 +47,6 @@ import org.joda.time.DateTime;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -131,7 +131,7 @@ public class TimeBoundaryQueryRunnerFactory
     @Override
     public Sequence<Result<TimeBoundaryResultValue>> run(
         final QueryPlus<Result<TimeBoundaryResultValue>> queryPlus,
-        final Map<String, Object> responseContext
+        final ResponseContext responseContext
     )
     {
       Query<Result<TimeBoundaryResultValue>> input = queryPlus.getQuery();

@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.select.SelectQueryRunnerTest;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
@@ -56,9 +57,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -199,7 +198,7 @@ public class MultiSegmentScanQueryTest
             Execs.directExecutor(),
             ImmutableList.of(FACTORY.createRunner(segment0), FACTORY.createRunner(segment1))
         )
-        .run(QueryPlus.wrap(query), new HashMap<>())
+        .run(QueryPlus.wrap(query))
         .toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
@@ -221,13 +220,13 @@ public class MultiSegmentScanQueryTest
           @Override
           public Sequence<ScanResultValue> run(
               QueryPlus<ScanResultValue> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             // simulate results back from 2 historicals
             List<Sequence<ScanResultValue>> sequences = Lists.newArrayListWithExpectedSize(2);
-            sequences.add(FACTORY.createRunner(segment0).run(queryPlus, new HashMap<>()));
-            sequences.add(FACTORY.createRunner(segment1).run(queryPlus, new HashMap<>()));
+            sequences.add(FACTORY.createRunner(segment0).run(queryPlus));
+            sequences.add(FACTORY.createRunner(segment1).run(queryPlus));
             return new MergeSequence<>(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(sequences)
@@ -236,7 +235,7 @@ public class MultiSegmentScanQueryTest
         }
     );
     ScanQuery query = newBuilder().build();
-    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();

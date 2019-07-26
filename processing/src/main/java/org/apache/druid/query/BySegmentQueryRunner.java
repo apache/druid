@@ -21,12 +21,12 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -45,7 +45,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     if (QueryContexts.isBySegment(queryPlus.getQuery())) {
       final Sequence<T> baseSequence = base.run(queryPlus, responseContext);

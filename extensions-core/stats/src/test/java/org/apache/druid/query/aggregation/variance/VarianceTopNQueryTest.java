@@ -140,10 +140,7 @@ public class VarianceTopNQueryTest
         QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
-        QueryPlus.wrap(query),
-        ImmutableMap.of()
-    );
+    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(QueryPlus.wrap(query));
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }

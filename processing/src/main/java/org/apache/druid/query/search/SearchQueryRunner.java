@@ -34,6 +34,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -47,7 +48,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -207,7 +207,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   @Override
   public Sequence<Result<SearchResultValue>> run(
       final QueryPlus<Result<SearchResultValue>> queryPlus,
-      Map<String, Object> responseContext
+      ResponseContext responseContext
   )
   {
     Query<Result<SearchResultValue>> input = queryPlus.getQuery();

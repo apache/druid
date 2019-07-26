@@ -44,7 +44,6 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -248,9 +247,7 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    HashMap<String, List> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> results =
-        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
 
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

@@ -66,9 +66,7 @@ import org.junit.runners.Parameterized;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -394,8 +392,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
-                  Map<String, Object> context = new HashMap<String, Object>();
-                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
                       Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
@@ -427,8 +424,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());

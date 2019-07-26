@@ -52,7 +52,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
 
 public class MapVirtualColumnGroupByTest
@@ -141,7 +140,7 @@ public class MapVirtualColumnGroupByTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @Test
@@ -162,7 +161,7 @@ public class MapVirtualColumnGroupByTest
         null
     );
 
-    final List<Row> result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    final List<Row> result = runner.run(QueryPlus.wrap(query)).toList();
     final List<Row> expected = ImmutableList.of(
         new MapBasedRow(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

@@ -20,44 +20,50 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-
-public class LockAcquireAction implements TaskAction<TaskLock>
+/**
+ * TaskAction to acquire a {@link org.apache.druid.indexing.common.SegmentLock}.
+ * This action is a blocking operation and the caller could wait until it gets {@link LockResult}
+ * (up to timeoutMs if it's > 0).
+ *
+ * This action is currently used by only stream ingestion tasks.
+ */
+public class SegmentLockAcquireAction implements TaskAction<LockResult>
 {
-  private final TaskLockType type;
-
-  @JsonIgnore
+  private final TaskLockType lockType;
   private final Interval interval;
-
-  @JsonIgnore
+  private final String version;
+  private final int partitionId;
   private final long timeoutMs;
 
   @JsonCreator
-  public LockAcquireAction(
-      @JsonProperty("lockType") @Nullable TaskLockType type, // nullable for backward compatibility
+  public SegmentLockAcquireAction(
+      @JsonProperty("lockType") TaskLockType lockType,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") String version,
+      @JsonProperty("partitionId") int partitionId,
       @JsonProperty("timeoutMs") long timeoutMs
   )
   {
-    this.type = type == null ? TaskLockType.EXCLUSIVE : type;
+    this.lockType = Preconditions.checkNotNull(lockType, "lockType");
     this.interval = Preconditions.checkNotNull(interval, "interval");
+    this.version = Preconditions.checkNotNull(version, "version");
+    this.partitionId = partitionId;
     this.timeoutMs = timeoutMs;
   }
 
-  @JsonProperty("lockType")
-  public TaskLockType getType()
+  @JsonProperty
+  public TaskLockType getLockType()
   {
-    return type;
+    return lockType;
   }
 
   @JsonProperty
@@ -67,27 +73,46 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   }
 
   @JsonProperty
+  public String getVersion()
+  {
+    return version;
+  }
+
+  @JsonProperty
+  public int getPartitionId()
+  {
+    return partitionId;
+  }
+
+  @JsonProperty
   public long getTimeoutMs()
   {
     return timeoutMs;
   }
 
   @Override
-  public TypeReference<TaskLock> getReturnTypeReference()
+  public TypeReference<LockResult> getReturnTypeReference()
   {
-    return new TypeReference<TaskLock>()
+    return new TypeReference<LockResult>()
     {
     };
   }
 
   @Override
-  public TaskLock perform(Task task, TaskActionToolbox toolbox)
+  public LockResult perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      final LockResult result = timeoutMs == 0 ?
-                                toolbox.getTaskLockbox().lock(type, task, interval) :
-                                toolbox.getTaskLockbox().lock(type, task, interval, timeoutMs);
-      return result.isOk() ? result.getTaskLock() : null;
+      if (timeoutMs == 0) {
+        return toolbox.getTaskLockbox().lock(
+            task,
+            new SpecificSegmentLockRequest(lockType, task, interval, version, partitionId)
+        );
+      } else {
+        return toolbox.getTaskLockbox().lock(
+            task,
+            new SpecificSegmentLockRequest(lockType, task, interval, version, partitionId), timeoutMs
+        );
+      }
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -103,9 +128,11 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   @Override
   public String toString()
   {
-    return "LockAcquireAction{" +
-           "lockType=" + type +
+    return "SegmentLockAcquireAction{" +
+           "lockType=" + lockType +
            ", interval=" + interval +
+           ", version='" + version + '\'' +
+           ", partitionId=" + partitionId +
            ", timeoutMs=" + timeoutMs +
            '}';
   }

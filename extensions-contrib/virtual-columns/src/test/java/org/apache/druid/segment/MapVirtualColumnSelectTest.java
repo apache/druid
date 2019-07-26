@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -190,7 +189,7 @@ public class MapVirtualColumnSelectTest
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
-    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
+    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
     Assert.assertEquals(1, results.size());
 
     List<EventHolder> events = results.get(0).getValue().getEvents();
