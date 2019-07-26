@@ -126,7 +126,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         dataSegmentPusher,
         objectMapper,
         segmentAnnouncer,
-        segmentWalker.getSinkTimeline(),
         segmentWalker,
         indexIO,
         indexMerger,

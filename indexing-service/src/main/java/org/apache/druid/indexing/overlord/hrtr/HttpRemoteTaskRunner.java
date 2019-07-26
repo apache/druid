@@ -41,7 +41,6 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -438,7 +437,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private void startWorkersHandling() throws InterruptedException
   {
     final CountDownLatch workerViewInitialized = new CountDownLatch(1);
-    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER);
+
+    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(
+        WorkerNodeService.DISCOVERY_SERVICE_KEY
+    );
     druidNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {
@@ -462,32 +464,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           }
         }
     );
-
-    DruidNodeDiscovery druidNodeDiscoveryIndexer = druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER);
-    druidNodeDiscoveryIndexer.registerListener(
-        new DruidNodeDiscovery.Listener()
-        {
-          @Override
-          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
-          {
-            nodes.forEach(node -> addWorker(toWorker(node)));
-          }
-
-          @Override
-          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
-          {
-            nodes.forEach(node -> removeWorker(toWorker(node)));
-          }
-
-          @Override
-          public void nodeViewInitialized()
-          {
-            //CountDownLatch.countDown() does nothing when count has already reached 0.
-            workerViewInitialized.countDown();
-          }
-        }
-    );
-
 
     long workerDiscoveryStartTime = System.currentTimeMillis();
     while (!workerViewInitialized.await(30, TimeUnit.SECONDS)) {

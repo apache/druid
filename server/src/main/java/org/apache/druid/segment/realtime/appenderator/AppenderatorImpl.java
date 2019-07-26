@@ -171,35 +171,38 @@ public class AppenderatorImpl implements Appenderator
       CachePopulatorStats cachePopulatorStats
   )
   {
-    this.schema = Preconditions.checkNotNull(schema, "schema");
-    this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.metrics = Preconditions.checkNotNull(metrics, "metrics");
-    this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
-    this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
-    this.segmentAnnouncer = Preconditions.checkNotNull(segmentAnnouncer, "segmentAnnouncer");
-    this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
-    this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
-    this.cache = cache;
-    this.sinkTimeline = new VersionedIntervalTimeline<>(
-        String.CASE_INSENSITIVE_ORDER
-    );
-    this.texasRanger = conglomerate == null ? null : new SinkQuerySegmentWalker(
-        schema.getDataSource(),
-        sinkTimeline,
+    this(
+        schema,
+        tuningConfig,
+        metrics,
+        dataSegmentPusher,
         objectMapper,
-        emitter,
-        conglomerate,
-        queryExecutorService,
-        Preconditions.checkNotNull(cache, "cache"),
-        cacheConfig,
-        cachePopulatorStats
+        segmentAnnouncer,
+        conglomerate == null ? null : new SinkQuerySegmentWalker(
+            schema.getDataSource(),
+            new VersionedIntervalTimeline<>(
+                String.CASE_INSENSITIVE_ORDER
+            ),
+            objectMapper,
+            emitter,
+            conglomerate,
+            queryExecutorService,
+            Preconditions.checkNotNull(cache, "cache"),
+            cacheConfig,
+            cachePopulatorStats
+        ),
+        indexIO,
+        indexMerger,
+        cache
     );
-    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
 
   /**
-   * This constructor allows the caller to provide its own sink timeline and segment walker.
+   * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
+   *
+   * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
+   * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
    *
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
@@ -211,7 +214,6 @@ public class AppenderatorImpl implements Appenderator
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
-      VersionedIntervalTimeline<String, Sink> sinkTimeline,
       SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
@@ -228,7 +230,15 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
-    this.sinkTimeline = sinkTimeline;
+
+    if (sinkQuerySegmentWalker == null) {
+      this.sinkTimeline = new VersionedIntervalTimeline<>(
+          String.CASE_INSENSITIVE_ORDER
+      );
+    } else {
+      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
+    }
+
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }

@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -42,10 +43,7 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
 
   private final DataSegmentServerAnnouncer dataSegmentServerAnnouncer;
 
-  // Synchronizes start/stop of this object.
-  private final Object startStopLock = new Object();
-
-  private volatile boolean started = false;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
   public CliIndexerDataSegmentServerAnnouncerLifecycleHandler(
@@ -58,8 +56,12 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
   @LifecycleStart
   public void start() throws IOException
   {
-    synchronized (startStopLock) {
-      if (started) {
+    if (!lifecycleLock.canStart()) {
+      throw new RuntimeException("Lifecycle lock could not start");
+    }
+
+    try {
+      if (lifecycleLock.isStarted()) {
         return;
       }
 
@@ -71,35 +73,32 @@ public class CliIndexerDataSegmentServerAnnouncerLifecycleHandler
         Throwables.propagateIfPossible(e, IOException.class);
         throw new RuntimeException(e);
       }
-      started = true;
       LOG.info("Started.");
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    synchronized (startStopLock) {
-      if (!started) {
-        return;
-      }
-
-      LOG.info("Stopping...");
-      try {
-        dataSegmentServerAnnouncer.unannounce();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      finally {
-        started = false;
-      }
-      LOG.info("Stopped.");
+    if (!lifecycleLock.canStop()) {
+      throw new RuntimeException("Lifecycle lock could not stop");
     }
-  }
 
-  public boolean isStarted()
-  {
-    return started;
+    if (!lifecycleLock.isStarted()) {
+      return;
+    }
+
+    LOG.info("Stopping...");
+    try {
+      dataSegmentServerAnnouncer.unannounce();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    LOG.info("Stopped.");
   }
 }
