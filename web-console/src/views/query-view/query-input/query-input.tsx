@@ -203,6 +203,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
                 tabSize: 2,
               }}
               style={{}}
+              placeholder="SELECT * FROM ..."
             />
           </div>
         </ResizeSensor>
