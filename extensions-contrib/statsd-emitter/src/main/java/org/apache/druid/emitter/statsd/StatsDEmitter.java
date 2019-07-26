@@ -101,7 +101,7 @@ public class StatsDEmitter implements Emitter
       ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
       ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
 
-      if (config.isServiceAsTag()) {
+      if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
         dimsBuilder.put("service", service);
       } else {
         nameBuilder.add(service);

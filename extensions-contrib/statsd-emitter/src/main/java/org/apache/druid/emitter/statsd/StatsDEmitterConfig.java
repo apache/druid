@@ -45,13 +45,13 @@ public class StatsDEmitterConfig
   @JsonProperty
   private final String dimensionMapPath;
   @JsonProperty
-  private final Boolean serviceAsTag;
-  @JsonProperty
   private final String blankHolder;
   @JsonProperty
   private final Boolean dogstatsd;
   @JsonProperty
   private final List<String> dogstatsdConstantTags;
+  @JsonProperty
+  private final Boolean dogstatsdServiceAsTag;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -61,10 +61,10 @@ public class StatsDEmitterConfig
       @JsonProperty("separator") String separator,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("serviceAsTag") Boolean serviceAsTag,
       @JsonProperty("blankHolder") String blankHolder,
       @JsonProperty("dogstatsd") Boolean dogstatsd,
-      @JsonProperty("dogstatsdConstantTags") List<String> dogstatsdConstantTags
+      @JsonProperty("dogstatsdConstantTags") List<String> dogstatsdConstantTags,
+      @JsonProperty("dogstatsdServiceAsTag") Boolean dogstatsdServiceAsTag
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -73,10 +73,10 @@ public class StatsDEmitterConfig
     this.separator = separator != null ? separator : ".";
     this.includeHost = includeHost != null ? includeHost : false;
     this.dimensionMapPath = dimensionMapPath;
-    this.serviceAsTag = serviceAsTag;
     this.blankHolder = blankHolder != null ? blankHolder : "-";
     this.dogstatsd = dogstatsd != null ? dogstatsd : false;
     this.dogstatsdConstantTags = dogstatsdConstantTags != null ? dogstatsdConstantTags : Collections.emptyList();
+    this.dogstatsdServiceAsTag = dogstatsdServiceAsTag != null ? dogstatsdServiceAsTag : false;
   }
 
   @Override
@@ -109,10 +109,10 @@ public class StatsDEmitterConfig
     if (dimensionMapPath != null ? !dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath != null) {
       return false;
     }
-    if (serviceAsTag != null ? !serviceAsTag.equals(that.serviceAsTag) : that.serviceAsTag != null) {
+    if (dogstatsd != null ? !dogstatsd.equals(that.dogstatsd) : that.dogstatsd != null) {
       return false;
     }
-    if (dogstatsd != null ? !dogstatsd.equals(that.dogstatsd) : that.dogstatsd != null) {
+    if (dogstatsdServiceAsTag != null ? !dogstatsdServiceAsTag.equals(that.dogstatsdServiceAsTag) : that.dogstatsdServiceAsTag != null) {
       return false;
     }
     return dogstatsdConstantTags != null ? dogstatsdConstantTags.equals(that.dogstatsdConstantTags)
@@ -123,8 +123,8 @@ public class StatsDEmitterConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath, serviceAsTag,
-            blankHolder, dogstatsd, dogstatsdConstantTags);
+    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath,
+            blankHolder, dogstatsd, dogstatsdConstantTags, dogstatsdServiceAsTag);
   }
 
   @JsonProperty
@@ -164,12 +164,6 @@ public class StatsDEmitterConfig
   }
 
   @JsonProperty
-  public Boolean isServiceAsTag()
-  {
-    return serviceAsTag;
-  }
-
-  @JsonProperty
   public String getBlankHolder()
   {
     return blankHolder;
@@ -186,4 +180,11 @@ public class StatsDEmitterConfig
   {
     return dogstatsdConstantTags;
   }
+
+  @JsonProperty
+  public Boolean isDogstatsdServiceAsTag()
+  {
+    return dogstatsdServiceAsTag;
+  }
+
 }
