@@ -2,7 +2,7 @@
 
 exports[`rule editor matches snapshot 1`] = `
 <div
-  class="show-json"
+  class="supervisor-statistics-table"
 >
   <div
     class="top-actions"
@@ -84,7 +84,6 @@ exports[`rule editor matches snapshot 1`] = `
         </svg>
       </div>
     </div>
-    
   </div>
 </div>
 `;
