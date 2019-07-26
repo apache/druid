@@ -106,6 +106,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+
+  /**
+   * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+   * In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+   * If this task is overwriting existing segments, then we should know this task is changing segment granularity
+   * in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+   * the segment granularity of existing segments until the task reads all data because we don't know what segments
+   * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
+   * are missing and force to use timeChunk lock.
+   *
+   * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
+   * in the task logs.
+   */
   private final boolean missingIntervalsInOverwriteMode;
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
@@ -153,13 +166,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                                               .bucketIntervals()
                                                               .isPresent();
     if (missingIntervalsInOverwriteMode) {
-      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
-      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
-      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
-      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
-      // the segment granularity of existing segments until the task reads all data because we don't know what segments
-      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
-      // missing force to use timeChunk lock.
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
 
