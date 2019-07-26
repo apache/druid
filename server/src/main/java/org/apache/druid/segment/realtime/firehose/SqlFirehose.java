@@ -40,12 +40,13 @@ public class SqlFirehose implements Firehose
   private final Iterator<JsonIterator<Map<String, Object>>> resultIterator;
   private final MapInputRowParser parser;
   private final Closeable closer;
+  @Nullable
   private JsonIterator<Map<String, Object>> lineIterator = null;
   private final Transformer transformer;
 
   public SqlFirehose(
       Iterator<JsonIterator<Map<String, Object>>> lineIterators,
-      InputRowParser parser,
+      InputRowParser<?> parser,
       Closeable closer
   )
   {
@@ -70,6 +71,7 @@ public class SqlFirehose implements Firehose
   @Override
   public InputRow nextRow()
   {
+    assert lineIterator != null;
     final Map<String, Object> mapToParse = lineIterator.next();
     return transformer.transform(Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator()));
   }

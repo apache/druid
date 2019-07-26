@@ -37,7 +37,6 @@ import java.util.concurrent.ExecutorService;
  * See the javadoc of {@link PrefetchSqlFirehoseFactory} for more details.
  */
 public class SqlFetcher<T> extends Fetcher<T>
-
 {
   private static final String FETCH_FILE_PREFIX = "sqlfetch-";
 
