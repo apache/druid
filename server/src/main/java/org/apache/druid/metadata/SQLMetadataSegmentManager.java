@@ -677,7 +677,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          return replaceWithExistingSegmentIfPresent(segment);
+                          return DataSegment.intern(segment, true);
                         }
                         catch (IOException e) {
                           log.makeAlert(e, "Failed to read segment from db.").emit();

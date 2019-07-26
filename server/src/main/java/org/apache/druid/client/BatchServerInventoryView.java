@@ -37,6 +37,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -94,8 +95,22 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
     return container;
   }
 
+  private Set<DataSegment> dataSegmentsIntern(Set<DataSegment> segments)
+  {
+    Set<DataSegment> result = new HashSet<>();
+    for (DataSegment dataSegment : segments) {
+      result.add(DataSegment.intern(dataSegment, false));
+    }
+    return result;
+  }
+
+
   private Set<DataSegment> filterInventory(final DruidServer container, Set<DataSegment> inventory)
   {
+    if (container.segmentReplicatable()) {
+      inventory = dataSegmentsIntern(inventory);
+    }
+
     Predicate<Pair<DruidServerMetadata, DataSegment>> predicate = Predicates.or(
         defaultFilter,
         Predicates.or(segmentPredicates.values())
@@ -135,7 +150,6 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
   protected DruidServer updateInnerInventory(DruidServer container, String inventoryKey, Set<DataSegment> inventory)
   {
     Set<DataSegment> filteredInventory = filterInventory(container, inventory);
-
     Set<DataSegment> existing = zNodes.get(inventoryKey);
     if (existing == null) {
       throw new ISE("Trying to update an inventoryKey[%s] that didn't exist?!", inventoryKey);

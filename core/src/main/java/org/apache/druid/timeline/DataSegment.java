@@ -76,9 +76,22 @@ public class DataSegment implements Comparable<DataSegment>
     @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
   }
 
+  public static DataSegment intern(DataSegment dataSegment, boolean updateLoadSpec)
+  {
+    DataSegment result = DATA_SEGMENT_INTERNER.intern(dataSegment);
+    if (updateLoadSpec) {
+      result.dimensions = dataSegment.dimensions;
+      result.metrics = dataSegment.metrics;
+      result.loadSpec = dataSegment.loadSpec;
+    }
+    return result;
+  }
+
+
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> DIMENSIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> METRICS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
       ""
@@ -87,9 +100,9 @@ public class DataSegment implements Comparable<DataSegment>
   private final Integer binaryVersion;
   private final SegmentId id;
   @Nullable
-  private final Map<String, Object> loadSpec;
-  private final List<String> dimensions;
-  private final List<String> metrics;
+  private volatile Map<String, Object> loadSpec;
+  private volatile List<String> dimensions;
+  private volatile List<String> metrics;
   private final ShardSpec shardSpec;
   private final long size;
 
