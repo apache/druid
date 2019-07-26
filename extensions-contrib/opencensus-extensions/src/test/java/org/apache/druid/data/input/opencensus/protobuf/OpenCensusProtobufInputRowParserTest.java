@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,8 +51,6 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 public class OpenCensusProtobufInputRowParserTest
 {
@@ -98,13 +97,13 @@ public class OpenCensusProtobufInputRowParserTest
     d.writeTo(out);
 
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
-    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "name", "metric_gauge_double");
     assertDimensionEquals(row, "foo_key", "foo_value");
 
 
-    assertEquals(2000, row.getMetric("value").doubleValue(), 0.0);
+    Assert.assertEquals(2000, row.getMetric("value").doubleValue(), 0.0);
   }
 
   @Test
@@ -124,19 +123,19 @@ public class OpenCensusProtobufInputRowParserTest
 
     List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
 
-    assertEquals(2, rows.size());
+    Assert.assertEquals(2, rows.size());
 
     InputRow row = rows.get(0);
-    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_summary-count");
     assertDimensionEquals(row, "foo_key", "foo_value");
-    assertEquals(40, row.getMetric("value").doubleValue(), 0.0);
+    Assert.assertEquals(40, row.getMetric("value").doubleValue(), 0.0);
 
     row = rows.get(1);
-    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
     assertDimensionEquals(row, "name", "metric_summary-sum");
     assertDimensionEquals(row, "foo_key", "foo_value");
-    assertEquals(10, row.getMetric("value").doubleValue(), 0.0);
+    Assert.assertEquals(10, row.getMetric("value").doubleValue(), 0.0);
 
   }
 
@@ -144,8 +143,8 @@ public class OpenCensusProtobufInputRowParserTest
   {
     List<String> values = row.getDimension(dimension);
 
-    assertEquals(1, values.size());
-    assertEquals(expected, values.get(0));
+    Assert.assertEquals(1, values.size());
+    Assert.assertEquals(expected, values.get(0));
   }
 
   private Metric doubleGaugeMetric(Timestamp timestamp)
