@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import org.apache.druid.indexer.partitions.HadoopHashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.HadoopSingleDimensionPartitionsSpec;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.Collections;
@@ -36,9 +38,13 @@ public class IndexingHadoopModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Collections.<Module>singletonList(
-        new SimpleModule("IndexingHadoopModule")
+        new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
-                new NamedType(HadoopyStringInputRowParser.class, "hadoopyString")
+                new NamedType(HadoopyStringInputRowParser.class, "hadoopyString"),
+                new NamedType(HadoopSingleDimensionPartitionsSpec.class, "dimension"), // backward compatibility
+                new NamedType(HadoopSingleDimensionPartitionsSpec.class, "hadoop_single_dim_partitions"),
+                new NamedType(HadoopHashedPartitionsSpec.class, "hashed"), // backward compatibility
+                new NamedType(HadoopHashedPartitionsSpec.class, "hadoop_hashed_partitions")
             )
     );
   }
