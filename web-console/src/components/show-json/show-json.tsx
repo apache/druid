@@ -21,10 +21,10 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { Loader } from '../loader/loader';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { downloadFile } from '../../utils';
+import { Loader } from '../loader/loader';
 
 import './show-json.scss';
 
