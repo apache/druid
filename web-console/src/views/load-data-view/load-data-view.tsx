@@ -551,6 +551,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:static-s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
           {this.renderIngestionCard('hadoop')}
+          {this.renderIngestionCard('index:ingestSegment')}
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
           {/* this.renderIngestionCard('example') */}
@@ -607,6 +608,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <p>
               Files must be in a text format and must be accessible to all the Druid processes in
               the cluster.
+            </p>
+          </>
+        );
+
+      case 'index:ingestSegment':
+        return (
+          <>
+            <p>Re-ingest data from existing Druid segments.</p>
+            <p>
+              Re-ingesting data allows you to filter rows, add, transform, and delete columns, as
+              well as change the partitioning of the data.
             </p>
           </>
         );
@@ -672,6 +684,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     switch (selectedComboType) {
       case 'index:http':
       case 'index:local':
+      case 'index:ingestSegment':
       case 'index:static-s3':
       case 'index:static-google-blobstore':
       case 'kafka':
