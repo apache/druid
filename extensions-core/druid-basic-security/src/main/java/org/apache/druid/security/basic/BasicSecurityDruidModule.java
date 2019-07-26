@@ -84,6 +84,8 @@ public class BasicSecurityDruidModule implements DruidModule
 
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
     Jerseys.addResource(binder, BasicAuthorizerResource.class);
+
+    binder.requestStaticInjection(BasicSecuritySSLSocketFactory.class);
   }
 
   @Provides
