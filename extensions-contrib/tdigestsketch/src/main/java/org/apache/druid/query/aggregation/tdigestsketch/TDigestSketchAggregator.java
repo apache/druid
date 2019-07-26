@@ -30,8 +30,6 @@ import javax.annotation.Nullable;
 /**
  * Aggregator to build T-Digest sketches on numeric values.
  * It generally makes sense to use this aggregator during the ingestion time.
- * Then during query time one can use {@link TDigestMergeSketchAggregator} to merge
- * these pre-aggregated sketches.
  * <p>
  * One can use this aggregator to build these sketches during query time too, just
  * that it will be slower and more resource intensive.

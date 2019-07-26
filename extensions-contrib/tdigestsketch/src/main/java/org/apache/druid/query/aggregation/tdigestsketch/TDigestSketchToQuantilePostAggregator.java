@@ -112,7 +112,7 @@ public class TDigestSketchToQuantilePostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID).appendCacheable(field);
+        AggregatorUtil.TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID).appendCacheable(field);
     builder.appendDouble(fraction);
     return builder.build();
   }
