@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
@@ -93,7 +94,7 @@ public class ThreadingTaskRunner
   private final TaskLogPusher taskLogPusher;
   private final DruidNode node;
   private final AppenderatorsManager appenderatorsManager;
-  private final TaskReportFileWriter taskReportFileWriter;
+  private final MultipleFileTaskReportFileWriter taskReportFileWriter;
   private final ListeningExecutorService taskExecutor;
   private final ListeningExecutorService controlThreadExecutor;
 
@@ -116,7 +117,7 @@ public class ThreadingTaskRunner
     this.taskLogPusher = taskLogPusher;
     this.node = node;
     this.appenderatorsManager = appenderatorsManager;
-    this.taskReportFileWriter = taskReportFileWriter;
+    this.taskReportFileWriter = (MultipleFileTaskReportFileWriter) taskReportFileWriter;
     this.taskExecutor = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "threading-task-runner-executor-%d")
     );

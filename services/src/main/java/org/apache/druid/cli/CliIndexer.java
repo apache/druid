@@ -43,6 +43,7 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.ThreadingTaskRunner;
@@ -106,7 +107,7 @@ public class CliIndexer extends ServerRunnable
 
             CliPeon.bindTaskConfigAndClients(binder);
 
-            binder.bind(TaskReportFileWriter.class).toInstance(new TaskReportFileWriter());
+            binder.bind(TaskReportFileWriter.class).toInstance(new MultipleFileTaskReportFileWriter());
 
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);

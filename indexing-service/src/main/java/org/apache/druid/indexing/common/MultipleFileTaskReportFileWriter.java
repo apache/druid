@@ -24,23 +24,26 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 
-public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
+public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
 {
-  private static final Logger log = new Logger(SingleFileTaskReportFileWriter.class);
+  private static final Logger log = new Logger(MultipleFileTaskReportFileWriter.class);
 
-  private final File reportsFile;
+  private final Map<String, File> taskReportFiles = new HashMap<>();
+
   private ObjectMapper objectMapper;
-
-  public SingleFileTaskReportFileWriter(File reportsFile)
-  {
-    this.reportsFile = reportsFile;
-  }
 
   @Override
   public void write(String taskId, Map<String, TaskReport> reports)
   {
+    final File reportsFile = taskReportFiles.get(taskId);
+    if (reportsFile == null) {
+      log.error("Could not find report file for task[%s]", taskId);
+      return;
+    }
+
     try {
       final File reportsFileParent = reportsFile.getParentFile();
       if (reportsFileParent != null) {
@@ -53,10 +56,19 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
     }
   }
 
-
   @Override
   public void setObjectMapper(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
+  }
+
+  public void add(String taskId, File reportsFile)
+  {
+    taskReportFiles.put(taskId, reportsFile);
+  }
+
+  public void delete(String taskId)
+  {
+    taskReportFiles.remove(taskId);
   }
 }

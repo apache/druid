@@ -45,8 +45,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
 /**
- * Base class for {@link ForkingTaskRunner} and {@link ThreadingTaskRunner} which support task rest
- * oration.
+ * Base class for {@link ForkingTaskRunner} and {@link ThreadingTaskRunner} which support task restoration.
  */
 public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWorkItem> implements TaskRunner
 {
@@ -144,24 +143,12 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     }
   }
 
-  /**
-   * The concrete implementation should override this, as the implemention depends on the specifics of the
-   * work item implementation.
-   */
   @Override
   public abstract Collection<TaskRunnerWorkItem> getRunningTasks();
 
-  /**
-   * The concrete implementation should override this, as the implemention depends on the specifics of the
-   * work item implementation.
-   */
   @Override
   public abstract Collection<TaskRunnerWorkItem> getPendingTasks();
 
-  /**
-   * The concrete implementation should override this, as the implemention depends on the specifics of the
-   * work item implementation.
-   */
   @Nullable
   @Override
   public abstract RunnerTaskState getRunnerTaskState(String taskId);

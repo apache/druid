@@ -19,20 +19,22 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexing.common.TaskReportFileWriter;
 
 import java.util.Map;
 
-public class NoopTestTaskFileWriter extends SingleFileTaskReportFileWriter
+public class NoopTestTaskFileWriter implements TaskReportFileWriter
 {
-  public NoopTestTaskFileWriter()
-  {
-    super(null);
-  }
-
   @Override
   public void write(String id, Map<String, TaskReport> reports)
   {
+  }
+
+  @Override
+  public void setObjectMapper(ObjectMapper objectMapper)
+  {
+
   }
 }
