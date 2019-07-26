@@ -38,51 +38,51 @@ public class ResponseContextTest
   public void mergeValueTest()
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    ctx.merge(ResponseContext.Key.ETAG, "dummy-etag");
+    ctx.add(ResponseContext.Key.ETAG, "dummy-etag");
     Assert.assertEquals("dummy-etag", ctx.get(ResponseContext.Key.ETAG));
-    ctx.merge(ResponseContext.Key.ETAG, "new-dummy-etag");
+    ctx.add(ResponseContext.Key.ETAG, "new-dummy-etag");
     Assert.assertEquals("new-dummy-etag", ctx.get(ResponseContext.Key.ETAG));
 
     final Interval interval01 = Intervals.of("2019-01-01/P1D");
-    ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval01));
+    ctx.add(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval01));
     Assert.assertArrayEquals(
         Collections.singletonList(interval01).toArray(),
         ((List) ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
     );
     final Interval interval12 = Intervals.of("2019-01-02/P1D");
     final Interval interval23 = Intervals.of("2019-01-03/P1D");
-    ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(interval12, interval23));
+    ctx.add(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(interval12, interval23));
     Assert.assertArrayEquals(
         Arrays.asList(interval01, interval12, interval23).toArray(),
         ((List) ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
     );
 
     final SegmentDescriptor sd01 = new SegmentDescriptor(interval01, "01", 0);
-    ctx.merge(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));
+    ctx.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));
     Assert.assertArrayEquals(
         Collections.singletonList(sd01).toArray(),
         ((List) ctx.get(ResponseContext.Key.MISSING_SEGMENTS)).toArray()
     );
     final SegmentDescriptor sd12 = new SegmentDescriptor(interval12, "12", 1);
     final SegmentDescriptor sd23 = new SegmentDescriptor(interval23, "23", 2);
-    ctx.merge(ResponseContext.Key.MISSING_SEGMENTS, Arrays.asList(sd12, sd23));
+    ctx.add(ResponseContext.Key.MISSING_SEGMENTS, Arrays.asList(sd12, sd23));
     Assert.assertArrayEquals(
         Arrays.asList(sd01, sd12, sd23).toArray(),
         ((List) ctx.get(ResponseContext.Key.MISSING_SEGMENTS)).toArray()
     );
 
-    ctx.merge(ResponseContext.Key.COUNT, 0L);
-    Assert.assertEquals(0L, ctx.get(ResponseContext.Key.COUNT));
-    ctx.merge(ResponseContext.Key.COUNT, 1L);
-    Assert.assertEquals(1L, ctx.get(ResponseContext.Key.COUNT));
-    ctx.merge(ResponseContext.Key.COUNT, 3L);
-    Assert.assertEquals(4L, ctx.get(ResponseContext.Key.COUNT));
+    ctx.add(ResponseContext.Key.NUM_SCANNED_ROWS, 0L);
+    Assert.assertEquals(0L, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
+    ctx.add(ResponseContext.Key.NUM_SCANNED_ROWS, 1L);
+    Assert.assertEquals(1L, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
+    ctx.add(ResponseContext.Key.NUM_SCANNED_ROWS, 3L);
+    Assert.assertEquals(4L, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
 
-    ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, false);
+    ctx.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, false);
     Assert.assertEquals(false, ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
-    ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, true);
+    ctx.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, true);
     Assert.assertEquals(true, ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
-    ctx.merge(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, false);
+    ctx.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, false);
     Assert.assertEquals(true, ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
@@ -93,7 +93,7 @@ public class ResponseContextTest
     ctx1.put(ResponseContext.Key.ETAG, "dummy-etag-1");
     final Interval interval01 = Intervals.of("2019-01-01/P1D");
     ctx1.put(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval01));
-    ctx1.put(ResponseContext.Key.COUNT, 1L);
+    ctx1.put(ResponseContext.Key.NUM_SCANNED_ROWS, 1L);
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     ctx2.put(ResponseContext.Key.ETAG, "dummy-etag-2");
@@ -101,11 +101,11 @@ public class ResponseContextTest
     ctx2.put(ResponseContext.Key.UNCOVERED_INTERVALS, Collections.singletonList(interval12));
     final SegmentDescriptor sd01 = new SegmentDescriptor(interval01, "01", 0);
     ctx2.put(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));
-    ctx2.put(ResponseContext.Key.COUNT, 2L);
+    ctx2.put(ResponseContext.Key.NUM_SCANNED_ROWS, 2L);
 
     ctx1.merge(ctx2);
     Assert.assertEquals("dummy-etag-2", ctx1.get(ResponseContext.Key.ETAG));
-    Assert.assertEquals(3L, ctx1.get(ResponseContext.Key.COUNT));
+    Assert.assertEquals(3L, ctx1.get(ResponseContext.Key.NUM_SCANNED_ROWS));
     Assert.assertArrayEquals(
         Arrays.asList(interval01, interval12).toArray(),
         ((List) ctx1.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
@@ -120,16 +120,16 @@ public class ResponseContextTest
   public void serializeWith() throws JsonProcessingException
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    ctx.put(ResponseContext.Key.COUNT, 100L);
+    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100L);
     ctx.put(ResponseContext.Key.ETAG, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, 1000);
-    Assert.assertEquals(fullString, res1.getResult());
+    Assert.assertEquals(fullString, res1.getTruncatedResult());
     final ResponseContext reducedCtx = ResponseContext.createEmpty();
     reducedCtx.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 20);
     reducedCtx.remove(ResponseContext.Key.ETAG);
-    Assert.assertEquals(objectMapper.writeValueAsString(reducedCtx.getDelegate()), res2.getResult());
+    Assert.assertEquals(objectMapper.writeValueAsString(reducedCtx.getDelegate()), res2.getTruncatedResult());
   }
 }

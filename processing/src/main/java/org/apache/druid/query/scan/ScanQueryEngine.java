@@ -67,9 +67,10 @@ public class ScanQueryEngine
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "WTF?! Expected non-null legacy");
 
-    if (responseContext.get(ResponseContext.Key.COUNT) != null) {
-      long count = (long) responseContext.get(ResponseContext.Key.COUNT);
-      if (count >= query.getLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
+    final Object numScannedRows = responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
+    if (numScannedRows != null) {
+      long count = (long) numScannedRows;
+      if (count >= query.getScanRowsLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
@@ -121,8 +122,8 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
 
-    responseContext.merge(ResponseContext.Key.COUNT, 0L);
-    final long limit = calculateLimit(query, responseContext);
+    responseContext.add(ResponseContext.Key.NUM_SCANNED_ROWS, 0L);
+    final long limit = calculateRemainingScanRowsLimit(query, responseContext);
     return Sequences.concat(
             adapter
                 .makeCursors(
@@ -185,7 +186,7 @@ public class ScanQueryEngine
                             } else {
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
-                            responseContext.merge(ResponseContext.Key.COUNT, offset - lastOffset);
+                            responseContext.add(ResponseContext.Key.NUM_SCANNED_ROWS, offset - lastOffset);
                             if (hasTimeout) {
                               responseContext.put(
                                   ResponseContext.Key.TIMEOUT_AT,
@@ -258,11 +259,11 @@ public class ScanQueryEngine
    * If we're performing time-ordering, we want to scan through the first `limit` rows in each segment ignoring the number
    * of rows already counted on other segments.
    */
-  private long calculateLimit(ScanQuery query, ResponseContext responseContext)
+  private long calculateRemainingScanRowsLimit(ScanQuery query, ResponseContext responseContext)
   {
     if (query.getOrder().equals(ScanQuery.Order.NONE)) {
-      return query.getLimit() - (long) responseContext.get(ResponseContext.Key.COUNT);
+      return query.getScanRowsLimit() - (long) responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
     }
-    return query.getLimit();
+    return query.getScanRowsLimit();
   }
 }

@@ -97,7 +97,7 @@ public class RetryQueryRunnerTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(QueryPlus queryPlus, ResponseContext context)
           {
-            context.merge(
+            context.add(
                 ResponseContext.Key.MISSING_SEGMENTS,
                 Collections.singletonList(new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1))
             );
@@ -135,7 +135,7 @@ public class RetryQueryRunnerTest
   public void testRetry()
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.Key.COUNT, 0);
+    context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 0);
     context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -146,12 +146,12 @@ public class RetryQueryRunnerTest
               ResponseContext context
           )
           {
-            if ((int) context.get(ResponseContext.Key.COUNT) == 0) {
-              context.merge(
+            if ((int) context.get(ResponseContext.Key.NUM_SCANNED_ROWS) == 0) {
+              context.add(
                   ResponseContext.Key.MISSING_SEGMENTS,
                   Collections.singletonList(new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1))
               );
-              context.put(ResponseContext.Key.COUNT, 1);
+              context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 1);
               return Sequences.empty();
             } else {
               return Sequences.simple(
@@ -184,7 +184,7 @@ public class RetryQueryRunnerTest
   public void testRetryMultiple()
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.Key.COUNT, 0);
+    context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 0);
     context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -195,12 +195,12 @@ public class RetryQueryRunnerTest
               ResponseContext context
           )
           {
-            if ((int) context.get(ResponseContext.Key.COUNT) < 3) {
-              context.merge(
+            if ((int) context.get(ResponseContext.Key.NUM_SCANNED_ROWS) < 3) {
+              context.add(
                   ResponseContext.Key.MISSING_SEGMENTS,
                   Collections.singletonList(new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1))
               );
-              context.put(ResponseContext.Key.COUNT, (int) context.get(ResponseContext.Key.COUNT) + 1);
+              context.put(ResponseContext.Key.NUM_SCANNED_ROWS, (int) context.get(ResponseContext.Key.NUM_SCANNED_ROWS) + 1);
               return Sequences.empty();
             } else {
               return Sequences.simple(
@@ -243,7 +243,7 @@ public class RetryQueryRunnerTest
               ResponseContext context
           )
           {
-            context.merge(
+            context.add(
                 ResponseContext.Key.MISSING_SEGMENTS,
                 Collections.singletonList(new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1))
             );
@@ -266,7 +266,7 @@ public class RetryQueryRunnerTest
   public void testNoDuplicateRetry()
   {
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.Key.COUNT, 0);
+    context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 0);
     context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -278,16 +278,16 @@ public class RetryQueryRunnerTest
           )
           {
             final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
-            if ((int) context.get(ResponseContext.Key.COUNT) == 0) {
+            if ((int) context.get(ResponseContext.Key.NUM_SCANNED_ROWS) == 0) {
               // assume 2 missing segments at first run
-              context.merge(
+              context.add(
                   ResponseContext.Key.MISSING_SEGMENTS,
                   Arrays.asList(
                       new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1),
                       new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
                   )
               );
-              context.put(ResponseContext.Key.COUNT, 1);
+              context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 1);
               return Sequences.simple(
                   Collections.singletonList(
                       new Result<>(
@@ -298,15 +298,15 @@ public class RetryQueryRunnerTest
                       )
                   )
               );
-            } else if ((int) context.get(ResponseContext.Key.COUNT) == 1) {
+            } else if ((int) context.get(ResponseContext.Key.NUM_SCANNED_ROWS) == 1) {
               // this is first retry
               Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 2);
               // assume only left 1 missing at first retry
-              context.merge(
+              context.add(
                   ResponseContext.Key.MISSING_SEGMENTS,
                   Collections.singletonList(new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2))
               );
-              context.put(ResponseContext.Key.COUNT, 2);
+              context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 2);
               return Sequences.simple(
                   Collections.singletonList(
                       new Result<>(
@@ -321,7 +321,7 @@ public class RetryQueryRunnerTest
               // this is second retry
               Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 1);
               // assume no more missing at second retry
-              context.put(ResponseContext.Key.COUNT, 3);
+              context.put(ResponseContext.Key.NUM_SCANNED_ROWS, 3);
               return Sequences.simple(
                   Collections.singletonList(
                       new Result<>(

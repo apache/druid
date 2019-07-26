@@ -23,13 +23,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,8 +85,9 @@ public abstract class ResponseContext
     ETAG("ETag"),
     /**
      * Query fail time (current time + timeout).
+     * The final value in comparison to continuously updated TIMEOUT_AT.
      */
-    QUERY_FAIL_TIME("queryFailTime"),
+    QUERY_FAIL_DEADLINE_MILLIS("queryFailTime"),
     /**
      * Query total bytes gathered.
      */
@@ -93,19 +95,24 @@ public abstract class ResponseContext
     /**
      * This variable indicates when a running query should be expired,
      * and is effective only when 'timeout' of queryContext has a positive value.
+     * Continuously updated by {@link org.apache.druid.query.scan.ScanQueryEngine}
+     * by reducing its value on the time of every scan iteration.
      */
     TIMEOUT_AT("timeoutAt"),
     /**
      * The number of scanned rows.
+     * For backward compatibility the context key name still equals to "count".
      */
-    COUNT(
+    NUM_SCANNED_ROWS(
         "count",
             (oldValue, newValue) -> (long) oldValue + (long) newValue
     ),
     /**
-     * CPU consumed while processing a request.
+     * The total CPU time for threads related to Sequence processing of the query.
+     * Resulting value on a Broker is a sum of downstream values from historicals / realtime nodes.
+     * For additional information see {@link org.apache.druid.query.CPUTimeMetricQueryRunner}
      */
-    CPU_CONSUMED(
+    CPU_CONSUMED_NANOS(
         "cpuConsumed",
             (oldValue, newValue) -> (long) oldValue + (long) newValue
     );
@@ -172,9 +179,10 @@ public abstract class ResponseContext
   }
 
   /**
-   * Merges a new value associated with a key with an old value.
+   * Adds (merges) a new value associated with a key to an old value.
+   * See merge function of a context key for a specific implementation.
    */
-  public Object merge(Key key, Object value)
+  public Object add(Key key, Object value)
   {
     return getDelegate().merge(key.name, value, key.mergeFunction);
   }
@@ -188,7 +196,7 @@ public abstract class ResponseContext
     for (Key key : Key.values()) {
       final Object newValue = responseContext.get(key);
       if (newValue != null) {
-        merge(key, newValue);
+        add(key, newValue);
       }
     }
   }
@@ -198,32 +206,34 @@ public abstract class ResponseContext
    * The method removes max-length fields one by one if the resulting string length is greater than the limit.
    * The resulting string might be correctly deserialized as a {@link ResponseContext}.
    */
-  public SerializationResult serializeWith(ObjectMapper objectMapper, int maxLength) throws JsonProcessingException
+  public SerializationResult serializeWith(ObjectMapper objectMapper, int maxCharsNumber) throws JsonProcessingException
   {
     final String fullSerializedString = objectMapper.writeValueAsString(getDelegate());
-    if (fullSerializedString.length() <= maxLength) {
-      return new SerializationResult(fullSerializedString, fullSerializedString, false);
+    if (fullSerializedString.length() <= maxCharsNumber) {
+      return new SerializationResult(fullSerializedString, fullSerializedString);
     } else {
       final HashMap<String, Object> copiedMap = new HashMap<>(getDelegate());
-      final PriorityQueue<Pair<String, String>> serializedPairs = new PriorityQueue<>((o1, o2) -> {
-        Preconditions.checkNotNull(o1.rhs);
-        Preconditions.checkNotNull(o2.rhs);
-        return o2.rhs.length() - o1.rhs.length();
-      });
+      final PriorityQueue<Map.Entry<String, String>> serializedValueEntries = new PriorityQueue<>(
+          Comparator.comparing((Map.Entry<String, String> e) -> e.getValue().length()).reversed()
+      );
       for (Map.Entry<String, Object> e : copiedMap.entrySet()) {
-        serializedPairs.add(new Pair<>(e.getKey(), objectMapper.writeValueAsString(e.getValue())));
+        serializedValueEntries.add(new AbstractMap.SimpleImmutableEntry<>(
+            e.getKey(),
+            objectMapper.writeValueAsString(e.getValue())
+        ));
       }
-      while (!copiedMap.isEmpty()) {
-        final Pair<String, String> maxLengthPair = serializedPairs.poll();
-        Preconditions.checkNotNull(maxLengthPair);
-        copiedMap.remove(maxLengthPair.lhs);
+      // quadratic complexity: while loop with map serialization on each iteration
+      while (!copiedMap.isEmpty() && !serializedValueEntries.isEmpty()) {
+        final Map.Entry<String, String> maxLengthEntry = serializedValueEntries.poll();
+        Preconditions.checkNotNull(maxLengthEntry);
+        copiedMap.remove(maxLengthEntry.getKey());
         final String reducedSerializedString = objectMapper.writeValueAsString(copiedMap);
-        if (reducedSerializedString.length() <= maxLength) {
-          return new SerializationResult(reducedSerializedString, fullSerializedString, true);
+        if (reducedSerializedString.length() <= maxCharsNumber) {
+          return new SerializationResult(reducedSerializedString, fullSerializedString);
         }
       }
       final String serializedEmptyMap = objectMapper.writeValueAsString(copiedMap);
-      return new SerializationResult(serializedEmptyMap, fullSerializedString, true);
+      return new SerializationResult(serializedEmptyMap, fullSerializedString);
     }
   }
 
@@ -236,20 +246,18 @@ public abstract class ResponseContext
    */
   public static class SerializationResult
   {
-    private final String result;
+    private final String truncatedResult;
     private final String fullResult;
-    private final Boolean isReduced;
 
-    SerializationResult(String result, String fullResult, Boolean isReduced)
+    SerializationResult(String truncatedResult, String fullResult)
     {
-      this.result = result;
+      this.truncatedResult = truncatedResult;
       this.fullResult = fullResult;
-      this.isReduced = isReduced;
     }
 
-    public String getResult()
+    public String getTruncatedResult()
     {
-      return result;
+      return truncatedResult;
     }
 
     public String getFullResult()
@@ -259,7 +267,7 @@ public abstract class ResponseContext
 
     public Boolean isReduced()
     {
-      return isReduced;
+      return !truncatedResult.equals(fullResult);
     }
   }
 }

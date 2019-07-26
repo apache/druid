@@ -123,7 +123,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
 
       ResponseContext gbqResponseContext = ResponseContext.createEmpty();
       gbqResponseContext.put(
-          ResponseContext.Key.QUERY_FAIL_TIME,
+          ResponseContext.Key.QUERY_FAIL_DEADLINE_MILLIS,
           System.currentTimeMillis() + QueryContexts.getTimeout(gbq)
       );
       gbqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
@@ -164,7 +164,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       );
       ResponseContext tsqResponseContext = ResponseContext.createEmpty();
       tsqResponseContext.put(
-          ResponseContext.Key.QUERY_FAIL_TIME,
+          ResponseContext.Key.QUERY_FAIL_DEADLINE_MILLIS,
           System.currentTimeMillis() + QueryContexts.getTimeout(tsq)
       );
       tsqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());

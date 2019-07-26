@@ -39,7 +39,7 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    responseContext.merge(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(descriptor));
+    responseContext.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(descriptor));
     return Sequences.empty();
   }
 }

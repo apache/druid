@@ -213,7 +213,7 @@ public class QueryResource implements QueryCountStatsProvider
             QueryContexts.isSerializeDateTimeAsLong(query, false)
             || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
         final ObjectWriter jsonWriter = ioReaderWriter.newOutputWriter(serializeDateTimeAsLong);
-        Response.ResponseBuilder builder = Response
+        Response.ResponseBuilder responseBuilder = Response
             .ok(
                 new StreamingOutput()
                 {
@@ -252,9 +252,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(ResponseContext.Key.ETAG) != null) {
-          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.Key.ETAG));
-          responseContext.remove(ResponseContext.Key.ETAG);
+        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
+        if (entityTag != null) {
+          responseBuilder.header(HEADER_ETAG, entityTag);
         }
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
@@ -274,8 +274,8 @@ public class QueryResource implements QueryCountStatsProvider
           );
         }
 
-        return builder
-            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
+        return responseBuilder
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult())
             .build();
       }
       catch (Exception e) {
