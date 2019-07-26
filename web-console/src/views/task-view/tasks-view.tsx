@@ -466,6 +466,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         }}
       >
         <p>{`Are you sure you want to reset supervisor '${resetSupervisorId}'?`}</p>
+        <p>Resetting a supervisor could lead data loss or data duplication</p>
       </AsyncActionDialog>
     );
   }

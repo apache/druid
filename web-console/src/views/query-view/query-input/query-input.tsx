@@ -18,9 +18,9 @@
 
 import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
 import ace from 'brace';
+import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
-import ReactDOMServer from 'react-dom/server';
 
 import { SQL_DATE_TYPES, SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
 import { uniq } from '../../../utils';
@@ -142,23 +142,22 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
           const functionName = item.caption.slice(0, -2);
-          item.docHTML = ReactDOMServer.renderToStaticMarkup(
-            <div className="function-doc">
-              <div className="function-doc-name">
-                <b>{functionName}</b>
-              </div>
-              <hr />
-              <div>
-                <b>Syntax:</b>
-              </div>
-              <div>{item.syntax}</div>
-              <br />
-              <div>
-                <b>Description:</b>
-              </div>
-              <div>{item.description}</div>
-            </div>,
-          );
+          item.docHTML = `
+<div class="function-doc">
+  <div class="function-doc-name">
+    <b>${escape(functionName)}</b>
+  </div>
+  <hr />
+  <div>
+    <b>Syntax:</b>
+  </div>
+  <div>${escape(item.syntax)}</div>
+  <br />
+  <div>
+    <b>Description:</b>
+  </div>
+  <div>${escape(item.description)}</div>
+</div>`;
         }
       },
     });

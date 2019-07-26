@@ -165,11 +165,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
   }
 
-  private changeLookup(field: string, value: string) {
+  private handleChangeLookup = (field: string, value: string) => {
     this.setState({
       [field]: value,
     } as any);
-  }
+  };
 
   private async submitLookupEdit() {
     const {
@@ -352,7 +352,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         isOpen={lookupEditDialogOpen}
         onClose={() => this.setState({ lookupEditDialogOpen: false })}
         onSubmit={() => this.submitLookupEdit()}
-        onChange={(field: string, value: string) => this.changeLookup(field, value)}
+        onChange={this.handleChangeLookup}
         lookupSpec={lookupEditSpec}
         lookupName={lookupEditName}
         lookupTier={lookupEditTier}
@@ -376,7 +376,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           {!lookupsError && (
             <Button
               icon={IconNames.PLUS}
-              text="Add"
+              text="Add lookup"
               onClick={() => this.openLookupEditDialog('', '')}
             />
           )}

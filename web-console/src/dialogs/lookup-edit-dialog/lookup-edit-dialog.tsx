@@ -143,7 +143,7 @@ export class LookupEditDialog extends React.PureComponent<
 
         <AceEditor
           className="lookup-edit-dialog-textarea"
-          mode="sql"
+          mode="hjson"
           theme="solarized_dark"
           onChange={(e: any) => onChange('lookupEditSpec', e)}
           fontSize={12}

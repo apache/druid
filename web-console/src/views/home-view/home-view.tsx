@@ -302,7 +302,7 @@ GROUP BY 1`,
       processQuery: async () => {
         const resp = await axios.get('/druid/coordinator/v1/lookups/status');
         const data = resp.data;
-        const lookupsCount = Object.keys(data.__default).length;
+        const lookupsCount = sum(Object.keys(data).map(k => Object.keys(data[k]).length));
         return {
           lookupsCount,
         };
