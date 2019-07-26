@@ -98,7 +98,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 {
   public static final String TYPE = "index_parallel";
 
-  private static final Logger log = new Logger(ParallelIndexSupervisorTask.class);
+  private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
@@ -106,6 +106,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final boolean missingIntervalsInOverwriteMode;
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
 
@@ -146,16 +147,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+                                           && !ingestionSchema.getDataSchema()
+                                                              .getGranularitySpec()
+                                                              .bucketIntervals()
+                                                              .isPresent();
+    if (missingIntervalsInOverwriteMode) {
+      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
+      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+      // the segment granularity of existing segments until the task reads all data because we don't know what segments
+      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
+      // missing force to use timeChunk lock.
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
-      log.warn("maxSavedParseExceptions is not supported yet");
+      LOG.warn("maxSavedParseExceptions is not supported yet");
     }
     if (ingestionSchema.getTuningConfig().getMaxParseExceptions() != TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS) {
-      log.warn("maxParseExceptions is not supported yet");
+      LOG.warn("maxParseExceptions is not supported yet");
     }
     if (ingestionSchema.getTuningConfig().isLogParseExceptions() != TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS) {
-      log.warn("logParseExceptions is not supported yet");
+      LOG.warn("logParseExceptions is not supported yet");
     }
   }
 
@@ -218,17 +234,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()
-        && !ingestionSchema.getIOConfig().isAppendToExisting()) {
-      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
-      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
-      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
-      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
-      // the segment granularity of existing segments until the task reads all data because we don't know what segments
-      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
-      // missing force to use timeChunk lock.
-      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
@@ -279,7 +284,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    log.info(
+    if (missingIntervalsInOverwriteMode) {
+      LOG.warn(
+          "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
+          + "Forced to use timeChunk lock."
+      );
+    }
+    LOG.info(
         "Found chat handler of class[%s]",
         Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
     );
@@ -290,12 +301,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         return runParallel(toolbox);
       } else {
         if (!baseFirehoseFactory.isSplittable()) {
-          log.warn(
+          LOG.warn(
               "firehoseFactory[%s] is not splittable. Running sequentially.",
               baseFirehoseFactory.getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
-          log.warn(
+          LOG.warn(
               "maxNumSubTasks is 1. Running sequentially. "
               + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
           );

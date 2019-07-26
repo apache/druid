@@ -98,13 +98,14 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "index_sub";
 
-  private static final Logger log = new Logger(ParallelIndexSubTask.class);
+  private static final Logger LOG = new Logger(ParallelIndexSubTask.class);
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final boolean missingIntervalsInOverwriteMode;
 
   @JsonCreator
   public ParallelIndexSubTask(
@@ -137,6 +138,21 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+                                           && !ingestionSchema.getDataSchema()
+                                                              .getGranularitySpec()
+                                                              .bucketIntervals()
+                                                              .isPresent();
+    if (missingIntervalsInOverwriteMode) {
+      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
+      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+      // the segment granularity of existing segments until the task reads all data because we don't know what segments
+      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
+      // missing force to use timeChunk lock.
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
   }
 
   @Override
@@ -154,17 +170,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()
-        && !ingestionSchema.getIOConfig().isAppendToExisting()) {
-      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
-      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
-      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
-      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
-      // the segment granularity of existing segments until the task reads all data because we don't know what segments
-      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
-      // missing force to use timeChunk lock.
-      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
@@ -189,6 +194,12 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    if (missingIntervalsInOverwriteMode) {
+      LOG.warn(
+          "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
+          + "Forced to use timeChunk lock."
+      );
+    }
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -440,7 +451,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
               // which makes the size of segments smaller.
               final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
-              log.info("Pushed segments[%s]", pushed.getSegments());
+              LOG.info("Pushed segments[%s]", pushed.getSegments());
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -459,7 +470,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      log.info("Pushed segments[%s]", pushed.getSegments());
+      LOG.info("Pushed segments[%s]", pushed.getSegments());
 
       return pushedSegments;
     }
