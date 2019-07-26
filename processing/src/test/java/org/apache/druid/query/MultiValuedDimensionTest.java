@@ -84,7 +84,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1016,7 +1015,7 @@ public class MultiValuedDimensionTest
         ))
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();
@@ -1035,8 +1034,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -1071,7 +1069,7 @@ public class MultiValuedDimensionTest
         )
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();
 
@@ -1089,8 +1087,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
                        .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
@@ -1132,7 +1129,7 @@ public class MultiValuedDimensionTest
         )
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();
 
@@ -1150,8 +1147,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
 
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()

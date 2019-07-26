@@ -105,11 +105,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -272,8 +271,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      53000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      53000L
   );
   private final DataSegment publishedSegment2 = new DataSegment(
       "wikipedia2",
@@ -284,8 +282,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      83000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      83000L
   );
   private final DataSegment publishedSegment3 = new DataSegment(
       "wikipedia3",
@@ -296,8 +293,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      47000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      47000L
   );
 
   private final DataSegment segment1 = new DataSegment(
@@ -309,8 +305,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment2 = new DataSegment(
       "test2",
@@ -321,8 +316,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment3 = new DataSegment(
       "test3",
@@ -333,8 +327,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       new NumberedShardSpec(2, 3),
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment4 = new DataSegment(
       "test4",
@@ -345,8 +338,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment5 = new DataSegment(
       "test5",
@@ -357,8 +349,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
 
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
@@ -484,19 +475,18 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable()
   {
-
     final SystemSchema.SegmentsTable segmentsTable = EasyMock
         .createMockBuilder(SystemSchema.SegmentsTable.class)
         .withConstructor(druidSchema, metadataView, mapper, authMapper)
         .createMock();
     EasyMock.replay(segmentsTable);
-    final Set<SegmentWithOvershadowedStatus> publishedSegments = Stream.of(
+    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedSegment2, false),
         new SegmentWithOvershadowedStatus(publishedSegment3, false),
         new SegmentWithOvershadowedStatus(segment1, true),
         new SegmentWithOvershadowedStatus(segment2, false)
-    ).collect(Collectors.toSet());
+    ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
 

@@ -19,15 +19,15 @@
 
 package org.apache.druid.common.guava;
 
-import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.function.BinaryOperator;
 
 /**
  */
@@ -35,21 +35,21 @@ public class CombiningSequence<T> implements Sequence<T>
 {
   public static <T> CombiningSequence<T> create(
       Sequence<T> baseSequence,
-      Ordering<T> ordering,
-      BinaryFn<T, T, T> mergeFn
+      Comparator<T> ordering,
+      BinaryOperator<T> mergeFn
   )
   {
     return new CombiningSequence<>(baseSequence, ordering, mergeFn);
   }
 
   private final Sequence<T> baseSequence;
-  private final Ordering<T> ordering;
-  private final BinaryFn<T, T, T> mergeFn;
+  private final Comparator<T> ordering;
+  private final BinaryOperator<T> mergeFn;
 
   private CombiningSequence(
       Sequence<T> baseSequence,
-      Ordering<T> ordering,
-      BinaryFn<T, T, T> mergeFn
+      Comparator<T> ordering,
+      BinaryOperator<T> mergeFn
   )
   {
     this.baseSequence = baseSequence;
@@ -147,8 +147,8 @@ public class CombiningSequence<T> implements Sequence<T>
 
   private static class CombiningYieldingAccumulator<OutType, T> extends YieldingAccumulator<T, T>
   {
-    private final Ordering<T> ordering;
-    private final BinaryFn<T, T, T> mergeFn;
+    private final Comparator<T> ordering;
+    private final BinaryOperator<T> mergeFn;
     private final YieldingAccumulator<OutType, T> accumulator;
 
     private OutType retVal;
@@ -156,8 +156,8 @@ public class CombiningSequence<T> implements Sequence<T>
     private boolean accumulatedSomething = false;
 
     CombiningYieldingAccumulator(
-        Ordering<T> ordering,
-        BinaryFn<T, T, T> mergeFn,
+        Comparator<T> ordering,
+        BinaryOperator<T> mergeFn,
         YieldingAccumulator<OutType, T> accumulator
     )
     {

@@ -46,11 +46,15 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -80,6 +84,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -200,6 +205,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
 
+  private final LockGranularity lockGranularityToUse;
+
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
   private volatile TaskToolbox toolbox;
@@ -220,7 +227,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final AuthorizerMapper authorizerMapper,
       final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
-      final RowIngestionMetersFactory rowIngestionMetersFactory
+      final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final LockGranularity lockGranularityToUse
   )
   {
     Preconditions.checkNotNull(task);
@@ -236,6 +244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.lockGranularityToUse = lockGranularityToUse;
 
     resetNextCheckpointTime();
   }
@@ -383,7 +392,34 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
 
       // Start up, set up initial sequences.
-      final Object restoredMetadata = driver.startJob();
+      final Object restoredMetadata = driver.startJob(
+          segmentId -> {
+            try {
+              if (lockGranularityToUse == LockGranularity.SEGMENT) {
+                return toolbox.getTaskActionClient().submit(
+                    new SegmentLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        segmentId.getVersion(),
+                        segmentId.getShardSpec().getPartitionNum(),
+                        1000L
+                    )
+                ).isOk();
+              } else {
+                return toolbox.getTaskActionClient().submit(
+                    new TimeChunkLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        1000L
+                    )
+                ) != null;
+              }
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
       if (restoredMetadata == null) {
         // no persist has happened so far
         // so either this is a brand new task or replacement of a failed task
@@ -1274,8 +1310,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
       throws IOException
   {
-    Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap = outOfRangePartitions
-        .entrySet().stream().collect(Collectors.toMap(x -> x.getKey().getPartitionId(), Map.Entry::getValue));
+    Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap = CollectionUtils.mapKeys(
+        outOfRangePartitions,
+        StreamPartition::getPartitionId
+    );
 
     boolean result = taskToolbox
         .getTaskActionClient()

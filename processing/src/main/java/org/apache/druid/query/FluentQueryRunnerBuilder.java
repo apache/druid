@@ -21,8 +21,8 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class FluentQueryRunnerBuilder<T>
@@ -49,7 +49,7 @@ public class FluentQueryRunnerBuilder<T>
     }
 
     @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
       return baseRunner.run(queryPlus, responseContext);
     }

@@ -17,11 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.guava.nary;
+package org.apache.druid.timeline.partition;
 
 /**
+ * ShardSpec for non-first-generation segments.
+ * This shardSpec is allocated a partitionId between {@link PartitionIds#NON_ROOT_GEN_START_PARTITION_ID} and
+ * {@link PartitionIds#NON_ROOT_GEN_END_PARTITION_ID}.
+ *
+ * @see org.apache.druid.timeline.Overshadowable
  */
-public interface BinaryFn<Type1, Type2, OutType>
+public interface OverwriteShardSpec extends ShardSpec
 {
-  OutType apply(Type1 arg1, Type2 arg2);
+  default OverwriteShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)
+  {
+    return withAtomicUpdateGroupSize((short) atomicUpdateGroupSize);
+  }
+
+  OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
 }
