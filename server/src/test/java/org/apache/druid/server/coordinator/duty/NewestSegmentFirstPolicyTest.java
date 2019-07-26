@@ -644,7 +644,7 @@ public class NewestSegmentFirstPolicyTest
         }
 
         for (int i = 0; i < spec.numSegmentsPerShard; i++) {
-          final ShardSpec shardSpec = new NumberedShardSpec(spec.numSegmentsPerShard, i);
+          final ShardSpec shardSpec = new NumberedShardSpec(i, spec.numSegmentsPerShard);
           final DataSegment segment = new DataSegment(
               DATA_SOURCE,
               segmentInterval,

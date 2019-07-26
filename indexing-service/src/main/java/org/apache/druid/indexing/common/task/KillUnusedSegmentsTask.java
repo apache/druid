@@ -21,20 +21,27 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * The client representation of this task is {@link ClientKillUnusedSegmentsTaskQuery}.
@@ -43,7 +50,6 @@ import java.util.Map;
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
-  private static final Logger log = new Logger(KillUnusedSegmentsTask.class);
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -70,34 +76,36 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = getAndCheckLock(toolbox);
-
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = getTaskLockMap(toolbox.getTaskActionClient());
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new SegmentListUnusedAction(getDataSource(), getInterval()));
 
-    // Verify none of these segments have versions > lock version
-    for (final DataSegment unusedSegment : unusedSegments) {
-      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
-        throw new ISE(
-            "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
-            unusedSegment.getId(),
-            unusedSegment.getVersion(),
-            myLock.getVersion()
-        );
-      }
-
-      log.info("OK to kill segment: %s", unusedSegment.getId());
+    if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
+      throw new ISE(
+          "Locks[%s] for task[%s] can't cover segments[%s]",
+          taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
+          getId(),
+          unusedSegments
+      );
     }
 
     // Kill segments
+    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
     for (DataSegment segment : unusedSegments) {
       toolbox.getDataSegmentKiller().kill(segment);
-      toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.of(segment)));
     }
 
     return TaskStatus.success(getId());
   }
 
+  private NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskActionClient client) throws IOException
+  {
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = new TreeMap<>();
+    getTaskLocks(client).forEach(
+        taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>()).add(taskLock)
+    );
+    return taskLockMap;
+  }
 }

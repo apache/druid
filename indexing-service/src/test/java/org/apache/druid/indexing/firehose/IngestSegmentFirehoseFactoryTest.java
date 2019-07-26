@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -101,8 +102,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -116,6 +119,7 @@ public class IngestSegmentFirehoseFactoryTest
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TaskStorage TASK_STORAGE;
+  private static final IndexerSQLMetadataStorageCoordinator MDC;
   private static final TaskLockbox TASK_LOCKBOX;
   private static final Task TASK;
 
@@ -132,7 +136,48 @@ public class IngestSegmentFirehoseFactoryTest
         {
         }
     );
-    TASK_LOCKBOX = new TaskLockbox(TASK_STORAGE);
+    MDC = new IndexerSQLMetadataStorageCoordinator(null, null, null)
+    {
+      private final Set<DataSegment> published = new HashSet<>();
+
+      @Override
+      public List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
+      public List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
+      public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
+      {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      {
+        Set<DataSegment> added = new HashSet<>();
+        for (final DataSegment segment : segments) {
+          if (published.add(segment)) {
+            added.add(segment);
+          }
+        }
+
+        return ImmutableSet.copyOf(added);
+      }
+
+      @Override
+      public void deleteSegments(Set<DataSegment> segments)
+      {
+        // do nothing
+      }
+    };
+    TASK_LOCKBOX = new TaskLockbox(TASK_STORAGE, MDC);
     TASK = NoopTask.create();
     TASK_LOCKBOX.add(TASK);
   }

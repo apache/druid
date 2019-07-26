@@ -146,7 +146,7 @@ public class DataSourcesSnapshot
   /**
    * This method builds timelines from all data sources and finds the overshadowed segments list
    *
-   * This method should be deduplicated with {@link VersionedIntervalTimeline#findOvershadowed()}: see
+   * This method should be deduplicated with {@link VersionedIntervalTimeline#findFullyOvershadowed()}: see
    * https://github.com/apache/incubator-druid/issues/8070.
    *
    * @return overshadowed segment Ids list
@@ -161,7 +161,7 @@ public class DataSourcesSnapshot
       VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline =
           usedSegmentsTimelinesPerDataSource.get(dataSource.getName());
       for (DataSegment segment : dataSource.getSegments()) {
-        if (usedSegmentsTimeline.isOvershadowed(segment.getInterval(), segment.getVersion())) {
+        if (usedSegmentsTimeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment)) {
           overshadowedSegments.add(segment.getId());
         }
       }

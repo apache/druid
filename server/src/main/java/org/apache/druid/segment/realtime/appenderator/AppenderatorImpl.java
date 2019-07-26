@@ -271,7 +271,7 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList();
+    List<String> persistReasons = new ArrayList<>();
 
     if (!sink.canAppendRow()) {
       persist = true;
@@ -626,7 +626,11 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue(), useUniquePath);
+            final DataSegment dataSegment = mergeAndPush(
+                entry.getKey(),
+                entry.getValue(),
+                useUniquePath
+            );
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
@@ -745,7 +749,8 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              sink.getSegment()
+                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
               useUniquePath
           ),
           exception -> exception instanceof Exception,

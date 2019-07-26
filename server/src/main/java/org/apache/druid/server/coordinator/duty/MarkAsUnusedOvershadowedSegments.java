@@ -74,7 +74,8 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     // Mark all segments as unused in db that are overshadowed by served segments
     for (DataSegment dataSegment : params.getUsedSegments()) {
       VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+      if (timeline != null
+          && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion(), dataSegment)) {
         coordinator.markSegmentAsUnused(dataSegment);
         stats.addToGlobalStat("overShadowedCount", 1);
       }

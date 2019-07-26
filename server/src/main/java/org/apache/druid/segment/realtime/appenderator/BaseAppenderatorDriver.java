@@ -272,7 +272,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @return currently persisted commit metadata
    */
   @Nullable
-  public abstract Object startJob();
+  public abstract Object startJob(AppenderatorDriverSegmentLockHelper lockHelper);
 
   /**
    * Find a segment in the {@link SegmentState#APPENDING} state for the given timestamp and sequenceName.
@@ -534,11 +534,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * ingestion) before being published.
    *
    * @param segmentsAndCommitMetadata result of dropping or pushing
-   * @param publisher           transactional segment publisher
+   * @param publisher transactional segment publisher
    *
    * @return a future for publishing segments
    */
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
+      @Nullable Set<DataSegment> segmentsToBeOverwritten,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher
   )
@@ -556,8 +557,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
             try {
               final Object metadata = segmentsAndCommitMetadata.getCommitMetadata();
-              final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
+              final ImmutableSet<DataSegment> ourSegments =
+                  ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
               final SegmentPublishResult publishResult = publisher.publishSegments(
+                  segmentsToBeOverwritten,
                   ourSegments,
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
               );

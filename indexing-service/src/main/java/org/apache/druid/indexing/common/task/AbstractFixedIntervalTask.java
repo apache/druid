@@ -26,8 +26,8 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Interval;
 
@@ -77,7 +77,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return taskActionClient.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
+    return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
   }
 
   @JsonProperty
@@ -86,7 +86,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
     return interval;
   }
 
-  protected TaskLock getAndCheckLock(TaskToolbox toolbox) throws IOException
+  TaskLock getAndCheckLock(TaskToolbox toolbox) throws IOException
   {
     // Confirm we have a lock (will throw if there isn't exactly one element)
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));

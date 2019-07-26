@@ -107,7 +107,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   @Override
   @Nullable
-  public Object startJob()
+  public Object startJob(AppenderatorDriverSegmentLockHelper lockHelper)
   {
     handoffNotifier.start();
 
@@ -133,6 +133,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
           final SegmentsForSequenceBuilder builder = new SegmentsForSequenceBuilder(lastSegmentIds.get(sequenceName));
           builders.put(sequenceName, builder);
           entry.getValue().forEach(builder::add);
+          if (lockHelper != null) {
+            for (SegmentWithState segmentWithState : entry.getValue()) {
+              if (segmentWithState.getState() != SegmentState.PUSHED_AND_DROPPED
+                  && !lockHelper.lock(segmentWithState.getSegmentIdentifier())) {
+                throw new ISE("Failed to lock segment[%s]", segmentWithState.getSegmentIdentifier());
+              }
+            }
+          }
         }
 
         builders.forEach((sequence, builder) -> segments.put(sequence, builder.build()));
@@ -273,6 +281,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
         sam -> publishInBackground(
+            null,
             sam,
             publisher
         )

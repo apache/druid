@@ -75,7 +75,6 @@ public class TaskActionTestKit extends ExternalResource
   public void before()
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
-    taskLockbox = new TaskLockbox(taskStorage);
     testDerbyConnector = new TestDerbyConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig)
@@ -86,6 +85,7 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector
     );
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     segmentsMetadata = new SqlSegmentsMetadata(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataConfig()),

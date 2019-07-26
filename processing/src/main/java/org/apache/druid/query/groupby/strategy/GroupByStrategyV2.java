@@ -55,6 +55,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -229,7 +230,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
@@ -363,7 +364,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           mergeResults(new QueryRunner<Row>()
           {
             @Override
-            public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+            public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
             {
               return GroupByRowProcessor.getRowsFromGrouper(
                   query,
@@ -440,7 +441,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
             mergeResults(new QueryRunner<Row>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
               {
                 return GroupByRowProcessor.getRowsFromGrouper(
                     queryWithoutSubtotalsSpec,

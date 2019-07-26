@@ -47,7 +47,9 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -246,7 +248,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              ZkPathsConfig zkPaths
+              ZkPathsConfig zkPaths,
+              Lifecycle lifecycle
           )
           {
             boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
@@ -254,9 +257,12 @@ public class CliCoordinator extends ServerRunnable
             if (useHttpLoadQueuePeon) {
               callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
             } else {
-              callBackExec = Execs.multiThreaded(config.getNumCuratorCallBackThreads(), "LoadQueuePeon"
-                                                                                        + "-callbackexec--%d");
+              callBackExec = Execs.multiThreaded(
+                  config.getNumCuratorCallBackThreads(),
+                  "LoadQueuePeon-callbackexec--%d"
+              );
             }
+            ExecutorServices.manageLifecycle(lifecycle, callBackExec);
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,

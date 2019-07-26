@@ -53,6 +53,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -145,7 +146,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> initAndMergeGroupByResults(
       final GroupByQuery query,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
@@ -159,7 +160,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     if (isNestedQueryPushDown(query, groupByStrategy)) {
@@ -173,7 +174,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
@@ -254,7 +255,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GroupByQuery query,
       GroupByQueryResource resource,
       QueryRunner<Row> runner,
-      Map<String, Object> context
+      ResponseContext context
   )
   {
     Sequence<Row> pushDownQueryResults = groupByStrategy.mergeResults(runner, query, context);
@@ -417,7 +418,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
             if (groupByQuery.getDimFilter() != null) {
