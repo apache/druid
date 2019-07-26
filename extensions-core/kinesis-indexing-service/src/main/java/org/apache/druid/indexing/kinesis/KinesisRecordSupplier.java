@@ -49,7 +49,6 @@ import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -797,7 +796,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       return callable.call();
     }
     catch (Exception e) {
-      throw new StreamException(e);
+      throw new RuntimeException(e);
     }
   }
 
