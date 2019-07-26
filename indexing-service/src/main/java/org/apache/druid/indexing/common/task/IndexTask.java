@@ -1246,7 +1246,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         if (forceGuaranteedRollup) {
           if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
-            throw new ISE("HashedPartitonsSpec must be used for perfect rollup");
+            throw new ISE("HashedPartitionsSpec must be used for perfect rollup");
           }
         } else {
           if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {

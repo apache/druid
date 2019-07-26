@@ -48,9 +48,9 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   {
     Preconditions.checkArgument(
         PartitionsSpec.isEffectivelyNull(maxRowsPerSegment) || PartitionsSpec.isEffectivelyNull(numShards),
-        "Can't use maxRowsPerSegment and numShards together"
+        "Can't use maxRowsPerSegment or targetPartitionSize and numShards together"
     );
-    // Needs to determin partitions if the _given_ numShards is null
+    // Needs to determine partitions if the _given_ numShards is null
     this.maxRowsPerSegment = getValidMaxRowsPerSegment(maxRowsPerSegment, numShards);
     this.numShards = PartitionsSpec.isEffectivelyNull(numShards) ? null : numShards;
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;

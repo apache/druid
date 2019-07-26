@@ -48,7 +48,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     Preconditions.checkArgument(maxRowsPerSegment > 0, "maxRowsPerSegment must be specified");
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxPartitionSize = PartitionsSpec.isEffectivelyNull(maxPartitionSize)
-                            ? Math.multiplyExact(maxRowsPerSegment, (int) (maxRowsPerSegment * 0.5))
+                            ? Math.addExact(maxRowsPerSegment, (int) (maxRowsPerSegment * 0.5))
                             : maxPartitionSize;
     this.partitionDimension = partitionDimension;
     this.assumeGrouped = assumeGrouped;
