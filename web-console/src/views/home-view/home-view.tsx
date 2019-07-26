@@ -22,14 +22,23 @@ import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 
-import { UrlBaser } from '../../singletons/url-baser';
+import { StatusDialog } from '../../dialogs/status-dialog/status-dialog';
 import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
 import { deepGet } from '../../utils/object-change';
 
 import './home-view.scss';
 
-export interface CardOptions {
+export interface CardLinkOptions {
   href: string;
+  icon: IconName;
+  title: string;
+  loading?: boolean;
+  content: JSX.Element | string;
+  error?: string | null;
+}
+
+export interface CardModalOptions {
+  onClick: () => void;
   icon: IconName;
   title: string;
   loading?: boolean;
@@ -82,6 +91,8 @@ export interface HomeViewState {
   middleManagerCount: number;
   peonCount: number;
   serverCountError: string | null;
+
+  showStatusDialog: boolean;
 }
 
 export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> {
@@ -136,6 +147,8 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       middleManagerCount: 0,
       peonCount: 0,
       serverCountError: null,
+
+      showStatusDialog: false,
     };
 
     this.statusQueryManager = new QueryManager({
@@ -346,7 +359,21 @@ GROUP BY 1`,
     this.serverQueryManager.terminate();
   }
 
-  renderCard(cardOptions: CardOptions): JSX.Element {
+  renderStatusDialog() {
+    const { showStatusDialog } = this.state;
+    if (!showStatusDialog) {
+      return null;
+    }
+    return (
+      <StatusDialog
+        onClose={() => this.setState({ showStatusDialog: false })}
+        title={'Status'}
+        isOpen
+      />
+    );
+  }
+
+  renderCard(cardOptions: CardLinkOptions): JSX.Element {
     return (
       <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
         <Card className="status-card" interactive>
@@ -366,136 +393,161 @@ GROUP BY 1`,
     );
   }
 
+  renderModalCard(cardOptions: CardModalOptions): JSX.Element {
+    return (
+      <Card
+        className="status-card"
+        interactive
+        onClick={() => this.setState({ showStatusDialog: true })}
+      >
+        <H5>
+          <Icon color="#bfccd5" icon={cardOptions.icon} />
+          &nbsp;{cardOptions.title}
+        </H5>
+        {cardOptions.loading ? (
+          <p>Loading...</p>
+        ) : cardOptions.error ? (
+          `Error: ${cardOptions.error}`
+        ) : (
+          cardOptions.content
+        )}
+      </Card>
+    );
+  }
+
   render() {
     const state = this.state;
 
     return (
-      <div className="home-view app-view">
-        {this.renderCard({
-          href: UrlBaser.base('/status'),
-          icon: IconNames.GRAPH,
-          title: 'Status',
-          loading: state.statusLoading,
-          content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
-          error: state.statusError,
-        })}
-        {this.renderCard({
-          href: '#datasources',
-          icon: IconNames.MULTI_SELECT,
-          title: 'Datasources',
-          loading: state.datasourceCountLoading,
-          content: pluralIfNeeded(state.datasourceCount, 'datasource'),
-          error: state.datasourceCountError,
-        })}
-        {this.renderCard({
-          href: '#segments',
-          icon: IconNames.STACKED_CHART,
-          title: 'Segments',
-          loading: state.segmentCountLoading,
-          content: (
-            <>
-              <p>{pluralIfNeeded(state.segmentCount, 'segment')}</p>
-              {Boolean(state.unavailableSegmentCount) && (
-                <p>{pluralIfNeeded(state.unavailableSegmentCount, 'unavailable segment')}</p>
-              )}
-            </>
-          ),
-          error: state.datasourceCountError,
-        })}
-        {this.renderCard({
-          href: '#tasks',
-          icon: IconNames.LIST_COLUMNS,
-          title: 'Supervisors',
-          loading: state.supervisorCountLoading,
-          content: (
-            <>
-              {!Boolean(state.runningSupervisorCount + state.suspendedSupervisorCount) && (
-                <p>0 supervisors</p>
-              )}
-              {Boolean(state.runningSupervisorCount) && (
-                <p>{pluralIfNeeded(state.runningSupervisorCount, 'running supervisor')}</p>
-              )}
-              {Boolean(state.suspendedSupervisorCount) && (
-                <p>{pluralIfNeeded(state.suspendedSupervisorCount, 'suspended supervisor')}</p>
-              )}
-            </>
-          ),
-          error: state.supervisorCountError,
-        })}
-        {this.renderCard({
-          href: '#tasks',
-          icon: IconNames.GANTT_CHART,
-          title: 'Tasks',
-          loading: state.taskCountLoading,
-          content: (
-            <>
-              {Boolean(state.runningTaskCount) && (
-                <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>
-              )}
-              {Boolean(state.pendingTaskCount) && (
-                <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p>
-              )}
-              {Boolean(state.successTaskCount) && (
-                <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>
-              )}
-              {Boolean(state.waitingTaskCount) && (
-                <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>
-              )}
-              {Boolean(state.failedTaskCount) && (
-                <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>
-              )}
-              {!(
-                Boolean(state.runningTaskCount) ||
-                Boolean(state.pendingTaskCount) ||
-                Boolean(state.successTaskCount) ||
-                Boolean(state.waitingTaskCount) ||
-                Boolean(state.failedTaskCount)
-              ) && <p>There are no tasks</p>}
-            </>
-          ),
-          error: state.taskCountError,
-        })}
-        {this.renderCard({
-          href: '#servers',
-          icon: IconNames.DATABASE,
-          title: 'Servers',
-          loading: state.serverCountLoading,
-          content: (
-            <>
-              <p>{`${pluralIfNeeded(state.overlordCount, 'overlord')}, ${pluralIfNeeded(
-                state.coordinatorCount,
-                'coordinator',
-              )}`}</p>
-              <p>{`${pluralIfNeeded(state.routerCount, 'router')}, ${pluralIfNeeded(
-                state.brokerCount,
-                'broker',
-              )}`}</p>
-              <p>{`${pluralIfNeeded(state.historicalCount, 'historical')}, ${pluralIfNeeded(
-                state.middleManagerCount,
-                'middle manager',
-              )}`}</p>
-              {Boolean(state.peonCount) && <p>{pluralIfNeeded(state.peonCount, 'peon')}</p>}
-            </>
-          ),
-          error: state.serverCountError,
-        })}
-        {this.renderCard({
-          href: '#lookups',
-          icon: IconNames.PROPERTIES,
-          title: 'Lookups',
-          loading: state.lookupsCountLoading,
-          content: (
-            <>
-              <p>
-                {!state.lookupsUninitialized
-                  ? pluralIfNeeded(state.lookupsCount, 'lookup')
-                  : 'Lookups uninitialized'}
-              </p>
-            </>
-          ),
-          error: !state.lookupsUninitialized ? state.lookupsCountError : null,
-        })}
-      </div>
+      <>
+        <div className="home-view app-view">
+          {this.renderModalCard({
+            onClick: () => this.setState({ showStatusDialog: true }),
+            icon: IconNames.GRAPH,
+            title: 'Status',
+            loading: state.statusLoading,
+            content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
+            error: state.statusError,
+          })}
+          {this.renderCard({
+            href: '#datasources',
+            icon: IconNames.MULTI_SELECT,
+            title: 'Datasources',
+            loading: state.datasourceCountLoading,
+            content: pluralIfNeeded(state.datasourceCount, 'datasource'),
+            error: state.datasourceCountError,
+          })}
+          {this.renderCard({
+            href: '#segments',
+            icon: IconNames.STACKED_CHART,
+            title: 'Segments',
+            loading: state.segmentCountLoading,
+            content: (
+              <>
+                <p>{pluralIfNeeded(state.segmentCount, 'segment')}</p>
+                {Boolean(state.unavailableSegmentCount) && (
+                  <p>{pluralIfNeeded(state.unavailableSegmentCount, 'unavailable segment')}</p>
+                )}
+              </>
+            ),
+            error: state.datasourceCountError,
+          })}
+          {this.renderCard({
+            href: '#tasks',
+            icon: IconNames.LIST_COLUMNS,
+            title: 'Supervisors',
+            loading: state.supervisorCountLoading,
+            content: (
+              <>
+                {!Boolean(state.runningSupervisorCount + state.suspendedSupervisorCount) && (
+                  <p>0 supervisors</p>
+                )}
+                {Boolean(state.runningSupervisorCount) && (
+                  <p>{pluralIfNeeded(state.runningSupervisorCount, 'running supervisor')}</p>
+                )}
+                {Boolean(state.suspendedSupervisorCount) && (
+                  <p>{pluralIfNeeded(state.suspendedSupervisorCount, 'suspended supervisor')}</p>
+                )}
+              </>
+            ),
+            error: state.supervisorCountError,
+          })}
+          {this.renderCard({
+            href: '#tasks',
+            icon: IconNames.GANTT_CHART,
+            title: 'Tasks',
+            loading: state.taskCountLoading,
+            content: (
+              <>
+                {Boolean(state.runningTaskCount) && (
+                  <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>
+                )}
+                {Boolean(state.pendingTaskCount) && (
+                  <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p>
+                )}
+                {Boolean(state.successTaskCount) && (
+                  <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>
+                )}
+                {Boolean(state.waitingTaskCount) && (
+                  <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>
+                )}
+                {Boolean(state.failedTaskCount) && (
+                  <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>
+                )}
+                {!(
+                  Boolean(state.runningTaskCount) ||
+                  Boolean(state.pendingTaskCount) ||
+                  Boolean(state.successTaskCount) ||
+                  Boolean(state.waitingTaskCount) ||
+                  Boolean(state.failedTaskCount)
+                ) && <p>There are no tasks</p>}
+              </>
+            ),
+            error: state.taskCountError,
+          })}
+          {this.renderCard({
+            href: '#servers',
+            icon: IconNames.DATABASE,
+            title: 'Servers',
+            loading: state.serverCountLoading,
+            content: (
+              <>
+                <p>{`${pluralIfNeeded(state.overlordCount, 'overlord')}, ${pluralIfNeeded(
+                  state.coordinatorCount,
+                  'coordinator',
+                )}`}</p>
+                <p>{`${pluralIfNeeded(state.routerCount, 'router')}, ${pluralIfNeeded(
+                  state.brokerCount,
+                  'broker',
+                )}`}</p>
+                <p>{`${pluralIfNeeded(state.historicalCount, 'historical')}, ${pluralIfNeeded(
+                  state.middleManagerCount,
+                  'middle manager',
+                )}`}</p>
+                {Boolean(state.peonCount) && <p>{pluralIfNeeded(state.peonCount, 'peon')}</p>}
+              </>
+            ),
+            error: state.serverCountError,
+          })}
+          {this.renderCard({
+            href: '#lookups',
+            icon: IconNames.PROPERTIES,
+            title: 'Lookups',
+            loading: state.lookupsCountLoading,
+            content: (
+              <>
+                <p>
+                  {!state.lookupsUninitialized
+                    ? pluralIfNeeded(state.lookupsCount, 'lookup')
+                    : 'Lookups uninitialized'}
+                </p>
+              </>
+            ),
+            error: !state.lookupsUninitialized ? state.lookupsCountError : null,
+          })}
+        </div>
+        {!state.statusLoading && this.renderStatusDialog()}
+      </>
     );
   }
 }

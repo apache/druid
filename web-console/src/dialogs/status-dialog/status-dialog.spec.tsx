@@ -16,30 +16,17 @@
  * limitations under the License.
  */
 
-.show-json {
-  position: relative;
-  height: 100%;
+import React from 'react';
 
-  .top-actions {
-    text-align: right;
-    padding-bottom: 10px;
+import { render } from '@testing-library/react';
+import { SpecDialog } from '..';
 
-    & > * {
-      display: inline-block;
-    }
-  }
-
-  .main-area {
-    height: calc(100% - 40px);
-
-    textarea {
-      height: 100%;
-      width: 100%;
-      resize: none;
-    }
-
-    .loader {
-      position: relative;
-    }
-  }
-}
+describe('table action dialog', () => {
+  it('matches snapshot', () => {
+    const tableActionDialog = (
+      <SpecDialog onClose={() => null} title={'spec-dialog'} onSubmit={() => null} />
+    );
+    render(tableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});

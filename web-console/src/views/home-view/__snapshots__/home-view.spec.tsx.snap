@@ -1,17 +1,15 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`home view matches snapshot 1`] = `
-<div
-  className="home-view app-view"
->
-  <a
-    href="/status"
-    target="_blank"
+<Fragment>
+  <div
+    className="home-view app-view"
   >
     <Blueprint3.Card
       className="status-card"
       elevation={0}
       interactive={true}
+      onClick={[Function]}
     >
       <Component>
         <Blueprint3.Icon
@@ -25,132 +23,132 @@ exports[`home view matches snapshot 1`] = `
         Loading...
       </p>
     </Blueprint3.Card>
-  </a>
-  <a
-    href="#datasources"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+    <a
+      href="#datasources"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="multi-select"
-        />
-         
-        Datasources
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-  <a
-    href="#segments"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="multi-select"
+          />
+           
+          Datasources
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+    <a
+      href="#segments"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="stacked-chart"
-        />
-         
-        Segments
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-  <a
-    href="#tasks"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="stacked-chart"
+          />
+           
+          Segments
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+    <a
+      href="#tasks"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="list-columns"
-        />
-         
-        Supervisors
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-  <a
-    href="#tasks"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="list-columns"
+          />
+           
+          Supervisors
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+    <a
+      href="#tasks"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="gantt-chart"
-        />
-         
-        Tasks
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-  <a
-    href="#servers"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="gantt-chart"
+          />
+           
+          Tasks
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+    <a
+      href="#servers"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="database"
-        />
-         
-        Servers
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-  <a
-    href="#lookups"
-  >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="database"
+          />
+           
+          Servers
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+    <a
+      href="#lookups"
     >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="properties"
-        />
-         
-        Lookups
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
-</div>
+      <Blueprint3.Card
+        className="status-card"
+        elevation={0}
+        interactive={true}
+      >
+        <Component>
+          <Blueprint3.Icon
+            color="#bfccd5"
+            icon="properties"
+          />
+           
+          Lookups
+        </Component>
+        <p>
+          Loading...
+        </p>
+      </Blueprint3.Card>
+    </a>
+  </div>
+</Fragment>
 `;
