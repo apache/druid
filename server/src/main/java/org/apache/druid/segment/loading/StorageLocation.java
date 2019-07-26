@@ -49,13 +49,13 @@ public class StorageLocation
   private final long freeSpaceToKeep;
 
   /**
-   * Set of files stored under the given path. All accesses must be synchronized with currSizeBytes.
+   * Set of files stored under the {@link #path}.
    */
   @GuardedBy("this")
   private final Set<File> files = new HashSet<>();
 
   /**
-   * Current total size of files in bytes. All accesses must be synchronized with files.
+   * Current total size of files in bytes.
    */
   @GuardedBy("this")
   private long currSizeBytes = 0;

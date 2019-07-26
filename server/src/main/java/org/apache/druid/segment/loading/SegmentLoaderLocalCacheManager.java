@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -43,8 +42,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
-  private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.availableSizeBytes(), left.availableSizeBytes());
+  private static final Comparator<StorageLocation> COMPARATOR = Comparator
+      .comparing(StorageLocation::availableSizeBytes)
+      .reversed();
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
