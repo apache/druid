@@ -455,13 +455,7 @@ public class IndexIO
         if (index.getSpatialIndexes().get(dimension) != null) {
           builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(index.getSpatialIndexes().get(dimension)));
         }
-        if (lazy) {
-          columns.put(dimension, Suppliers.memoize(() -> builder.build()));
-        } else {
-          ColumnHolder columnHolder = builder.build();
-          columns.put(dimension, () -> columnHolder);
-        }
-
+        columns.put(dimension, getColumnHolderSupplier(builder, lazy));
       }
 
       for (String metric : index.getAvailableMetrics()) {
@@ -475,25 +469,14 @@ public class IndexIO
                       LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
                   )
               );
-          if (lazy) {
-            columns.put(metric, Suppliers.memoize(() -> builder.build()));
-          } else {
-            ColumnHolder columnHolder = builder.build();
-            columns.put(metric, () -> columnHolder);
-          }
-
+          columns.put(metric, getColumnHolderSupplier(builder, lazy));
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
           ColumnBuilder builder = new ColumnBuilder()
               .setType(ValueType.COMPLEX)
               .setComplexColumnSupplier(
                   new ComplexColumnPartSupplier(metricHolder.getTypeName(), metricHolder.complexType)
               );
-          if (lazy) {
-            columns.put(metric, Suppliers.memoize(() -> builder.build()));
-          } else {
-            ColumnHolder columnHolder = builder.build();
-            columns.put(metric, () -> columnHolder);
-          }
+          columns.put(metric, getColumnHolderSupplier(builder, lazy));
         }
       }
 
@@ -505,12 +488,7 @@ public class IndexIO
                   LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
               )
           );
-      if (lazy) {
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, Suppliers.memoize(() -> builder.build()));
-      } else {
-        ColumnHolder columnHolder = builder.build();
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
-      }
+      columns.put(ColumnHolder.TIME_COLUMN_NAME, getColumnHolderSupplier(builder, lazy));
 
       return new SimpleQueryableIndex(
           index.getDataInterval(),
@@ -521,6 +499,16 @@ public class IndexIO
           null,
           lazy
       );
+    }
+
+    private Supplier<ColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
+    {
+      if (lazy) {
+        return  Suppliers.memoize(() -> builder.build());
+      } else {
+        ColumnHolder columnHolder = builder.build();
+        return () -> columnHolder;
+      }
     }
   }
 
