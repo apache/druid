@@ -31,6 +31,7 @@ export interface ShowJsonProps {
   endpoint: string;
   transform?: (x: any) => any;
   downloadFilename?: string;
+  defaultValue?: string;
 }
 
 export interface ShowJsonState {
@@ -44,7 +45,9 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
       jsonValue: '',
     };
 
-    this.getJsonInfo();
+    if (!this.props.defaultValue) {
+      this.getJsonInfo();
+    }
   }
 
   private getJsonInfo = async (): Promise<void> => {
@@ -65,9 +68,9 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
   };
 
   render() {
-    const { endpoint, downloadFilename } = this.props;
+    const { endpoint, downloadFilename, defaultValue } = this.props;
     const { jsonValue } = this.state;
-
+    const content = defaultValue ? defaultValue : jsonValue;
     return (
       <div className="show-json">
         <div className="top-actions">
@@ -76,14 +79,14 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
               <Button
                 text="Save"
                 minimal
-                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+                onClick={() => downloadFile(content, 'json', downloadFilename)}
               />
             )}
             <Button
               text="Copy"
               minimal
               onClick={() => {
-                copy(jsonValue, { format: 'text/plain' });
+                copy(content, { format: 'text/plain' });
                 AppToaster.show({
                   message: 'JSON copied to clipboard',
                   intent: Intent.SUCCESS,
@@ -98,7 +101,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <TextArea readOnly value={jsonValue} />
+          <TextArea readOnly value={content} />
         </div>
       </div>
     );
