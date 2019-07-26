@@ -120,6 +120,7 @@ import {
   getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
+  SampleEntry,
   sampleForConnect,
   sampleForFilter,
   sampleForParser,
@@ -139,14 +140,19 @@ import { TransformTable } from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
-function showRawLine(line: string): string {
-  if (line.includes('\n')) {
-    return `<Multi-line row, length: ${line.length}>`;
+function showRawLine(line: SampleEntry): string {
+  const raw = line.raw;
+  if (raw.includes('\n')) {
+    return `[Multi-line row, length: ${raw.length}]`;
   }
-  if (line.length > 1000) {
-    return line.substr(0, 1000) + '...';
+  if (raw.length > 1000) {
+    return raw.substr(0, 1000) + '...';
   }
-  return line;
+  return raw;
+}
+
+function showBlankLine(line: SampleEntry): string {
+  return line.parsed ? `[Row: ${JSON.stringify(line.parsed)}]` : '[Binary data]';
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
@@ -244,7 +250,7 @@ export interface LoadDataViewState {
   specialColumnsOnly: boolean;
 
   // for ioConfig
-  inputQueryState: QueryState<string[]>;
+  inputQueryState: QueryState<SampleEntry[]>;
 
   // for parser
   parserQueryState: QueryState<HeaderAndRows>;
@@ -825,7 +831,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     this.setState({
       cacheKey: sampleResponse.cacheKey,
-      inputQueryState: new QueryState({ data: sampleResponse.data.map((d: any) => d.raw) }),
+      inputQueryState: new QueryState({ data: sampleResponse.data }),
     });
   }
 
@@ -854,8 +860,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           className="raw-lines"
           value={
             inputData.length
-              ? (inputData.every(l => !l)
-                  ? inputData.map(_ => '<Binary data>')
+              ? (inputData.every(l => !l.raw)
+                  ? inputData.map(showBlankLine)
                   : inputData.map(showRawLine)
                 ).join('\n')
               : 'No data returned from sampler'
@@ -923,7 +929,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !inputQueryState.data,
           onNextStep: () => {
             if (!inputQueryState.data) return;
-            this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
+            this.updateSpec(
+              fillDataSourceName(fillParser(spec, inputQueryState.data.map(l => l.raw))),
+            );
           },
         })}
       </>

@@ -855,6 +855,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.filter',
           label: 'Filter',
           type: 'json',
+          placeholder: '(optional)',
           info: (
             <p>
               The{' '}
