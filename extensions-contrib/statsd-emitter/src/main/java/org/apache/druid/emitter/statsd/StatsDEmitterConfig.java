@@ -45,6 +45,8 @@ public class StatsDEmitterConfig
   @JsonProperty
   private final String dimensionMapPath;
   @JsonProperty
+  private final Boolean serviceAsTag;
+  @JsonProperty
   private final String blankHolder;
   @JsonProperty
   private final Boolean dogstatsd;
@@ -59,6 +61,7 @@ public class StatsDEmitterConfig
       @JsonProperty("separator") String separator,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
+      @JsonProperty("serviceAsTag") Boolean serviceAsTag,
       @JsonProperty("blankHolder") String blankHolder,
       @JsonProperty("dogstatsd") Boolean dogstatsd,
       @JsonProperty("dogstatsdConstantTags") List<String> dogstatsdConstantTags
@@ -70,6 +73,7 @@ public class StatsDEmitterConfig
     this.separator = separator != null ? separator : ".";
     this.includeHost = includeHost != null ? includeHost : false;
     this.dimensionMapPath = dimensionMapPath;
+    this.serviceAsTag = serviceAsTag;
     this.blankHolder = blankHolder != null ? blankHolder : "-";
     this.dogstatsd = dogstatsd != null ? dogstatsd : false;
     this.dogstatsdConstantTags = dogstatsdConstantTags != null ? dogstatsdConstantTags : Collections.emptyList();
@@ -105,6 +109,9 @@ public class StatsDEmitterConfig
     if (dimensionMapPath != null ? !dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath != null) {
       return false;
     }
+    if (serviceAsTag != null ? !serviceAsTag.equals(that.serviceAsTag) : that.serviceAsTag != null) {
+      return false;
+    }
     if (dogstatsd != null ? !dogstatsd.equals(that.dogstatsd) : that.dogstatsd != null) {
       return false;
     }
@@ -116,7 +123,7 @@ public class StatsDEmitterConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath,
+    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath, serviceAsTag,
             blankHolder, dogstatsd, dogstatsdConstantTags);
   }
 
@@ -154,6 +161,12 @@ public class StatsDEmitterConfig
   public String getDimensionMapPath()
   {
     return dimensionMapPath;
+  }
+
+  @JsonProperty
+  public Boolean isServiceAsTag()
+  {
+    return serviceAsTag;
   }
 
   @JsonProperty

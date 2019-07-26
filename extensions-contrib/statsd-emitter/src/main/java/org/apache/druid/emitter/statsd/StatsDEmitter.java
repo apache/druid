@@ -99,10 +99,15 @@ public class StatsDEmitter implements Emitter
       Number value = metricEvent.getValue();
 
       ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
-      nameBuilder.add(service);
+      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
+
+      if (config.isServiceAsTag()) {
+        dimsBuilder.put("service", service);
+      } else {
+        nameBuilder.add(service);
+      }
       nameBuilder.add(metric);
 
-      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
       StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
 
       if (statsDMetric != null) {
