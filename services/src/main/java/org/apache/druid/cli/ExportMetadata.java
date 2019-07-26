@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -53,6 +52,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -263,9 +263,9 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, datasourceTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -294,9 +294,9 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, rulesTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -325,9 +325,9 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, configTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -354,9 +354,9 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, supervisorTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -386,9 +386,9 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, segmentsTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
