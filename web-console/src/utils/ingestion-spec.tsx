@@ -724,15 +724,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     type: 'string',
     suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
     info: (
-      <>
-        <p>
-          Druid connects to raw data through{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
-            firehoses
-          </ExternalLink>
-          . You can change your selected firehose here.
-        </p>
-      </>
+      <p>
+        Druid connects to raw data through{' '}
+        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+          firehoses
+        </ExternalLink>
+        . You can change your selected firehose here.
+      </p>
     ),
   };
 
