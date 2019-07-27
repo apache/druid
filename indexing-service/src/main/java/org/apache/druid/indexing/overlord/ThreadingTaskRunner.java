@@ -47,7 +47,6 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -75,14 +74,13 @@ import java.util.concurrent.TimeUnit;
  * TaskRunner implemention for the CliIndexer task execution service, which runs all tasks in a single process.
  *
  * Two thread pools are used:
- * - A task execution pool, sized to number of worker slots. This is used to execute the Task run() methods.
- * - A control thread pool, sized to worker slots * 2. The control threads setup and submit work to the
- *   task execution pool, and are also responsible for running graceful shutdown on the Task objects.
- *   Only one shutdown per-task can be running at a given time, and there is one control thread per task,
- *   thus the pool has 2 * worker slots.
+ * - A task execution pool, sized to number of worker slots. This is used to setup and execute the Task run() methods.
+ * - A control thread pool, sized to number of worker slots. The control threads are responsible for running graceful
+ *   shutdown on the Task objects. Only one shutdown per-task can be running at a given time,
+ *   so we allocate one control thread per worker slot.
  *
- * Note that separate task logs are not supported, all task log entries will be written to the Indexer process log
- * instead.
+ * Note that separate task logs are not currently supported, all task log entries will be written to the Indexer
+ * process log instead.
  */
 public class ThreadingTaskRunner
     extends BaseRestorableTaskRunner<ThreadingTaskRunner.ThreadingTaskRunnerWorkItem>
@@ -122,7 +120,7 @@ public class ThreadingTaskRunner
         Execs.multiThreaded(workerConfig.getCapacity(), "threading-task-runner-executor-%d")
     );
     this.controlThreadExecutor = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(workerConfig.getCapacity() * 2, "threading-task-runner-control-%d")
+        Execs.multiThreaded(workerConfig.getCapacity(), "threading-task-runner-control-%d")
     );
   }
 
@@ -147,7 +145,7 @@ public class ThreadingTaskRunner
           task.getId(), k ->
               new ThreadingTaskRunnerWorkItem(
                   task,
-                  controlThreadExecutor.submit(
+                  taskExecutor.submit(
                       new Callable<TaskStatus>() {
                         @Override
                         public TaskStatus call()
@@ -162,6 +160,8 @@ public class ThreadingTaskRunner
                               node.getTlsPort()
                           );
 
+                          final ThreadingTaskRunnerWorkItem taskWorkItem;
+
                           try {
                             if (!attemptDir.mkdirs()) {
                               throw new IOE("Could not create directories: %s", attemptDir);
@@ -171,7 +171,6 @@ public class ThreadingTaskRunner
                             final File reportsFile = new File(attemptDir, "report.json");
                             taskReportFileWriter.add(task.getId(), reportsFile);
 
-                            final ThreadingTaskRunnerWorkItem taskWorkItem;
                             // time to adjust process holders
                             synchronized (tasks) {
                               taskWorkItem = tasks.get(task.getId());
@@ -197,43 +196,29 @@ public class ThreadingTaskRunner
 
                             TaskStatus taskStatus = null;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
+                            TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                            TaskRunnerUtils.notifyStatusChanged(
+                                listeners,
+                                task.getId(),
+                                TaskStatus.running(task.getId())
+                            );
+
+                            taskWorkItem.setThread(Thread.currentThread());
+
                             try {
-                              ListenableFuture<TaskStatus> taskStatusFuture = taskExecutor.submit(
-                                  new Callable<TaskStatus>()
-                                  {
-                                    @Override
-                                    public TaskStatus call()
-                                    {
-                                      taskWorkItem.setThread(Thread.currentThread());
-                                      try {
-                                        return task.run(toolbox);
-                                      }
-                                      catch (Exception e) {
-                                        LOGGER.error(e, "Task[%s] exited with exception.", task.getId());
-                                        return null;
-                                      }
-                                      finally {
-                                        taskWorkItem.setThread(null);
-                                      }
-                                    }
-                                  }
-                              );
-                              TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
-                              TaskRunnerUtils.notifyStatusChanged(
-                                  listeners,
-                                  task.getId(),
-                                  TaskStatus.running(task.getId())
-                              );
-                              taskStatus = taskStatusFuture.get();
+                              taskStatus = task.run(toolbox);
+                            }
+                            catch (Throwable t) {
+                              LOGGER.info(t, "Exception caught while running the task.");
                             }
                             finally {
                               taskWorkItem.setFinished(true);
+                              if (taskStatus == null) {
+                                taskStatus = TaskStatus.failure(task.getId());
+                              }
                               Thread.currentThread().setName(priorThreadName);
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);
-                              }
-                              if (taskStatus == null) {
-                                taskStatus = TaskStatus.failure(task.getId());
                               }
                             }
 
@@ -250,7 +235,7 @@ public class ThreadingTaskRunner
 
                             try {
                               synchronized (tasks) {
-                                final ThreadingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
+                                tasks.remove(task.getId());
                                 if (!stopping) {
                                   saveRunningTasks();
                                 }
@@ -272,6 +257,10 @@ public class ThreadingTaskRunner
                             catch (Exception e) {
                               LOGGER.error(e, "Suppressing exception caught while cleaning up task");
                             }
+
+                            // Make sure we clear the interrupt flag at the end, since this thread will be reused
+                            // for other tasks.
+                            Thread.interrupted();
                           }
                         }
                       }
