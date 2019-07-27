@@ -441,9 +441,9 @@ bin/start-cluster-master-no-zk-server
 If you plan to run ZK on Master servers, first update `conf/zoo.cfg` to reflect how you plan to run ZK. Then log on to your Master servers and install Zookeeper:
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
-tar -xzf zookeeper-3.4.11.tar.gz
-mv zookeeper-3.4.11 zk
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -o zookeeper-3.4.14.tar.gz
+tar -xzf zookeeper-3.4.14.tar.gz
+mv zookeeper-3.4.14 zk
 ```
 
 If you are running ZK on the Master server, you can start the Master server processes together with ZK using:

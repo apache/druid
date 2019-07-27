@@ -640,7 +640,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 4.2.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -744,7 +744,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.4.11
+version: 3.4.14
 libraries:
   - org.apache.zookeeper: zookeeper
 
