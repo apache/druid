@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class HashedPartitionsSpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testHashedPartitionsSpec()
@@ -42,12 +42,12 @@ public class HashedPartitionsSpecTest
           + "}",
           PartitionsSpec.class
       );
-      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HadoopHashedPartitionsSpec);
-      final HadoopHashedPartitionsSpec hadoopHashedPartitionsSpec = (HadoopHashedPartitionsSpec) partitionsSpec;
+      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+      final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
       Assert.assertEquals(
           "isDeterminingPartitions",
-          hadoopHashedPartitionsSpec.needsDeterminePartitions(),
+          hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
           true
       );
 
@@ -75,12 +75,12 @@ public class HashedPartitionsSpecTest
         + "}",
         PartitionsSpec.class
     );
-    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HadoopHashedPartitionsSpec);
-    final HadoopHashedPartitionsSpec hadoopHashedPartitionsSpec = (HadoopHashedPartitionsSpec) partitionsSpec;
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+    final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
     Assert.assertEquals(
         "isDeterminingPartitions",
-        hadoopHashedPartitionsSpec.needsDeterminePartitions(),
+        hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
         false
     );
 
@@ -106,7 +106,7 @@ public class HashedPartitionsSpecTest
   private <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

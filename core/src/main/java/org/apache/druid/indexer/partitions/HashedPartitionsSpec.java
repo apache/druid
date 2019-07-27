@@ -39,19 +39,39 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   private final Integer numShards;
   private final List<String> partitionDimensions;
 
+  public static HashedPartitionsSpec defaultSpec()
+  {
+    return new HashedPartitionsSpec(null, null, null, null);
+  }
+
+  public HashedPartitionsSpec(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Integer numShards,
+      @Nullable List<String> partitionDimensions
+  )
+  {
+    this(null, maxRowsPerSegment, numShards, partitionDimensions);
+  }
+
   @JsonCreator
   public HashedPartitionsSpec(
+      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions
   )
   {
     Preconditions.checkArgument(
-        PartitionsSpec.isEffectivelyNull(maxRowsPerSegment) || PartitionsSpec.isEffectivelyNull(numShards),
+        PartitionsSpec.isEffectivelyNull(targetPartitionSize) || PartitionsSpec.isEffectivelyNull(maxRowsPerSegment),
+        "Can't set both targetPartitionSize and maxRowsPerSegment"
+    );
+    final Integer realMaxRowsPerSegment = targetPartitionSize == null ? maxRowsPerSegment : targetPartitionSize;
+    Preconditions.checkArgument(
+        PartitionsSpec.isEffectivelyNull(realMaxRowsPerSegment) || PartitionsSpec.isEffectivelyNull(numShards),
         "Can't use maxRowsPerSegment or targetPartitionSize and numShards together"
     );
     // Needs to determine partitions if the _given_ numShards is null
-    this.maxRowsPerSegment = getValidMaxRowsPerSegment(maxRowsPerSegment, numShards);
+    this.maxRowsPerSegment = getValidMaxRowsPerSegment(realMaxRowsPerSegment, numShards);
     this.numShards = PartitionsSpec.isEffectivelyNull(numShards) ? null : numShards;
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
 
@@ -107,9 +127,9 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   }
 
   @Override
-  public boolean needsDeterminePartitions()
+  public boolean needsDeterminePartitions(boolean useForHadoopTask)
   {
-    return numShards == null;
+    return useForHadoopTask ? maxRowsPerSegment != null : numShards == null;
   }
 
   @Nullable

@@ -21,9 +21,10 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.partitions.HadoopHashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.DateTime;
@@ -54,14 +55,14 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     JobHelper.ensurePaths(config);
 
     if (config.isDeterminingPartitions()) {
-      job = config.getPartitionsSpec().getPartitionJob(config);
+      job = createPartitionJob(config);
       config.setHadoopJobIdFileName(hadoopJobIdFile);
       return JobHelper.runSingleJob(job, config);
     } else {
-      final HadoopPartitionsSpec partitionsSpec = config.getPartitionsSpec();
+      final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
       final int shardsPerInterval;
-      if (partitionsSpec instanceof HadoopHashedPartitionsSpec) {
-        final HadoopHashedPartitionsSpec hashedPartitionsSpec = (HadoopHashedPartitionsSpec) partitionsSpec;
+      if (partitionsSpec instanceof HashedPartitionsSpec) {
+        final HashedPartitionsSpec hashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
         shardsPerInterval = PartitionsSpec.isEffectivelyNull(hashedPartitionsSpec.getNumShards())
                             ? 1
                             : hashedPartitionsSpec.getNumShards();
@@ -92,6 +93,18 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       }
       config.setShardSpecs(shardSpecs);
       return true;
+    }
+  }
+
+  private static Jobby createPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
+    if (partitionsSpec instanceof HashedPartitionsSpec) {
+      return new DetermineHashedPartitionsJob(config);
+    } else if (partitionsSpec instanceof SingleDimensionPartitionsSpec) {
+      return new DeterminePartitionsJob(config);
+    } else {
+      throw new ISE("Unknown partitionsSpec[%s]", partitionsSpec);
     }
   }
 

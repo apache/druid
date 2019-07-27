@@ -37,18 +37,38 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   private final String partitionDimension;
   private final boolean assumeGrouped;
 
+  public SingleDimensionPartitionsSpec(
+      int maxRowsPerSegment,
+      @Nullable Integer maxPartitionSize,
+      @Nullable String partitionDimension,
+      boolean assumeGrouped
+  )
+  {
+    this(null, maxRowsPerSegment, maxPartitionSize, partitionDimension, assumeGrouped);
+  }
+
   @JsonCreator
   public SingleDimensionPartitionsSpec(
-      @JsonProperty("maxRowsPerSegment") int maxRowsPerSegment,
+      @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxPartitionSize") @Nullable Integer maxPartitionSize,
       @JsonProperty("partitionDimension") @Nullable String partitionDimension,
       @JsonProperty("assumeGrouped") boolean assumeGrouped // false by default
   )
   {
-    Preconditions.checkArgument(maxRowsPerSegment > 0, "maxRowsPerSegment must be specified");
-    this.maxRowsPerSegment = maxRowsPerSegment;
+    Preconditions.checkArgument(
+        PartitionsSpec.isEffectivelyNull(targetPartitionSize) || PartitionsSpec.isEffectivelyNull(maxRowsPerSegment),
+        "Can't set both targetPartitionSize and maxRowsPerSegment"
+    );
+    Preconditions.checkArgument(
+        !PartitionsSpec.isEffectivelyNull(targetPartitionSize) || !PartitionsSpec.isEffectivelyNull(maxRowsPerSegment),
+        "Either targetPartitionSize or maxRowsPerSegment must be specified"
+    );
+    final int realMaxRowsPerSegment = targetPartitionSize == null ? maxRowsPerSegment : targetPartitionSize;
+    Preconditions.checkArgument(realMaxRowsPerSegment > 0, "maxRowsPerSegment must be specified");
+    this.maxRowsPerSegment = realMaxRowsPerSegment;
     this.maxPartitionSize = PartitionsSpec.isEffectivelyNull(maxPartitionSize)
-                            ? Math.addExact(maxRowsPerSegment, (int) (maxRowsPerSegment * 0.5))
+                            ? Math.addExact(realMaxRowsPerSegment, (int) (realMaxRowsPerSegment * 0.5))
                             : maxPartitionSize;
     this.partitionDimension = partitionDimension;
     this.assumeGrouped = assumeGrouped;
@@ -62,7 +82,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   }
 
   @Override
-  public boolean needsDeterminePartitions()
+  public boolean needsDeterminePartitions(boolean useForHadoopTask)
   {
     return true;
   }

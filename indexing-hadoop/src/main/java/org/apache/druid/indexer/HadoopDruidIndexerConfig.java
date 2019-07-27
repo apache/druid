@@ -39,7 +39,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -289,7 +289,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
-  public HadoopPartitionsSpec getPartitionsSpec()
+  public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
     return schema.getTuningConfig().getPartitionsSpec();
   }
@@ -327,7 +327,7 @@ public class HadoopDruidIndexerConfig
 
   public boolean isDeterminingPartitions()
   {
-    return schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions();
+    return schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true);
   }
 
   public int getTargetPartitionSize()

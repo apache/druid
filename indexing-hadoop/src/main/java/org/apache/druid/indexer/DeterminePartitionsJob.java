@@ -33,7 +33,6 @@ import com.google.common.io.Closeables;
 import org.apache.druid.collections.CombiningIterable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.indexer.partitions.HadoopSingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -127,8 +126,8 @@ public class DeterminePartitionsJob implements Jobby
         );
       }
 
-      final HadoopSingleDimensionPartitionsSpec partitionsSpec =
-          (HadoopSingleDimensionPartitionsSpec) config.getPartitionsSpec();
+      final SingleDimensionPartitionsSpec partitionsSpec =
+          (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
 
       if (!partitionsSpec.isAssumeGrouped()) {
         groupByJob = Job.getInstance(
@@ -768,8 +767,8 @@ public class DeterminePartitionsJob implements Jobby
 
         // Make sure none of these shards are oversized
         boolean oversized = false;
-        final HadoopSingleDimensionPartitionsSpec partitionsSpec =
-            (HadoopSingleDimensionPartitionsSpec) config.getPartitionsSpec();
+        final SingleDimensionPartitionsSpec partitionsSpec =
+            (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
         for (final DimPartition partition : dimPartitions.partitions) {
           if (partition.rows > partitionsSpec.getMaxPartitionSize()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);

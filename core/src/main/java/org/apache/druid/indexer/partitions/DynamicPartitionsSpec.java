@@ -61,7 +61,7 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   }
 
   @Override
-  public boolean needsDeterminePartitions()
+  public boolean needsDeterminePartitions(boolean useForHadoopTask)
   {
     return false;
   }

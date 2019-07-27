@@ -577,7 +577,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
 
     // Must determine partitions if rollup is guaranteed and the user didn't provide a specific value.
-    final boolean determineNumPartitions = nonNullPartitionsSpec.needsDeterminePartitions();
+    final boolean determineNumPartitions = nonNullPartitionsSpec.needsDeterminePartitions(false);
 
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
@@ -667,7 +667,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final HyperLogLogCollector collector = entry.getValue().orNull();
 
         final int numShards;
-        if (partitionsSpec.needsDeterminePartitions()) {
+        if (partitionsSpec.needsDeterminePartitions(false)) {
           final long numRows = Preconditions.checkNotNull(collector, "HLL collector").estimateCardinalityRound();
           final int nonNullMaxRowsPerSegment = partitionsSpec.getMaxRowsPerSegment() == null
                                                ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
@@ -755,7 +755,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             interval = optInterval.get();
           }
 
-          if (nonNullPartitionsSpec.needsDeterminePartitions()) {
+          if (nonNullPartitionsSpec.needsDeterminePartitions(false)) {
             hllCollectors.computeIfAbsent(interval, intv -> Optional.of(HyperLogLogCollector.makeLatestCollector()));
 
             List<Object> groupKey = Rows.toGroupKey(

@@ -22,9 +22,8 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.druid.indexer.partitions.HadoopPartitionsSpec;
-import org.apache.druid.indexer.partitions.HadoopSingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -42,11 +41,11 @@ import java.util.Collections;
 
 public class HadoopIngestionSpecTest
 {
-  private static final ObjectMapper jsonMapper;
+  private static final ObjectMapper JSON_MAPPER;
 
   static {
-    jsonMapper = new DefaultObjectMapper();
-    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+    JSON_MAPPER = new DefaultObjectMapper();
+    JSON_MAPPER.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, JSON_MAPPER));
   }
 
   @Test
@@ -145,9 +144,9 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    final HadoopPartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
-    Assert.assertTrue("isDeterminingPartitions", partitionsSpec.needsDeterminePartitions());
+    Assert.assertTrue("isDeterminingPartitions", partitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertEquals(
         "getTargetPartitionSize",
@@ -187,12 +186,12 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    final HadoopSingleDimensionPartitionsSpec partitionsSpec =
-        (HadoopSingleDimensionPartitionsSpec) schema.getTuningConfig().getPartitionsSpec();
+    final SingleDimensionPartitionsSpec partitionsSpec =
+        (SingleDimensionPartitionsSpec) schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
-        partitionsSpec.needsDeterminePartitions(),
+        partitionsSpec.needsDeterminePartitions(true),
         true
     );
 
@@ -275,7 +274,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertFalse(
         "isDeterminingPartitions",
-        schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions()
+        schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)
     );
 
     Assert.assertFalse(Strings.isNullOrEmpty(schema.getUniqueId()));
@@ -335,7 +334,7 @@ public class HadoopIngestionSpecTest
   private <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
