@@ -24,8 +24,8 @@ import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface SegmentTableActionDialogProps extends IDialogProps {
-  segmentId: string | null;
-  dataSourceId: string | null;
+  segmentId?: string;
+  dataSourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
 }

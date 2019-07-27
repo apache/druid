@@ -25,9 +25,9 @@ describe('compaction dialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
       <CompactionDialog
-        onClose={() => null}
-        onSave={() => null}
-        onDelete={() => null}
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
         datasource={'test'}
         configData={'test'}
       />

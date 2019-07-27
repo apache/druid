@@ -33,7 +33,7 @@ export interface CoordinatorDynamicConfigDialogProps {
 }
 
 export interface CoordinatorDynamicConfigDialogState {
-  dynamicConfig: Record<string, any> | null;
+  dynamicConfig?: Record<string, any>;
   historyRecords: any[];
 }
 
@@ -46,7 +46,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null,
       historyRecords: [],
     };
 
@@ -70,7 +69,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
   }
 
   async getClusterConfig() {
-    let config: Record<string, any> | null = null;
+    let config: Record<string, any> | undefined;
     try {
       const configResp = await axios.get('/druid/coordinator/v1/config');
       config = configResp.data;
@@ -112,7 +111,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
     onClose();
   };
 
-  render() {
+  render(): JSX.Element {
     const { onClose } = this.props;
     const { dynamicConfig, historyRecords } = this.state;
 

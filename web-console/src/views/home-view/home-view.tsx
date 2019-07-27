@@ -34,7 +34,7 @@ export interface CardOptions {
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
-  error?: string | null;
+  error?: string;
 }
 
 export interface HomeViewProps {
@@ -42,28 +42,23 @@ export interface HomeViewProps {
 }
 
 export interface HomeViewState {
-  statusLoading: boolean;
-  status: any;
-  statusError: string | null;
+  versionLoading: boolean;
+  version: string;
+  versionError?: string;
 
   datasourceCountLoading: boolean;
   datasourceCount: number;
-  datasourceCountError: string | null;
+  datasourceCountError?: string;
 
   segmentCountLoading: boolean;
   segmentCount: number;
   unavailableSegmentCount: number;
-  segmentCountError: string | null;
+  segmentCountError?: string;
 
   supervisorCountLoading: boolean;
   runningSupervisorCount: number;
   suspendedSupervisorCount: number;
-  supervisorCountError: string | null;
-
-  lookupsCountLoading: boolean;
-  lookupsCount: number;
-  lookupsCountError: string | null;
-  lookupsUninitialized: boolean;
+  supervisorCountError?: string;
 
   taskCountLoading: boolean;
   runningTaskCount: number;
@@ -71,7 +66,7 @@ export interface HomeViewState {
   successTaskCount: number;
   failedTaskCount: number;
   waitingTaskCount: number;
-  taskCountError: string | null;
+  taskCountError?: string;
 
   serverCountLoading: boolean;
   coordinatorCount: number;
@@ -81,11 +76,16 @@ export interface HomeViewState {
   historicalCount: number;
   middleManagerCount: number;
   peonCount: number;
-  serverCountError: string | null;
+  serverCountError?: string;
+
+  lookupsCountLoading: boolean;
+  lookupsCount: number;
+  lookupsUninitialized: boolean;
+  lookupsCountError?: string;
 }
 
 export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> {
-  private statusQueryManager: QueryManager<null, any>;
+  private versionQueryManager: QueryManager<null, string>;
   private datasourceQueryManager: QueryManager<boolean, any>;
   private segmentQueryManager: QueryManager<boolean, any>;
   private supervisorQueryManager: QueryManager<null, any>;
@@ -96,28 +96,19 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
   constructor(props: HomeViewProps, context: any) {
     super(props, context);
     this.state = {
-      statusLoading: true,
-      status: null,
-      statusError: null,
+      versionLoading: true,
+      version: '',
 
       datasourceCountLoading: false,
       datasourceCount: 0,
-      datasourceCountError: null,
 
       segmentCountLoading: false,
       segmentCount: 0,
       unavailableSegmentCount: 0,
-      segmentCountError: null,
 
       supervisorCountLoading: false,
       runningSupervisorCount: 0,
       suspendedSupervisorCount: 0,
-      supervisorCountError: null,
-
-      lookupsCountLoading: false,
-      lookupsCount: 0,
-      lookupsCountError: null,
-      lookupsUninitialized: false,
 
       taskCountLoading: false,
       runningTaskCount: 0,
@@ -125,7 +116,6 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       successTaskCount: 0,
       failedTaskCount: 0,
       waitingTaskCount: 0,
-      taskCountError: null,
 
       serverCountLoading: false,
       coordinatorCount: 0,
@@ -135,19 +125,22 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       historicalCount: 0,
       middleManagerCount: 0,
       peonCount: 0,
-      serverCountError: null,
+
+      lookupsCountLoading: false,
+      lookupsCount: 0,
+      lookupsUninitialized: false,
     };
 
-    this.statusQueryManager = new QueryManager({
+    this.versionQueryManager = new QueryManager({
       processQuery: async () => {
         const statusResp = await axios.get('/status');
-        return statusResp.data;
+        return statusResp.data.version;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          statusLoading: loading,
-          status: result,
-          statusError: error,
+          versionLoading: loading,
+          version: result,
+          versionError: error,
         });
       },
     });
@@ -169,7 +162,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
         this.setState({
           datasourceCountLoading: loading,
           datasourceCount: result,
-          datasourceCountError: error,
+          datasourceCountError: error || undefined,
         });
       },
     });
@@ -309,7 +302,7 @@ GROUP BY 1`,
       processQuery: async () => {
         const resp = await axios.get('/druid/coordinator/v1/lookups/status');
         const data = resp.data;
-        const lookupsCount = Object.keys(data.__default).length;
+        const lookupsCount = sum(Object.keys(data).map(k => Object.keys(data[k]).length));
         return {
           lookupsCount,
         };
@@ -317,9 +310,9 @@ GROUP BY 1`,
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           lookupsCount: result ? result.lookupsCount : 0,
+          lookupsUninitialized: error === 'Request failed with status code 404',
           lookupsCountLoading: loading,
           lookupsCountError: error,
-          lookupsUninitialized: error === 'Request failed with status code 404',
         });
       },
     });
@@ -328,7 +321,7 @@ GROUP BY 1`,
   componentDidMount(): void {
     const { noSqlMode } = this.props;
 
-    this.statusQueryManager.runQuery(null);
+    this.versionQueryManager.runQuery(null);
     this.datasourceQueryManager.runQuery(noSqlMode);
     this.segmentQueryManager.runQuery(noSqlMode);
     this.supervisorQueryManager.runQuery(null);
@@ -338,7 +331,7 @@ GROUP BY 1`,
   }
 
   componentWillUnmount(): void {
-    this.statusQueryManager.terminate();
+    this.versionQueryManager.terminate();
     this.datasourceQueryManager.terminate();
     this.segmentQueryManager.terminate();
     this.supervisorQueryManager.terminate();
@@ -349,7 +342,7 @@ GROUP BY 1`,
   renderCard(cardOptions: CardOptions): JSX.Element {
     return (
       <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
-        <Card className="status-card" interactive>
+        <Card className="home-view-card" interactive>
           <H5>
             <Icon color="#bfccd5" icon={cardOptions.icon} />
             &nbsp;{cardOptions.title}
@@ -366,7 +359,7 @@ GROUP BY 1`,
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const state = this.state;
 
     return (
@@ -375,9 +368,9 @@ GROUP BY 1`,
           href: UrlBaser.base('/status'),
           icon: IconNames.GRAPH,
           title: 'Status',
-          loading: state.statusLoading,
-          content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
-          error: state.statusError,
+          loading: state.versionLoading,
+          content: state.version ? `Apache Druid is running version ${state.version}` : '',
+          error: state.versionError,
         })}
         {this.renderCard({
           href: '#datasources',
@@ -493,7 +486,7 @@ GROUP BY 1`,
               </p>
             </>
           ),
-          error: !state.lookupsUninitialized ? state.lookupsCountError : null,
+          error: !state.lookupsUninitialized ? state.lookupsCountError : undefined,
         })}
       </div>
     );
