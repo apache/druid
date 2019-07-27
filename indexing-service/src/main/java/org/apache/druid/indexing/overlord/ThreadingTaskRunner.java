@@ -230,10 +230,10 @@ public class ThreadingTaskRunner
                             throw new RuntimeException(t);
                           }
                           finally {
-                            taskReportFileWriter.delete(task.getId());
-                            appenderatorsManager.removeAppenderatorForTask(task.getId());
-
                             try {
+                              taskReportFileWriter.delete(task.getId());
+                              appenderatorsManager.removeAppenderatorForTask(task.getId());
+
                               synchronized (tasks) {
                                 tasks.remove(task.getId());
                                 if (!stopping) {

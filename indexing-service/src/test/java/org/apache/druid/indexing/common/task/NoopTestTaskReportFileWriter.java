@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.TaskReportFileWriter;
 
 import java.util.Map;
 
-public class NoopTestTaskFileWriter implements TaskReportFileWriter
+public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
 {
   @Override
   public void write(String id, Map<String, TaskReport> reports)
