@@ -49,6 +49,7 @@ export type IngestionComboType =
   | 'index:http'
   | 'index:local'
   | 'index:ingestSegment'
+  | 'index:inline'
   | 'index:static-s3'
   | 'index:static-google-blobstore';
 
@@ -86,9 +87,10 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'local':
         case 'http':
         case 'ingestSegment':
+        case 'inline':
         case 'static-s3':
         case 'static-google-blobstore':
-          return `index:${firehose.type}` as any;
+          return `index:${firehose.type}` as IngestionComboType;
       }
   }
 
@@ -105,6 +107,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:ingestSegment':
       return 'Re-ingest from Druid';
+
+    case 'index:inline':
+      return 'Paste data';
 
     case 'index:static-s3':
       return 'Amazon S3';
@@ -727,6 +732,9 @@ export interface Firehose {
   dimensions?: string[];
   metrics?: string[];
   maxInputSegmentBytesPerTask?: number;
+
+  // inline
+  data?: string;
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
@@ -865,6 +873,17 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               to apply to the data as part of querying.
             </p>
           ),
+        },
+      ];
+
+    case 'index:inline':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.data',
+          label: 'Data',
+          type: 'string',
+          info: <p>The data to ingest.</p>,
         },
       ];
 
@@ -1051,6 +1070,10 @@ function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
       if (!firehose.interval) return `must have an 'interval'`;
       break;
 
+    case 'inline':
+      if (!firehose.data) return `must have 'data'`;
+      break;
+
     case 'static-s3':
       if (!nonEmptyArray(firehose.uris) && !nonEmptyArray(firehose.prefixes)) {
         return 'must have at least one uri or prefix';
@@ -1161,6 +1184,7 @@ export function getIoConfigTuningFormFields(
       ];
 
     case 'index:local':
+    case 'index:inline':
       return [];
 
     case 'index:ingestSegment':
@@ -1437,6 +1461,9 @@ export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
 
         case 'ingestSegment':
           return firehose.dataSource;
+
+        case 'inline':
+          return 'inline_data';
       }
 
       return;

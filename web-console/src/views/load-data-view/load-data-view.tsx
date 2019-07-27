@@ -560,6 +560,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:ingestSegment')}
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
+          {this.renderIngestionCard('index:inline')}
           {/* this.renderIngestionCard('example') */}
           {this.renderIngestionCard('other')}
         </div>
@@ -629,6 +630,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
+      case 'index:inline':
+        return (
+          <>
+            <p>Ingest a small amount of data directly from the clipboard.</p>
+          </>
+        );
+
       case 'index:static-s3':
         return <p>Load text based data from Amazon S3.</p>;
 
@@ -691,6 +699,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:http':
       case 'index:local':
       case 'index:ingestSegment':
+      case 'index:inline':
       case 'index:static-s3':
       case 'index:static-google-blobstore':
       case 'kafka':
