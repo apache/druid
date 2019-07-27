@@ -110,6 +110,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
   private final int batchSize;
+  @JsonProperty("limit")
   private final long scanRowsLimit;
   private final DimFilter dimFilter;
   private final List<String> columns;
