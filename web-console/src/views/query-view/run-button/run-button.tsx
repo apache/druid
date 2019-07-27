@@ -47,7 +47,7 @@ export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: ((wrapQuery: boolean) => void) | null;
+  onRun: (wrapQuery: boolean) => void;
   onExplain: () => void;
 }
 
@@ -137,7 +137,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { runeMode, onRun } = this.props;
     const { wrapQuery } = this.state;
 

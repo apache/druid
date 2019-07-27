@@ -28,7 +28,7 @@ export interface LoaderProps {
 export interface LoaderState {}
 
 export class Loader extends React.PureComponent<LoaderProps, LoaderState> {
-  render() {
+  render(): JSX.Element | null {
     const { loadingText, loading } = this.props;
     if (!loading) return null;
 

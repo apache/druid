@@ -40,7 +40,7 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { sideButtonMetadata, isOpen, onClose, title, bottomButtons } = this.props;
 
     return (

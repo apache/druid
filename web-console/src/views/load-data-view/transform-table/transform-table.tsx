@@ -38,7 +38,7 @@ export interface TransformTableProps {
 }
 
 export class TransformTable extends React.PureComponent<TransformTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleData,
       columnFilter,

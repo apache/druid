@@ -14,7 +14,7 @@ exports[`lookups view matches snapshot 1`] = `
     <Blueprint3.Button
       icon="plus"
       onClick={[Function]}
-      text="Add"
+      text="Add lookup"
     />
     <TableColumnSelector
       columns={

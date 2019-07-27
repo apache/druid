@@ -2645,6 +2645,16 @@ license_file_path: licenses/bin/js-tokens.MIT
 
 ---
 
+name: "lodash.compact"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 3.0.1
+license_file_path: licenses/bin/lodash.compact.MIT
+
+---
+
 name: "lodash.debounce"
 license_category: binary
 module: web-console
@@ -2652,6 +2662,16 @@ license_name: MIT License
 copyright: John-David Dalton
 version: 4.0.8
 license_file_path: licenses/bin/lodash.debounce.MIT
+
+---
+
+name: "lodash.escape"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.0.1
+license_file_path: licenses/bin/lodash.escape.MIT
 
 ---
 

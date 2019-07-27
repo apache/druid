@@ -127,7 +127,7 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { active, hideLegacy } = this.props;
     const {
       aboutDialogOpen,
