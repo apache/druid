@@ -143,13 +143,13 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
       {
-        return ImmutableList.copyOf(segmentSet);
+        return ImmutableList.copyOf(SEGMENT_SET);
       }
 
       @Override
       public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
       {
-        return ImmutableList.copyOf(segmentSet);
+        return ImmutableList.copyOf(SEGMENT_SET);
       }
 
       @Override
@@ -467,7 +467,7 @@ public class IngestSegmentFirehoseFactoryTest
   {
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), SEGMENT_SET.size());
     Integer rowcount = 0;
-    try (final Firehose firehose = factory.connect(rowParser, tmpDir)) {
+    try (final Firehose firehose = factory.connect(rowParser, TMP_DIR)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
@@ -497,7 +497,7 @@ public class IngestSegmentFirehoseFactoryTest
     );
     int skipped = 0;
     try (final Firehose firehose =
-             factory.connect(transformSpec.decorate(rowParser), tmpDir)) {
+             factory.connect(transformSpec.decorate(rowParser), TMP_DIR)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         if (row == null) {

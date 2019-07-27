@@ -48,6 +48,7 @@
   <suppress checks="Indentation" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="Indentation" files="ProtoTestEventWrapper.java" />
   <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
+  <suppress checks="ConstantName" files="ProtoTestEventWrapper.java" />
 
   <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 

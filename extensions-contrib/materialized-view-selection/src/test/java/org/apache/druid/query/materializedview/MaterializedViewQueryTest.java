@@ -43,15 +43,15 @@ import java.io.IOException;
 
 public class MaterializedViewQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private DataSourceOptimizer optimizer;
 
   @Before
   public void setUp()
   {
-    jsonMapper.registerSubtypes(new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE));
+    JSON_MAPPER.registerSubtypes(new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE));
     optimizer = EasyMock.createMock(DataSourceOptimizer.class);
-    jsonMapper.setInjectableValues(
+    JSON_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(DataSourceOptimizer.class, optimizer)
@@ -82,8 +82,8 @@ public class MaterializedViewQueryTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
     Assert.assertEquals(query, serdeQuery);
     Assert.assertEquals(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE), query.getDataSource());
     Assert.assertEquals(QueryRunnerTestHelper.ALL_GRAN, query.getGranularity());

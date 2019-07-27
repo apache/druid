@@ -120,7 +120,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
   }
 
-  private static final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
@@ -168,7 +168,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -211,7 +211,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask1 = builder
@@ -286,7 +286,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -381,7 +381,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     // day segmentGranularity
@@ -433,7 +433,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -479,7 +479,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
@@ -536,7 +536,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
