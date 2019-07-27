@@ -45,6 +45,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -231,7 +232,6 @@ public class IntermediaryDataManager
    * addSegment method.
    */
   public void addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentFile)
-      throws IOException
   {
     final Iterator<StorageLocation> iterator = locationIterators.computeIfAbsent(
         supervisorTaskId,
@@ -243,7 +243,7 @@ public class IntermediaryDataManager
   public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
   {
     for (StorageLocation location : shuffleDataLocations) {
-      final File partitionDir = getPartitionDir(location, supervisorTaskId, interval, partitionId);
+      final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, partitionId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
         final File[] segmentFiles = partitionDir.listFiles();
@@ -279,53 +279,65 @@ public class IntermediaryDataManager
       String subTaskId,
       DataSegment segment,
       File segmentFile
-  ) throws IOException
-  {
-    final StorageLocation location = findLocationForSegment(cyclicIterator, numLocations, segment);
-    final File destFile = new File(
-        getPartitionDir(location, supervisorTaskId, segment.getInterval(), segment.getShardSpec().getPartitionNum()),
-        subTaskId
-    );
-    FileUtils.forceMkdirParent(destFile);
-    final long copiedBytes = Files.asByteSource(segmentFile).copyTo(Files.asByteSink(destFile));
-    if (copiedBytes == 0) {
-      throw new IOE(
-          "0 bytes copied after copying a segment file from [%s] to [%s]",
-          segmentFile.getAbsolutePath(),
-          destFile.getAbsolutePath()
-      );
-    }
-    location.addFile(destFile);
-  }
-
-  private static StorageLocation findLocationForSegment(
-      Iterator<StorageLocation> cyclicIterator,
-      int numLocations,
-      DataSegment segment
   )
   {
     for (int i = 0; i < numLocations; i++) {
       final StorageLocation location = cyclicIterator.next();
-      if (location.canHandle(segment)) {
-        return location;
+      final File destFile = location.reserve(
+          getPartitionFilePath(
+              supervisorTaskId,
+              subTaskId,
+              segment.getInterval(),
+              segment.getShardSpec().getPartitionNum()
+          ),
+          segment.getId(),
+          segmentFile.length()
+      );
+      if (destFile != null) {
+        try {
+          FileUtils.forceMkdirParent(destFile);
+          final long copiedBytes = Files.asByteSource(segmentFile).copyTo(Files.asByteSink(destFile));
+          if (copiedBytes == 0) {
+            throw new IOE(
+                "0 bytes copied after copying a segment file from [%s] to [%s]",
+                segmentFile.getAbsolutePath(),
+                destFile.getAbsolutePath()
+            );
+          } else {
+            return;
+          }
+        }
+        catch (IOException e) {
+          // Only log here to try other locations as well.
+          log.warn(e, "Failed to write segmentFile at [%s]", destFile);
+          location.removeFile(segmentFile);
+        }
       }
     }
     throw new ISE("Can't find location to handle segment[%s]", segment);
   }
 
-  private static File getPartitionDir(
-      StorageLocation location,
+  private static String getPartitionFilePath(
+      String supervisorTaskId,
+      String subTaskId,
+      Interval interval,
+      int partitionId
+  )
+  {
+    return Paths.get(getPartitionDir(supervisorTaskId, interval, partitionId), subTaskId).toString();
+  }
+
+  private static String getPartitionDir(
       String supervisorTaskId,
       Interval interval,
       int partitionId
   )
   {
-    return FileUtils.getFile(
-        location.getPath(),
+    return Paths.get(
         supervisorTaskId,
         interval.getStart().toString(),
         interval.getEnd().toString(),
         String.valueOf(partitionId)
-    );
+    ).toString();
   }
 }
