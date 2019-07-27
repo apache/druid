@@ -74,6 +74,17 @@
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <scope>provided</scope>
+      <version>${project.parent.version}</version>
+    </dependency>
     
     <!-- Test Dependencies -->
     <dependency>
