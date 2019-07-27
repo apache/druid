@@ -163,90 +163,82 @@ public class ThreadingTaskRunner
                           );
 
                           try {
-                            final Closer closer = Closer.create();
+                            if (!attemptDir.mkdirs()) {
+                              throw new IOE("Could not create directories: %s", attemptDir);
+                            }
+
+                            final File taskFile = new File(taskDir, "task.json");
+                            final File reportsFile = new File(attemptDir, "report.json");
+                            taskReportFileWriter.add(task.getId(), reportsFile);
+
+                            final ThreadingTaskRunnerWorkItem taskWorkItem;
+                            // time to adjust process holders
+                            synchronized (tasks) {
+                              taskWorkItem = tasks.get(task.getId());
+
+                              if (taskWorkItem == null) {
+                                LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                                throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
+                              }
+
+                              if (taskWorkItem.shutdown) {
+                                throw new IllegalStateException("Task has been shut down!");
+                              }
+                            }
+
+                            if (!taskFile.exists()) {
+                              jsonMapper.writeValue(taskFile, task);
+                            }
+
+                            // This will block for a while. So we append the thread information with more details
+                            final String priorThreadName = Thread.currentThread().getName();
+                            Thread.currentThread()
+                                  .setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+
+                            TaskStatus taskStatus = null;
+                            final TaskToolbox toolbox = toolboxFactory.build(task);
                             try {
-                              if (!attemptDir.mkdirs()) {
-                                throw new IOE("Could not create directories: %s", attemptDir);
-                              }
-
-                              final File taskFile = new File(taskDir, "task.json");
-                              final File reportsFile = new File(attemptDir, "report.json");
-                              taskReportFileWriter.add(task.getId(), reportsFile);
-
-                              final ThreadingTaskRunnerWorkItem taskWorkItem;
-                              // time to adjust process holders
-                              synchronized (tasks) {
-                                taskWorkItem = tasks.get(task.getId());
-
-                                if (taskWorkItem == null) {
-                                  LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
-                                  throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
-                                }
-
-                                if (taskWorkItem.shutdown) {
-                                  throw new IllegalStateException("Task has been shut down!");
-                                }
-                              }
-
-                              if (!taskFile.exists()) {
-                                jsonMapper.writeValue(taskFile, task);
-                              }
-
-                              // This will block for a while. So we append the thread information with more details
-                              final String priorThreadName = Thread.currentThread().getName();
-                              Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
-
-                              TaskStatus taskStatus = null;
-                              final TaskToolbox toolbox = toolboxFactory.build(task);
-                              try {
-                                ListenableFuture<TaskStatus> taskStatusFuture = taskExecutor.submit(
-                                    new Callable<TaskStatus>()
+                              ListenableFuture<TaskStatus> taskStatusFuture = taskExecutor.submit(
+                                  new Callable<TaskStatus>()
+                                  {
+                                    @Override
+                                    public TaskStatus call()
                                     {
-                                      @Override
-                                      public TaskStatus call()
-                                      {
-                                        taskWorkItem.setThread(Thread.currentThread());
-                                        try {
-                                          return task.run(toolbox);
-                                        }
-                                        catch (Exception e) {
-                                          LOGGER.error(e, "Task[%s] exited with exception.", task.getId());
-                                          return null;
-                                        }
-                                        finally {
-                                          taskWorkItem.setThread(null);
-                                        }
+                                      taskWorkItem.setThread(Thread.currentThread());
+                                      try {
+                                        return task.run(toolbox);
+                                      }
+                                      catch (Exception e) {
+                                        LOGGER.error(e, "Task[%s] exited with exception.", task.getId());
+                                        return null;
+                                      }
+                                      finally {
+                                        taskWorkItem.setThread(null);
                                       }
                                     }
-                                );
-                                TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
-                                TaskRunnerUtils.notifyStatusChanged(
-                                    listeners,
-                                    task.getId(),
-                                    TaskStatus.running(task.getId())
-                                );
-                                taskStatus = taskStatusFuture.get();
-                              }
-                              finally {
-                                taskWorkItem.setFinished(true);
-                                Thread.currentThread().setName(priorThreadName);
-                                if (reportsFile.exists()) {
-                                  taskLogPusher.pushTaskReports(task.getId(), reportsFile);
-                                }
-                                if (taskStatus == null) {
-                                  taskStatus = TaskStatus.failure(task.getId());
-                                }
-                              }
-
-                              TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
-                              return taskStatus;
-                            }
-                            catch (Throwable t) {
-                              throw closer.rethrow(t);
+                                  }
+                              );
+                              TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                              TaskRunnerUtils.notifyStatusChanged(
+                                  listeners,
+                                  task.getId(),
+                                  TaskStatus.running(task.getId())
+                              );
+                              taskStatus = taskStatusFuture.get();
                             }
                             finally {
-                              closer.close();
+                              taskWorkItem.setFinished(true);
+                              Thread.currentThread().setName(priorThreadName);
+                              if (reportsFile.exists()) {
+                                taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                              }
+                              if (taskStatus == null) {
+                                taskStatus = TaskStatus.failure(task.getId());
+                              }
                             }
+
+                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
+                            return taskStatus;
                           }
                           catch (Throwable t) {
                             LOGGER.info(t, "Exception caught during execution");
