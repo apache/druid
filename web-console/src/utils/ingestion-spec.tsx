@@ -29,6 +29,8 @@ import { deepGet, deepSet } from './object-change';
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
+const CURRENT_YEAR = new Date().getUTCFullYear();
+
 export interface IngestionSpec {
   type?: IngestionType;
   dataSchema: DataSchema;
@@ -827,7 +829,12 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.interval',
           label: 'Interval',
           type: 'string',
-          placeholder: '2019-01-01/2024-01-01',
+          placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+          suggestions: [
+            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
+            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+            `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
+          ],
           info: (
             <p>
               A String representing ISO-8601 Interval. This defines the time range to fetch the data
