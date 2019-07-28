@@ -502,11 +502,10 @@ public class SegmentLoaderLocalCacheManagerTest
 
   private StorageLocationConfig createStorageLocationConfig(String localPath, long maxSize, boolean writable) throws Exception
   {
-    final StorageLocationConfig locationConfig = new StorageLocationConfig();
+
     final File localStorageFolder = tmpFolder.newFolder(localPath);
     localStorageFolder.setWritable(writable);
-    locationConfig.setPath(localStorageFolder);
-    locationConfig.setMaxSize(maxSize);
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localStorageFolder, maxSize, 1.0);
     return locationConfig;
   }
 

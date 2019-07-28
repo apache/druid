@@ -53,8 +53,8 @@ public class SegmentLoaderConfig
   private Integer numBootstrapThreads = null;
 
   @JsonProperty("locationSelectorStrategy")
-  private StorageLocationSelectorStrategy locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy()
-  ; // default strategy if no strategy is specified in the config
+  private StorageLocationSelectorStrategy locationSelectorStrategy =
+      new LeastBytesUsedStorageLocationSelectorStrategy(); // default strategy if no strategy is specified in the config
 
   @JsonProperty
   private File infoDir = null;
