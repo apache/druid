@@ -34,18 +34,20 @@ import java.util.List;
  */
 public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-  private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-    Longs.compare(right.available(), left.available());
+  private static final Comparator<StorageLocation> COMPARATOR = Comparator
+    .comparingLong(StorageLocation::currSizeBytes);
 
   private ImmutableList<StorageLocation> storageLocations;
 
   @Override
-  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations) {
+  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
+  {
     this.storageLocations = storageLocations;
   }
 
   @Override
-  public StorageLocation select(DataSegment dataSegment) {
+  public StorageLocation select(DataSegment dataSegment, String storageDirStr)
+  {
 
     StorageLocation bestLocation = null;
 
@@ -55,10 +57,12 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
 
     while(locIterator.hasNext()) {
       StorageLocation location = locIterator.next();
-      if(location.canHandle(dataSegment)){
+
+      if (null != location.reserve(storageDirStr, dataSegment)) {
         bestLocation = location;
         break;
       }
+
     }
     return bestLocation;
   }

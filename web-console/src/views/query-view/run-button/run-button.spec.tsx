@@ -27,9 +27,9 @@ describe('run button', () => {
       <RunButton
         runeMode={false}
         queryContext={{}}
-        onQueryContextChange={() => null}
-        onRun={() => null}
-        onExplain={() => null}
+        onQueryContextChange={() => {}}
+        onRun={() => {}}
+        onExplain={() => {}}
       />
     );
 

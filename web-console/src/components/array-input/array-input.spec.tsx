@@ -28,7 +28,7 @@ describe('array input', () => {
         values={['apple', 'banana', 'pear']}
         className={'test'}
         placeholder={'test'}
-        onChange={() => null}
+        onChange={() => {}}
       />
     );
 

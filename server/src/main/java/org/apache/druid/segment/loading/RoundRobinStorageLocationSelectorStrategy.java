@@ -43,7 +43,7 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   }
 
   @Override
-  public StorageLocation select(DataSegment dataSegment) {
+  public StorageLocation select(DataSegment dataSegment, String storageDirStr) {
 
     StorageLocation bestLocation = null;
 
@@ -55,7 +55,7 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
 
       numLocationsToTry--;
 
-      if (loc.canHandle(dataSegment)) {
+      if (null != loc.reserve(storageDirStr, dataSegment)) {
         bestLocation = loc;
         break;
       }

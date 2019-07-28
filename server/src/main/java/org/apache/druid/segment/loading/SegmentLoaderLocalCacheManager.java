@@ -22,7 +22,6 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -166,9 +165,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
-        final File localStorageDir = new File(loc.getPath(), storageDir);
-        loc.addSegmentDir(localStorageDir, segment);
-        return localStorageDir;
+        return new File(loc.getPath(), storageDir);
       }
       finally {
         unlock(segment, lock);
@@ -183,7 +180,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    StorageLocation selectedLoc = strategy.select(segment);
+    StorageLocation selectedLoc = strategy.select(segment, storageDirStr);
 
     if (null != selectedLoc) {
       File storageDir = new File(selectedLoc.getPath(), storageDirStr);
@@ -200,11 +197,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         )
           .addData("location", selectedLoc.getPath().getAbsolutePath())
           .emit();
-
+      }
+      finally {
+        selectedLoc.removeSegmentDir(storageDir, segment);
         cleanupCacheFiles(selectedLoc.getPath(), storageDir);
       }
     }
-
     throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
   }
 
@@ -369,5 +367,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
     return segmentLocks;
+  }
+
+  @VisibleForTesting
+  public List<StorageLocation> getLocations()
+  {
+    return locations;
   }
 }

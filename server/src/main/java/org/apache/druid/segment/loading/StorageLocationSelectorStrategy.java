@@ -42,7 +42,7 @@ public interface StorageLocationSelectorStrategy
    *
    * @return The storage location to load the given segment into or null if no location has the capacity to store the given segment.
    */
-  StorageLocation select(DataSegment dataSegment);
+  StorageLocation select(DataSegment dataSegment, String storageDirStr);
 
   /**
    * Sets the storage locations list  with the supplied storage locations.

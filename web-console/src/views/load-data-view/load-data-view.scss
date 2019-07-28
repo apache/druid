@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .load-data-view {
   height: 100%;
   display: grid;
@@ -26,6 +28,36 @@
     'navi navi'
     'main ctrl'
     'main next';
+
+  &.load-data-continue-view {
+    display: block;
+    text-align: center;
+
+    .spec-card {
+      display: inline-block;
+      width: 480px;
+      height: 100px;
+      margin: 10px;
+      text-align: left;
+
+      .spec-card-icon {
+        vertical-align: top;
+      }
+
+      .spec-card-header {
+        font-size: 25px;
+        line-height: 30px;
+        display: inline-block;
+        vertical-align: top;
+        padding-left: 10px;
+
+        .spec-card-caption {
+          font-size: 15px;
+          line-height: 20px;
+        }
+      }
+    }
+  }
 
   &.welcome {
     .main {

@@ -106,7 +106,7 @@ export class AsyncActionDialog extends React.PureComponent<
     onClose();
   };
 
-  render() {
+  render(): JSX.Element {
     const {
       className,
       icon,

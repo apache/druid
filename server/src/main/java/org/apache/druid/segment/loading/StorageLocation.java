@@ -19,33 +19,51 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * This class is a very simple logical representation of a local path. It keeps track of files stored under the
+ * {@link #path} via {@link #reserve}, so that the total size of stored files doesn't exceed the {@link #maxSizeBytes}
+ * and available space is always kept smaller than {@link #freeSpaceToKeep}.
+ *
+ * This class is thread-safe, so that multiple threads can update its state at the same time.
+ * One example usage is that a historical can use multiple threads to load different segments in parallel
+ * from deep storage.
 */
 public class StorageLocation
 {
   private static final Logger log = new Logger(StorageLocation.class);
 
   private final File path;
-  private final long maxSize;
+  private final long maxSizeBytes;
   private final long freeSpaceToKeep;
+
+  /**
+   * Set of files stored under the {@link #path}.
+   */
+  @GuardedBy("this")
   private final Set<File> files = new HashSet<>();
 
-  private volatile long currSize = 0;
+  /**
+   * Current total size of files in bytes.
+   */
+  @GuardedBy("this")
+  private long currSizeBytes = 0;
 
-  public StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
+  public StorageLocation(File path, long maxSizeBytes, @Nullable Double freeSpacePercent)
   {
     this.path = path;
-    this.maxSize = maxSize;
+    this.maxSizeBytes = maxSizeBytes;
 
     if (freeSpacePercent != null) {
       long totalSpaceInPartition = path.getTotalSpace();
@@ -66,73 +84,86 @@ public class StorageLocation
     return path;
   }
 
-  public long getMaxSize()
-  {
-    return maxSize;
-  }
-
-  /**
-   * Add a new file to this location. The given file argument must be a file rather than directory.
-   */
-  public synchronized void addFile(File file)
-  {
-    if (file.isDirectory()) {
-      throw new ISE("[%s] must be a file. Use a");
-    }
-    if (files.add(file)) {
-      currSize += FileUtils.sizeOf(file);
-    }
-  }
-
-  /**
-   * Add a new segment dir to this location. The segment size is added to currSize.
-   */
-  public synchronized void addSegmentDir(File segmentDir, DataSegment segment)
-  {
-    if (files.add(segmentDir)) {
-      currSize += segment.getSize();
-    }
-  }
-
   /**
    * Remove a segment file from this location. The given file argument must be a file rather than directory.
    */
   public synchronized void removeFile(File file)
   {
     if (files.remove(file)) {
-      currSize -= FileUtils.sizeOf(file);
+      currSizeBytes -= FileUtils.sizeOf(file);
+    } else {
+      log.warn("File[%s] is not found under this location[%s]", file, path);
     }
   }
 
   /**
-   * Remove a segment dir from this location. The segment size is subtracted from currSize.
+   * Remove a segment dir from this location. The segment size is subtracted from currSizeBytes.
    */
   public synchronized void removeSegmentDir(File segmentDir, DataSegment segment)
   {
     if (files.remove(segmentDir)) {
-      currSize -= segment.getSize();
+      currSizeBytes -= segment.getSize();
+    } else {
+      log.warn("SegmentDir[%s] is not found under this location[%s]", segmentDir, path);
     }
   }
 
-  public boolean canHandle(DataSegment segment)
+  /**
+   * Reserves space to store the given segment. The segment size is added to currSizeBytes.
+   * If it succeeds, it returns a file for the given segmentDir in this storage location. Returns null otherwise.
+   */
+  @Nullable
+  public synchronized File reserve(String segmentDir, DataSegment segment)
   {
-    if (available() < segment.getSize()) {
+    return reserve(segmentDir, segment.getId(), segment.getSize());
+  }
+
+  /**
+   * Reserves space to store the given segment.
+   * If it succeeds, it returns a file for the given segmentFilePathToAdd in this storage location.
+   * Returns null otherwise.
+   */
+  @Nullable
+  public synchronized File reserve(String segmentFilePathToAdd, SegmentId segmentId, long segmentSize)
+  {
+    final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
+    if (files.contains(segmentFileToAdd)) {
+      return null;
+    }
+    if (canHandle(segmentId, segmentSize)) {
+      files.add(segmentFileToAdd);
+      currSizeBytes += segmentSize;
+      return segmentFileToAdd;
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * This method is only package-private to use it in unit tests. Production code must not call this method directly.
+   * Use {@link #reserve} instead.
+   */
+  @VisibleForTesting
+  @GuardedBy("this")
+  boolean canHandle(SegmentId segmentId, long segmentSize)
+  {
+    if (availableSizeBytes() < segmentSize) {
       log.warn(
           "Segment[%s:%,d] too large for storage[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
-          segment.getId(), segment.getSize(), getPath(), available()
+          segmentId, segmentSize, getPath(), availableSizeBytes()
       );
       return false;
     }
 
     if (freeSpaceToKeep > 0) {
       long currFreeSpace = path.getFreeSpace();
-      if ((freeSpaceToKeep + segment.getSize()) > currFreeSpace) {
+      if ((freeSpaceToKeep + segmentSize) > currFreeSpace) {
         log.warn(
             "Segment[%s:%,d] too large for storage[%s:%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
-            segment.getId(),
-            segment.getSize(),
+            segmentId,
+            segmentSize,
             getPath(),
-            available(),
+            availableSizeBytes(),
             freeSpaceToKeep,
             currFreeSpace
         );
@@ -143,8 +174,13 @@ public class StorageLocation
     return true;
   }
 
-  public synchronized long available()
+  public synchronized long availableSizeBytes()
   {
-    return maxSize - currSize;
+    return maxSizeBytes - currSizeBytes;
+  }
+
+  public synchronized long currSizeBytes()
+  {
+    return currSizeBytes;
   }
 }
