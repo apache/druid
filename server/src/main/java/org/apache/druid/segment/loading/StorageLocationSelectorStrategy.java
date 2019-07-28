@@ -24,16 +24,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
-
 /**
  * Interface which represents a strategy to select a {@link StorageLocation} from available segment cache locations
  * for segment distribution.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
-  @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
-  @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class)
 })
 public interface StorageLocationSelectorStrategy
 {

@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Comparator;
@@ -35,7 +34,7 @@ import java.util.List;
 public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
   private static final Comparator<StorageLocation> COMPARATOR = Comparator
-    .comparingLong(StorageLocation::currSizeBytes);
+      .comparingLong(StorageLocation::currSizeBytes);
 
   private ImmutableList<StorageLocation> storageLocations;
 
@@ -55,7 +54,7 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
 
     Iterator<StorageLocation> locIterator = locations.iterator();
 
-    while(locIterator.hasNext()) {
+    while (locIterator.hasNext()) {
       StorageLocation location = locIterator.next();
 
       if (null != location.reserve(storageDirStr, dataSegment)) {

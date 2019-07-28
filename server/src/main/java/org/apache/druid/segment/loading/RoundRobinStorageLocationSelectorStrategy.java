@@ -36,14 +36,16 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   private Iterator<StorageLocation> cyclicIterator;
 
   @Override
-  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations) {
+  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
+  {
     this.storageLocations = storageLocations;
     // cyclicIterator remembers the marker internally
     cyclicIterator = Iterators.cycle(storageLocations);
   }
 
   @Override
-  public StorageLocation select(DataSegment dataSegment, String storageDirStr) {
+  public StorageLocation select(DataSegment dataSegment, String storageDirStr)
+  {
 
     StorageLocation bestLocation = null;
 
