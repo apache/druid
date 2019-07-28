@@ -22,7 +22,12 @@ import React from 'react';
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
 
-import { BASIC_FORMAT_VALUES, DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES } from './druid-time';
+import {
+  BASIC_TIME_FORMATS,
+  DATE_ONLY_TIME_FORMATS,
+  DATETIME_TIME_FORMATS,
+  OTHER_TIME_FORMATS,
+} from './druid-time';
 import { deepGet, deepSet } from './object-change';
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
@@ -381,14 +386,18 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     defaultValue: 'auto',
     suggestions: [
       'auto',
-      ...BASIC_FORMAT_VALUES,
+      ...BASIC_TIME_FORMATS,
       {
         group: 'Date and time formats',
-        suggestions: DATE_TIME_FORMAT_VALUES,
+        suggestions: DATETIME_TIME_FORMATS,
       },
       {
         group: 'Date only formats',
-        suggestions: DATE_FORMAT_VALUES,
+        suggestions: DATE_ONLY_TIME_FORMATS,
+      },
+      {
+        group: 'Other time formats',
+        suggestions: OTHER_TIME_FORMATS,
       },
     ],
     isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),

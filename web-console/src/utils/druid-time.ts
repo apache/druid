@@ -18,9 +18,9 @@
 
 import { jodaFormatToRegExp } from './joda-to-regexp';
 
-export const BASIC_FORMAT_VALUES: string[] = ['iso', 'millis', 'posix'];
+export const BASIC_TIME_FORMATS: string[] = ['iso', 'millis', 'posix'];
 
-export const DATE_FORMAT_VALUES: string[] = [
+export const DATE_ONLY_TIME_FORMATS: string[] = [
   'dd/MM/yyyy',
   'MM/dd/yyyy',
   'd/M/yy',
@@ -29,7 +29,7 @@ export const DATE_FORMAT_VALUES: string[] = [
   'M/d/yyyy',
 ];
 
-export const DATE_TIME_FORMAT_VALUES: string[] = [
+export const DATETIME_TIME_FORMATS: string[] = [
   'd/M/yyyy H:mm:ss',
   'M/d/yyyy H:mm:ss',
   'MM/dd/yyyy hh:mm:ss a',
@@ -37,9 +37,12 @@ export const DATE_TIME_FORMAT_VALUES: string[] = [
   'yyyy-MM-dd HH:mm:ss.S',
 ];
 
-const ALL_FORMAT_VALUES: string[] = BASIC_FORMAT_VALUES.concat(
-  DATE_FORMAT_VALUES,
-  DATE_TIME_FORMAT_VALUES,
+export const OTHER_TIME_FORMATS: string[] = ['MMM dd HH:mm:ss'];
+
+const ALL_FORMAT_VALUES: string[] = BASIC_TIME_FORMATS.concat(
+  DATE_ONLY_TIME_FORMATS,
+  DATETIME_TIME_FORMATS,
+  OTHER_TIME_FORMATS,
 );
 
 const EXAMPLE_DATE_ISO = '2015-10-29T23:00:00.000Z';
