@@ -113,7 +113,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
       return 'HTTP(s)';
 
     case 'index:ingestSegment':
-      return 'Re-ingest from Druid';
+      return 'Reindex from Druid';
 
     case 'index:inline':
       return 'Paste data';

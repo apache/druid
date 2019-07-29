@@ -622,10 +622,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:ingestSegment':
         return (
           <>
-            <p>Re-ingest data from existing Druid segments.</p>
+            <p>Reindex data from existing Druid segments.</p>
             <p>
-              Re-ingesting data allows you to filter rows, add, transform, and delete columns, as
-              well as change the partitioning of the data.
+              Reindexing data allows you to filter rows, add, transform, and delete columns, as well
+              as change the partitioning of the data.
             </p>
           </>
         );
