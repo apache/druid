@@ -394,7 +394,7 @@ public class SegmentLoaderLocalCacheManagerTest
   }
 
   @Test
-  public void testSegmentDistributionToMultipleLocations() throws Exception
+  public void testSegmentDistributionUsingRoundRobinStrategy() throws Exception
   {
     final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = createStorageLocationConfig("local_storage_folder", 10000000000L, true);
@@ -406,7 +406,9 @@ public class SegmentLoaderLocalCacheManagerTest
 
     manager = new SegmentLoaderLocalCacheManager(
       TestHelper.getTestIndexIO(),
-      new SegmentLoaderConfig().withLocations(locations),
+      new SegmentLoaderConfig().withLocations(locations).withStorageLocationSelectorStrategy(
+        new RoundRobinStorageLocationSelectorStrategy()
+      ),
       jsonMapper
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");

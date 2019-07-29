@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.utils.JvmUtils;
@@ -122,6 +123,13 @@ public class SegmentLoaderConfig
     retVal.deleteOnRemove = this.deleteOnRemove;
     retVal.infoDir = this.infoDir;
     return retVal;
+  }
+
+  @VisibleForTesting
+  SegmentLoaderConfig withStorageLocationSelectorStrategy(StorageLocationSelectorStrategy strategy)
+  {
+    this.locationSelectorStrategy = strategy;
+    return this;
   }
 
   @Override
