@@ -37,7 +37,7 @@ export interface SupervisorStatisticsTableProps {
 }
 
 export interface SupervisorStatisticsTableState {
-  data: any;
+  data: any[];
   jsonValue: string;
   loading: boolean;
   error: string | null;
@@ -85,15 +85,24 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     this.supervisorStatisticsTableQueryManager.runQuery(null);
   }
 
-  renderCell(data: any) {
+  renderCell(data: {
+    processed?: number;
+    unparseable?: number;
+    thrownAway?: number;
+    processedWithError?: number;
+  }) {
     if (data) {
-      return Object.keys(data).map((key: any) => this.renderData(key, data[key]));
+      // @ts-ignore
+      return Object.keys(data).map(key => this.renderData(key, data[key]));
     }
     return <div> no data found</div>;
   }
 
-  renderData(key: string, data: number) {
-    return <div key={key}>{`${key}: ${data.toFixed(1)}`}</div>;
+  renderData(key: string, data: number | null) {
+    if (data !== null) {
+      return <div key={key}>{`${key}: ${data.toFixed(1)}`}</div>;
+    }
+    return <div> no data found</div>;
   }
 
   renderTable(error: string | null) {
