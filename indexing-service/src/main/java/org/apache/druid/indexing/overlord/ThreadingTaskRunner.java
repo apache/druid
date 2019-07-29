@@ -69,6 +69,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * TaskRunner implemention for the CliIndexer task execution service, which runs all tasks in a single process.
@@ -185,6 +186,7 @@ public class ThreadingTaskRunner
                               }
                             }
 
+
                             if (!taskFile.exists()) {
                               jsonMapper.writeValue(taskFile, task);
                             }
@@ -203,8 +205,7 @@ public class ThreadingTaskRunner
                                 TaskStatus.running(task.getId())
                             );
 
-                            taskWorkItem.setThread(Thread.currentThread());
-
+                            taskWorkItem.setState(RunnerTaskState.RUNNING);
                             try {
                               taskStatus = task.run(toolbox);
                             }
@@ -212,7 +213,7 @@ public class ThreadingTaskRunner
                               LOGGER.error(t, "Exception caught while running the task.");
                             }
                             finally {
-                              taskWorkItem.setFinished(true);
+                              taskWorkItem.setState(RunnerTaskState.NONE);
                               if (taskStatus == null) {
                                 taskStatus = TaskStatus.failure(task.getId());
                               }
@@ -257,10 +258,6 @@ public class ThreadingTaskRunner
                             catch (Exception e) {
                               LOGGER.error(e, "Suppressing exception caught while cleaning up task");
                             }
-
-                            // Make sure we clear the interrupt flag at the end, since this thread will be reused
-                            // for other tasks.
-                            Thread.interrupted();
                           }
                         }
                       }
@@ -322,18 +319,16 @@ public class ThreadingTaskRunner
               taskInfo.getTask().stopGracefully(taskConfig);
 
               try {
-                TaskStatus status = taskInfo.getResult().get(
+                taskInfo.getResult().get(
                     taskConfig.getGracefulShutdownTimeout().toStandardDuration().getMillis(),
                     TimeUnit.MILLISECONDS
                 );
-
-                if (status == null) {
-                  // Note that we can't truly force a hard termination of the task thread externally.
-                  // In the future we may want to add a forceful shutdown method to the Task interface.
-                  if (taskInfo.shutdownFuture != null) {
-                    taskInfo.shutdownFuture.cancel(true);
-                  }
-                }
+              }
+              catch (TimeoutException e) {
+                // Note that we can't truly force a hard termination of the task, interrupting the thread
+                // running the task to hopefully have it stop.
+                // In the future we may want to add a forceful shutdown method to the Task interface.
+                taskInfo.getResult().cancel(true);
               }
               catch (Exception e) {
                 LOGGER.info(e, "Encountered exception while waiting for task [%s] shutdown", taskInfo.getTaskId());
@@ -419,29 +414,13 @@ public class ThreadingTaskRunner
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    synchronized (tasks) {
-      final List<TaskRunnerWorkItem> ret = new ArrayList<>();
-      for (final ThreadingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
-        if (taskWorkItem.getThread() != null) {
-          ret.add(taskWorkItem);
-        }
-      }
-      return ret;
-    }
+    return getTasks(RunnerTaskState.RUNNING);
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
-    synchronized (tasks) {
-      final List<TaskRunnerWorkItem> ret = new ArrayList<>();
-      for (final ThreadingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
-        if (taskWorkItem.getThread() == null) {
-          ret.add(taskWorkItem);
-        }
-      }
-      return ret;
-    }
+    return getTasks(RunnerTaskState.PENDING);
   }
 
   @Nullable
@@ -449,16 +428,19 @@ public class ThreadingTaskRunner
   public RunnerTaskState getRunnerTaskState(String taskId)
   {
     final ThreadingTaskRunnerWorkItem workItem = tasks.get(taskId);
-    if (workItem == null) {
-      return null;
-    } else {
-      if (workItem.getThread() == null) {
-        return RunnerTaskState.PENDING;
-      } else if (!workItem.isFinished()) {
-        return RunnerTaskState.RUNNING;
-      } else {
-        return RunnerTaskState.NONE;
+    return workItem == null ? null : workItem.getState();
+  }
+
+  private Collection<TaskRunnerWorkItem> getTasks(RunnerTaskState state)
+  {
+    synchronized (tasks) {
+      final List<TaskRunnerWorkItem> ret = new ArrayList<>();
+      for (final ThreadingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
+        if (taskWorkItem.getState() == state) {
+          ret.add(taskWorkItem);
+        }
       }
+      return ret;
     }
   }
 
@@ -489,10 +471,9 @@ public class ThreadingTaskRunner
   protected static class ThreadingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
-    private volatile Thread thread;
-    private boolean finished = false;
     private volatile boolean shutdown = false;
-    private ListenableFuture shutdownFuture;
+    private volatile ListenableFuture shutdownFuture;
+    private volatile RunnerTaskState state;
 
     private ThreadingTaskRunnerWorkItem(
         Task task,
@@ -501,6 +482,7 @@ public class ThreadingTaskRunner
     {
       super(task.getId(), statusFuture);
       this.task = task;
+      this.state = RunnerTaskState.PENDING;
     }
 
     public Task getTask()
@@ -526,24 +508,14 @@ public class ThreadingTaskRunner
       return task.getDataSource();
     }
 
-    public void setThread(Thread thread)
+    public RunnerTaskState getState()
     {
-      this.thread = thread;
+      return state;
     }
 
-    public Thread getThread()
+    public void setState(RunnerTaskState state)
     {
-      return thread;
-    }
-
-    public boolean isFinished()
-    {
-      return finished;
-    }
-
-    public void setFinished(boolean finished)
-    {
-      this.finished = finished;
+      this.state = state;
     }
   }
 }
