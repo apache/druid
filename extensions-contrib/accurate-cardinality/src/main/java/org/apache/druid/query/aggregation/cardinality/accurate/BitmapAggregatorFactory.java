@@ -150,10 +150,7 @@ public class BitmapAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new BitmapAggregatorFactory(
-        name,
-        field
-    ));
+    return Collections.singletonList(new BitmapAggregatorFactory(name, field));
   }
 
   @Override

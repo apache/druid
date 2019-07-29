@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.cardinality.accurate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -360,7 +361,7 @@ public class AccurateCardinalityAggregatorTest
   /**
    * 字符串类型的数据
    */
-  private static final List<String[]> values1 = dimensionValues(
+  private static final List<String[]> values1 = stringDimensionValues(
       "a", "b", "c", "a", "a", null, "b", "b", "b", "b", "a", "a", "d"
   );
 
@@ -368,7 +369,7 @@ public class AccurateCardinalityAggregatorTest
    * 11 个值
    * 基数 6;
    */
-  private static final List<Long[]> values2 = dimensionValues(
+  private static final List<Long[]> values2 = longDimensionValues(
       1L,
       2L,
       2L,
@@ -382,7 +383,7 @@ public class AccurateCardinalityAggregatorTest
       6L
   );
 
-  private static final List<Long[]> values3 = dimensionValues(
+  private static final List<Long[]> values3 = longDimensionValues(
       5L,
       5L,
       6L,
@@ -390,7 +391,7 @@ public class AccurateCardinalityAggregatorTest
       7L
   );
 
-  private static List<String[]> dimensionValues(String... values)
+  private static List<String[]> stringDimensionValues(Object... values)
   {
     return Lists.transform(
         Lists.newArrayList(values), new Function<Object, String[]>()
@@ -409,7 +410,7 @@ public class AccurateCardinalityAggregatorTest
     );
   }
 
-  private static List<Long[]> dimensionValues(Long... values)
+  private static List<Long[]> longDimensionValues(Object... values)
   {
     return Lists.transform(
         Lists.newArrayList(values), new Function<Object, Long[]>()
@@ -567,8 +568,8 @@ public class AccurateCardinalityAggregatorTest
   @Test
   public void testCombinRows()
   {
-    List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
-    List<DimensionSelector> selector3 = Lists.newArrayList((DimensionSelector) dim3);
+    List<DimensionSelector> selector2 = ImmutableList.of(dim2);
+    List<DimensionSelector> selector3 = ImmutableList.of(dim3);
 
     LongAccurateCardinalityAggregator agg2 = new LongAccurateCardinalityAggregator(
         dim2,
