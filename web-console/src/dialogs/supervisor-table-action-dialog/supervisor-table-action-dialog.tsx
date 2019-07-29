@@ -32,7 +32,7 @@ interface SupervisorTableActionDialogProps extends IDialogProps {
 }
 
 interface SupervisorTableActionDialogState {
-  activeTab: 'status' | 'payload' | 'stats' | 'history';
+  activeTab: 'status' | 'stats' | 'payload' | 'history';
 }
 
 export class SupervisorTableActionDialog extends React.PureComponent<
@@ -57,16 +57,16 @@ export class SupervisorTableActionDialog extends React.PureComponent<
         onClick: () => this.setState({ activeTab: 'status' }),
       },
       {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' }),
-      },
-      {
         icon: 'chart',
         text: 'Statistics',
         active: activeTab === 'stats',
         onClick: () => this.setState({ activeTab: 'stats' }),
+      },
+      {
+        icon: 'align-left',
+        text: 'Payload',
+        active: activeTab === 'payload',
+        onClick: () => this.setState({ activeTab: 'payload' }),
       },
       {
         icon: 'history',
@@ -91,16 +91,16 @@ export class SupervisorTableActionDialog extends React.PureComponent<
             downloadFilename={`supervisor-status-${supervisorId}.json`}
           />
         )}
-        {activeTab === 'payload' && (
-          <ShowJson
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
-            downloadFilename={`supervisor-payload-${supervisorId}.json`}
-          />
-        )}
         {activeTab === 'stats' && (
           <ShowJson
             endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
             downloadFilename={`supervisor-stats-${supervisorId}.json`}
+          />
+        )}
+        {activeTab === 'payload' && (
+          <ShowJson
+            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
+            downloadFilename={`supervisor-payload-${supervisorId}.json`}
           />
         )}
         {activeTab === 'history' && (

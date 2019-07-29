@@ -67,7 +67,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
     }
   };
 
-  render() {
+  render(): JSX.Element {
     const { endpoint, downloadFilename, defaultValue } = this.props;
     const { jsonValue } = this.state;
     const content = defaultValue ? defaultValue : jsonValue;
