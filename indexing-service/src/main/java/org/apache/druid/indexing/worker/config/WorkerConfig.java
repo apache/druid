@@ -34,24 +34,24 @@ public class WorkerConfig
 {
   @JsonProperty
   @NotNull
-  private final String ip = DruidNode.getDefaultHost();
+  private String ip = DruidNode.getDefaultHost();
 
-  @JsonProperty(defaultValue = "0")
+  @JsonProperty
   @NotNull
-  private String version;
+  private String version = "0";
 
   @JsonProperty
   @Min(1)
-  private final int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
+  private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
-  @JsonProperty(defaultValue = "60")
-  private long intermediaryPartitionDiscoveryPeriodSec;
+  @JsonProperty
+  private long intermediaryPartitionDiscoveryPeriodSec = 60L;
 
-  @JsonProperty(defaultValue = "300")
-  private long intermediaryPartitionCleanupPeriodSec;
+  @JsonProperty
+  private long intermediaryPartitionCleanupPeriodSec = 300L;
 
-  @JsonProperty(defaultValue = "P1D")
-  private Period intermediaryPartitionTimeout;
+  @JsonProperty
+  private Period intermediaryPartitionTimeout = new Period("P1D");
 
   @Nonnull
   public String getIp()
