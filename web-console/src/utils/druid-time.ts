@@ -18,7 +18,7 @@
 
 import { jodaFormatToRegExp } from './joda-to-regexp';
 
-export const BASIC_TIME_FORMATS: string[] = ['iso', 'millis', 'posix'];
+export const BASIC_TIME_FORMATS: string[] = ['iso', 'posix', 'millis', 'micro', 'nano'];
 
 export const DATE_ONLY_TIME_FORMATS: string[] = [
   'dd/MM/yyyy',
@@ -45,33 +45,37 @@ const ALL_FORMAT_VALUES: string[] = BASIC_TIME_FORMATS.concat(
   OTHER_TIME_FORMATS,
 );
 
-const EXAMPLE_DATE_ISO = '2015-10-29T23:00:00.000Z';
-const EXAMPLE_DATE_VALUE = Date.parse(EXAMPLE_DATE_ISO);
-const MIN_MILLIS = 3.15576e11; // 3 years in millis, so Tue Jan 01 1980
-const MAX_MILLIS = EXAMPLE_DATE_VALUE * 10;
-const MIN_POSIX = MIN_MILLIS / 1000;
-const MAX_POSIX = MAX_MILLIS / 1000;
+const MIN_POSIX = 3.15576e8; // 3 years in posix, so Tue Jan 01 1980
+const MIN_MILLIS = MIN_POSIX * 1000;
+const MIN_MICRO = MIN_MILLIS * 1000;
+const MIN_NANO = MIN_MICRO * 1000;
+const MAX_NANO = MIN_NANO * 1000;
 
 // copied from http://goo.gl/0ejHHW with small tweak to make dddd not pass on its own
 // tslint:disable-next-line:max-line-length
 export const ISO_MATCHER = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))(T((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)$/;
 
 export function timeFormatMatches(format: string, value: string | number): boolean {
-  if (format === 'iso') {
-    return ISO_MATCHER.test(String(value));
-  }
+  const absValue = Math.abs(Number(value));
+  switch (format) {
+    case 'iso':
+      return ISO_MATCHER.test(String(value));
 
-  if (format === 'millis') {
-    const absValue = Math.abs(Number(value));
-    return MIN_MILLIS < absValue && absValue < MAX_MILLIS;
-  }
+    case 'posix':
+      return MIN_POSIX < absValue && absValue < MIN_MILLIS;
 
-  if (format === 'posix') {
-    const absValue = Math.abs(Number(value));
-    return MIN_POSIX < absValue && absValue < MAX_POSIX;
-  }
+    case 'millis':
+      return MIN_MILLIS < absValue && absValue < MIN_MICRO;
 
-  return jodaFormatToRegExp(format).test(String(value));
+    case 'micro':
+      return MIN_MICRO < absValue && absValue < MIN_NANO;
+
+    case 'nano':
+      return MIN_NANO < absValue && absValue < MAX_NANO;
+
+    default:
+      return jodaFormatToRegExp(format).test(String(value));
+  }
 }
 
 export function possibleDruidFormatForValues(values: any[]): string | null {
