@@ -25,24 +25,21 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NoopAggregator;
-import org.apache.druid.query.aggregation.NoopBufferAggregator;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.Collector;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.CollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.types.AccurateCardinalityAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.cardinality.accurate.types.AccurateCardinalityAggregatorColumnSelectorStrategyFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollector;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
@@ -52,25 +49,24 @@ import java.util.List;
 
 public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
 {
-  private static final AccurateCardinalityAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
-      new AccurateCardinalityAggregatorColumnSelectorStrategyFactory();
-
-  private static final CollectorFactory DEFAULT_BITMAP_FACTORY = new RoaringBitmapCollectorFactory();
+  private static final LongBitmapCollectorFactory DEFAULT_BITMAP_FACTORY = new LongRoaringBitmapCollectorFactory();
 
   private final String name;
   private final DimensionSpec field;
-  private final CollectorFactory collectorFactory;
+  private final LongBitmapCollectorFactory longBitmapCollectorFactory;
 
   @JsonCreator
   public AccurateCardinalityAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("field") final DimensionSpec field,
-      @JsonProperty("collectorFactory") CollectorFactory collectorFactory
+      @JsonProperty("longBitmapCollectorFactory") LongBitmapCollectorFactory longBitmapCollectorFactory
   )
   {
     this.name = name;
     this.field = field;
-    this.collectorFactory = collectorFactory == null ? DEFAULT_BITMAP_FACTORY : collectorFactory;
+    this.longBitmapCollectorFactory = longBitmapCollectorFactory == null
+                                      ? DEFAULT_BITMAP_FACTORY
+                                      : longBitmapCollectorFactory;
   }
 
   public AccurateCardinalityAggregatorFactory(
@@ -83,11 +79,20 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
 
   public AccurateCardinalityAggregatorFactory(
       String name,
-      String field,
-      CollectorFactory collectorFactory
+      String field
   )
   {
-    this(name, new DefaultDimensionSpec(field, field, ValueType.LONG), collectorFactory);
+    this(name, field, DEFAULT_BITMAP_FACTORY);
+  }
+
+
+  public AccurateCardinalityAggregatorFactory(
+      String name,
+      String field,
+      LongBitmapCollectorFactory longBitmapCollectorFactory
+  )
+  {
+    this(name, new DefaultDimensionSpec(field, field, ValueType.LONG), longBitmapCollectorFactory);
   }
 
   @JsonProperty
@@ -97,46 +102,66 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
-  public CollectorFactory getCollectorFactory()
+  public LongBitmapCollectorFactory getLongBitmapCollectorFactory()
   {
-    return collectorFactory;
+    return longBitmapCollectorFactory;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnFactory)
   {
-    ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy> selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
-        STRATEGY_FACTORY,
-        field,
-        columnFactory
-    );
-    if (selectorPlus == null) {
-      return NoopAggregator.instance();
+    return factorizeInternal(columnFactory, true);
+  }
+
+  private BaseAccurateCardinalityAggregator factorizeInternal(ColumnSelectorFactory columnFactory, boolean onHeap)
+  {
+    if (field == null || field.getDimension() == null) {
+      return new NoopAccurateCardinalityAggregator(longBitmapCollectorFactory, onHeap);
     }
-    return new AccurateCardinalityAggregator(name, selectorPlus, collectorFactory.makeEmptyCollector());
+    ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
+
+    if (capabilities != null) {
+      ValueType type = capabilities.getType();
+      switch (type) {
+        case LONG:
+          return new LongAccurateCardinalityAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              longBitmapCollectorFactory,
+              onHeap
+          );
+        default:
+          throw new IAE(
+              "Cannot create accurate cardinality %s for invalid column type [%s]",
+              onHeap ? "aggregator" : "buffer aggregator",
+              type
+          );
+      }
+    } else {
+      ColumnValueSelector columnValueSelector = columnFactory.makeColumnValueSelector(field.getDimension());
+      if (columnValueSelector instanceof NilColumnValueSelector) {
+        return new NoopAccurateCardinalityAggregator(longBitmapCollectorFactory, onHeap);
+      }
+      return new ObjectAccurateCardinalityAggregator(
+          columnFactory.makeColumnValueSelector(field.getDimension()),
+          longBitmapCollectorFactory,
+          onHeap
+      );
+    }
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy> selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
-        STRATEGY_FACTORY,
-        field,
-        columnFactory
-    );
-    if (selectorPlus == null) {
-      return NoopBufferAggregator.instance();
-    }
-    return new AccurateCardinalityBufferAggregator(selectorPlus, collectorFactory);
+    return factorizeInternal(columnFactory, false);
   }
 
   @Override
   public Comparator getComparator()
   {
-    return new Comparator<Collector>()
+    return new Comparator<LongBitmapCollector>()
     {
       @Override
-      public int compare(Collector c1, Collector c2)
+      public int compare(LongBitmapCollector c1, LongBitmapCollector c2)
       {
         return c1.compareTo(c2);
       }
@@ -152,8 +177,8 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
     if (lhs == null) {
       return rhs;
     }
-    Collector lhsCollector = (Collector) lhs;
-    return lhsCollector.fold((Collector) rhs);
+    LongBitmapCollector lhsLongBitmapCollector = (LongBitmapCollector) lhs;
+    return lhsLongBitmapCollector.fold((LongBitmapCollector) rhs);
   }
 
   @Override
@@ -172,7 +197,7 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
           @Override
           public AggregatorFactory apply(DimensionSpec input)
           {
-            return new AccurateCardinalityAggregatorFactory(input.getOutputName(), input, collectorFactory);
+            return new AccurateCardinalityAggregatorFactory(input.getOutputName(), input, longBitmapCollectorFactory);
           }
         }
     );
@@ -189,11 +214,11 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
       // Be conservative, don't assume we own this buffer.
       buffer = ((ByteBuffer) object).duplicate();
     } else if (object instanceof String) {
-      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+      buffer = ByteBuffer.wrap(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
     } else {
       return object;
     }
-    return collectorFactory.makeCollector(buffer);
+    return longBitmapCollectorFactory.makeCollector(buffer);
   }
 
   @Override
@@ -202,7 +227,7 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
     if (object == null) {
       return 0;
     }
-    return ((Collector) object).getCardinality();
+    return ((LongBitmapCollector) object).getCardinality();
   }
 
   @JsonProperty
@@ -227,7 +252,11 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return 1024;
+    /* LongAccurateCardinalityAggregator and BitmapAggregator actrually use onheap LongBitmapCollector to collect long-type dimension value.
+       It just use the buffer an offset in buffer to locate according LongBitmapCollector, but not store data in it.
+       So here just return 1.
+    */
+    return 1;
   }
 
   @Override
@@ -253,12 +282,12 @@ public class AccurateCardinalityAggregatorFactory extends AggregatorFactory
     AccurateCardinalityAggregatorFactory factory = (AccurateCardinalityAggregatorFactory) o;
     return Objects.equal(name, factory.name) &&
            Objects.equal(field, factory.field) &&
-           Objects.equal(collectorFactory, factory.collectorFactory);
+           Objects.equal(longBitmapCollectorFactory, factory.longBitmapCollectorFactory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(name, field, collectorFactory);
+    return Objects.hashCode(name, field, longBitmapCollectorFactory);
   }
 }

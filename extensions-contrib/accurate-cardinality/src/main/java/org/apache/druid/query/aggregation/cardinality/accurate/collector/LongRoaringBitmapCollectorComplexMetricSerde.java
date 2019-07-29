@@ -31,22 +31,21 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import java.nio.ByteBuffer;
 
-public class RoaringBitmapCollectorComplexMetricSerde extends ComplexMetricSerde
+public class LongRoaringBitmapCollectorComplexMetricSerde extends ComplexMetricSerde
 {
+  private LongBitmapCollectorFactory longBitmapCollectorFactory;
 
-  private CollectorFactory collectorFactory;
-
-  public RoaringBitmapCollectorComplexMetricSerde(CollectorFactory collectorFactory)
+  public LongRoaringBitmapCollectorComplexMetricSerde(LongBitmapCollectorFactory longBitmapCollectorFactory)
   {
-    this.collectorFactory = collectorFactory;
+    this.longBitmapCollectorFactory = longBitmapCollectorFactory;
   }
 
-  private static Ordering<Collector> comparator = new Ordering<Collector>()
+  private static Ordering<LongBitmapCollector> comparator = new Ordering<LongBitmapCollector>()
   {
     @Override
     public int compare(
-        Collector arg1,
-        Collector arg2
+        LongBitmapCollector arg1,
+        LongBitmapCollector arg2
     )
     {
       return arg1.toByteBuffer().compareTo(arg2.toByteBuffer());
@@ -65,19 +64,19 @@ public class RoaringBitmapCollectorComplexMetricSerde extends ComplexMetricSerde
     return new ComplexMetricExtractor()
     {
       @Override
-      public Class<RoaringBitmapCollector> extractedClass()
+      public Class<LongRoaringBitmapCollector> extractedClass()
       {
-        return RoaringBitmapCollector.class;
+        return LongRoaringBitmapCollector.class;
       }
 
       @Override
-      public RoaringBitmapCollector extractValue(InputRow inputRow, String metricName)
+      public LongRoaringBitmapCollector extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object instanceof RoaringBitmapCollector) {
-          return (RoaringBitmapCollector) object;
+        if (object instanceof LongRoaringBitmapCollector) {
+          return (LongRoaringBitmapCollector) object;
         }
-        RoaringBitmapCollector collector = (RoaringBitmapCollector) collectorFactory.makeEmptyCollector();
+        LongRoaringBitmapCollector collector = (LongRoaringBitmapCollector) longBitmapCollectorFactory.makeEmptyCollector();
         collector.add(Long.valueOf(object.toString()));
         return collector;
       }
@@ -94,26 +93,26 @@ public class RoaringBitmapCollectorComplexMetricSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<RoaringBitmapCollector>()
+    return new ObjectStrategy<LongRoaringBitmapCollector>()
     {
 
       @Override
       public int compare(
-          RoaringBitmapCollector o1,
-          RoaringBitmapCollector o2
+          LongRoaringBitmapCollector o1,
+          LongRoaringBitmapCollector o2
       )
       {
         return comparator.compare(o1, o2);
       }
 
       @Override
-      public Class<? extends RoaringBitmapCollector> getClazz()
+      public Class<? extends LongRoaringBitmapCollector> getClazz()
       {
-        return RoaringBitmapCollector.class;
+        return LongRoaringBitmapCollector.class;
       }
 
       @Override
-      public RoaringBitmapCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public LongRoaringBitmapCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
 
@@ -121,11 +120,11 @@ public class RoaringBitmapCollectorComplexMetricSerde extends ComplexMetricSerde
         byte[] bytes = new byte[readOnlyBuffer.remaining()];
         readOnlyBuffer.get(bytes, 0, numBytes);
 
-        return RoaringBitmapCollector.deserialize(bytes);
+        return LongRoaringBitmapCollector.deserialize(bytes);
       }
 
       @Override
-      public byte[] toBytes(RoaringBitmapCollector collector)
+      public byte[] toBytes(LongRoaringBitmapCollector collector)
       {
         if (collector == null) {
           return new byte[]{};

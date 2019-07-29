@@ -17,19 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.accurate.types;
+package org.apache.druid.query.aggregation.cardinality.accurate.bitmap64;
 
+import java.nio.ByteBuffer;
 
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.data.IndexedInts;
-
-public class StringAccurateCardinalityAggregatorColumnSelectorStrategy
-    implements AccurateCardinalityAggregatorColumnSelectorStrategy<DimensionSelector>
+public interface LongBitmapFactory
 {
-  @Override
-  public long getUniversalUniqueCode(DimensionSelector dimSelector)
-  {
-    IndexedInts row = dimSelector.getRow();
-    return (long) (row.get(0));
-  }
+  LongMutableBitmap makeEmptyMutableBitmap();
+
+  LongImmutableBitmap makeEmptyImmutableBitmap();
+
+  LongImmutableBitmap makeImmutableBitmap(LongMutableBitmap mutableBitmap);
+
+  LongMutableBitmap mapMutableBitmap(ByteBuffer b);
 }

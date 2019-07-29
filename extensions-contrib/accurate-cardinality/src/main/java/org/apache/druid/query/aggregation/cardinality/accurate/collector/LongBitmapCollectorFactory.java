@@ -17,17 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.accurate.types;
+package org.apache.druid.query.aggregation.cardinality.accurate.collector;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import java.nio.ByteBuffer;
 
-public class LongAccurateCardinalityAggregatorColumnSelectorStrategy
-    implements AccurateCardinalityAggregatorColumnSelectorStrategy<BaseLongColumnValueSelector>
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LongRoaringBitmapCollectorFactory.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "roaring", value = LongRoaringBitmapCollectorFactory.class)
+})
+public interface LongBitmapCollectorFactory
 {
-  @Override
-  public long getUniversalUniqueCode(BaseLongColumnValueSelector dimSelector)
-  {
-    return dimSelector.getLong();
-  }
+  LongBitmapCollector makeEmptyCollector();
+
+  LongBitmapCollector makeCollector(ByteBuffer buffer);
 }

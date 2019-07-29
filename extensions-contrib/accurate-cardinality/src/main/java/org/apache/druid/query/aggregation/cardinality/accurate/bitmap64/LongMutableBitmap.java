@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.cardinality.accurate.bitmap64;
 /**
  * This class is meant to represent a simple wrapper around a bitmap class.
  */
-public interface MutableBitmap extends ImmutableBitmap
+public interface LongMutableBitmap extends LongImmutableBitmap
 {
   /**
    * Empties the content of this bitmap.
@@ -37,7 +37,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  void or(MutableBitmap mutableBitmap);
+  void or(LongMutableBitmap mutableBitmap);
 
   /**
    * Compute the bitwise-and of this bitmap with another bitmap. The current
@@ -47,7 +47,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  void and(MutableBitmap mutableBitmap);
+  void and(LongMutableBitmap mutableBitmap);
 
 
   /**
@@ -58,7 +58,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  void xor(MutableBitmap mutableBitmap);
+  void xor(LongMutableBitmap mutableBitmap);
 
   /**
    * Compute the bitwise-andNot of this bitmap with another bitmap. The current
@@ -68,7 +68,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  void andNot(MutableBitmap mutableBitmap);
+  void andNot(LongMutableBitmap mutableBitmap);
 
   /**
    * Return the size in bytes for the purpose of serialization to a ByteBuffer.

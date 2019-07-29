@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.junit.Assert;
@@ -150,7 +150,7 @@ public class AccurateCardinalityAggGroupbyTest
     assertAggregatorFactorySerde(new AccurateCardinalityAggregatorFactory(
         "name",
         "fieldName",
-        new RoaringBitmapCollectorFactory()
+        new LongRoaringBitmapCollectorFactory()
     ));
   }
 
@@ -168,7 +168,7 @@ public class AccurateCardinalityAggGroupbyTest
   @Test
   public void testCacheKey()
   {
-    RoaringBitmapCollectorFactory collectorFactory = new RoaringBitmapCollectorFactory();
+    LongRoaringBitmapCollectorFactory collectorFactory = new LongRoaringBitmapCollectorFactory();
     final AccurateCardinalityAggregatorFactory factory1 = new AccurateCardinalityAggregatorFactory(
         "name",
         "fieldName",

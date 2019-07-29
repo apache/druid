@@ -25,11 +25,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.CollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollector;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorComplexMetricSerde;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorJsonSerializer;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollector;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorComplexMetricSerde;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorJsonSerializer;
 import org.apache.druid.query.aggregation.cardinality.accurate.sql.AccurateCardinalitySqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -42,8 +42,7 @@ public class AccurateCardinalityModule implements DruidModule
   public static final String BITMAP_COLLECTOR = "bitmapCollector";
   private static final String BITMPA_AGG = "bitmapAgg";
 
-  private static final CollectorFactory DEFAULT_BITMAP_FACTORY = new RoaringBitmapCollectorFactory();
-
+  private static final LongBitmapCollectorFactory DEFAULT_BITMAP_FACTORY = new LongRoaringBitmapCollectorFactory();
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -55,8 +54,8 @@ public class AccurateCardinalityModule implements DruidModule
                 new NamedType(BitmapAggregatorFactory.class, BITMPA_AGG)
             )
             .addSerializer(
-                RoaringBitmapCollector.class,
-                new RoaringBitmapCollectorJsonSerializer()
+                LongRoaringBitmapCollector.class,
+                new LongRoaringBitmapCollectorJsonSerializer()
             )
     );
   }
@@ -67,7 +66,7 @@ public class AccurateCardinalityModule implements DruidModule
     if (ComplexMetrics.getSerdeForType(BITMAP_COLLECTOR) == null) {
       ComplexMetrics.registerSerde(
           BITMAP_COLLECTOR,
-          new RoaringBitmapCollectorComplexMetricSerde(DEFAULT_BITMAP_FACTORY)
+          new LongRoaringBitmapCollectorComplexMetricSerde(DEFAULT_BITMAP_FACTORY)
       );
     }
 

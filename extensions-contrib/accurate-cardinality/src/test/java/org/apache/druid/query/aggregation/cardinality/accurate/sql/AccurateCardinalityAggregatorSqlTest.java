@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.cardinality.accurate.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -228,7 +229,7 @@ public class AccurateCardinalityAggregatorSqlTest
         walker,
         plannerConfig
     );
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new AccurateCardinalitySqlAggregator()),
         ImmutableSet.of()
@@ -256,16 +257,17 @@ public class AccurateCardinalityAggregatorSqlTest
   @Test
   public void testAccurateCardinalityAggregatorOnLongs() throws Exception
   {
-    final DruidPlanner planner = plannerFactory.createPlanner(QUERY_CONTEXT_DEFAULT);
+    final DruidPlanner planner = plannerFactory.createPlanner(
+        QUERY_CONTEXT_DEFAULT,
+        NoopEscalator.getInstance()
+                     .createEscalatedAuthenticationResult()
+    );
     final String sql = "SELECT\n"
                        + "ACCURATE_CARDINALITY(clientid),\n"
                        + "ACCURATE_CARDINALITY(clientid) FILTER(WHERE dim1 = 'abc')\n"
                        + "FROM foo";
 
-    final PlannerResult plannerResult = planner.plan(
-        sql,
-        NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-    );
+    final PlannerResult plannerResult = planner.plan(sql);
     final List<Object[]> results = plannerResult.run().toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
@@ -281,29 +283,19 @@ public class AccurateCardinalityAggregatorSqlTest
     }
   }
 
-  @Test
+  @Test(expected = ValidationException.class)
   public void testAccurateCardinalityAggregatorOnString() throws Exception
   {
-    final DruidPlanner planner = plannerFactory.createPlanner(QUERY_CONTEXT_DEFAULT);
+    final DruidPlanner planner = plannerFactory.createPlanner(
+        QUERY_CONTEXT_DEFAULT,
+        NoopEscalator.getInstance()
+                     .createEscalatedAuthenticationResult()
+    );
     final String sql = "SELECT\n"
                        + "ACCURATE_CARDINALITY(dim1)\n"
                        + "FROM foo";
 
-    final PlannerResult plannerResult = planner.plan(
-        sql,
-        NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-    );
-    final List<Object[]> results = plannerResult.run().toList();
-    final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{
-            6L
-        }
-    );
-
-    Assert.assertEquals(expectedResults.size(), results.size());
-
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    final PlannerResult plannerResult = planner.plan(sql);
+    plannerResult.run().toList();
   }
 }

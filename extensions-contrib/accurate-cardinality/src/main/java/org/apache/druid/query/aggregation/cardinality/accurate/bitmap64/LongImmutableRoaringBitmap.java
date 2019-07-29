@@ -28,16 +28,17 @@ import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 
-public class ImmutableRoaringBitmap implements ImmutableBitmap
+
+public class LongImmutableRoaringBitmap implements LongImmutableBitmap
 {
   protected InnerRoaringBitmap64 underlyingBitmap;
 
-  public ImmutableRoaringBitmap()
+  public LongImmutableRoaringBitmap()
   {
     this(new InnerRoaringBitmap64());
   }
 
-  public ImmutableRoaringBitmap(InnerRoaringBitmap64 underlyingBitmap)
+  public LongImmutableRoaringBitmap(InnerRoaringBitmap64 underlyingBitmap)
   {
     this.underlyingBitmap = underlyingBitmap;
   }
@@ -81,10 +82,7 @@ public class ImmutableRoaringBitmap implements ImmutableBitmap
 
   static class InnerRoaringBitmap64 extends Roaring64NavigableMap
   {
-    // onheap
     private static BitmapDataProviderSupplier supplier = new RoaringBitmapSupplier();
-    // offheap
-    // private static BitmapDataProviderSupplier supplier = new MutableRoaringBitmapSupplier();
 
     public InnerRoaringBitmap64()
     {

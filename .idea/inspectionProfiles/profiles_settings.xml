@@ -24,9 +24,9 @@
       </option>
     </info>
     <list size="9">
-      <item index="0" class="java.lang.String" itemvalue="INFORMATION" />
-      <item index="1" class="java.lang.String" itemvalue="Non-TeamCity Error" />
-      <item index="2" class="java.lang.String" itemvalue="Non-TeamCity Warning" />
+      <item index="0" class="java.lang.String" itemvalue="Non-TeamCity Error" />
+      <item index="1" class="java.lang.String" itemvalue="Non-TeamCity Warning" />
+      <item index="2" class="java.lang.String" itemvalue="UNUSED ENTRY" />
       <item index="3" class="java.lang.String" itemvalue="TYPO" />
       <item index="4" class="java.lang.String" itemvalue="SERVER PROBLEM" />
       <item index="5" class="java.lang.String" itemvalue="WEAK WARNING" />

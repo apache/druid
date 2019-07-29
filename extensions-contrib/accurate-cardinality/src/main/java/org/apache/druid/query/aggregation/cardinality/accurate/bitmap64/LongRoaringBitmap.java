@@ -26,14 +26,14 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-public class RoaringBitmap extends ImmutableRoaringBitmap implements MutableBitmap
+public class LongRoaringBitmap extends LongImmutableRoaringBitmap implements LongMutableBitmap
 {
-  public RoaringBitmap()
+  public LongRoaringBitmap()
   {
     super();
   }
 
-  public RoaringBitmap(InnerRoaringBitmap64 underlyingBitmap)
+  public LongRoaringBitmap(InnerRoaringBitmap64 underlyingBitmap)
   {
     super(underlyingBitmap);
   }
@@ -45,33 +45,33 @@ public class RoaringBitmap extends ImmutableRoaringBitmap implements MutableBitm
   }
 
   @Override
-  public void or(MutableBitmap mutableBitmap)
+  public void or(LongMutableBitmap mutableBitmap)
   {
-    RoaringBitmap other = (RoaringBitmap) mutableBitmap;
+    LongRoaringBitmap other = (LongRoaringBitmap) mutableBitmap;
     Roaring64NavigableMap unwrappedOtherBitmap = other.underlyingBitmap;
     this.underlyingBitmap.or(unwrappedOtherBitmap);
   }
 
   @Override
-  public void and(MutableBitmap mutableBitmap)
+  public void and(LongMutableBitmap mutableBitmap)
   {
-    RoaringBitmap other = (RoaringBitmap) mutableBitmap;
+    LongRoaringBitmap other = (LongRoaringBitmap) mutableBitmap;
     Roaring64NavigableMap unwrappedOtherBitmap = other.underlyingBitmap;
     this.underlyingBitmap.and(unwrappedOtherBitmap);
   }
 
   @Override
-  public void xor(MutableBitmap mutableBitmap)
+  public void xor(LongMutableBitmap mutableBitmap)
   {
-    RoaringBitmap other = (RoaringBitmap) mutableBitmap;
+    LongRoaringBitmap other = (LongRoaringBitmap) mutableBitmap;
     Roaring64NavigableMap unwrappedOtherBitmap = other.underlyingBitmap;
     this.underlyingBitmap.xor(unwrappedOtherBitmap);
   }
 
   @Override
-  public void andNot(MutableBitmap mutableBitmap)
+  public void andNot(LongMutableBitmap mutableBitmap)
   {
-    RoaringBitmap other = (RoaringBitmap) mutableBitmap;
+    LongRoaringBitmap other = (LongRoaringBitmap) mutableBitmap;
     Roaring64NavigableMap unwrappedOtherBitmap = other.underlyingBitmap;
     this.underlyingBitmap.andNot(unwrappedOtherBitmap);
   }
@@ -94,13 +94,13 @@ public class RoaringBitmap extends ImmutableRoaringBitmap implements MutableBitm
     this.underlyingBitmap.removeLong(entry);
   }
 
-  public ImmutableRoaringBitmap toImmutableBitmap()
+  public LongImmutableRoaringBitmap toImmutableBitmap()
   {
     InnerRoaringBitmap64 mrb = this.underlyingBitmap.copy();
-    return new ImmutableRoaringBitmap(mrb);
+    return new LongImmutableRoaringBitmap(mrb);
   }
 
-  public static RoaringBitmap deserializeFromByteArray(byte[] bytes)
+  public static LongRoaringBitmap deserializeFromByteArray(byte[] bytes)
   {
     InnerRoaringBitmap64 innerRoaringBitmap64 = new InnerRoaringBitmap64();
     try {
@@ -109,7 +109,7 @@ public class RoaringBitmap extends ImmutableRoaringBitmap implements MutableBitm
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
-    return new RoaringBitmap(innerRoaringBitmap64);
+    return new LongRoaringBitmap(innerRoaringBitmap64);
   }
 
 }

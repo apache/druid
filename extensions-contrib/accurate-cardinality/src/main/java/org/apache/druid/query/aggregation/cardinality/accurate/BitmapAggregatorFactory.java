@@ -21,8 +21,6 @@ package org.apache.druid.query.aggregation.cardinality.accurate;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -31,16 +29,18 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NoopAggregator;
-import org.apache.druid.query.aggregation.NoopBufferAggregator;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.Collector;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.CollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollector;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollector;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollector;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -50,47 +50,71 @@ import java.util.List;
 
 public class BitmapAggregatorFactory extends AggregatorFactory
 {
-  private static final CollectorFactory DEFAULT_BITMAP_FACTORY = new RoaringBitmapCollectorFactory();
+  private static final LongBitmapCollectorFactory DEFAULT_BITMAP_FACTORY = new LongRoaringBitmapCollectorFactory();
 
   private final String name;
-  private final String fieldName;
+  private final DimensionSpec field;
+
+  public BitmapAggregatorFactory(String name, String field)
+  {
+    this(name, DefaultDimensionSpec.of(field));
+  }
 
   @JsonCreator
   public BitmapAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName
+      @JsonProperty("fieldName") DimensionSpec field
   )
   {
     this.name = name;
-    this.fieldName = fieldName;
+    this.field = field;
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory columnFactory)
   {
-    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    if (selector instanceof NilColumnValueSelector) {
-      return NoopAggregator.instance();
-    }
-    final Class classOfObject = selector.classOfObject();
-    if (classOfObject.equals(Object.class) || RoaringBitmapCollector.class.isAssignableFrom(classOfObject)) {
-      return new BitmapAggregator(selector, DEFAULT_BITMAP_FACTORY.makeEmptyCollector());
-    }
-    throw new IAE("Incompatible type for metric[%s], expected a Bitmap, got a %s", fieldName, classOfObject);
+    return factorizeInternal(columnFactory, true);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    if (selector instanceof NilColumnValueSelector) {
-      return NoopBufferAggregator.instance();
+    return factorizeInternal(columnFactory, false);
+  }
+
+  private BaseAccurateCardinalityAggregator factorizeInternal(ColumnSelectorFactory columnFactory, boolean onHeap)
+  {
+    if (field == null || field.getDimension() == null) {
+      return new NoopAccurateCardinalityAggregator(DEFAULT_BITMAP_FACTORY, onHeap);
     }
-    final Class classOfObject = selector.classOfObject();
-    if (classOfObject.equals(Object.class) || RoaringBitmapCollector.class.isAssignableFrom(classOfObject)) {
-      return new BitmapBufferAggregator(selector, DEFAULT_BITMAP_FACTORY);
+    ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
+    if (capabilities != null) {
+      ValueType type = capabilities.getType();
+      switch (type) {
+        case COMPLEX:
+          return new BitmapAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              DEFAULT_BITMAP_FACTORY,
+              onHeap
+          );
+        default:
+          throw new IAE(
+              "Cannot create bitmap aggregator %s for invalid column type [%s]",
+              onHeap ? "aggregator" : "buffer aggregator",
+              type
+          );
+      }
+    } else {
+      ColumnValueSelector columnValueSelector = columnFactory.makeColumnValueSelector(field.getDimension());
+      if (columnValueSelector instanceof NilColumnValueSelector) {
+        return new NoopAccurateCardinalityAggregator(DEFAULT_BITMAP_FACTORY, onHeap);
+      }
+      return new ObjectAccurateCardinalityAggregator(
+          columnFactory.makeColumnValueSelector(field.getDimension()),
+          DEFAULT_BITMAP_FACTORY,
+          onHeap
+      );
     }
-    throw new IAE("Incompatible type for metric[%s], expected a Bitmap, got a %s", fieldName, classOfObject);
   }
 
   @Override
@@ -108,7 +132,7 @@ public class BitmapAggregatorFactory extends AggregatorFactory
     if (lhs == null) {
       return rhs;
     }
-    return ((RoaringBitmapCollector) lhs).fold((RoaringBitmapCollector) rhs);
+    return ((LongRoaringBitmapCollector) lhs).fold((LongRoaringBitmapCollector) rhs);
   }
 
   @Override
@@ -126,9 +150,9 @@ public class BitmapAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return ImmutableList.of(new BitmapAggregatorFactory(
-        fieldName,
-        fieldName
+    return Collections.<AggregatorFactory>singletonList(new BitmapAggregatorFactory(
+        name,
+        field
     ));
   }
 
@@ -143,7 +167,7 @@ public class BitmapAggregatorFactory extends AggregatorFactory
       // Be conservative, don't assume we own this buffer.
       buffer = ((ByteBuffer) object).duplicate();
     } else if (object instanceof String) {
-      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+      buffer = ByteBuffer.wrap(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
     } else {
       return object;
     }
@@ -156,7 +180,7 @@ public class BitmapAggregatorFactory extends AggregatorFactory
     if (object == null) {
       return 0;
     }
-    return ((Collector) object).getCardinality();
+    return ((LongBitmapCollector) object).getCardinality();
   }
 
   @JsonProperty
@@ -167,15 +191,15 @@ public class BitmapAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
-  public String getFieldName()
+  public DimensionSpec getField()
   {
-    return fieldName;
+    return field;
   }
 
   @Override
   public List<String> requiredFields()
   {
-    return Collections.singletonList(fieldName);
+    return Collections.singletonList(field.getDimension());
   }
 
   @Override
@@ -187,14 +211,14 @@ public class BitmapAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return 1024;
+    return 1;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(AggregatorUtil.BITMAP_AGG_CACHE_TYPE_ID)
-        .appendString(fieldName)
+        .appendCacheable(field)
         .build();
   }
 }

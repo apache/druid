@@ -20,39 +20,41 @@
 package org.apache.druid.query.aggregation.cardinality.accurate.collector;
 
 
-import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.BitmapFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.RoaringBitmapFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.LongBitmapFactory;
+import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.LongRoaringBitmapFactory;
 
 import java.nio.ByteBuffer;
 
-public class RoaringBitmapCollectorFactory implements CollectorFactory
+public class LongRoaringBitmapCollectorFactory implements LongBitmapCollectorFactory
 {
-  private static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
+  private static final LongBitmapFactory LONG_BITMAP_FACTORY = new LongRoaringBitmapFactory();
 
-  public RoaringBitmapCollectorFactory() {}
-
-  @Override
-  public Collector makeEmptyCollector()
+  public LongRoaringBitmapCollectorFactory()
   {
-    return new RoaringBitmapCollector(bitmapFactory.makeEmptyMutableBitmap());
   }
 
   @Override
-  public Collector makeCollector(ByteBuffer buffer)
+  public LongBitmapCollector makeEmptyCollector()
   {
-    return new RoaringBitmapCollector(bitmapFactory.mapMutableBitmap(buffer));
+    return new LongRoaringBitmapCollector(LONG_BITMAP_FACTORY.makeEmptyMutableBitmap());
+  }
+
+  @Override
+  public LongBitmapCollector makeCollector(ByteBuffer buffer)
+  {
+    return new LongRoaringBitmapCollector(LONG_BITMAP_FACTORY.mapMutableBitmap(buffer));
   }
 
   @Override
   public String toString()
   {
-    return "RoaringBitmapCollectorFactory";
+    return "LongRoaringBitmapCollectorFactory";
   }
 
   @Override
   public boolean equals(Object o)
   {
-    return this == o || o instanceof RoaringBitmapCollectorFactory;
+    return this == o || o instanceof LongRoaringBitmapCollectorFactory;
   }
 
   @Override

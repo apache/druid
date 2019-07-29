@@ -25,30 +25,30 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
-public class RoaringBitmapFactory implements BitmapFactory
+public class LongRoaringBitmapFactory implements LongBitmapFactory
 {
-  private static final ImmutableRoaringBitmap EMPTY_IMMUTABLE_BITMAP = new ImmutableRoaringBitmap();
+  private static final LongImmutableRoaringBitmap EMPTY_IMMUTABLE_BITMAP = new LongImmutableRoaringBitmap();
 
   @Override
-  public MutableBitmap makeEmptyMutableBitmap()
+  public LongMutableBitmap makeEmptyMutableBitmap()
   {
-    return new RoaringBitmap();
+    return new LongRoaringBitmap();
   }
 
   @Override
-  public ImmutableBitmap makeEmptyImmutableBitmap()
+  public LongImmutableBitmap makeEmptyImmutableBitmap()
   {
     return EMPTY_IMMUTABLE_BITMAP;
   }
 
   @Override
-  public ImmutableBitmap makeImmutableBitmap(MutableBitmap mutableBitmap)
+  public LongImmutableBitmap makeImmutableBitmap(LongMutableBitmap mutableBitmap)
   {
-    if (!(mutableBitmap instanceof RoaringBitmap)) {
-      throw new IllegalStateException(StringUtils.format("Cannot convert [%s]", mutableBitmap.getClass()));
+    if (!(mutableBitmap instanceof LongRoaringBitmap)) {
+      throw new IllegalStateException(StringUtils.nonStrictFormat("Cannot convert [%s]", mutableBitmap.getClass()));
     }
     try {
-      return ((RoaringBitmap) mutableBitmap).toImmutableBitmap();
+      return ((LongRoaringBitmap) mutableBitmap).toImmutableBitmap();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -56,8 +56,8 @@ public class RoaringBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public MutableBitmap mapMutableBitmap(ByteBuffer b)
+  public LongMutableBitmap mapMutableBitmap(ByteBuffer b)
   {
-    return RoaringBitmap.deserializeFromByteArray(b.array());
+    return LongRoaringBitmap.deserializeFromByteArray(b.array());
   }
 }

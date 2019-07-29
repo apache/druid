@@ -22,18 +22,13 @@ package org.apache.druid.query.aggregation.cardinality.accurate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
-import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.RoaringBitmapCollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.types.AccurateCardinalityAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.cardinality.accurate.types.LongAccurateCardinalityAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.cardinality.accurate.types.StringAccurateCardinalityAggregatorColumnSelectorStrategy;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollectorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -41,6 +36,7 @@ import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
@@ -63,7 +59,7 @@ import java.util.stream.StreamSupport;
 public class AccurateCardinalityAggregatorTest
 {
 
-  private RoaringBitmapCollectorFactory roaringBitmapCollectorFactory = new RoaringBitmapCollectorFactory();
+  private LongRoaringBitmapCollectorFactory roaringBitmapCollectorFactory = new LongRoaringBitmapCollectorFactory();
 
   interface ISeek
   {
@@ -306,7 +302,7 @@ public class AccurateCardinalityAggregatorTest
     @Override
     public int getValueCardinality()
     {
-      return DimensionSelector.CARDINALITY_UNKNOWN;
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     @Nullable
@@ -457,7 +453,6 @@ public class AccurateCardinalityAggregatorTest
     }
   }
 
-  List<ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>> dimInfoList;
   List<DimensionSelector> selectorList;
   AccurateCardinalityAggregatorFactory strAggregatorFactory;
   AccurateCardinalityAggregatorFactory longAggregatorFactory2;
@@ -468,12 +463,10 @@ public class AccurateCardinalityAggregatorTest
   final TestLongDimensionSelector dim3;
 
 
-  List<ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>> dimInfoListWithExtraction;
   List<DimensionSelector> selectorListWithExtraction;
   final TestStringDimensionSelector dim1WithExtraction;
   final TestLongDimensionSelector dim2WithExtraction;
 
-  List<ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>> dimInfoListConstantVal;
   List<DimensionSelector> selectorListConstantVal;
   final TestStringDimensionSelector dim1ConstantVal;
   final TestLongDimensionSelector dim2ConstantVal;
@@ -487,21 +480,6 @@ public class AccurateCardinalityAggregatorTest
     dim1 = new TestStringDimensionSelector(values1, null);
     dim2 = new TestLongDimensionSelector(values2, null);
     dim3 = new TestLongDimensionSelector(values3, null);
-
-    dimInfoList = Lists.newArrayList(
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new StringAccurateCardinalityAggregatorColumnSelectorStrategy(),
-            dim1
-        ),
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec2.getDimension(),
-            dimSpec2.getOutputName(),
-            new LongAccurateCardinalityAggregatorColumnSelectorStrategy(),
-            dim2
-        )
-    );
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1,
@@ -535,21 +513,8 @@ public class AccurateCardinalityAggregatorTest
     dim2WithExtraction = new TestLongDimensionSelector(values2, superFn2);
 
     selectorListWithExtraction = Lists.newArrayList(
-        (DimensionSelector) dim1WithExtraction,
+        dim1WithExtraction,
         dim2WithExtraction
-    );
-
-    dimInfoListWithExtraction = Lists.newArrayList(
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new StringAccurateCardinalityAggregatorColumnSelectorStrategy(), dim1WithExtraction
-        ),
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new LongAccurateCardinalityAggregatorColumnSelectorStrategy(), dim2WithExtraction
-        )
     );
 
     String helloJsFn = "function(str) { return 'hello' }";
@@ -559,31 +524,18 @@ public class AccurateCardinalityAggregatorTest
     dim1ConstantVal = new TestStringDimensionSelector(values1, helloFn);
     dim2ConstantVal = new TestLongDimensionSelector(values2, helloFn2);
     selectorListConstantVal = Lists.newArrayList(
-        (DimensionSelector) dim1ConstantVal,
+        dim1ConstantVal,
         dim2ConstantVal
     );
-    dimInfoListConstantVal = Lists.newArrayList(
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new StringAccurateCardinalityAggregatorColumnSelectorStrategy(), dim1ConstantVal
-        ),
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new LongAccurateCardinalityAggregatorColumnSelectorStrategy(), dim2ConstantVal
-        )
-    );
-
   }
 
   @Test
   public void testAggregateLong() throws Exception
   {
-    AccurateCardinalityAggregator agg = new AccurateCardinalityAggregator(
-        "billy",
-        dimInfoList.get(1),
-        roaringBitmapCollectorFactory.makeEmptyCollector()
+    LongAccurateCardinalityAggregator agg = new LongAccurateCardinalityAggregator(
+        selectorList.get(1),
+        roaringBitmapCollectorFactory,
+        true
     );
     for (int i = 0; i < values2.size(); ++i) {
       aggregate(selectorList, agg);
@@ -591,32 +543,13 @@ public class AccurateCardinalityAggregatorTest
     Assert.assertEquals(6L, longAggregatorFactory2.finalizeComputation(agg.get()));
   }
 
-  /**
-   * 这个聚合的是String列值的字典编码值,所以也可以得数结果,
-   * 但是由于没有全局字典,这个聚合结果是没法merge的,所以应该是没有用的
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testAggregateString() throws Exception
-  {
-    AccurateCardinalityAggregator agg = new AccurateCardinalityAggregator(
-        "billy",
-        dimInfoList.get(0),
-        roaringBitmapCollectorFactory.makeEmptyCollector()
-    );
-    for (int i = 0; i < values1.size(); ++i) {
-      aggregate(selectorList, agg);
-    }
-    Assert.assertEquals(5L, strAggregatorFactory.finalizeComputation(agg.get()));
-  }
-
   @Test
   public void testBufferAggregateLong()
   {
-    AccurateCardinalityBufferAggregator agg = new AccurateCardinalityBufferAggregator(
-        dimInfoList.get(1),
-        roaringBitmapCollectorFactory
+    LongAccurateCardinalityAggregator agg = new LongAccurateCardinalityAggregator(
+        selectorList.get(1),
+        roaringBitmapCollectorFactory,
+        false
     );
     int maxSize = longAggregatorFactory2.getMaxIntermediateSize();
 
@@ -634,31 +567,18 @@ public class AccurateCardinalityAggregatorTest
   @Test
   public void testCombinRows()
   {
-    List<DimensionSelector> selector2 = ImmutableList.of((DimensionSelector) dim2);
-    List<DimensionSelector> selector3 = ImmutableList.of((DimensionSelector) dim3);
+    List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
+    List<DimensionSelector> selector3 = Lists.newArrayList((DimensionSelector) dim3);
 
-    ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy> dimInfo2 =
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec2.getDimension(),
-            dimSpec2.getOutputName(),
-            new LongAccurateCardinalityAggregatorColumnSelectorStrategy(), dim2
-        );
-    ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy> dimInfo3 =
-        new ColumnSelectorPlus<AccurateCardinalityAggregatorColumnSelectorStrategy>(
-            dimSpec3.getDimension(),
-            dimSpec3.getOutputName(),
-            new LongAccurateCardinalityAggregatorColumnSelectorStrategy(), dim3
-        );
-
-    AccurateCardinalityAggregator agg2 = new AccurateCardinalityAggregator(
-        "UV",
-        dimInfo2,
-        roaringBitmapCollectorFactory.makeEmptyCollector()
+    LongAccurateCardinalityAggregator agg2 = new LongAccurateCardinalityAggregator(
+        dim2,
+        roaringBitmapCollectorFactory,
+        true
     );
-    AccurateCardinalityAggregator agg3 = new AccurateCardinalityAggregator(
-        "UV",
-        dimInfo3,
-        roaringBitmapCollectorFactory.makeEmptyCollector()
+    LongAccurateCardinalityAggregator agg3 = new LongAccurateCardinalityAggregator(
+        dim3,
+        roaringBitmapCollectorFactory,
+        true
     );
 
     for (int i = 0; i < values2.size(); ++i) {
@@ -680,33 +600,67 @@ public class AccurateCardinalityAggregatorTest
             )
         )
     );
-
   }
 
   @Test
   public void testAggregateLongWithExtraction()
   {
-    AccurateCardinalityAggregator agg = new AccurateCardinalityAggregator(
-        "UV",
-        dimInfoListWithExtraction.get(1),
-        roaringBitmapCollectorFactory.makeEmptyCollector()
+    LongAccurateCardinalityAggregator agg = new LongAccurateCardinalityAggregator(
+        selectorListWithExtraction.get(1),
+        roaringBitmapCollectorFactory,
+        true
     );
     for (int i = 0; i < values2.size(); ++i) {
       aggregate(selectorListWithExtraction, agg);
     }
     Assert.assertEquals(6L, longAggregatorFactory2.finalizeComputation(agg.get()));
 
-
-    AccurateCardinalityAggregator agg2 = new AccurateCardinalityAggregator(
-        "UV",
-        dimInfoListConstantVal.get(1),
-        roaringBitmapCollectorFactory.makeEmptyCollector()
+    LongAccurateCardinalityAggregator agg2 = new LongAccurateCardinalityAggregator(
+        selectorListConstantVal.get(1),
+        roaringBitmapCollectorFactory,
+        true
     );
     for (int i = 0; i < values2.size(); ++i) {
       aggregate(selectorListConstantVal, agg2);
     }
     Assert.assertEquals(1L, longAggregatorFactory2.finalizeComputation(agg2.get()));
+  }
 
+  @Test
+  public void testBufferAggregateLongWithExtraction()
+  {
+    LongAccurateCardinalityAggregator agg = new LongAccurateCardinalityAggregator(
+        selectorListWithExtraction.get(1),
+        roaringBitmapCollectorFactory,
+        false
+    );
+
+    int maxSize = longAggregatorFactory2.getMaxIntermediateSize();
+
+    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
+    int pos = 10;
+    buf.limit(pos + maxSize);
+
+    agg.init(buf, pos);
+    for (int i = 0; i < values2.size(); ++i) {
+      bufferAggregate(selectorListWithExtraction, agg, buf, pos);
+    }
+
+    Assert.assertEquals(6L, longAggregatorFactory2.finalizeComputation(agg.get(buf, pos)));
+
+    LongAccurateCardinalityAggregator agg2 = new LongAccurateCardinalityAggregator(
+        selectorListConstantVal.get(1),
+        roaringBitmapCollectorFactory,
+        false
+    );
+    pos = buf.limit();
+    buf.limit(buf.limit() + maxSize);
+    agg2.init(buf, pos);
+    for (int i = 0; i < values2.size(); ++i) {
+      bufferAggregate(selectorListConstantVal, agg2, buf, pos);
+    }
+
+    Assert.assertEquals(1L, longAggregatorFactory2.finalizeComputation(agg2.get(buf, pos)));
   }
 
   @Test
@@ -718,16 +672,15 @@ public class AccurateCardinalityAggregatorTest
         roaringBitmapCollectorFactory
     );
 
-    AccurateCardinalityModule acm = new AccurateCardinalityModule();
-    acm.configure(null);
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    AccurateCardinalityModule acm = new AccurateCardinalityModule();
     acm.getJacksonModules().forEach(objectMapper::registerModule);
 
     String jsonStr = "{\"type\":\"accurateCardinality\",\"name\":\"UV\",\"field\":\"UV\"}";
 
     AccurateCardinalityAggregatorFactory factory;
     factory = objectMapper.readValue(jsonStr, AccurateCardinalityAggregatorFactory.class);
-    Assert.assertEquals("", expectedFactory.getCollectorFactory(), factory.getCollectorFactory());
+    Assert.assertEquals("", expectedFactory.getLongBitmapCollectorFactory(), factory.getLongBitmapCollectorFactory());
     Assert.assertEquals("", expectedFactory.getName(), factory.getName());
   }
 

@@ -88,9 +88,6 @@
     <inspection_tool class="JSRedeclarationOfBlockScope" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="JSReferencingArgumentsOutsideOfFunction" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="Java8MapForEach" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true">
-      <option name="REPORT_INACCESSIBLE" value="false" />
-    </inspection_tool>
     <inspection_tool class="Jscs" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -256,29 +253,29 @@
         <constraint name="K" within="" contains="" />
         <constraint name="V" within="" contains="" />
         <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which compute() is called should be assinged into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.compute($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which computeIfAbsent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfAbsent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which computeIfPresent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfPresent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which merge() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.merge($a$, $b$, $c$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="a" within="" contains="" />
         <constraint name="b" within="" contains="" />
         <constraint name="c" within="" contains="" />
@@ -349,7 +346,6 @@
     <inspection_tool class="StandardJS" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="StaticCallOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="StaticPseudoFunctionalStyleMethod" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInMessageFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationMissingWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -401,8 +397,8 @@
     <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="XmlPathReference" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
-    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true">
+    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" isSelected="false">
+      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" isSelected="false">
         <option name="LOCAL_VARIABLE" value="true" />
         <option name="FIELD" value="true" />
         <option name="METHOD" value="true" />

@@ -17,12 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.accurate.types;
+package org.apache.druid.query.aggregation.cardinality.accurate.bitmap64;
 
+import org.roaringbitmap.longlong.LongIterator;
 
-import org.apache.druid.query.dimension.ColumnSelectorStrategy;
-
-public interface AccurateCardinalityAggregatorColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
+/**
+ * This class is meant to represent a simple wrapper around an immutable bitmap
+ * class.
+ */
+public interface LongImmutableBitmap
 {
-  long getUniversalUniqueCode(ValueSelectorType dimSelector);
+  /**
+   * @return an iterator over the set bits of this bitmap
+   */
+  LongIterator iterator();
+
+  /**
+   * @return The number of bits set to true in this bitmap
+   */
+  long size();
+
+  byte[] toBytes();
+
+  /**
+   * @return True if this bitmap is empty (contains no set bit)
+   */
+  boolean isEmpty();
+
+  /**
+   * Returns true if the bit at position value is set
+   *
+   * @param value the position to check
+   *
+   * @return true if bit is set
+   */
+  boolean get(long value);
 }

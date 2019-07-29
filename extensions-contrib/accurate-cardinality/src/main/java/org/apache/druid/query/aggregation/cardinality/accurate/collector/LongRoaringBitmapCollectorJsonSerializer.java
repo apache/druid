@@ -25,10 +25,10 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
-public class RoaringBitmapCollectorJsonSerializer extends JsonSerializer<RoaringBitmapCollector>
+public class LongRoaringBitmapCollectorJsonSerializer extends JsonSerializer<LongRoaringBitmapCollector>
 {
   @Override
-  public void serialize(RoaringBitmapCollector collector, JsonGenerator jgen, SerializerProvider provider)
+  public void serialize(LongRoaringBitmapCollector collector, JsonGenerator jgen, SerializerProvider provider)
       throws IOException
   {
     jgen.writeBinary(collector.toByteBuffer().array());

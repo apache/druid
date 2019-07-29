@@ -27,16 +27,15 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.accurate.AccurateCardinalityAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -46,6 +45,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -69,6 +69,7 @@ public class AccurateCardinalitySqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -83,36 +84,82 @@ public class AccurateCardinalitySqlAggregator implements SqlAggregator
         Iterables.getOnlyElement(aggregateCall.getArgList())
     );
 
-    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    if (arg == null) {
+    final DruidExpression input = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
+    if (input == null) {
       return null;
     }
 
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
+    final String aggName = StringUtils.format("%s:agg", name);
 
-    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-    final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
-    if (inputType == null) {
-      throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, name);
+    // Look for existing matching aggregatorFactory.
+    for (final Aggregation existing : existingAggregations) {
+      for (AggregatorFactory factory : existing.getAggregatorFactories()) {
+        if (factory instanceof AccurateCardinalityAggregatorFactory) {
+          final AccurateCardinalityAggregatorFactory theFactory = (AccurateCardinalityAggregatorFactory) factory;
+
+          // Check input for equivalence.
+          final boolean inputMatches;
+          final VirtualColumn virtualInput =
+              existing.getVirtualColumns()
+                      .stream()
+                      .filter(virtualColumn ->
+                                  virtualColumn.getOutputName().equals(theFactory.getField().getOutputName())
+                      )
+                      .findFirst()
+                      .orElse(null);
+          if (virtualInput == null) {
+            if (input.isDirectColumnAccess()) {
+              inputMatches =
+                  input.getDirectColumn().equals(theFactory.getField().getDimension());
+            } else {
+              inputMatches =
+                  input.getSimpleExtraction().getColumn().equals(theFactory.getField().getDimension()) &&
+                  input.getSimpleExtraction().getExtractionFn().equals(theFactory.getField().getExtractionFn());
+            }
+          } else {
+            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
+          }
+
+          if (inputMatches) {
+            // Found existing one. Use this.
+            return Aggregation.create(
+                theFactory
+            );
+          }
+        }
+      }
     }
+    // No existing match found. Create a new one.
+    final List<VirtualColumn> virtualColumns = new ArrayList<>();
 
+    final ValueType inputType = Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName());
     final DimensionSpec dimensionSpec;
-
-    if (arg.isSimpleExtraction()) {
-      dimensionSpec = arg.getSimpleExtraction().toDimensionSpec(null, inputType);
-    } else {
-      final ExpressionVirtualColumn virtualColumn = arg.toVirtualColumn(
-          StringUtils.format("%s:v", name),
-          inputType,
-          plannerContext.getExprMacroTable()
+    if (input.isDirectColumnAccess()) {
+      dimensionSpec = new DefaultDimensionSpec(
+          input.getSimpleExtraction().getColumn(),
+          StringUtils.format("%s:%s", name, input.getSimpleExtraction().getColumn()),
+          inputType
       );
-      dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+    } else if (input.isSimpleExtraction()) {
+      dimensionSpec = new ExtractionDimensionSpec(
+          input.getSimpleExtraction().getColumn(),
+          StringUtils.format("%s:%s", name, input.getSimpleExtraction().getColumn()),
+          inputType,
+          input.getSimpleExtraction().getExtractionFn()
+      );
+    } else {
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          input,
+          rexNode.getType().getSqlTypeName()
+      );
+      dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), virtualColumn.getOutputName());
       virtualColumns.add(virtualColumn);
     }
 
     aggregatorFactory = new AccurateCardinalityAggregatorFactory(
-        name,
+        aggName,
         dimensionSpec
     );
 
@@ -128,13 +175,12 @@ public class AccurateCardinalitySqlAggregator implements SqlAggregator
           null,
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.BIGINT),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.ANY,
+          null,
+          OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC,
           false,
           false
       );
     }
-
   }
 }

@@ -22,26 +22,35 @@ package org.apache.druid.query.aggregation.cardinality.accurate;
 
 import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollector;
 import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
 
-public class BitmapAggregator extends BaseAccurateCardinalityAggregator<BaseObjectColumnValueSelector>
+import java.nio.ByteBuffer;
+
+public class NoopAccurateCardinalityAggregator extends BaseAccurateCardinalityAggregator<NilColumnValueSelector>
 {
-  public BitmapAggregator(
-      BaseObjectColumnValueSelector selector,
+  public NoopAccurateCardinalityAggregator(
       LongBitmapCollectorFactory longBitmapCollectorFactory,
       boolean onHeap
   )
   {
-    super(selector, longBitmapCollectorFactory, onHeap);
+    super(NilColumnValueSelector.instance(), longBitmapCollectorFactory, onHeap);
   }
 
   @Override
   void collectorAdd(LongBitmapCollector longBitmapCollector)
   {
-    Object object = selector.getObject();
-    if (object == null) {
-      return;
-    }
-    longBitmapCollector.fold((LongBitmapCollector) object);
+    // nothing to do
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position)
+  {
+    // nothing to do
+  }
+
+  @Override
+  public void aggregate()
+  {
+    // nothing to do
   }
 }

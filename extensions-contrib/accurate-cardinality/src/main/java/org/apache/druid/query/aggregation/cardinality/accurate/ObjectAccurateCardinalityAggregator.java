@@ -19,58 +19,38 @@
 
 package org.apache.druid.query.aggregation.cardinality.accurate;
 
-import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollector;
 import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
-import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongRoaringBitmapCollector;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import javax.annotation.Nullable;
-
-public class BitmapAggregatorCombiner extends ObjectAggregateCombiner<LongBitmapCollector>
+public class ObjectAccurateCardinalityAggregator extends BaseAccurateCardinalityAggregator<ColumnValueSelector>
 {
-
-  @Nullable
-  private LongBitmapCollector collector;
-  private LongBitmapCollectorFactory collectorFactory;
-
-  public BitmapAggregatorCombiner(
-      LongBitmapCollectorFactory collectorFactory
+  public ObjectAccurateCardinalityAggregator(
+      ColumnValueSelector selector,
+      LongBitmapCollectorFactory longBitmapCollectorFactory,
+      boolean onHeap
   )
   {
-    this.collectorFactory = collectorFactory;
+    super(selector, longBitmapCollectorFactory, onHeap);
   }
 
   @Override
-  public void reset(ColumnValueSelector selector)
+  void collectorAdd(LongBitmapCollector longBitmapCollector)
   {
-    collector = null;
-    fold(selector);
-  }
-
-  @Override
-  public void fold(ColumnValueSelector selector)
-  {
-    Object object = selector.getObject();
+    final Object object = selector.getObject();
     if (object == null) {
       return;
     }
-    if (collector == null) {
-      collector = collectorFactory.makeEmptyCollector();
+    if (object instanceof LongBitmapCollector) {
+      longBitmapCollector.fold((LongBitmapCollector) object);
+    } else if (object instanceof Long) {
+      longBitmapCollector.add(selector.getLong());
+    } else {
+      throw new IAE(
+          "Cannot aggregat accurate cardinality for invalid column type"
+      );
     }
-    collector.fold((LongBitmapCollector) object);
-  }
-
-  @Nullable
-  @Override
-  public LongBitmapCollector getObject()
-  {
-    return collector;
-  }
-
-  @Override
-  public Class<LongRoaringBitmapCollector> classOfObject()
-  {
-    return LongRoaringBitmapCollector.class;
   }
 }

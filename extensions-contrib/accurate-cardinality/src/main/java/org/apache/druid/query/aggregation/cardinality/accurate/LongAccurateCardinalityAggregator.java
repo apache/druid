@@ -17,17 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.cardinality.accurate.bitmap64;
+package org.apache.druid.query.aggregation.cardinality.accurate;
 
-import java.nio.ByteBuffer;
 
-public interface BitmapFactory
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollector;
+import org.apache.druid.query.aggregation.cardinality.accurate.collector.LongBitmapCollectorFactory;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
+
+public class LongAccurateCardinalityAggregator extends BaseAccurateCardinalityAggregator<BaseLongColumnValueSelector>
 {
-  MutableBitmap makeEmptyMutableBitmap();
+  public LongAccurateCardinalityAggregator(
+      BaseLongColumnValueSelector selector,
+      LongBitmapCollectorFactory longBitmapCollectorFactory,
+      boolean onHeap
+  )
+  {
+    super(selector, longBitmapCollectorFactory, onHeap);
+  }
 
-  ImmutableBitmap makeEmptyImmutableBitmap();
-
-  ImmutableBitmap makeImmutableBitmap(MutableBitmap mutableBitmap);
-
-  MutableBitmap mapMutableBitmap(ByteBuffer b);
+  @Override
+  void collectorAdd(LongBitmapCollector longBitmapCollector)
+  {
+    longBitmapCollector.add(selector.getLong());
+  }
 }
+
+

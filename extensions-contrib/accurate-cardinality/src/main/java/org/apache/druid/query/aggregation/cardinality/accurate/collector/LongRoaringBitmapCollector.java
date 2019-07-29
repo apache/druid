@@ -19,18 +19,18 @@
 
 package org.apache.druid.query.aggregation.cardinality.accurate.collector;
 
-import org.apache.commons.codec.binary.Base64;
+
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.MutableBitmap;
-import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.RoaringBitmap;
+import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.LongMutableBitmap;
+import org.apache.druid.query.aggregation.cardinality.accurate.bitmap64.LongRoaringBitmap;
 
 import java.nio.ByteBuffer;
 
-public class RoaringBitmapCollector implements Collector
+public class LongRoaringBitmapCollector implements LongBitmapCollector
 {
-  public final MutableBitmap bitmap;
+  public final LongMutableBitmap bitmap;
 
-  public RoaringBitmapCollector(MutableBitmap mutableBitmap)
+  public LongRoaringBitmapCollector(LongMutableBitmap mutableBitmap)
   {
     this.bitmap = mutableBitmap;
   }
@@ -48,47 +48,47 @@ public class RoaringBitmapCollector implements Collector
   }
 
   @Override
-  public Collector fold(Collector other)
+  public LongBitmapCollector fold(LongBitmapCollector other)
   {
     if (other == null) {
       return this;
     }
-    bitmap.or(((RoaringBitmapCollector) other).bitmap);
+    bitmap.or(((LongRoaringBitmapCollector) other).bitmap);
     return this;
   }
 
   @Override
-  public int compareTo(Collector other)
+  public int compareTo(LongBitmapCollector other)
   {
     return Long.compare(this.getCardinality(), other.getCardinality());
   }
 
-  public static RoaringBitmapCollector of(Object obj)
+  public static LongRoaringBitmapCollector of(Object obj)
   {
-    return new RoaringBitmapCollector((MutableBitmap) obj);
+    return new LongRoaringBitmapCollector((LongMutableBitmap) obj);
   }
 
-  public static RoaringBitmapCollector deserialize(Object serializedCollector)
+  public static LongRoaringBitmapCollector deserialize(Object serializedCollector)
   {
     if (serializedCollector instanceof String) {
-      return RoaringBitmapCollector.of(deserializeFromBase64EncodedString((String) serializedCollector));
+      return LongRoaringBitmapCollector.of(deserializeFromBase64EncodedString((String) serializedCollector));
     } else if (serializedCollector instanceof byte[]) {
-      return RoaringBitmapCollector.of(deserializeFromByteArray((byte[]) serializedCollector));
-    } else if (serializedCollector instanceof RoaringBitmapCollector) {
-      return (RoaringBitmapCollector) serializedCollector;
+      return LongRoaringBitmapCollector.of(deserializeFromByteArray((byte[]) serializedCollector));
+    } else if (serializedCollector instanceof LongRoaringBitmapCollector) {
+      return (LongRoaringBitmapCollector) serializedCollector;
     } else {
       return null;
     }
   }
 
-  private static MutableBitmap deserializeFromBase64EncodedString(String str)
+  private static LongMutableBitmap deserializeFromBase64EncodedString(String str)
   {
-    return deserializeFromByteArray(Base64.decodeBase64(StringUtils.toUtf8(str)));
+    return deserializeFromByteArray(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
   }
 
-  private static MutableBitmap deserializeFromByteArray(byte[] bytes)
+  private static LongMutableBitmap deserializeFromByteArray(byte[] bytes)
   {
-    return RoaringBitmap.deserializeFromByteArray(bytes);
+    return LongRoaringBitmap.deserializeFromByteArray(bytes);
   }
 
   @Override
