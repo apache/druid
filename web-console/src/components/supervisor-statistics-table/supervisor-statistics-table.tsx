@@ -26,6 +26,7 @@ import { Loader } from '..';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { downloadFile, QueryManager } from '../../utils';
+import { deepGet } from '../../utils/object-change';
 
 import './supervisor-statistics-table.scss';
 
@@ -36,7 +37,7 @@ export interface SupervisorStatisticsTableProps {
 }
 
 export interface SupervisorStatisticsTableState {
-  data: JSON[];
+  data: any;
   jsonValue: string;
   loading: boolean;
   error: string | null;
@@ -85,18 +86,20 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   }
 
   renderCell(data: any) {
-    return (
-      <div>
-        <div>{`Processed: ${data.processed.toFixed(1)}`}</div>
-        <div>{`Unparseable: ${data.unparseable.toFixed(1)}`}</div>
-        <div>{`ThrownAway: ${data.thrownAway.toFixed(1)}`}</div>
-        <div>{`ProcessedWithError: ${data.processedWithError.toFixed(1)}`}</div>
-      </div>
-    );
+    if (data) {
+      return Object.keys(data).map((key: any) => this.renderData(key, data[key]));
+    }
+    return <div> no data found</div>;
+  }
+
+  renderData(key: string, data: number) {
+    return <div key={key}>{`${key}: ${data.toFixed(1)}`}</div>;
   }
 
   renderTable(error: string | null) {
-    const columns = [
+    const { data } = this.state;
+
+    let columns = [
       {
         Header: 'Task Id',
         id: 'task_id',
@@ -104,38 +107,33 @@ export class SupervisorStatisticsTable extends React.PureComponent<
       },
       {
         Header: 'Totals',
-        id: 'totals',
-        accessor: (d: any) => d[Object.keys(d)[0]].totals.buildSegments,
-        Cell: (d: any) => {
-          return this.renderCell(d.value);
+        id: 'total',
+        accessor: (d: any) => {
+          return deepGet(d[Object.keys(d)[0]], 'totals.buildSegments');
         },
-      },
-      {
-        Header: '1m',
-        id: '1m',
-        accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['1m'],
         Cell: (d: any) => {
-          return this.renderCell(d.value);
-        },
-      },
-      {
-        Header: '5m',
-        id: '5m',
-        accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['5m'],
-        Cell: (d: any) => {
-          return this.renderCell(d.value);
-        },
-      },
-      {
-        Header: '15m',
-        id: '15m',
-        accessor: (d: any) => d[Object.keys(d)[0]].movingAverages.buildSegments['15m'],
-        Cell: (d: any) => {
-          return this.renderCell(d.value);
+          return this.renderCell(d.value ? d.value : null);
         },
       },
     ];
 
+    columns = columns.concat(
+      Object.keys(deepGet(data[0][Object.keys(data[0])[0]], 'movingAverages.buildSegments'))
+        .map((interval: string, index: number) => {
+          return {
+            Header: interval,
+            id: interval,
+            key: index,
+            accessor: (d: any) => {
+              return deepGet(d[Object.keys(d)[0]], 'movingAverages.buildSegments');
+            },
+            Cell: (d: any) => {
+              return this.renderCell(d.value ? d.value[interval] : null);
+            },
+          };
+        })
+        .sort((a, b) => (a.Header.localeCompare(b.Header, undefined, { numeric: true }) ? -1 : 1)),
+    );
     return (
       <ReactTable
         data={this.state.data ? this.state.data : []}
@@ -187,8 +185,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
           </ButtonGroup>
         </div>
         <div className="main-area">
-          {loading && <Loader loadingText="" loading />}
-          {!loading && this.renderTable(error)}
+          {loading ? <Loader loadingText="" loading /> : !loading && this.renderTable(error)}
         </div>
       </div>
     );

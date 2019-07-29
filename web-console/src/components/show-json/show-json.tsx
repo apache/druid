@@ -110,8 +110,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
           </ButtonGroup>
         </div>
         <div className="main-area">
-          {loading && <Loader />}
-          {!loading && <TextArea readOnly value={!error ? jsonValue : error} />}
+          {loading ? <Loader /> : <TextArea readOnly value={!error ? jsonValue : error} />}
         </div>
       </div>
     );
