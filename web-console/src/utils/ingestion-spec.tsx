@@ -133,7 +133,7 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
-export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | null {
+export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
     case 'index:static-s3':
       return 'druid-s3-extensions';
@@ -148,7 +148,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
       return 'druid-kinesis-indexing-service';
 
     default:
-      return null;
+      return;
   }
 }
 
@@ -308,9 +308,9 @@ export function getParseSpecFormFields() {
   return PARSE_SPEC_FORM_FIELDS;
 }
 
-export function issueWithParser(parser: Parser | undefined): string | null {
+export function issueWithParser(parser: Parser | undefined): string | undefined {
   if (!parser) return 'no parser';
-  if (parser.type === 'map') return null;
+  if (parser.type === 'map') return;
 
   const { parseSpec } = parser;
   if (!parseSpec) return 'no parse spec';
@@ -324,7 +324,7 @@ export function issueWithParser(parser: Parser | undefined): string | null {
       if (!parseSpec['function']) return "must have a 'function'";
       break;
   }
-  return null;
+  return;
 }
 
 export function parseSpecHasFlatten(parseSpec: ParseSpec): boolean {
@@ -415,10 +415,12 @@ export function getTimestampSpecFormFields(timestampSpec: TimestampSpec) {
   }
 }
 
-export function issueWithTimestampSpec(timestampSpec: TimestampSpec | undefined): string | null {
+export function issueWithTimestampSpec(
+  timestampSpec: TimestampSpec | undefined,
+): string | undefined {
   if (!timestampSpec) return 'no spec';
   if (!timestampSpec.column && !timestampSpec.missingValue) return 'timestamp spec is blank';
-  return null;
+  return;
 }
 
 export interface DimensionsSpec {
@@ -722,15 +724,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     type: 'string',
     suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
     info: (
-      <>
-        <p>
-          Druid connects to raw data through{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
-            firehoses
-          </ExternalLink>
-          . You can change your selected firehose here.
-        </p>
-      </>
+      <p>
+        Druid connects to raw data through{' '}
+        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+          firehoses
+        </ExternalLink>
+        . You can change your selected firehose here.
+      </p>
     ),
   };
 
@@ -957,7 +957,7 @@ function nonEmptyArray(a: any) {
   return Array.isArray(a) && Boolean(a.length);
 }
 
-function issueWithFirehose(firehose: Firehose | undefined): string | null {
+function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
   if (!firehose) return 'does not exist';
   if (!firehose.type) return 'missing a type';
   switch (firehose.type) {
@@ -984,10 +984,10 @@ function issueWithFirehose(firehose: Firehose | undefined): string | null {
       }
       break;
   }
-  return null;
+  return;
 }
 
-export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null {
+export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | undefined {
   if (!ioConfig) return 'does not exist';
   if (!ioConfig.type) return 'missing a type';
   switch (ioConfig.type) {
@@ -1007,7 +1007,7 @@ export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null
       break;
   }
 
-  return null;
+  return;
 }
 
 export function getIoConfigTuningFormFields(
@@ -1296,13 +1296,14 @@ function filterIsFilename(filter: string): boolean {
   return !/[*?]/.test(filter);
 }
 
-function filenameFromPath(path: string): string | null {
+function filenameFromPath(path: string): string | undefined {
   const m = path.match(/([^\/.]+)[^\/]*?\/?$/);
-  return m ? m[1] : null;
+  if (!m) return;
+  return m[1];
 }
 
-function basenameFromFilename(filename: string): string | null {
-  return filename.split('.')[0] || null;
+function basenameFromFilename(filename: string): string | undefined {
+  return filename.split('.')[0];
 }
 
 export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
@@ -1313,12 +1314,12 @@ export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
   return deepSet(spec, 'dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(ioConfig: IoConfig): string | null {
+export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
       const firehose = ioConfig.firehose;
-      if (!firehose) return null;
+      if (!firehose) return;
 
       switch (firehose.type) {
         case 'local':
@@ -1327,27 +1328,27 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
           } else if (firehose.baseDir) {
             return filenameFromPath(firehose.baseDir);
           } else {
-            return null;
+            return;
           }
 
         case 'static-s3':
           const s3Path = (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0];
-          return s3Path ? filenameFromPath(s3Path) : null;
+          return s3Path ? filenameFromPath(s3Path) : undefined;
 
         case 'http':
-          return Array.isArray(firehose.uris) ? filenameFromPath(firehose.uris[0]) : null;
+          return Array.isArray(firehose.uris) ? filenameFromPath(firehose.uris[0]) : undefined;
       }
 
-      return null;
+      return;
 
     case 'kafka':
-      return ioConfig.topic || null;
+      return ioConfig.topic;
 
     case 'kinesis':
-      return ioConfig.stream || null;
+      return ioConfig.stream;
 
     default:
-      return null;
+      return;
   }
 }
 
@@ -1830,9 +1831,9 @@ export function fillParser(spec: IngestionSpec, sampleData: string[]): Ingestion
   return deepSet(spec, 'dataSchema.parser', { type: 'string', parseSpec });
 }
 
-function guessParseSpec(sampleData: string[]): ParseSpec | null {
+function guessParseSpec(sampleData: string[]): ParseSpec | undefined {
   const sampleDatum = sampleData[0];
-  if (!sampleDatum) return null;
+  if (!sampleDatum) return;
 
   if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
     return parseSpecFromFormat('json');
@@ -1867,7 +1868,7 @@ export type DruidFilter = Record<string, any>;
 
 export interface DimensionFiltersWithRest {
   dimensionFilters: DruidFilter[];
-  restFilter: DruidFilter | null;
+  restFilter?: DruidFilter;
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
@@ -1887,16 +1888,18 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
       ? restFilters.length > 1
         ? { type: 'and', filters: restFilters }
         : restFilters[0]
-      : null,
+      : undefined,
   };
 }
 
-export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
+export function joinFilter(
+  dimensionFiltersWithRest: DimensionFiltersWithRest,
+): DruidFilter | undefined {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
   let newFields = dimensionFilters || EMPTY_ARRAY;
   if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
-  if (!newFields.length) return null;
+  if (!newFields.length) return;
   if (newFields.length === 1) return newFields[0];
   return { type: 'and', fields: newFields };
 }

@@ -26,7 +26,7 @@ exports[`home view matches snapshot 1`] = `
     href="#datasources"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -47,7 +47,7 @@ exports[`home view matches snapshot 1`] = `
     href="#segments"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -68,7 +68,7 @@ exports[`home view matches snapshot 1`] = `
     href="#tasks"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -89,7 +89,7 @@ exports[`home view matches snapshot 1`] = `
     href="#tasks"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -110,7 +110,7 @@ exports[`home view matches snapshot 1`] = `
     href="#servers"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -131,7 +131,7 @@ exports[`home view matches snapshot 1`] = `
     href="#lookups"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >

@@ -41,7 +41,7 @@ export class TableColumnSelector extends React.PureComponent<
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { columns, onChange, tableColumnsHidden } = this.props;
     const checkboxes = (
       <Menu className="table-column-selector-menu">
