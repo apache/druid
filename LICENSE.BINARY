@@ -649,7 +649,7 @@ BINARY/EXTENSIONS/druid-bloom-filter
 
 BINARY/EXTENSIONS/druid-datasketches
 
-    This product bundles DataSketches version 0.13.3.
+    This product bundles DataSketches version 0.13.4.
       * com.yahoo.datasketches:datasketches-core
       * com.yahoo.datasketches:memory
 
