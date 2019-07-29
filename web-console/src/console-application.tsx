@@ -284,7 +284,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer('lookups', <LookupsView />);
   };
 
-  render() {
+  render(): JSX.Element {
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {

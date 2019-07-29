@@ -37,7 +37,7 @@ export interface FilterTableProps {
 }
 
 export class FilterTable extends React.PureComponent<FilterTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleData,
       columnFilter,

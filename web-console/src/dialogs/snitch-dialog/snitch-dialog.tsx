@@ -116,9 +116,10 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  renderHistoryDialog() {
+  renderHistoryDialog(): JSX.Element | null {
     const { historyRecords } = this.props;
-    if (!historyRecords) return;
+    if (!historyRecords) return null;
+
     return (
       <HistoryDialog {...this.props} className="history-dialog" historyRecords={historyRecords}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -150,7 +151,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             Back
           </Button>
         ) : onReset ? (
-          <Button onClick={this.reset} intent={'none' as any}>
+          <Button onClick={this.reset} intent={Intent.NONE}>
             Reset
           </Button>
         ) : null}
@@ -176,7 +177,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  render() {
+  render(): JSX.Element | null {
     const { children, saveDisabled } = this.props;
     const { showFinalStep, showHistory } = this.state;
 

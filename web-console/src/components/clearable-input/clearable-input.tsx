@@ -29,7 +29,7 @@ export interface ClearableInputProps {
 }
 
 export class ClearableInput extends React.PureComponent<ClearableInputProps> {
-  render() {
+  render(): JSX.Element {
     const { className, value, onChange, placeholder } = this.props;
 
     return (

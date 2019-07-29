@@ -43,7 +43,34 @@ matrix:
       # Strict compilation requires more than 2 GB
       script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile spotbugs:check -B --fail-at-end
 
-    # packaging check
+      # analyze dependencies
+    - env:
+        - NAME="analyze dependencies"
+      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
+      script: MAVEN_OPTS='-Xmx3000m' mvn dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true
+      after_failure:
+        - |
+          cat << EOF
+
+          The dependency analysis has found a dependency that is either:
+
+          1) Used and undeclared: These are available as a transitive dependency but should be explicitly
+          added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
+          shown above.
+
+          2) Unused and declared: These are not needed and removing them from the POM will speed up the build
+          and reduce the artifact size.
+
+          If there are false positive dependency analysis warnings, they can be suppressed:
+          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
+          https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
+
+          For more information, refer to:
+          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
+
+          EOF
+
+      # packaging check
     - env:
         - NAME="packaging check"
       before_install:

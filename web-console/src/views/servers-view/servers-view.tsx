@@ -83,13 +83,13 @@ export interface ServersViewProps {
 
 export interface ServersViewState {
   serversLoading: boolean;
-  servers: any[] | null;
-  serversError: string | null;
+  servers?: any[];
+  serversError?: string;
   serverFilter: Filter[];
-  groupServersBy: null | 'server_type' | 'tier';
+  groupServersBy?: 'server_type' | 'tier';
 
-  middleManagerDisableWorkerHost: string | null;
-  middleManagerEnableWorkerHost: string | null;
+  middleManagerDisableWorkerHost?: string;
+  middleManagerEnableWorkerHost?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
 }
@@ -182,13 +182,7 @@ ORDER BY "rank" DESC, "server" DESC`;
     super(props, context);
     this.state = {
       serversLoading: true,
-      servers: null,
-      serversError: null,
       serverFilter: [],
-      groupServersBy: null,
-
-      middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null,
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
@@ -576,7 +570,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not disable worker"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ middleManagerDisableWorkerHost: null });
+          this.setState({ middleManagerDisableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
@@ -605,7 +599,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not enable worker"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ middleManagerEnableWorkerHost: null });
+          this.setState({ middleManagerEnableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
@@ -616,7 +610,7 @@ ORDER BY "rank" DESC, "server" DESC`;
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { goToQuery, noSqlMode } = this.props;
     const { groupServersBy, hiddenColumns } = this.state;
 
@@ -626,8 +620,8 @@ ORDER BY "rank" DESC, "server" DESC`;
           <Label>Group by</Label>
           <ButtonGroup>
             <Button
-              active={groupServersBy === null}
-              onClick={() => this.setState({ groupServersBy: null })}
+              active={!groupServersBy}
+              onClick={() => this.setState({ groupServersBy: undefined })}
             >
               None
             </Button>

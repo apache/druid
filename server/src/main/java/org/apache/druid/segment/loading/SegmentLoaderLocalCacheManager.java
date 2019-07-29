@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -43,8 +42,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
-  private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.available(), left.available());
+  private static final Comparator<StorageLocation> COMPARATOR = Comparator
+      .comparingLong(StorageLocation::availableSizeBytes)
+      .reversed();
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
@@ -163,9 +163,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
-        final File localStorageDir = new File(loc.getPath(), storageDir);
-        loc.addSegmentDir(localStorageDir, segment);
-        return localStorageDir;
+        return new File(loc.getPath(), storageDir);
       }
       finally {
         unlock(segment, lock);
@@ -181,23 +179,24 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
     for (StorageLocation loc : locations) {
-      if (loc.canHandle(segment)) {
-        File storageDir = new File(loc.getPath(), storageDirStr);
-
+      File storageDir = loc.reserve(storageDirStr, segment);
+      if (storageDir != null) {
         try {
           loadInLocationWithStartMarker(segment, storageDir);
           return loc;
         }
         catch (SegmentLoadingException e) {
-          log.makeAlert(
-              e,
-              "Failed to load segment in current location %s, try next location if any",
-              loc.getPath().getAbsolutePath()
-          )
-             .addData("location", loc.getPath().getAbsolutePath())
-             .emit();
-
-          cleanupCacheFiles(loc.getPath(), storageDir);
+          try {
+            log.makeAlert(
+                e,
+                "Failed to load segment in current location [%s], try next location if any",
+                loc.getPath().getAbsolutePath()
+            ).addData("location", loc.getPath().getAbsolutePath()).emit();
+          }
+          finally {
+            loc.removeSegmentDir(storageDir, segment);
+            cleanupCacheFiles(loc.getPath(), storageDir);
+          }
         }
       }
     }
@@ -365,5 +364,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
     return segmentLocks;
+  }
+
+  @VisibleForTesting
+  public List<StorageLocation> getLocations()
+  {
+    return locations;
   }
 }

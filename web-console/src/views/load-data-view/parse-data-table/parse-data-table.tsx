@@ -38,7 +38,7 @@ export interface ParseDataTableProps {
 }
 
 export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleData,
       columnFilter,

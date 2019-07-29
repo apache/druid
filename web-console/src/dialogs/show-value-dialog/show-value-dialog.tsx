@@ -35,7 +35,7 @@ export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { onClose, str } = this.props;
 
     return (
