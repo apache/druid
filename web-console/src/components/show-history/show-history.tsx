@@ -32,14 +32,12 @@ export interface ShowHistoryProps {
 
 export interface ShowHistoryState {
   jsonValue: [];
-  versions: any;
 }
 
 export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
   constructor(props: ShowHistoryProps, context: any) {
     super(props, context);
     this.state = {
-      versions: [],
       jsonValue: [],
     };
 
@@ -47,28 +45,12 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
   }
 
   private getJsonInfo = async (): Promise<void> => {
-    const { endpoint, transform, downloadFilename } = this.props;
+    const { endpoint } = this.props;
     try {
       const resp = await axios.get(endpoint);
       const data = resp.data;
       this.setState({
         jsonValue: data,
-        versions: data.map((version: any, index: number) => (
-          <Tab
-            id={index}
-            key={index}
-            title={version.version}
-            panel={
-              <ShowJson
-                defaultValue={JSON.stringify(version.spec, undefined, 2)}
-                transform={transform}
-                downloadFilename={downloadFilename + 'version-' + version.version}
-                endpoint={endpoint}
-              />
-            }
-            panelClassName={'panel'}
-          />
-        )),
       });
     } catch (e) {
       this.setState({
@@ -78,7 +60,26 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
   };
 
   render() {
-    const { versions } = this.state;
+    const { transform, downloadFilename, endpoint } = this.props;
+    const { jsonValue } = this.state;
+
+    const versions = jsonValue.map((version: any, index: number) => (
+      <Tab
+        id={index}
+        key={index}
+        title={version.version}
+        panel={
+          <ShowJson
+            defaultValue={JSON.stringify(version.spec, undefined, 2)}
+            transform={transform}
+            downloadFilename={downloadFilename + 'version-' + version.version}
+            endpoint={endpoint}
+          />
+        }
+        panelClassName={'panel'}
+      />
+    ));
+
     return (
       <div className="show-history">
         <Tabs
