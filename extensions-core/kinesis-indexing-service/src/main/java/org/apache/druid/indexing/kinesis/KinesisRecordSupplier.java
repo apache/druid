@@ -26,6 +26,8 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
+import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
@@ -35,11 +37,13 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
@@ -61,12 +65,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -579,12 +585,31 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Set<String> getPartitionIds(String stream)
   {
-    checkIfClosed();
-    return kinesis.describeStream(stream)
-                  .getStreamDescription()
-                  .getShards()
-                  .stream()
-                  .map(Shard::getShardId).collect(Collectors.toSet());
+    return wrapExceptions(
+        () -> {
+          final Set<String> retVal = new HashSet<>();
+          DescribeStreamRequest request = new DescribeStreamRequest();
+          request.setStreamName(stream);
+
+          while (request != null) {
+            final DescribeStreamResult result = kinesis.describeStream(request);
+            final StreamDescription streamDescription = result.getStreamDescription();
+            final List<Shard> shards = streamDescription.getShards();
+
+            for (Shard shard : shards) {
+              retVal.add(shard.getShardId());
+            }
+
+            if (streamDescription.isHasMoreShards()) {
+              request.setExclusiveStartShardId(Iterables.getLast(shards).getShardId());
+            } else {
+              request = null;
+            }
+          }
+
+          return retVal;
+        }
+    );
   }
 
   @Override
@@ -624,12 +649,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         sequenceNumber != null ? sequenceNumber : iteratorEnum.toString()
     );
 
-    resource.shardIterator = kinesis.getShardIterator(
+    resource.shardIterator = wrapExceptions(() -> kinesis.getShardIterator(
         partition.getStream(),
         partition.getPartitionId(),
         iteratorEnum.toString(),
         sequenceNumber
-    ).getShardIterator();
+    ).getShardIterator());
 
     checkPartitionsStarted = true;
   }
@@ -655,10 +680,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     // filter records in buffer and only retain ones whose partition was not seeked
     BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
-    records
-        .stream()
-        .filter(x -> !partitions.contains(x.getStreamPartition()))
-        .forEachOrdered(newQ::offer);
+
+    records.stream()
+           .filter(x -> !partitions.contains(x.getStreamPartition()))
+           .forEachOrdered(newQ::offer);
 
     records = newQ;
 
@@ -670,20 +695,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Nullable
   private String getSequenceNumberInternal(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
   {
-
-    String shardIterator = null;
-    try {
-      shardIterator = kinesis.getShardIterator(
-          partition.getStream(),
-          partition.getPartitionId(),
-          iteratorEnum.toString()
-      ).getShardIterator();
-    }
-    catch (ResourceNotFoundException e) {
-      log.warn(e, "Caught ResourceNotFoundException while getting shardIterator");
-    }
-
-    return getSequenceNumberInternal(partition, shardIterator);
+    return wrapExceptions(() -> getSequenceNumberInternal(
+        partition,
+        kinesis.getShardIterator(partition.getStream(), partition.getPartitionId(), iteratorEnum.toString())
+               .getShardIterator()
+    ));
   }
 
   @Nullable
@@ -771,6 +787,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       final byte[] retVal = new byte[buffer.remaining()];
       buffer.duplicate().get(retVal);
       return retVal;
+    }
+  }
+
+  private static <T> T wrapExceptions(Callable<T> callable)
+  {
+    try {
+      return callable.call();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
