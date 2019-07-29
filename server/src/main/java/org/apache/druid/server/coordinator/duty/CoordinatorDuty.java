@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
 import javax.annotation.Nullable;
@@ -35,7 +34,7 @@ public interface CoordinatorDuty
    *
    * @return same as input or a modified value to be used by next duty. Null return
    * values will prevent subsequent CoordinatorDuty objects (see the order in the lists passed into the constructor of
-   * {@link DruidCoordinator.DutiesRunnable}) from running until the next
+   * {@link org.apache.druid.server.coordinator.DruidCoordinator.DutiesRunnable}) from running until the next
    * cycle.
    */
   @Nullable
