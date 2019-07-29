@@ -176,11 +176,11 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-            new StatsDEmitterConfig("localhost", 8888, "druid", null, true, null, null, true, null, true),
+            new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true),
             new ObjectMapper(),
             client
     );
-    client.time("query.time", 10,
+    client.time("druid.query.time", 10,
             "service:druid/broker", "dataSource:data-source", "type:groupBy", "hostname:brokerHost1"
     );
     EasyMock.replay(client);

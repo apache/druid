@@ -43,6 +43,7 @@ public class StatsDEmitter implements Emitter
 
   private static final Logger log = new Logger(StatsDEmitter.class);
   private static final char DRUID_METRIC_SEPARATOR = '/';
+  private static final String DRUID_DEFAULT_PREFIX = "druid";
   private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
@@ -103,6 +104,7 @@ public class StatsDEmitter implements Emitter
 
       if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
         dimsBuilder.put("service", service);
+        nameBuilder.add(DRUID_DEFAULT_PREFIX);
       } else {
         nameBuilder.add(service);
       }
