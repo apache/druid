@@ -191,9 +191,9 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
-   * Read dataSource metadata. Returns null if there is no metadata.
+   * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
    */
-  DataSourceMetadata getDataSourceMetadata(String dataSource);
+  @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);
 
   /**
    * Removes entry for 'dataSource' from the dataSource metadata table.

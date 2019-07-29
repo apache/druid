@@ -42,6 +42,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -585,7 +586,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public byte[] lookup(
+  public @Nullable byte[] lookup(
       final String tableName,
       final String keyColumn,
       final String valueColumn,
@@ -604,7 +605,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public byte[] lookupWithHandle(
+  public @Nullable byte[] lookupWithHandle(
       final Handle handle,
       final String tableName,
       final String keyColumn,

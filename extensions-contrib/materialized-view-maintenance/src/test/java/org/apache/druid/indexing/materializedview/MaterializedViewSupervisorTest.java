@@ -288,10 +288,10 @@ public class MaterializedViewSupervisorTest
     );
     MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
 
-    // mock IndexerSQLMetadataStorageCoordinator to ensure that getDataSourceMetadata is not called
+    // mock IndexerSQLMetadataStorageCoordinator to ensure that retrieveDataSourceMetadata is not called
     // which will be true if truly suspended, since this is the first operation of the 'run' method otherwise
     IndexerSQLMetadataStorageCoordinator mock = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
-    EasyMock.expect(mock.getDataSourceMetadata(suspended.getDataSourceName()))
+    EasyMock.expect(mock.retrieveDataSourceMetadata(suspended.getDataSourceName()))
             .andAnswer(() -> {
               Assert.fail();
               return null;

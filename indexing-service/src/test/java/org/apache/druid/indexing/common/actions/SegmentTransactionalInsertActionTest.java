@@ -131,7 +131,7 @@ public class SegmentTransactionalInsertActionTest
 
     Assert.assertEquals(
         new ObjectMetadata(ImmutableList.of(2)),
-        actionTestKit.getMetadataStorageCoordinator().getDataSourceMetadata(DATA_SOURCE)
+        actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(DATA_SOURCE)
     );
   }
 

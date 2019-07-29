@@ -944,7 +944,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Read dataSource metadata. Returns null if there is no metadata.
    */
   @Override
-  public DataSourceMetadata getDataSourceMetadata(final String dataSource)
+  public @Nullable DataSourceMetadata retrieveDataSourceMetadata(final String dataSource)
   {
     final byte[] bytes = connector.lookup(
         dbTables.getDataSourceTable(),
@@ -968,7 +968,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
    */
-  private byte[] getDataSourceMetadataWithHandleAsBytes(
+  private @Nullable byte[] retrieveDataSourceMetadataWithHandleAsBytes(
       final Handle handle,
       final String dataSource
   )
@@ -1012,7 +1012,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(startMetadata, "startMetadata");
     Preconditions.checkNotNull(endMetadata, "endMetadata");
 
-    final byte[] oldCommitMetadataBytesFromDb = getDataSourceMetadataWithHandleAsBytes(handle, dataSource);
+    final byte[] oldCommitMetadataBytesFromDb = retrieveDataSourceMetadataWithHandleAsBytes(handle, dataSource);
     final String oldCommitMetadataSha1FromDb;
     final DataSourceMetadata oldCommitMetadataFromDb;
 

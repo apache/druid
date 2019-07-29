@@ -129,7 +129,7 @@ public class MaterializedViewSupervisor implements Supervisor
     synchronized (stateLock) {
       Preconditions.checkState(!started, "already started");
 
-      DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
+      DataSourceMetadata metadata = metadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
       if (null == metadata) {
         metadataStorageCoordinator.insertDataSourceMetadata(
             dataSource,
@@ -161,7 +161,7 @@ public class MaterializedViewSupervisor implements Supervisor
         return;
       }
 
-      DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
+      DataSourceMetadata metadata = metadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
       if (metadata instanceof DerivativeDataSourceMetadata
           && spec.getBaseDataSource().equals(((DerivativeDataSourceMetadata) metadata).getBaseDataSource())
           && spec.getDimensions().equals(((DerivativeDataSourceMetadata) metadata).getDimensions())
@@ -256,7 +256,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     if (dataSourceMetadata == null) {
       // if oldMetadata is different from spec, tasks and segments will be removed when reset.
-      DataSourceMetadata oldMetadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
+      DataSourceMetadata oldMetadata = metadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
       if (oldMetadata instanceof DerivativeDataSourceMetadata) {
         if (!((DerivativeDataSourceMetadata) oldMetadata).getBaseDataSource().equals(spec.getBaseDataSource()) ||
             !((DerivativeDataSourceMetadata) oldMetadata).getDimensions().equals(spec.getDimensions()) ||

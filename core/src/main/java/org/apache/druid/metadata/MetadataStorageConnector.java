@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -36,7 +37,7 @@ public interface MetadataStorageConnector
       byte[] value
   );
 
-  byte[] lookup(
+  @Nullable byte[] lookup(
       String tableName,
       String keyColumn,
       String valueColumn,

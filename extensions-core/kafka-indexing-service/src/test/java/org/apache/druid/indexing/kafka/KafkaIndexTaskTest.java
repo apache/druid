@@ -441,7 +441,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -492,7 +492,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -589,7 +589,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -734,7 +734,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
@@ -742,7 +742,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -837,7 +837,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 2L, 1, 0L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -990,7 +990,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1041,7 +1041,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1100,7 +1100,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1183,7 +1183,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1235,7 +1235,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1282,7 +1282,7 @@ public class KafkaIndexTaskTest
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
   }
 
   @Test(timeout = 60_000L)
@@ -1332,7 +1332,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -1404,7 +1404,7 @@ public class KafkaIndexTaskTest
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -1486,7 +1486,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1553,7 +1553,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1604,7 +1604,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc1 = sd("2010/P1D", 0);
     SegmentDescriptor desc2 = sd("2011/P1D", 0);
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
@@ -1622,7 +1622,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc3 = sd("2011/P1D", 1);
     SegmentDescriptor desc4 = sd("2013/P1D", 0);
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     // Check segments in deep storage
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1675,7 +1675,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1754,7 +1754,7 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 1L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1852,7 +1852,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1967,7 +1967,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
   }
 
@@ -2053,7 +2053,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2177,7 +2177,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2321,7 +2321,7 @@ public class KafkaIndexTaskTest
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage

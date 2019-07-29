@@ -458,7 +458,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -528,7 +528,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -641,7 +641,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 ImmutableMap.of(SHARD_ID1, "9", SHARD_ID0, "1")
             )
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -786,7 +786,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc7), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "10"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -860,7 +860,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -932,7 +932,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1011,7 +1011,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1136,7 +1136,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1206,7 +1206,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1273,7 +1273,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
   }
 
 
@@ -1344,7 +1344,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "12"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -1435,7 +1435,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -1543,7 +1543,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1634,7 +1634,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1710,7 +1710,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     SegmentDescriptor desc1 = sd("2010/P1D", 0);
     SegmentDescriptor desc2 = sd("2011/P1D", 0);
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
@@ -1730,7 +1730,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     SegmentDescriptor desc3 = sd("2011/P1D", 1);
     SegmentDescriptor desc4 = sd("2013/P1D", 0);
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
     // Check segments in deep storage
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1808,7 +1808,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -1909,7 +1909,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2038,7 +2038,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "5"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2186,7 +2186,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "6"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
   }
 
@@ -2285,7 +2285,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             STREAM,
             ImmutableMap.of(SHARD_ID1, currentOffsets.get(SHARD_ID1))
         )),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2364,7 +2364,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
@@ -2522,7 +2522,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "9"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+        metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
   }
 

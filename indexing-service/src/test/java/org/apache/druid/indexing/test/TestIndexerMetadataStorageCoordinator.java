@@ -51,7 +51,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public DataSourceMetadata getDataSourceMetadata(String dataSource)
+  public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
   {
     throw new UnsupportedOperationException();
   }

@@ -348,7 +348,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Examine metadata.
     Assert.assertEquals(
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        coordinator.getDataSourceMetadata("fooDataSource")
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
     );
 
     // Should only be tried once per call.
@@ -425,7 +425,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Examine metadata.
     Assert.assertEquals(
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        failOnceCoordinator.getDataSourceMetadata("fooDataSource")
+        failOnceCoordinator.retrieveDataSourceMetadata("fooDataSource")
     );
 
     // Should be tried twice per call.
@@ -790,13 +790,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals(
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        coordinator.getDataSourceMetadata("fooDataSource")
+        coordinator.retrieveDataSourceMetadata("fooDataSource")
     );
 
     Assert.assertFalse("deleteInvalidDataSourceMetadata", coordinator.deleteDataSourceMetadata("nonExistentDS"));
     Assert.assertTrue("deleteValidDataSourceMetadata", coordinator.deleteDataSourceMetadata("fooDataSource"));
 
-    Assert.assertNull("getDataSourceMetadataNullAfterDelete", coordinator.getDataSourceMetadata("fooDataSource"));
+    Assert.assertNull("getDataSourceMetadataNullAfterDelete", coordinator.retrieveDataSourceMetadata("fooDataSource"));
   }
 
   @Test
