@@ -58,7 +58,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
     }
   }
 
-  render() {
+  render(): JSX.Element {
     const { onChange, updateInputValidity, focus, width, height } = this.props;
     const { stringValue } = this.state;
     return (

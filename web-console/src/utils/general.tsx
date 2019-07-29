@@ -101,10 +101,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
-    return true;
-  }
-  if (value === null) return false;
+  if (value == null) return false;
   const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;

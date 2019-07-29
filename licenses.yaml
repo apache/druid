@@ -488,28 +488,19 @@ module: java-core
 license_name: Apache License version 2.0
 version: 4.1.29.Final
 libraries:
+  - io.netty: netty-buffer
+  - io.netty: netty-codec
   - io.netty: netty-codec-dns
+  - io.netty: netty-codec-http
   - io.netty: netty-codec-socks
+  - io.netty: netty-common
+  - io.netty: netty-handler
   - io.netty: netty-handler-proxy
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
+  - io.netty: netty-transport
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.30.Final
-libraries:
-  - io.netty: netty-buffer
-  - io.netty: netty-codec
-  - io.netty: netty-codec-http
-  - io.netty: netty-common
-  - io.netty: netty-handler
-  - io.netty: netty-transport
 
 ---
 
@@ -1367,16 +1358,6 @@ libraries:
 
 ---
 
-name: Apache Commons Pool
-license_category: binary
-module: extensions/druid-datasketches
-license_name: Apache License version 2.0
-version: 2.5.0
-libraries:
-  - org.apache.commons: commons-pool2
-
----
-
 name: Apache Kafka
 version: 2.1.0
 license_category: binary
@@ -2025,7 +2006,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.15
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -2645,6 +2626,16 @@ license_file_path: licenses/bin/js-tokens.MIT
 
 ---
 
+name: "lodash.compact"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 3.0.1
+license_file_path: licenses/bin/lodash.compact.MIT
+
+---
+
 name: "lodash.debounce"
 license_category: binary
 module: web-console
@@ -2652,6 +2643,16 @@ license_name: MIT License
 copyright: John-David Dalton
 version: 4.0.8
 license_file_path: licenses/bin/lodash.debounce.MIT
+
+---
+
+name: "lodash.escape"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.0.1
+license_file_path: licenses/bin/lodash.escape.MIT
 
 ---
 

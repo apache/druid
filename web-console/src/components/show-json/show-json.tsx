@@ -74,7 +74,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
     this.showJsonQueryManager.runQuery(null);
   }
 
-  render() {
+  render(): JSX.Element {
     const { endpoint, downloadFilename } = this.props;
     const { jsonValue, error, loading } = this.state;
 

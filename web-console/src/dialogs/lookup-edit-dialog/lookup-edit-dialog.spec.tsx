@@ -26,9 +26,9 @@ describe('lookup edit dialog', () => {
     const lookupEditDialog = (
       <LookupEditDialog
         isOpen
-        onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
+        onClose={() => {}}
+        onSubmit={() => {}}
+        onChange={() => {}}
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}

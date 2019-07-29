@@ -54,33 +54,29 @@ function processTimeseries(rune: any[]): HeaderRows {
 }
 
 function processArrayWithResultArray(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows([].concat(...rune.map(r => r.result)));
+  return flatArrayToHeaderRows(rune.flatMap(r => r.result));
 }
 
 function processArrayWithEvent(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows(rune.map((r: any) => r.event));
+  return flatArrayToHeaderRows(rune.map(r => r.event));
 }
 
 function processArrayWithResult(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows(rune.map((r: any) => r.result));
+  return flatArrayToHeaderRows(rune.map(r => r.result));
 }
 
 function processSelect(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows(
-    [].concat(...rune.map(r => r.result.events.map((e: any) => e.event))),
-  );
+  return flatArrayToHeaderRows(rune.flatMap(r => r.result.events.map((e: any) => e.event)));
 }
 
 function processScan(rune: any[]): HeaderRows {
   const header = rune[0].columns;
-  return flatArrayToHeaderRows([].concat(...rune.map(r => r.events)), header);
+  return flatArrayToHeaderRows(rune.flatMap(r => r.events), header);
 }
 
 function processSegmentMetadata(rune: any[]): HeaderRows {
-  const flatArray = ([] as any).concat(
-    ...rune.map(r =>
-      Object.keys(r.columns).map(k => Object.assign({ id: r.id, column: k }, r.columns[k])),
-    ),
+  const flatArray = rune.flatMap(r =>
+    Object.keys(r.columns).map(k => Object.assign({ id: r.id, column: k }, r.columns[k])),
   );
   return flatArrayToHeaderRows(flatArray);
 }
@@ -131,7 +127,7 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
       if (runeQuery.resultFormat === 'compactedList') {
         return {
           header: runeResult[0].columns,
-          rows: [].concat(...runeResult.map(r => r.events)),
+          rows: runeResult.flatMap(r => r.events),
         };
       }
       return processScan(runeResult);
