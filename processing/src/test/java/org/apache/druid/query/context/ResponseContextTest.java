@@ -30,9 +30,49 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public class ResponseContextTest
 {
+
+  public enum ExtensionResponseContextKey implements ResponseContext.BaseKey
+  {
+    EXTENSION_KEY_1("extension_key_1"),
+    EXTENSION_KEY_2("extension_key_2", (oldValue, newValue) -> (long) oldValue + (long) newValue);
+
+    static {
+      for (ResponseContext.BaseKey key : values()) {
+        ResponseContext.Key.addKey(key);
+      }
+    }
+
+    private final String name;
+    private final BiFunction<Object, Object, Object> mergeFunction;
+
+    ExtensionResponseContextKey(String name)
+    {
+      this.name = name;
+      this.mergeFunction = (oldValue, newValue) -> newValue;
+    }
+
+    ExtensionResponseContextKey(String name, BiFunction<Object, Object, Object> mergeFunction)
+    {
+      this.name = name;
+      this.mergeFunction = mergeFunction;
+    }
+
+    @Override
+    public String getName()
+    {
+      return name;
+    }
+
+    @Override
+    public BiFunction<Object, Object, Object> getMergeFunction()
+    {
+      return mergeFunction;
+    }
+  }
 
   @Test
   public void mergeValueTest()
@@ -131,5 +171,38 @@ public class ResponseContextTest
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 20);
     reducedCtx.remove(ResponseContext.Key.ETAG);
     Assert.assertEquals(objectMapper.writeValueAsString(reducedCtx.getDelegate()), res2.getTruncatedResult());
+  }
+
+  @Test
+  public void extensionEnumIntegrityTest()
+  {
+    Assert.assertEquals(
+        ExtensionResponseContextKey.EXTENSION_KEY_1,
+        ResponseContext.Key.keyOf(ExtensionResponseContextKey.EXTENSION_KEY_1.getName())
+    );
+    Assert.assertEquals(
+        ExtensionResponseContextKey.EXTENSION_KEY_2,
+        ResponseContext.Key.keyOf(ExtensionResponseContextKey.EXTENSION_KEY_2.getName())
+    );
+    for (ResponseContext.BaseKey key : ExtensionResponseContextKey.values()) {
+      Assert.assertTrue(ResponseContext.Key.getKeys().contains(key));
+    }
+  }
+
+  @Test
+  public void extensionEnumMergeTest()
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    ctx.add(ResponseContext.Key.ETAG, "etag");
+    ctx.add(ExtensionResponseContextKey.EXTENSION_KEY_1, "string-value");
+    ctx.add(ExtensionResponseContextKey.EXTENSION_KEY_2, 2L);
+    final ResponseContext ctxFinal = ResponseContext.createEmpty();
+    ctxFinal.add(ResponseContext.Key.ETAG, "old-etag");
+    ctxFinal.add(ExtensionResponseContextKey.EXTENSION_KEY_1, "old-string-value");
+    ctxFinal.add(ExtensionResponseContextKey.EXTENSION_KEY_2, 1L);
+    ctxFinal.merge(ctx);
+    Assert.assertEquals("etag", ctxFinal.get(ResponseContext.Key.ETAG));
+    Assert.assertEquals("string-value", ctxFinal.get(ExtensionResponseContextKey.EXTENSION_KEY_1));
+    Assert.assertEquals(1L + 2L, ctxFinal.get(ExtensionResponseContextKey.EXTENSION_KEY_2));
   }
 }

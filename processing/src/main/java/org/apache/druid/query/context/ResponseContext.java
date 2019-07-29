@@ -30,11 +30,13 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.TreeMap;
 import java.util.function.BiFunction;
 
 /**
@@ -45,9 +47,47 @@ import java.util.function.BiFunction;
 public abstract class ResponseContext
 {
   /**
-   * Keys associated with objects in the context.
+   * The base interface of a response context key.
+   * Should be implemented by every context key.
    */
-  public enum Key
+  public interface BaseKey
+  {
+    String getName();
+    /**
+     * Merge function associated with a key: Object (Object oldValue, Object newValue)
+     */
+    BiFunction<Object, Object, Object> getMergeFunction();
+  }
+
+  /**
+   * Keys associated with objects in the context. The enum is extension-friendly.
+   * <p>If it's necessary to have some new keys in the context then they could be described in a separate enum:
+   * <pre>{@code
+   * public enum ExtensionResponseContextKey implements BaseKey
+   * {
+   *   EXTENSION_KEY_1("extension_key_1"), EXTENSION_KEY_2("extension_key_2");
+   *
+   *   static {
+   *     for (ResponseContextKey key : values()) ResponseContext.Key.addKey(key);
+   *   }
+   *
+   *   private final String name;
+   *   private final BiFunction<Object, Object, Object> mergeFunction;
+   *
+   *   ExtensionResponseContextKey(String name)
+   *   {
+   *     this.name = name;
+   *     this.mergeFunction = (oldValue, newValue) -> newValue;
+   *   }
+   *
+   *   @Override public String getName() { return name; }
+   *
+   *   @Override public BiFunction<Object, Object, Object> getMergeFunction() { return mergeFunction; }
+   * }
+   * }</pre>
+   * Make sure all extension enum values added with Key.addKey method.
+   */
+  public enum Key implements BaseKey
   {
     /**
      * Lists intervals for which NO segment is present.
@@ -117,10 +157,49 @@ public abstract class ResponseContext
             (oldValue, newValue) -> (long) oldValue + (long) newValue
     );
 
-    private final String name;
     /**
-     * Merge function associated with a key: Object (Object oldValue, Object newValue)
+     * TreeMap is used to have the natural ordering of its keys
      */
+    private static Map<String, BaseKey> map = new TreeMap<>();
+
+    static {
+      for (BaseKey key : values()) {
+        addKey(key);
+      }
+    }
+
+    /**
+     * The primary way of registering context keys.
+     * Only the keys registered this way are considered during the context merge.
+     */
+    public static void addKey(BaseKey key)
+    {
+      Preconditions.checkState(
+          !map.containsKey(key.getName()),
+          "ResponseContext keys already has the key with [%s] name",
+          key.getName()
+      );
+      map.put(key.getName(), key);
+    }
+
+    /**
+     * Returns a key associated with the name if the key was added via addKey method
+     */
+    public static BaseKey keyOf(String name)
+    {
+      return map.get(name);
+    }
+
+    /**
+     * Returns all keys the enum contains and the added via addKey method
+     */
+    public static Collection<BaseKey> getKeys()
+    {
+      return map.values();
+    }
+
+    private final String name;
+
     private final BiFunction<Object, Object, Object> mergeFunction;
 
     Key(String name)
@@ -133,6 +212,18 @@ public abstract class ResponseContext
     {
       this.name = name;
       this.mergeFunction = mergeFunction;
+    }
+
+    @Override
+    public String getName()
+    {
+      return name;
+    }
+
+    @Override
+    public BiFunction<Object, Object, Object> getMergeFunction()
+    {
+      return mergeFunction;
     }
   }
 
@@ -163,28 +254,28 @@ public abstract class ResponseContext
 
   protected abstract Map<String, Object> getDelegate();
 
-  public Object put(Key key, Object value)
+  public Object put(BaseKey key, Object value)
   {
-    return getDelegate().put(key.name, value);
+    return getDelegate().put(key.getName(), value);
   }
 
-  public Object get(Key key)
+  public Object get(BaseKey key)
   {
-    return getDelegate().get(key.name);
+    return getDelegate().get(key.getName());
   }
 
-  public Object remove(Key key)
+  public Object remove(BaseKey key)
   {
-    return getDelegate().remove(key.name);
+    return getDelegate().remove(key.getName());
   }
 
   /**
    * Adds (merges) a new value associated with a key to an old value.
    * See merge function of a context key for a specific implementation.
    */
-  public Object add(Key key, Object value)
+  public Object add(BaseKey key, Object value)
   {
-    return getDelegate().merge(key.name, value, key.mergeFunction);
+    return getDelegate().merge(key.getName(), value, key.getMergeFunction());
   }
 
   /**
@@ -193,7 +284,7 @@ public abstract class ResponseContext
    */
   public void merge(ResponseContext responseContext)
   {
-    for (Key key : Key.values()) {
+    for (BaseKey key : Key.getKeys()) {
       final Object newValue = responseContext.get(key);
       if (newValue != null) {
         add(key, newValue);
