@@ -22,7 +22,6 @@ package org.apache.druid.java.util.metrics;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
