@@ -18,7 +18,8 @@
 
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
-import compact from 'lodash.compact';
+
+import { assemble } from './general';
 
 export function parseHtmlError(htmlStr: string): string | undefined {
   const startIndex = htmlStr.indexOf('</h3><pre>');
@@ -37,12 +38,12 @@ export function getDruidErrorMessage(e: any) {
   switch (typeof data) {
     case 'object':
       return (
-        compact([
+        assemble(
           data.error,
           data.errorMessage,
           data.errorClass,
           data.host ? `on host ${data.host}` : undefined,
-        ]).join(' / ') || e.message
+        ).join(' / ') || e.message
       );
 
     case 'string':

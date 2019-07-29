@@ -17,8 +17,9 @@
  */
 
 import { TextArea } from '@blueprintjs/core';
-import compact from 'lodash.compact';
 import React from 'react';
+
+import { compact } from '../../utils';
 
 export interface ArrayInputProps {
   className?: string;
