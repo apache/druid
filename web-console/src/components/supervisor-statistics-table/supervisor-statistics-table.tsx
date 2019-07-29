@@ -74,8 +74,8 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         this.setState({
           jsonValue: result ? JSON.stringify(result) : '',
           data: dataArray,
+          error: error ? error : null,
           loading,
-          error,
         });
       },
     });

@@ -63,7 +63,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           loading,
-          error,
+          error: error ? error : null,
           jsonValue: result ? result : '',
         });
       },
