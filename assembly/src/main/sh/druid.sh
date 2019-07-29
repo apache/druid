@@ -8,7 +8,7 @@ DRUID_CLASSPATH=${DRUID_CLASSPATH:-"jars"}
 DRUID_USER_CLASSPATH=`ls -1 $DRUID_CLASSPATH | xargs -I{} echo $DRUID_CLASSPATH/{} | tr '\n' ':'`
 
 FS_FQDN=${FS_FQDN:-com.amazon.ws.emr.hadoop.fs.EmrFileSystem}
-DRUID_JAVA_OPTS="-Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/:$DRUID_CLASSPATH/*:$HADOOP_CLASSPATH -Ddruid.hadoop.user.classpath=$DRUID_USER_CLASSPATH -Djava.library.path=$HADOOP_HOME/lib/native/ -Dhadoop.fs.s3n.impl=${FS_FQDN} -Dhadoop.fs.s3.impl=${FS_FQDN} -Dhadoop.tmp.dir=${GENIE_JOB_DIR}/tmp"
+DRUID_JAVA_OPTS="-Xmx2560m -Djava.io.tmpdir=/mnt/tmp/druid/ -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/:$DRUID_CLASSPATH/*:$HADOOP_CLASSPATH -Ddruid.hadoop.user.classpath=$DRUID_USER_CLASSPATH -Djava.library.path=$HADOOP_HOME/lib/native/ -Dhadoop.fs.s3n.impl=${FS_FQDN} -Dhadoop.fs.s3.impl=${FS_FQDN} -Dhadoop.tmp.dir=${GENIE_JOB_DIR}/tmp"
 
 $JAVA_HOME/bin/java $DRUID_JAVA_OPTS org.apache.druid.cli.Main index hadoop --no-default-hadoop "$@"
 
