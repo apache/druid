@@ -37,7 +37,7 @@ export interface ShowJsonProps {
 export interface ShowJsonState {
   jsonValue: string;
   loading: boolean;
-  error: string | null;
+  error?: string;
 }
 
 export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
@@ -47,7 +47,6 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
     this.state = {
       jsonValue: '',
       loading: false,
-      error: null,
     };
     this.showJsonQueryManager = new QueryManager({
       processQuery: async () => {
@@ -63,7 +62,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           loading,
-          error: error ? error : null,
+          error,
           jsonValue: result ? result : '',
         });
       },

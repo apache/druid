@@ -40,7 +40,7 @@ export interface SupervisorStatisticsTableState {
   data: any[];
   jsonValue: string;
   loading: boolean;
-  error: string | null;
+  error?: string;
 }
 
 export class SupervisorStatisticsTable extends React.PureComponent<
@@ -54,7 +54,6 @@ export class SupervisorStatisticsTable extends React.PureComponent<
       data: [],
       jsonValue: '',
       loading: true,
-      error: null,
     };
     this.supervisorStatisticsTableQueryManager = new QueryManager({
       processQuery: async () => {
@@ -74,7 +73,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
         this.setState({
           jsonValue: result ? JSON.stringify(result) : '',
           data: dataArray,
-          error: error ? error : null,
+          error,
           loading,
         });
       },
@@ -105,7 +104,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     return <div> no data found</div>;
   }
 
-  renderTable(error: string | null) {
+  renderTable(error?: string) {
     const { data } = this.state;
 
     let columns = [
