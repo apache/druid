@@ -378,14 +378,18 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         command.add(StringUtils.format("-Ddruid.host=%s", childHost));
                         command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
                         command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
-                        /**
-                         * These are not enabled per default to allow the user to either set or not set them
-                         * Users are highly suggested to be set in druid.indexer.runner.javaOpts
-                         * See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
-                         * for more information
-                         command.add("-XX:+UseThreadPriorities");
-                         command.add("-XX:ThreadPriorityPolicy=42");
-                         */
+
+                        // Let tasks know where they are running on.
+                        // This information is used in native parallel indexing with shuffle.
+                        command.add(StringUtils.format("-Ddruid.parent.plaintextPort=%d", node.getPlaintextPort()));
+                        command.add(StringUtils.format("-Ddruid.parent.tlsPort=%d", node.getTlsPort()));
+
+                        // These are not enabled per default to allow the user to either set or not set them
+                        // Users are highly suggested to be set in druid.indexer.runner.javaOpts
+                        // See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
+                        // for more information
+                        // command.add("-XX:+UseThreadPriorities");
+                        // command.add("-XX:ThreadPriorityPolicy=42");
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
