@@ -209,7 +209,7 @@ public class ThreadingTaskRunner
                               taskStatus = task.run(toolbox);
                             }
                             catch (Throwable t) {
-                              LOGGER.info(t, "Exception caught while running the task.");
+                              LOGGER.error(t, "Exception caught while running the task.");
                             }
                             finally {
                               taskWorkItem.setFinished(true);
@@ -226,7 +226,7 @@ public class ThreadingTaskRunner
                             return taskStatus;
                           }
                           catch (Throwable t) {
-                            LOGGER.info(t, "Exception caught during execution");
+                            LOGGER.error(t, "Exception caught during execution");
                             throw new RuntimeException(t);
                           }
                           finally {
@@ -312,7 +312,7 @@ public class ThreadingTaskRunner
         return taskInfo.shutdownFuture;
       }
 
-      ListenableFuture shutdownFuture = controlThreadExecutor.submit(
+      taskInfo.shutdownFuture = controlThreadExecutor.submit(
           new Callable<Void>()
           {
             @Override
@@ -328,15 +328,17 @@ public class ThreadingTaskRunner
                 );
 
                 if (status == null) {
-                  if (taskInfo.thread != null) {
-                    taskInfo.thread.interrupt();
+                  // Note that we can't truly force a hard termination of the task thread externally.
+                  // In the future we may want to add a forceful shutdown method to the Task interface.
+                  if (taskInfo.shutdownFuture != null) {
+                    taskInfo.shutdownFuture.cancel(true);
                   }
                 }
               }
               catch (Exception e) {
                 LOGGER.info(e, "Encountered exception while waiting for task [%s] shutdown", taskInfo.getTaskId());
-                if (taskInfo.thread != null) {
-                  taskInfo.thread.interrupt();
+                if (taskInfo.shutdownFuture != null) {
+                  taskInfo.shutdownFuture.cancel(true);
                 }
               }
               return null;
@@ -344,8 +346,7 @@ public class ThreadingTaskRunner
           }
       );
 
-      taskInfo.shutdownFuture = shutdownFuture;
-      return shutdownFuture;
+      return taskInfo.shutdownFuture;
     }
   }
 
