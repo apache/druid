@@ -28,15 +28,15 @@ import java.lang.annotation.Target;
 
 /**
  * Binding annotation for org.apache.druid.server.DruidNode.
- * Indicates that the DruidNode bound with this annotation holds the information of the machine where this process
- * is running.
+ * Indicates that the DruidNode bound with this annotation holds the information of the machine which spawned
+ * this process.
  *
- * @see Parent
+ * @see Self
  */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
 @PublicApi
-public @interface Self
+public @interface Parent
 {
 }

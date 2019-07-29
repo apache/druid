@@ -166,6 +166,7 @@ public class WorkerTaskMonitorTest
         new SingleTaskBackgroundRunner(
             new TaskToolboxFactory(
                 taskConfig,
+                null,
                 taskActionClientFactory,
                 null, null, null, null, null, null, null, notifierFactory, null, null, null,
                 new SegmentLoaderFactory(null, jsonMapper),

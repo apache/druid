@@ -381,8 +381,21 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                         // Let tasks know where they are running on.
                         // This information is used in native parallel indexing with shuffle.
-                        command.add(StringUtils.format("-Ddruid.parent.plaintextPort=%d", node.getPlaintextPort()));
-                        command.add(StringUtils.format("-Ddruid.parent.tlsPort=%d", node.getTlsPort()));
+                        command.add(StringUtils.format("-Ddruid.task.executor.service=%s", node.getServiceName()));
+                        command.add(StringUtils.format("-Ddruid.task.executor.host=%s", node.getHost()));
+                        command.add(
+                            StringUtils.format("-Ddruid.task.executor.plaintextPort=%d", node.getPlaintextPort())
+                        );
+                        command.add(
+                            StringUtils.format(
+                                "-Ddruid.task.executor.enablePlaintextPort=%s",
+                                node.isEnablePlaintextPort()
+                            )
+                        );
+                        command.add(StringUtils.format("-Ddruid.task.executor.tlsPort=%d", node.getTlsPort()));
+                        command.add(
+                            StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
+                        );
 
                         // These are not enabled per default to allow the user to either set or not set them
                         // Users are highly suggested to be set in druid.indexer.runner.javaOpts

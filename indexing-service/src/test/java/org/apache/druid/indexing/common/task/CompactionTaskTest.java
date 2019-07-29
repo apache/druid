@@ -1153,6 +1153,7 @@ public class CompactionTaskTest
     {
       super(
           null,
+          null,
           taskActionClient,
           null,
           null,

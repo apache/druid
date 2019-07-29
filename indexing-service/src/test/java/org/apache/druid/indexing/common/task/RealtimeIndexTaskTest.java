@@ -976,6 +976,7 @@ public class RealtimeIndexTaskTest
     };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
         emitter,
         new TestDataSegmentPusher(),
