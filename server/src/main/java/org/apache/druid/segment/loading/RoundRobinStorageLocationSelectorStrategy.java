@@ -31,38 +31,18 @@ import java.util.Iterator;
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-
-  private ImmutableList<StorageLocation> storageLocations;
   private Iterator<StorageLocation> cyclicIterator;
 
   @Override
   public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
   {
-    this.storageLocations = storageLocations;
     // cyclicIterator remembers the marker internally
     cyclicIterator = Iterators.cycle(storageLocations);
   }
 
   @Override
-  public StorageLocation select(DataSegment dataSegment, String storageDirStr)
+  public Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr)
   {
-
-    StorageLocation bestLocation = null;
-
-    int numLocationsToTry = storageLocations.size();
-
-    while (cyclicIterator.hasNext() && numLocationsToTry > 0) {
-
-      StorageLocation loc = cyclicIterator.next();
-
-      numLocationsToTry--;
-
-      if (null != loc.reserve(storageDirStr, dataSegment)) {
-        bestLocation = loc;
-        break;
-      }
-    }
-
-    return bestLocation;
+    return cyclicIterator;
   }
 }

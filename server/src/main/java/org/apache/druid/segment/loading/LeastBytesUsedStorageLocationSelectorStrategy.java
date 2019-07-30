@@ -25,7 +25,6 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * A {@link StorageLocation} selector strategy that selects a segment cache location that is least filled each time
@@ -39,30 +38,14 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
   private ImmutableList<StorageLocation> storageLocations;
 
   @Override
-  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
+  public Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr)
   {
-    this.storageLocations = storageLocations;
+    return Ordering.from(COMPARATOR).sortedCopy(this.storageLocations).iterator();
   }
 
   @Override
-  public StorageLocation select(DataSegment dataSegment, String storageDirStr)
+  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
   {
-
-    StorageLocation bestLocation = null;
-
-    List<StorageLocation> locations = Ordering.from(COMPARATOR).sortedCopy(this.storageLocations);
-
-    Iterator<StorageLocation> locIterator = locations.iterator();
-
-    while (locIterator.hasNext()) {
-      StorageLocation location = locIterator.next();
-
-      if (null != location.reserve(storageDirStr, dataSegment)) {
-        bestLocation = location;
-        break;
-      }
-
-    }
-    return bestLocation;
+    this.storageLocations = storageLocations;
   }
 }

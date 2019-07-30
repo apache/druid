@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -175,29 +176,39 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    * location may fail because of IO failure, most likely in two cases:<p>
    * 1. druid don't have the write access to this location, most likely the administrator doesn't config it correctly<p>
    * 2. disk failure, druid can't read/write to this disk anymore
+   *
+   * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    StorageLocation loc = strategy.select(segment, storageDirStr);
+    Iterator<StorageLocation> locations = strategy.getLocations(segment, storageDirStr);
+    int numLocationsToTry = this.locations.size();
 
-    if (null != loc) {
-      File storageDir = new File(loc.getPath(), storageDirStr);
+    while (locations.hasNext() && numLocationsToTry > 0) {
 
-      try {
-        loadInLocationWithStartMarker(segment, storageDir);
-        return loc;
-      }
-      catch (SegmentLoadingException e) {
+      StorageLocation loc = locations.next();
+      numLocationsToTry--; // This is to avoid the cyclic iterator returned from Round Robin strategy to loop
+      // indefinitely.
+
+      File storageDir = loc.reserve(storageDirStr, segment);
+
+      if (null != loc) {
         try {
-          log.makeAlert(
-            e,
-            "Failed to load segment in current location %s, try next location if any",
-            loc.getPath().getAbsolutePath()
-          ).addData("location", loc.getPath().getAbsolutePath()).emit();
+          loadInLocationWithStartMarker(segment, storageDir);
+          return loc;
         }
-        finally {
-          loc.removeSegmentDir(storageDir, segment);
-          cleanupCacheFiles(loc.getPath(), storageDir);
+        catch (SegmentLoadingException e) {
+          try {
+            log.makeAlert(
+              e,
+              "Failed to load segment in current location %s, try next location if any",
+              loc.getPath().getAbsolutePath()
+            ).addData("location", loc.getPath().getAbsolutePath()).emit();
+          }
+          finally {
+            loc.removeSegmentDir(storageDir, segment);
+            cleanupCacheFiles(loc.getPath(), storageDir);
+          }
         }
       }
     }
