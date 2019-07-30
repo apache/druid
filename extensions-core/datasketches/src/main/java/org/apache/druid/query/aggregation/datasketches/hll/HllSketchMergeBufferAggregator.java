@@ -40,7 +40,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  /** for locking per buffer position (power of 2 to make index computation faster) */
+  /**
+   * for locking per buffer position (power of 2 to make index computation faster)
+   */
   private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<HllSketch> selector;
@@ -48,6 +50,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   private final TgtHllType tgtHllType;
   private final int size;
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final byte[] emptySketch;
 
   public HllSketchMergeBufferAggregator(
       final ColumnValueSelector<HllSketch> selector,
@@ -60,17 +63,22 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     this.lgK = lgK;
     this.tgtHllType = tgtHllType;
     this.size = size;
+    this.emptySketch = new byte[size];
+
+    //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptySketch" as a side effect of construction)
+    new Union(lgK, WritableMemory.wrap(emptySketch, ByteOrder.LITTLE_ENDIAN).writableRegion(0, size));
   }
 
-  @SuppressWarnings("ResultOfObjectAllocationIgnored")
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
-    // Not necessary to keep the constructed object since it is cheap to reconstruct by wrapping the memory.
-    // The objects are not cached as in BuildBufferAggregator since they never exceed the max size and never move.
-    // So it is easier to reconstruct them by wrapping memory then to keep position-to-object mappings. 
-    new Union(lgK, mem);
+    final int oldPosition = buf.position();
+    try {
+      buf.put(emptySketch);
+    }
+    finally {
+      buf.position(oldPosition);
+    }
   }
 
   /**

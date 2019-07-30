@@ -47,6 +47,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.yahoo.datasketches</groupId>
+      <artifactId>memory</artifactId>
+      <version>0.12.2</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-math3</artifactId>
     </dependency>
