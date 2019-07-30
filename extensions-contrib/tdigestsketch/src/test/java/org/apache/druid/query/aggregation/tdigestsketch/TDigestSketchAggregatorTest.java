@@ -104,7 +104,7 @@ public class TDigestSketchAggregatorTest
             "  }",
             "}"
         ),
-        "[{\"type\": \"buildTDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}]",
+        "[{\"type\": \"tDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}]",
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
@@ -116,7 +116,7 @@ public class TDigestSketchAggregatorTest
             "  \"granularity\": \"ALL\",",
             "  \"dimensions\": [],",
             "  \"aggregations\": [",
-            "    {\"type\": \"buildTDigestSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
+            "    {\"type\": \"tDigestSketch\", \"name\": \"merged_sketch\", \"fieldName\": \"sketch\", "
             + "\"compression\": "
             + "200}",
             "  ],",
@@ -174,7 +174,7 @@ public class TDigestSketchAggregatorTest
             "  \"granularity\": \"ALL\",",
             "  \"dimensions\": [],",
             "  \"aggregations\": [",
-            "    {\"type\": \"buildTDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}",
+            "    {\"type\": \"tDigestSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"compression\": 200}",
             "  ],",
             "  \"postAggregations\": [",
             "    {\"type\": \"quantilesFromTDigestSketch\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
@@ -221,7 +221,7 @@ public class TDigestSketchAggregatorTest
         String.join(
             "\n",
             "[",
-            "  {\"type\": \"buildTDigestSketch\", \"name\": \"first_level_merge_sketch\", \"fieldName\": \"sketch\", "
+            "  {\"type\": \"tDigestSketch\", \"name\": \"first_level_merge_sketch\", \"fieldName\": \"sketch\", "
             + "\"compression\": "
             + "200}",
             "]"
@@ -237,7 +237,7 @@ public class TDigestSketchAggregatorTest
             "  \"granularity\": \"ALL\",",
             "  \"dimensions\": [],",
             "  \"aggregations\": [",
-            "    {\"type\": \"buildTDigestSketch\", \"name\": \"second_level_merge_sketch\", \"fieldName\": "
+            "    {\"type\": \"tDigestSketch\", \"name\": \"second_level_merge_sketch\", \"fieldName\": "
             + "\"first_level_merge_sketch\", \"compression\": "
             + "200}",
             "  ],",

@@ -70,7 +70,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   @Nonnull
   private final byte cacheTypeId;
 
-  public static final String TYPE_NAME = "buildTDigestSketch";
+  public static final String TYPE_NAME = "tDigestSketch";
 
   @JsonCreator
   public TDigestSketchAggregatorFactory(
