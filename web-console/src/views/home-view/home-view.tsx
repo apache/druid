@@ -43,7 +43,7 @@ export interface CardModalOptions {
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
-  error?: string | null;
+  error?: string;
 }
 
 export interface HomeViewProps {
@@ -85,7 +85,7 @@ export interface HomeViewState {
   historicalCount: number;
   middleManagerCount: number;
   peonCount: number;
-  serverCountError: string | null;
+  serverCountError?: string;
 
   showStatusDialog: boolean;
 
@@ -136,7 +136,6 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       historicalCount: 0,
       middleManagerCount: 0,
       peonCount: 0,
-      serverCountError: null,
 
       showStatusDialog: false,
 
@@ -307,7 +306,7 @@ GROUP BY 1`,
           historicalCount: result ? result.historical : 0,
           middleManagerCount: result ? result.middle_manager : 0,
           peonCount: result ? result.peon : 0,
-          serverCountError: error ? error : null,
+          serverCountError: error,
         });
       },
     });
