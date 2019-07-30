@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -73,7 +74,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -171,6 +172,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonIgnore
   private String errorMsg;
 
+  @JsonIgnore
+  private final AppenderatorsManager appenderatorsManager;
+
+  @JsonIgnore
+  private Thread runThread;
+
+  @JsonIgnore
+  private boolean stopped = false;
+
+  @JsonIgnore
+  private Appenderator appenderator;
+
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
@@ -179,7 +192,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     this(
@@ -191,7 +205,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         context,
         authorizerMapper,
         chatHandlerProvider,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
   }
 
@@ -204,7 +219,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Map<String, Object> context,
       AuthorizerMapper authorizerMapper,
       ChatHandlerProvider chatHandlerProvider,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -229,6 +245,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.ingestionState = IngestionState.NOT_STARTED;
     this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -403,6 +420,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public TaskStatus run(final TaskToolbox toolbox)
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
@@ -478,7 +503,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -488,6 +513,23 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
+      }
+    }
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      // Nothing else to do for native batch except terminate
+      if (ingestionState != IngestionState.COMPLETED) {
+        if (appenderator != null) {
+          appenderator.closeNow();
+        }
+        if (runThread != null) {
+          runThread.interrupt();
+        }
       }
     }
   }
@@ -882,6 +924,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
+      this.appenderator = appenderator;
+
       driver.startJob();
 
       while (firehose.hasMore()) {
@@ -950,7 +994,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -964,7 +1008,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         );
         log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
 
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       }
     }
@@ -1046,14 +1090,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       IndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,

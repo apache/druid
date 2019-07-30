@@ -100,6 +100,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
             />
             <Button
               text="View raw"
+              disabled={!jsonValue}
               minimal
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />

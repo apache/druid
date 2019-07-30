@@ -44,7 +44,7 @@ import java.util.Map;
 public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAverageQuery>
 {
 
-  private final QuerySegmentWalker walker;
+  private final Provider<QuerySegmentWalker> walkerProvider;
   private final RequestLogger requestLogger;
 
   private final MovingAverageQueryMetricsFactory movingAverageQueryMetricsFactory;
@@ -53,14 +53,13 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
    * Construct a MovingAverageQueryToolChest for processing moving-average queries.
    * MovingAverage queries are expected to be processed on broker nodes and never hit historical nodes.
    *
-   * @param walker
+   * @param walkerProvider
    * @param requestLogger
    */
   @Inject
-  public MovingAverageQueryToolChest(Provider<QuerySegmentWalker> walker, RequestLogger requestLogger)
+  public MovingAverageQueryToolChest(Provider<QuerySegmentWalker> walkerProvider, RequestLogger requestLogger)
   {
-
-    this.walker = walker.get();
+    this.walkerProvider = walkerProvider;
     this.requestLogger = requestLogger;
     this.movingAverageQueryMetricsFactory = DefaultMovingAverageQueryMetricsFactory.instance();
   }
@@ -68,7 +67,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   @Override
   public QueryRunner<Row> mergeResults(QueryRunner<Row> runner)
   {
-    return new MovingAverageQueryRunner(walker, requestLogger);
+    return new MovingAverageQueryRunner(walkerProvider.get(), requestLogger);
   }
 
   @Override

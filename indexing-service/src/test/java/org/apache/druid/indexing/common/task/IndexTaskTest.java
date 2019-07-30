@@ -70,6 +70,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -140,6 +141,7 @@ public class IndexTaskTest extends IngestionTestBase
 
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
+  private AppenderatorsManager appenderatorsManager;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final LockGranularity lockGranularity;
@@ -157,6 +159,8 @@ public class IndexTaskTest extends IngestionTestBase
   @Before
   public void setup() throws IOException
   {
+    appenderatorsManager = new TestAppenderatorsManager();
+
     final File cacheDir = temporaryFolder.newFolder();
     segmentLoader = new SegmentLoaderLocalCacheManager(
         indexIO,
@@ -202,7 +206,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -255,7 +260,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -300,7 +306,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -338,7 +345,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -372,7 +380,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -411,7 +420,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -486,7 +496,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
@@ -537,7 +548,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -601,7 +613,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -654,7 +667,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -702,7 +716,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -748,7 +763,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -793,7 +809,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -872,7 +889,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -926,7 +944,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1022,7 +1041,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1148,7 +1168,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1265,7 +1286,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1365,7 +1387,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1436,7 +1459,8 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1484,7 +1508,8 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           AuthTestUtils.TEST_AUTHORIZER_MAPPER,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          appenderatorsManager
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1551,7 +1576,8 @@ public class IndexTaskTest extends IngestionTestBase
           null,
           AuthTestUtils.TEST_AUTHORIZER_MAPPER,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          appenderatorsManager
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;

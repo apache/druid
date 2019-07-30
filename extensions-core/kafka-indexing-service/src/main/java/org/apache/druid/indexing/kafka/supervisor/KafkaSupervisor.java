@@ -258,7 +258,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           null,
           null,
           rowIngestionMetersFactory,
-          sortingMapper
+          sortingMapper,
+          null
       ));
     }
     return taskList;
