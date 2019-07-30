@@ -66,7 +66,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     this.emptySketch = new byte[size];
 
     //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptySketch" as a side effect of construction)
-    new Union(lgK, WritableMemory.wrap(emptySketch, ByteOrder.LITTLE_ENDIAN).writableRegion(0, size));
+    new Union(lgK, WritableMemory.wrap(emptySketch, ByteOrder.LITTLE_ENDIAN));
   }
 
   @Override
