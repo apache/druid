@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -74,11 +73,9 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
         final Map<String, Object> props = new HashMap<>(((KafkaSupervisorIOConfig) ioConfig).getConsumerProperties());
-
+        
         props.put("enable.auto.commit", "false");
         props.put("auto.offset.reset", "none");
-        props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-        props.put("value.deserializer", ByteArrayDeserializer.class.getName());
         props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
 
         return new KafkaRecordSupplier(props, objectMapper);
