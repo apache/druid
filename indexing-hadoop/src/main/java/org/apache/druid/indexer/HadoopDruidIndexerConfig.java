@@ -30,7 +30,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -102,18 +101,13 @@ public class HadoopDruidIndexerConfig
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder,
-                    Key.get(DruidNode.class, Self.class),
-                    new DruidNode("hadoop-indexer", null, false, null, null, true, false)
-                );
-                JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
-              }
+            (Module) binder -> {
+              JsonConfigProvider.bindInstance(
+                  binder,
+                  Key.get(DruidNode.class, Self.class),
+                  new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+              );
+              JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
             },
             new IndexingHadoopModule()
         )
