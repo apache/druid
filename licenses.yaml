@@ -362,6 +362,16 @@ libraries:
 
 ---
 
+name: Apache Commons Net
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6
+libraries:
+  - commons-net: commons-net
+
+---
+
 name: Apache Commons Pool
 license_category: binary
 module: java-core

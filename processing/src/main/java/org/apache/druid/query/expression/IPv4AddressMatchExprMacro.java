@@ -105,7 +105,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
             match = isStringMatch(eval.asString());
             break;
           case LONG:
-            match = isLongMatch(eval.asLong());
+            match = !eval.isNumericNull() && isLongMatch(eval.asLong());
             break;
           default:
             match = false;
