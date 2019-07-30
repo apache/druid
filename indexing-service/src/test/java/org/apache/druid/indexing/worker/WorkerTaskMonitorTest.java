@@ -39,7 +39,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
@@ -153,6 +153,7 @@ public class WorkerTaskMonitorTest
         null,
         false,
         null,
+        null,
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -178,7 +179,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                new NoopTestTaskFileWriter()
+                new NoopTestTaskReportFileWriter()
             ),
             taskConfig,
             new NoopServiceEmitter(),

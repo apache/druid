@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { HistoryDialog } from './history-dialog';
 
-import {HistoryDialog} from './history-dialog';
-
-
-describe('describe history dialog', () => {
-  it('history dialog snapshot', () => {
-    const historyDialog =
+describe('history dialog', () => {
+  it('matches snapshot', () => {
+    const historyDialog = (
       <HistoryDialog
-        historyRecords={[{auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name : 'test' })}, {auditTime: 'test', auditInfo: 'test',  payload: JSON.stringify({ name : 'test' })}]}
-        isOpen={true}
-      />;
-    const { container, getByText } = render(historyDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+        historyRecords={[
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+          { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
+        ]}
+        isOpen
+      />
+    );
+    render(historyDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

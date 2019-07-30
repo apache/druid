@@ -20,6 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -38,7 +39,8 @@ public class ExpressionColumnValueSelectorTest
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
-        dimensionSelectorFromSupplier(settableSupplier)
+        dimensionSelectorFromSupplier(settableSupplier),
+        false
     );
 
     Assert.assertNotNull(supplier);
@@ -120,8 +122,12 @@ public class ExpressionColumnValueSelectorTest
         objectSelectorFromSupplier(settableSupplier, List.class)
     );
 
-    // List can't be a number, so supplierFromObjectSelector should return null.
-    Assert.assertNull(supplier);
+    Assert.assertNotNull(supplier);
+    Assert.assertEquals(null, supplier.get());
+
+    settableSupplier.set(ImmutableList.of("1", "2", "3"));
+    Assert.assertArrayEquals(new String[]{"1", "2", "3"}, (Object[]) supplier.get());
+
   }
 
   private static DimensionSelector dimensionSelectorFromSupplier(

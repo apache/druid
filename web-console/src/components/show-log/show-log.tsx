@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Checkbox, InputGroup, Intent, TextArea} from '@blueprintjs/core';
+import { Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
 import axios from 'axios';
-import * as React from 'react';
-import * as CopyToClipboard from 'react-copy-to-clipboard';
+import copy from 'copy-to-clipboard';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -35,10 +35,11 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
-export interface ShowLogProps extends React.Props<any> {
+export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
+  status?: string;
 }
 
 export interface ShowLogState {
@@ -46,16 +47,22 @@ export interface ShowLogState {
   tail: boolean;
 }
 
-export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
+export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   public log = React.createRef<HTMLTextAreaElement>();
 
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
     this.state = {
       logValue: '',
-      tail: false
+      tail: true,
     };
     this.getLogInfo();
+  }
+
+  componentDidMount(): void {
+    if (this.props.status === 'RUNNING') {
+      this.tail();
+    }
   }
 
   private getLogInfo = async (): Promise<void> => {
@@ -64,85 +71,81 @@ export class ShowLog extends React.Component<ShowLogProps, ShowLogState> {
       const resp = await axios.get(endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''));
       const data = resp.data;
 
-      let logValue = typeof (data) === 'string' ? data : JSON.stringify(data, undefined, 2);
+      let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
       if (tailOffset) logValue = removeFirstPartialLine(logValue);
       this.setState({ logValue });
     } catch (e) {
       this.setState({
-        logValue: `Error: ` + e.response.data
+        logValue: `Error: ` + e.response.data,
       });
+    }
+  };
+
+  async tail() {
+    await this.getLogInfo();
+    if (this.state.tail) {
+      if (this.log.current) {
+        this.log.current.scrollTo(0, this.log.current.scrollHeight);
+      }
+      setTimeout(() => {
+        this.tail();
+      }, 2000);
     }
   }
 
-  async tail() {
-      await this.getLogInfo();
-      if (this.state.tail) {
-          if (this.log.current) {
-            this.log.current.scrollTo(0, this.log.current.scrollHeight);
-          }
-          setTimeout(() => {
-            this.tail();
-          }, 2000);
-        }
-    }
-
   private handleCheckboxChange = () => {
     this.setState({
-      tail: !this.state.tail
+      tail: !this.state.tail,
     });
     if (!this.state.tail) {
       this.tail();
     }
-  }
+  };
 
-
-  render() {
-    const { endpoint, downloadFilename } = this.props;
+  render(): JSX.Element {
+    const { endpoint, downloadFilename, status } = this.props;
     const { logValue } = this.state;
 
-    return <div className="show-log">
-      <div className="top-actions">
-        <Checkbox
-          label="Tail log"
-          checked={this.state.tail}
-          onChange={this.handleCheckboxChange}
-        />
-        <ButtonGroup className="right-buttons">
-          {
-            downloadFilename &&
-            <Button
-              text="Save"
-              minimal
-              onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
+    return (
+      <div className="show-log">
+        <div className="top-actions">
+          {status === 'RUNNING' && (
+            <Checkbox
+              label="Tail log"
+              checked={this.state.tail}
+              onChange={this.handleCheckboxChange}
             />
-          }
-          <CopyToClipboard text={logValue}>
+          )}
+          <ButtonGroup className="right-buttons">
+            {downloadFilename && (
+              <Button
+                text="Save"
+                minimal
+                onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
+              />
+            )}
             <Button
               text="Copy"
               minimal
               onClick={() => {
+                copy(logValue, { format: 'text/plain' });
                 AppToaster.show({
-                  message: 'Copied log to clipboard',
-                  intent: Intent.SUCCESS
+                  message: 'Log copied to clipboard',
+                  intent: Intent.SUCCESS,
                 });
               }}
             />
-          </CopyToClipboard>
-          <Button
-            text="View full log"
-            minimal
-            onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
-          />
-        </ButtonGroup>
+            <Button
+              text="View full log"
+              minimal
+              onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
+            />
+          </ButtonGroup>
+        </div>
+        <div className="main-area">
+          <textarea className="bp3-input" readOnly value={logValue} ref={this.log} />
+        </div>
       </div>
-      <div className="main-area">
-        <textarea
-          className="bp3-input"
-          readOnly
-          value={logValue}
-          ref={this.log}
-        />
-      </div>
-    </div>;
+    );
   }
 }

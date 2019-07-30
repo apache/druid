@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,6 +40,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -52,7 +52,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -69,7 +70,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, vectorize = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     GroupByQueryConfig config = new GroupByQueryConfig();
@@ -79,74 +80,76 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     );
     final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
     resourceCloser.register(factoryAndCloser.rhs);
-    return QueryRunnerTestHelper.transformToConstructionFeeder(
-        Lists.transform(
-            QueryRunnerTestHelper.makeQueryRunners(factory),
-            new Function<QueryRunner<Row>, Object>()
-            {
-              @Override
-              public Object apply(final QueryRunner<Row> input)
+
+    final List<Object[]> constructors = new ArrayList<>();
+
+    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+      final QueryRunner modifiedRunner = new QueryRunner()
+      {
+        @Override
+        public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
+        {
+          TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
+          QueryRunner<Row> newRunner = factory.mergeRunners(
+              Execs.directExecutor(), ImmutableList.of(runner)
+          );
+          QueryToolChest toolChest = factory.getToolchest();
+
+          newRunner = new FinalizeResultsQueryRunner<>(
+              toolChest.mergeResults(toolChest.preMergeQueryDecoration(newRunner)),
+              toolChest
+          );
+
+          GroupByQuery newQuery = GroupByQuery
+              .builder()
+              .setDataSource(tsQuery.getDataSource())
+              .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+              .setGranularity(tsQuery.getGranularity())
+              .setDimFilter(tsQuery.getDimensionsFilter())
+              .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+              .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+              .setVirtualColumns(tsQuery.getVirtualColumns())
+              .setContext(tsQuery.getContext())
+              .build();
+
+          return Sequences.map(
+              newRunner.run(queryPlus.withQuery(newQuery), responseContext),
+              new Function<Row, Result<TimeseriesResultValue>>()
               {
-                return new QueryRunner()
+                @Override
+                public Result<TimeseriesResultValue> apply(final Row input)
                 {
-                  @Override
-                  public Sequence run(QueryPlus queryPlus, Map responseContext)
-                  {
-                    TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
-                    QueryRunner<Row> newRunner = factory.mergeRunners(
-                        Execs.directExecutor(), ImmutableList.of(input)
-                    );
-                    QueryToolChest toolChest = factory.getToolchest();
+                  MapBasedRow row = (MapBasedRow) input;
 
-                    newRunner = new FinalizeResultsQueryRunner<>(
-                        toolChest.mergeResults(toolChest.preMergeQueryDecoration(newRunner)),
-                        toolChest
-                    );
-
-                    GroupByQuery newQuery = GroupByQuery
-                        .builder()
-                        .setDataSource(tsQuery.getDataSource())
-                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                        .setGranularity(tsQuery.getGranularity())
-                        .setDimFilter(tsQuery.getDimensionsFilter())
-                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                        .setVirtualColumns(tsQuery.getVirtualColumns())
-                        .setContext(tsQuery.getContext())
-                        .build();
-
-                    return Sequences.map(
-                        newRunner.run(queryPlus.withQuery(newQuery), responseContext),
-                        new Function<Row, Result<TimeseriesResultValue>>()
-                        {
-                          @Override
-                          public Result<TimeseriesResultValue> apply(final Row input)
-                          {
-                            MapBasedRow row = (MapBasedRow) input;
-
-                            return new Result<>(
-                                row.getTimestamp(), new TimeseriesResultValue(row.getEvent())
-                            );
-                          }
-                        }
-                    );
-                  }
-
-                  @Override
-                  public String toString()
-                  {
-                    return input.toString();
-                  }
-                };
+                  return new Result<>(
+                      row.getTimestamp(), new TimeseriesResultValue(row.getEvent())
+                  );
+                }
               }
-            }
-        )
-    );
+          );
+        }
+
+        @Override
+        public String toString()
+        {
+          return runner.toString();
+        }
+      };
+
+      for (boolean vectorize : ImmutableList.of(false, true)) {
+        // Add vectorization tests for any indexes that support it.
+        if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
+          constructors.add(new Object[]{modifiedRunner, vectorize});
+        }
+      }
+    }
+
+    return constructors;
   }
 
-  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner)
+  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize)
   {
-    super(runner, false, QueryRunnerTestHelper.commonDoubleAggregators);
+    super(runner, false, vectorize, QueryRunnerTestHelper.commonDoubleAggregators);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -168,7 +171,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     DateTime expectedEarliest = DateTimes.of("1970-01-01");
     DateTime expectedLast = DateTimes.of("2011-04-15");
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());

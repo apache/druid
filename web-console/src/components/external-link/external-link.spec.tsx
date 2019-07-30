@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import {ExternalLink} from './external-link';
+import { ExternalLink } from './external-link';
 
-describe('describe external link', () => {
-  it('external link snapshot', () => {
-    const externalLink =
+describe('external link', () => {
+  it('matches snapshot', () => {
+    const externalLink = (
       <ExternalLink href={'http://test/'}>
         <div>hello world</div>
-      </ExternalLink>;
+      </ExternalLink>
+    );
 
-    const { container, getByText } = render(externalLink);
+    const { container } = render(externalLink);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

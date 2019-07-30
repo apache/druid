@@ -38,6 +38,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -58,7 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MaterializedViewSupervisorSpec implements SupervisorSpec 
+public class MaterializedViewSupervisorSpec implements SupervisorSpec
 {
   private static final String TASK_PREFIX = "index_materialized_view";
   private final String baseDataSource;
@@ -81,8 +82,9 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final MaterializedViewTaskConfig config;
   private final AuthorizerMapper authorizerMapper;
   private final ChatHandlerProvider chatHandlerProvider;
+  private final SupervisorStateManagerConfig supervisorStateManagerConfig;
   private final boolean suspended;
-  
+
   public MaterializedViewSupervisorSpec(
       @JsonProperty("baseDataSource") String baseDataSource,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
@@ -102,31 +104,35 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JacksonInject IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       @JacksonInject MaterializedViewTaskConfig config,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
-    Preconditions.checkArgument(!Strings.isNullOrEmpty(baseDataSource), "baseDataSource cannot be null or empty. Please provide a baseDataSource.");
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(baseDataSource),
+        "baseDataSource cannot be null or empty. Please provide a baseDataSource."
+    );
     this.baseDataSource = baseDataSource;
 
     this.dimensionsSpec = Preconditions.checkNotNull(
-                            dimensionsSpec, 
-                            "dimensionsSpec cannot be null. Please provide a dimensionsSpec"
-                          );
+        dimensionsSpec,
+        "dimensionsSpec cannot be null. Please provide a dimensionsSpec"
+    );
     this.aggregators = Preconditions.checkNotNull(
-                         aggregators, 
-                         "metricsSpec cannot be null. Please provide a metricsSpec"
-                       );
+        aggregators,
+        "metricsSpec cannot be null. Please provide a metricsSpec"
+    );
     this.tuningConfig = Preconditions.checkNotNull(
-                          tuningConfig, 
-                          "tuningConfig cannot be null. Please provide tuningConfig"
-                        );
-    
-    this.dataSourceName = dataSourceName == null 
+        tuningConfig,
+        "tuningConfig cannot be null. Please provide tuningConfig"
+    );
+
+    this.dataSourceName = dataSourceName == null
                           ? StringUtils.format(
-                              "%s-%s", 
-                              baseDataSource, 
-                              DigestUtils.sha1Hex(dimensionsSpec.toString()).substring(0, 8)
-                            ) 
+        "%s-%s",
+        baseDataSource,
+        DigestUtils.sha1Hex(dimensionsSpec.toString()).substring(0, 8)
+    )
                           : dataSourceName;
     this.hadoopCoordinates = hadoopCoordinates;
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
@@ -141,6 +147,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.config = config;
+    this.supervisorStateManagerConfig = supervisorStateManagerConfig;
     this.suspended = suspended != null ? suspended : false;
 
     this.metrics = new HashSet<>();
@@ -152,11 +159,11 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       dimensions.add(schema.getName());
     }
   }
-  
+
   public HadoopIndexTask createTask(Interval interval, String version, List<DataSegment> segments)
   {
     String taskId = StringUtils.format("%s_%s_%s", TASK_PREFIX, dataSourceName, DateTimes.nowUtc());
-    
+
     // generate parser
     Map<String, Object> parseSpec = new HashMap<>();
     parseSpec.put("format", "timeAndDims");
@@ -164,7 +171,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     Map<String, Object> parser = new HashMap<>();
     parser.put("type", "map");
     parser.put("parseSpec", parseSpec);
-    
+
     //generate HadoopTuningConfig
     HadoopTuningConfig tuningConfigForTask = new HadoopTuningConfig(
         tuningConfig.getWorkingPath(),
@@ -172,6 +179,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getPartitionsSpec(),
         tuningConfig.getShardSpecs(),
         tuningConfig.getIndexSpec(),
+        tuningConfig.getIndexSpecForIntermediatePersists(),
         tuningConfig.getRowFlushBoundary(),
         tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isLeaveIntermediate(),
@@ -191,7 +199,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.isUseYarnRMJobStatusFallback()
     );
-    
+
     // generate granularity
     ArbitraryGranularitySpec granularitySpec = new ArbitraryGranularitySpec(
         Granularities.NONE,
@@ -207,7 +215,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         TransformSpec.NONE,
         objectMapper
     );
-    
+
     // generate DatasourceIngestionSpec
     DatasourceIngestionSpec datasourceIngestionSpec = new DatasourceIngestionSpec(
         baseDataSource,
@@ -226,10 +234,10 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     inputSpec.put("type", "dataSource");
     inputSpec.put("ingestionSpec", datasourceIngestionSpec);
     HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(inputSpec, null, null);
-    
+
     // generate HadoopIngestionSpec
     HadoopIngestionSpec spec = new HadoopIngestionSpec(dataSchema, hadoopIOConfig, tuningConfigForTask);
-    
+
     // generate HadoopIndexTask
     HadoopIndexTask task = new HadoopIndexTask(
         taskId,
@@ -250,24 +258,24 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return dimensions;
   }
-  
+
   public Set<String> getMetrics()
   {
     return metrics;
   }
-  
+
   @JsonProperty("baseDataSource")
   public String getBaseDataSource()
   {
     return baseDataSource;
   }
-  
+
   @JsonProperty("dimensionsSpec")
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
   }
-  
+
   @JsonProperty("metricsSpec")
   public AggregatorFactory[] getMetricsSpec()
   {
@@ -279,33 +287,33 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return tuningConfig;
   }
-  
+
   @JsonProperty("dataSource")
   public String getDataSourceName()
   {
     return dataSourceName;
   }
-  
+
   @JsonProperty("hadoopCoordinates")
   public String getHadoopCoordinates()
   {
     return hadoopCoordinates;
   }
-  
+
   @JsonProperty("hadoopDependencyCoordinates")
   public List<String> getSadoopDependencyCoordinates()
   {
     return hadoopDependencyCoordinates;
   }
-  
+
   @JsonProperty("classpathPrefix")
   public String getClasspathPrefix()
   {
     return classpathPrefix;
   }
-  
+
   @JsonProperty("context")
-  public Map<String, Object> getContext() 
+  public Map<String, Object> getContext()
   {
     return context;
   }
@@ -318,13 +326,13 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public String getId() 
+  public String getId()
   {
     return StringUtils.format("MaterializedViewSupervisor-%s", dataSourceName);
   }
 
   @Override
-  public Supervisor createSupervisor() 
+  public Supervisor createSupervisor()
   {
     return new MaterializedViewSupervisor(
         taskMaster,
@@ -365,7 +373,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         metadataStorageCoordinator,
         config,
         authorizerMapper,
-        chatHandlerProvider
+        chatHandlerProvider,
+        supervisorStateManagerConfig
     );
   }
 
@@ -391,17 +400,23 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         metadataStorageCoordinator,
         config,
         authorizerMapper,
-        chatHandlerProvider
+        chatHandlerProvider,
+        supervisorStateManagerConfig
     );
+  }
+
+  public SupervisorStateManagerConfig getSupervisorStateManagerConfig()
+  {
+    return supervisorStateManagerConfig;
   }
 
   @Override
   public String toString()
   {
     return "MaterializedViewSupervisorSpec{" +
-        "baseDataSource=" + baseDataSource +
-        ", dimensions=" + dimensions +
-        ", metrics=" + metrics +
-        '}';
+           "baseDataSource=" + baseDataSource +
+           ", dimensions=" + dimensions +
+           ", metrics=" + metrics +
+           '}';
   }
 }

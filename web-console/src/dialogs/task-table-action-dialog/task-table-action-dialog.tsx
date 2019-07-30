@@ -17,73 +17,104 @@
  */
 
 import { IDialogProps } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
-import { ShowJson } from '../../components/show-json/show-json';
-import { ShowLog } from '../../components/show-log/show-log';
+import { ShowJson, ShowLog } from '../../components';
 import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
+import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface TaskTableActionDialogProps extends IDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
+  status?: string;
 }
 
 interface TaskTableActionDialogState {
-  activeTab: 'payload' | 'status' | 'reports' | 'log';
+  activeTab: 'status' | 'payload' | 'reports' | 'log';
 }
 
-export class TaskTableActionDialog extends React.Component<TaskTableActionDialogProps, TaskTableActionDialogState> {
+export class TaskTableActionDialog extends React.PureComponent<
+  TaskTableActionDialogProps,
+  TaskTableActionDialogState
+> {
   constructor(props: TaskTableActionDialogProps) {
     super(props);
     this.state = {
-      activeTab: 'payload'
+      activeTab: 'status',
     };
   }
 
   render(): React.ReactNode {
-    const { taskId, actions, onClose } = this.props;
+    const { taskId, actions, onClose, status } = this.props;
     const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
       {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' })
-      },
-      {
         icon: 'dashboard',
         text: 'Status',
         active: activeTab === 'status',
-        onClick: () => this.setState({ activeTab: 'status' })
+        onClick: () => this.setState({ activeTab: 'status' }),
+      },
+      {
+        icon: 'align-left',
+        text: 'Payload',
+        active: activeTab === 'payload',
+        onClick: () => this.setState({ activeTab: 'payload' }),
       },
       {
         icon: 'comparison',
         text: 'Reports',
         active: activeTab === 'reports',
-        onClick: () => this.setState({ activeTab: 'reports' })
+        onClick: () => this.setState({ activeTab: 'reports' }),
       },
       {
         icon: 'align-justify',
         text: 'Logs',
         active: activeTab === 'log',
-        onClick: () => this.setState({ activeTab: 'log' })
-      }
+        onClick: () => this.setState({ activeTab: 'log' }),
+      },
     ];
 
-    return <TableActionDialog
-      isOpen
-      sideButtonMetadata={taskTableSideButtonMetadata}
-      onClose={onClose}
-      title={`Task: ${taskId}`}
-      bottomButtons={basicActionsToButtons(actions)}
-    >
-      {activeTab === 'payload' && <ShowJson endpoint={`/druid/indexer/v1/task/${taskId}`} downloadFilename={`task-payload-${taskId}.json`}/>}
-      {activeTab === 'status' && <ShowJson endpoint={`/druid/indexer/v1/task/${taskId}/status`} downloadFilename={`task-status-${taskId}.json`}/>}
-      {activeTab === 'reports' && <ShowJson endpoint={`/druid/indexer/v1/task/${taskId}/reports`} downloadFilename={`task-reports-${taskId}.json`}/>}
-      {activeTab === 'log' && <ShowLog endpoint={`/druid/indexer/v1/task/${taskId}/log`} downloadFilename={`task-log-${taskId}.json`} tailOffset={16000}/>}
-    </TableActionDialog>;
+    return (
+      <TableActionDialog
+        isOpen
+        sideButtonMetadata={taskTableSideButtonMetadata}
+        onClose={onClose}
+        title={`Task: ${taskId}`}
+        bottomButtons={basicActionsToButtons(actions)}
+      >
+        {activeTab === 'status' && (
+          <ShowJson
+            endpoint={`/druid/indexer/v1/task/${taskId}/status`}
+            transform={x => deepGet(x, 'status')}
+            downloadFilename={`task-status-${taskId}.json`}
+          />
+        )}
+        {activeTab === 'payload' && (
+          <ShowJson
+            endpoint={`/druid/indexer/v1/task/${taskId}`}
+            transform={x => deepGet(x, 'payload')}
+            downloadFilename={`task-payload-${taskId}.json`}
+          />
+        )}
+        {activeTab === 'reports' && (
+          <ShowJson
+            endpoint={`/druid/indexer/v1/task/${taskId}/reports`}
+            transform={x => deepGet(x, 'ingestionStatsAndErrors.payload')}
+            downloadFilename={`task-reports-${taskId}.json`}
+          />
+        )}
+        {activeTab === 'log' && (
+          <ShowLog
+            status={status}
+            endpoint={`/druid/indexer/v1/task/${taskId}/log`}
+            downloadFilename={`task-log-${taskId}.json`}
+            tailOffset={16000}
+          />
+        )}
+      </TableActionDialog>
+    );
   }
 }

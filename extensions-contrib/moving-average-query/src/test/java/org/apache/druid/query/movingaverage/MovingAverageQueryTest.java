@@ -19,9 +19,7 @@
 
 package org.apache.druid.query.movingaverage;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -70,6 +68,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -81,14 +80,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 
 /**
  * Base class for implementing MovingAverageQuery tests
@@ -97,7 +91,6 @@ import static org.junit.Assert.assertThat;
 public class MovingAverageQueryTest
 {
   private final ObjectMapper jsonMapper;
-  private final Injector injector;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ServerConfig serverConfig;
@@ -106,7 +99,6 @@ public class MovingAverageQueryTest
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
   private final TestConfig config;
-  private final String yamlFile;
 
   @Parameters(name = "{0}")
   public static Iterable<String[]> data() throws IOException
@@ -116,7 +108,7 @@ public class MovingAverageQueryTest
     List<String[]> tests = new ArrayList<>();
 
     for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
-      tests.add(new String[] {line});
+      tests.add(new String[]{line});
     }
 
     return tests;
@@ -124,7 +116,6 @@ public class MovingAverageQueryTest
 
   public MovingAverageQueryTest(String yamlFile) throws IOException
   {
-    this.yamlFile = yamlFile;
 
     List<Module> modules = getRequiredModules();
     modules.add(
@@ -137,19 +128,13 @@ public class MovingAverageQueryTest
             @Override
             public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
             {
-              return new QueryRunner<T>()
-              {
-                @Override
-                @SuppressWarnings("unchecked")
-                public Sequence<T> run(QueryPlus queryPlus, Map responseContext)
-                {
-                  if (query instanceof GroupByQuery) {
-                    return (Sequence<T>) Sequences.simple(groupByResults);
-                  } else if (query instanceof TimeseriesQuery) {
-                    return (Sequence<T>) Sequences.simple(timeseriesResults);
-                  }
-                  throw new UnsupportedOperationException("unexpected query type " + query.getType());
+              return (queryPlus, responseContext) -> {
+                if (query instanceof GroupByQuery) {
+                  return (Sequence<T>) Sequences.simple(groupByResults);
+                } else if (query instanceof TimeseriesQuery) {
+                  return (Sequence<T>) Sequences.simple(timeseriesResults);
                 }
+                throw new UnsupportedOperationException("unexpected query type " + query.getType());
               };
             }
 
@@ -165,7 +150,7 @@ public class MovingAverageQueryTest
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
     System.setProperty("druid.processing.buffer.sizeBytes", "655360");
     Injector baseInjector = GuiceInjectors.makeStartupInjector();
-    injector = Initialization.makeInjectorWithModules(baseInjector, modules);
+    Injector injector = Initialization.makeInjectorWithModules(baseInjector, modules);
 
     jsonMapper = injector.getInstance(ObjectMapper.class);
     warehouse = injector.getInstance(QueryToolChestWarehouse.class);
@@ -182,7 +167,7 @@ public class MovingAverageQueryTest
    *
    * @return The JSON query
    */
-  protected String getQueryString()
+  private String getQueryString()
   {
     return config.query.toString();
   }
@@ -192,7 +177,7 @@ public class MovingAverageQueryTest
    *
    * @return The JSON result
    */
-  protected String getExpectedResultString()
+  private String getExpectedResultString()
   {
     return config.expectedOutput.toString();
   }
@@ -204,7 +189,7 @@ public class MovingAverageQueryTest
    *
    * @return The JSON result from the groupby query
    */
-  protected String getGroupByResultJson()
+  private String getGroupByResultJson()
   {
     ArrayNode node = config.intermediateResults.get("groupBy");
     return node == null ? null : node.toString();
@@ -217,7 +202,7 @@ public class MovingAverageQueryTest
    *
    * @return The JSON result from the timeseries query
    */
-  protected String getTimeseriesResultJson()
+  private String getTimeseriesResultJson()
   {
     ArrayNode node = config.intermediateResults.get("timeseries");
     return node == null ? null : node.toString();
@@ -228,12 +213,12 @@ public class MovingAverageQueryTest
    *
    * @return The Query type
    */
-  protected Class<?> getExpectedQueryType()
+  private Class<?> getExpectedQueryType()
   {
     return MovingAverageQuery.class;
   }
 
-  protected TypeReference<?> getExpectedResultType()
+  private TypeReference<?> getExpectedResultType()
   {
     return new TypeReference<List<Row>>()
     {
@@ -242,10 +227,8 @@ public class MovingAverageQueryTest
 
   /**
    * Returns a list of any additional Druid Modules necessary to run the test.
-   *
-   * @return List of Druid Modules
    */
-  protected List<Module> getRequiredModules()
+  private List<Module> getRequiredModules()
   {
     List<Module> list = new ArrayList<>();
 
@@ -258,12 +241,8 @@ public class MovingAverageQueryTest
 
   /**
    * Set up any needed mocks to stub out backend query behavior.
-   *
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonParseException
    */
-  protected void defineMocks() throws IOException
+  private void defineMocks() throws IOException
   {
     groupByResults.clear();
     timeseriesResults.clear();
@@ -286,45 +265,39 @@ public class MovingAverageQueryTest
 
   /**
    * converts Int to Long, Float to Double in the actual and expected result
-   *
-   * @param result
    */
-  protected List<MapBasedRow> consistentTypeCasting(List<MapBasedRow> result)
+  private List<MapBasedRow> consistentTypeCasting(List<MapBasedRow> result)
   {
     List<MapBasedRow> newResult = new ArrayList<>();
     for (MapBasedRow row : result) {
       final Map<String, Object> event = Maps.newLinkedHashMap((row).getEvent());
       event.forEach((key, value) -> {
-        if (Integer.class.isInstance(value)) {
+        if (value instanceof Integer) {
           event.put(key, ((Integer) value).longValue());
         }
-        if (Float.class.isInstance(value)) {
+        if (value instanceof Float) {
           event.put(key, ((Float) value).doubleValue());
         }
       });
       newResult.add(new MapBasedRow(row.getTimestamp(), event));
     }
-    
+
     return newResult;
   }
 
   /**
    * Validate that the specified query behaves correctly.
-   *
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonParseException
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Test
   public void testQuery() throws IOException
   {
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
-    assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
+    Assert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
 
     List<MapBasedRow> expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
-    assertNotNull(expectedResults);
-    assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
+    Assert.assertNotNull(expectedResults);
+    Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
     CachingClusteredClient baseClient = new CachingClusteredClient(
         warehouse,
@@ -390,12 +363,11 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final Map<String, Object> responseContext = new HashMap<>();
 
     defineMocks();
 
     QueryPlus queryPlus = QueryPlus.wrap(query);
-    final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);
+    final Sequence<?> res = query.getRunner(walker).run(queryPlus);
 
     List actualResults = new ArrayList();
     actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());
@@ -403,6 +375,6 @@ public class MovingAverageQueryTest
     expectedResults = consistentTypeCasting(expectedResults);
     actualResults = consistentTypeCasting(actualResults);
 
-    assertEquals(expectedResults, actualResults);
+    Assert.assertEquals(expectedResults, actualResults);
   }
 }

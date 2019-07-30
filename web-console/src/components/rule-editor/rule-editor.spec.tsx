@@ -16,23 +16,24 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import {Rule, RuleEditor} from './rule-editor';
+import { RuleEditor } from './rule-editor';
 
-describe('describe rule editor', () => {
-  it('rule editor snapshot', () => {
-    const ruleEditor =
-    <RuleEditor
-      rule={{type: 'loadForever' }}
-      tiers={['test', 'test', 'test']}
-      onChange={(newRule: Rule) => null}
-      onDelete={() => null}
-      moveUp={null}
-      moveDown={null}
-    />;
-    const { container, getByText } = render(ruleEditor);
+describe('rule editor', () => {
+  it('matches snapshot', () => {
+    const ruleEditor = (
+      <RuleEditor
+        rule={{ type: 'loadForever' }}
+        tiers={['test', 'test', 'test']}
+        onChange={() => {}}
+        onDelete={() => {}}
+        moveUp={null}
+        moveDown={null}
+      />
+    );
+    const { container } = render(ruleEditor);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

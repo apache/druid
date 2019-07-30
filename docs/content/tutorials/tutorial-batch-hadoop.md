@@ -26,7 +26,9 @@ title: "Tutorial: Load batch data using Apache Hadoop"
 
 This tutorial shows you how to load data files into Apache Druid (incubating) using a remote Hadoop cluster.
 
-For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system.
+For this tutorial, we'll assume that you've already completed the previous
+[batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system and are using the
+`micro-quickstart` single-machine configuration as described in the [quickstart](index.html).
 
 ## Install Docker
 
@@ -194,7 +196,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Once the Hadoop .xml files have been copied to the Druid cluster and the segment/log storage configuration has been updated to use HDFS, the Druid cluster needs to be restarted for the new configurations to take effect.
 
-If the cluster is still running, CTRL-C to terminate the `bin/supervise` script, and re-reun it to bring the Druid services back up.
+If the cluster is still running, CTRL-C to terminate the `bin/start-micro-quickstart` script, and re-reun it to bring the Druid services back up.
 
 ## Load batch data
 

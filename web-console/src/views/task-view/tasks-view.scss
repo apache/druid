@@ -16,33 +16,39 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+@import '../../variables';
 
 .tasks-view {
   height: 100%;
   width: 100%;
 
+  .top-pane {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom: 0;
 
-  .view-control-bar{
-    margin-bottom: $standard-padding;
+    .view-control-bar {
+      margin-bottom: $standard-padding;
+    }
+  }
+
+  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
+    height: 3px;
+    background-color: #6d8ea9;
+  }
+
+  .bottom-pane {
+    position: absolute;
+    width: 100%;
+    top: 12px;
+    bottom: 0;
   }
 
   .ReactTable {
     position: absolute;
-    top: 50px;
+    top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
   }
-
-}
-
-.bottom-pane {
-  position: relative;
-  height: 100%;
-  padding-top: 15px;
-}
-
-.splitter-layout.splitter-layout-vertical > .layout-splitter{
-  height: 2px;
-  background-color: #6d8ea9;
 }

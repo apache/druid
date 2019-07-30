@@ -24,20 +24,18 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.SurrogateAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -48,10 +46,11 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -430,6 +429,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             NUM_SUB_TASKS,
             null,
             null,
@@ -501,6 +501,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
+      setToolbox(toolbox);
       setRunner(
           new TestRunner(
               toolbox,
@@ -543,7 +544,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
           supervisorTask,
-          this,
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
@@ -568,7 +568,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         String id,
         String groupId,
         ParallelIndexSupervisorTask supervisorTask,
-        SinglePhaseParallelIndexTaskRunner runner,
         ParallelIndexIngestionSpec ingestionSpec,
         Map<String, Object> context,
         InputSplit inputSplit
@@ -624,6 +623,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
   private class TestSubTask extends ParallelIndexSubTask
   {
+    private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
     private volatile TaskState state = TaskState.RUNNING;
 
     TestSubTask(
@@ -644,14 +644,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           ingestionSchema,
           context,
           null,
-          taskClientFactory
+          taskClientFactory,
+          new TestAppenderatorsManager()
       );
-    }
-
-    @Override
-    public boolean isReady(TaskActionClient taskActionClient)
-    {
-      return true;
+      this.taskClientFactory = taskClientFactory;
     }
 
     @Override
@@ -661,30 +657,31 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         Thread.sleep(100);
       }
 
-      final TestFirehose firehose = (TestFirehose) getIngestionSchema().getIOConfig().getFirehoseFactory();
+      // build LocalParallelIndexTaskClient
+      final ParallelIndexTaskClient taskClient = taskClientFactory.build(null, getId(), 0, null, 0);
 
-      final List<TaskLock> locks = toolbox.getTaskActionClient()
-                                          .submit(new SurrogateAction<>(getSupervisorTaskId(), new LockListAction()));
-      Preconditions.checkState(locks.size() == 1, "There should be a single lock");
+      final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
-      task.getRunner().collectReport(
-          new PushedSegmentsReport(
-              getId(),
-              Collections.singletonList(
-                  new DataSegment(
-                      getDataSource(),
-                      Intervals.of("2017/2018"),
-                      locks.get(0).getVersion(),
-                      null,
-                      null,
-                      null,
-                      new NumberedShardSpec(firehose.ids.get(0), NUM_SUB_TASKS),
-                      0,
-                      1L
-                  )
-              )
-          )
+      final SegmentIdWithShardSpec segmentIdentifier = segmentAllocator.allocate(
+          new MapBasedInputRow(DateTimes.of("2017-01-01"), Collections.emptyList(), Collections.emptyMap()),
+          getId(),
+          null,
+          true
       );
+
+      final DataSegment segment = new DataSegment(
+          segmentIdentifier.getDataSource(),
+          segmentIdentifier.getInterval(),
+          segmentIdentifier.getVersion(),
+          null,
+          null,
+          null,
+          segmentIdentifier.getShardSpec(),
+          0,
+          1L
+      );
+
+      taskClient.report(getId(), Collections.emptySet(), Collections.singleton(segment));
       return TaskStatus.fromCode(getId(), state);
     }
 

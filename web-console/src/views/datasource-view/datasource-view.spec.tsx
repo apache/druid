@@ -17,18 +17,15 @@
  */
 
 import { shallow } from 'enzyme';
-import * as React from 'react';
+import React from 'react';
 
-import {DatasourcesView} from './datasource-view';
+import { DatasourcesView } from './datasource-view';
 
-describe('describe data source view', () => {
-  it('data source view snapshot', () => {
+describe('data source view', () => {
+  it('matches snapshot', () => {
     const dataSourceView = shallow(
-      <DatasourcesView
-        goToSql={(initSql: string) => {}}
-        goToSegments={(datasource: string, onlyUnavailable?: boolean) => {}}
-        noSqlMode={false}
-      />);
+      <DatasourcesView goToQuery={() => {}} goToSegments={() => {}} noSqlMode={false} />,
+    );
     expect(dataSourceView).toMatchSnapshot();
   });
 });

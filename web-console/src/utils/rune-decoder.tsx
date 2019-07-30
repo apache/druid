@@ -30,7 +30,7 @@ const SUPPORTED_QUERY_TYPES: string[] = [
   'dataSourceMetadata',
   'select',
   'scan',
-  'segmentMetadata'
+  'segmentMetadata',
 ];
 
 function flatArrayToHeaderRows(a: Record<string, any>[], headerOverride?: string[]): HeaderRows {
@@ -38,7 +38,7 @@ function flatArrayToHeaderRows(a: Record<string, any>[], headerOverride?: string
   const header = headerOverride || Object.keys(a[0]);
   return {
     header,
-    rows: a.map(r => header.map(h => r[h]))
+    rows: a.map(r => header.map(h => r[h])),
   };
 }
 
@@ -49,35 +49,35 @@ function processTimeseries(rune: any[]): HeaderRows {
     rows: rune.map((r: Record<string, any>) => {
       const { timestamp, result } = r;
       return [timestamp].concat(header.map(h => result[h]));
-    })
+    }),
   };
 }
 
 function processArrayWithResultArray(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows([].concat(...rune.map(r => r.result)));
+  return flatArrayToHeaderRows(rune.flatMap(r => r.result));
 }
 
 function processArrayWithEvent(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows(rune.map((r: any) => r.event));
+  return flatArrayToHeaderRows(rune.map(r => r.event));
 }
 
 function processArrayWithResult(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows(rune.map((r: any) => r.result));
+  return flatArrayToHeaderRows(rune.map(r => r.result));
 }
 
 function processSelect(rune: any[]): HeaderRows {
-  return flatArrayToHeaderRows([].concat(...rune.map(r => r.result.events.map((e: any) => e.event))));
+  return flatArrayToHeaderRows(rune.flatMap(r => r.result.events.map((e: any) => e.event)));
 }
 
 function processScan(rune: any[]): HeaderRows {
   const header = rune[0].columns;
-  return flatArrayToHeaderRows([].concat(...rune.map(r => r.events)), header);
+  return flatArrayToHeaderRows(rune.flatMap(r => r.events), header);
 }
 
 function processSegmentMetadata(rune: any[]): HeaderRows {
-  const flatArray = ([] as any).concat(...rune.map(r => Object.keys(r.columns).map(
-    k => Object.assign({id: r.id, column: k},  r.columns[k])
-  )));
+  const flatArray = rune.flatMap(r =>
+    Object.keys(r.columns).map(k => Object.assign({ id: r.id, column: k }, r.columns[k])),
+  );
   return flatArrayToHeaderRows(flatArray);
 }
 
@@ -93,11 +93,13 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
         throw new Error(`Unsupported query type in treatQueryTypeAs: '${treatQueryTypeAs}'`);
       }
     } else {
-      throw new Error([
-        `Unsupported query type '${queryType}'.`,
-        `Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'.`,
-        `If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`
-      ].join(' '));
+      throw new Error(
+        [
+          `Unsupported query type '${queryType}'.`,
+          `Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'.`,
+          `If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`,
+        ].join(' '),
+      );
     }
   }
 
@@ -125,7 +127,7 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
       if (runeQuery.resultFormat === 'compactedList') {
         return {
           header: runeResult[0].columns,
-          rows: [].concat(...runeResult.map(r => r.events))
+          rows: runeResult.flatMap(r => r.events),
         };
       }
       return processScan(runeResult);

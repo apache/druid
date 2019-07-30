@@ -256,35 +256,27 @@ public class RowBasedGrouperHelper
         valueTypes
     );
 
-    final Accumulator<AggregateResult, Row> accumulator = new Accumulator<AggregateResult, Row>()
-    {
-      @Override
-      public AggregateResult accumulate(
-          final AggregateResult priorResult,
-          final Row row
-      )
-      {
-        BaseQuery.checkInterrupted();
+    final Accumulator<AggregateResult, Row> accumulator = (priorResult, row) -> {
+      BaseQuery.checkInterrupted();
 
-        if (priorResult != null && !priorResult.isOk()) {
-          // Pass-through error returns without doing more work.
-          return priorResult;
-        }
-
-        if (!grouper.isInitialized()) {
-          grouper.init();
-        }
-
-        columnSelectorRow.set(row);
-
-        final Comparable[] key = new Comparable[keySize];
-        valueExtractFn.apply(row, key);
-
-        final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
-        columnSelectorRow.set(null);
-
-        return aggregateResult;
+      if (priorResult != null && !priorResult.isOk()) {
+        // Pass-through error returns without doing more work.
+        return priorResult;
       }
+
+      if (!grouper.isInitialized()) {
+        grouper.init();
+      }
+
+      columnSelectorRow.set(row);
+
+      final Comparable[] key = new Comparable[keySize];
+      valueExtractFn.apply(row, key);
+
+      final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
+      columnSelectorRow.set(null);
+
+      return aggregateResult;
     };
 
     return new Pair<>(grouper, accumulator);
@@ -302,33 +294,12 @@ public class RowBasedGrouperHelper
   {
     if (isInputRaw) {
       if (query.getGranularity() instanceof AllGranularity) {
-        return new TimestampExtractFunction()
-        {
-          @Override
-          public long apply(Row row)
-          {
-            return query.getIntervals().get(0).getStartMillis();
-          }
-        };
+        return row -> query.getIntervals().get(0).getStartMillis();
       } else {
-        return new TimestampExtractFunction()
-        {
-          @Override
-          public long apply(Row row)
-          {
-            return query.getGranularity().bucketStart(row.getTimestamp()).getMillis();
-          }
-        };
+        return row -> query.getGranularity().bucketStart(row.getTimestamp()).getMillis();
       }
     } else {
-      return new TimestampExtractFunction()
-      {
-        @Override
-        public long apply(Row row)
-        {
-          return row.getTimestampFromEpoch();
-        }
-      };
+      return Row::getTimestampFromEpoch;
     }
   }
 
@@ -358,60 +329,40 @@ public class RowBasedGrouperHelper
       );
 
       if (includeTimestamp) {
-        return new ValueExtractFunction()
-        {
-          @Override
-          public Comparable[] apply(Row row, Comparable[] key)
-          {
-            key[0] = timestampExtractFn.apply(row);
-            for (int i = 1; i < key.length; i++) {
-              final Comparable val = inputRawSuppliers[i - 1].get();
-              key[i] = valueConvertFns[i - 1].apply(val);
-            }
-            return key;
+        return (row, key) -> {
+          key[0] = timestampExtractFn.apply(row);
+          for (int i = 1; i < key.length; i++) {
+            final Comparable val = inputRawSuppliers[i - 1].get();
+            key[i] = valueConvertFns[i - 1].apply(val);
           }
+          return key;
         };
       } else {
-        return new ValueExtractFunction()
-        {
-          @Override
-          public Comparable[] apply(Row row, Comparable[] key)
-          {
-            for (int i = 0; i < key.length; i++) {
-              final Comparable val = inputRawSuppliers[i].get();
-              key[i] = valueConvertFns[i].apply(val);
-            }
-            return key;
+        return (row, key) -> {
+          for (int i = 0; i < key.length; i++) {
+            final Comparable val = inputRawSuppliers[i].get();
+            key[i] = valueConvertFns[i].apply(val);
           }
+          return key;
         };
       }
     } else {
       if (includeTimestamp) {
-        return new ValueExtractFunction()
-        {
-          @Override
-          public Comparable[] apply(Row row, Comparable[] key)
-          {
-            key[0] = timestampExtractFn.apply(row);
-            for (int i = 1; i < key.length; i++) {
-              final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i - 1).getOutputName());
-              key[i] = valueConvertFns[i - 1].apply(val);
-            }
-            return key;
+        return (row, key) -> {
+          key[0] = timestampExtractFn.apply(row);
+          for (int i = 1; i < key.length; i++) {
+            final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i - 1).getOutputName());
+            key[i] = valueConvertFns[i - 1].apply(val);
           }
+          return key;
         };
       } else {
-        return new ValueExtractFunction()
-        {
-          @Override
-          public Comparable[] apply(Row row, Comparable[] key)
-          {
-            for (int i = 0; i < key.length; i++) {
-              final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i).getOutputName());
-              key[i] = valueConvertFns[i].apply(val);
-            }
-            return key;
+        return (row, key) -> {
+          for (int i = 0; i < key.length; i++) {
+            final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i).getOutputName());
+            key[i] = valueConvertFns[i].apply(val);
           }
+          return key;
         };
       }
     }
@@ -436,58 +387,52 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     return new CloseableGrouperIterator<>(
-        grouper,
-        true,
-        new Function<Grouper.Entry<RowBasedKey>, Row>()
-        {
-          @Override
-          public Row apply(Grouper.Entry<RowBasedKey> entry)
-          {
-            Map<String, Object> theMap = Maps.newLinkedHashMap();
+        grouper.iterator(true),
+        entry -> {
+          Map<String, Object> theMap = Maps.newLinkedHashMap();
 
-            // Get timestamp, maybe.
-            final DateTime timestamp;
-            final int dimStart;
+          // Get timestamp, maybe.
+          final DateTime timestamp;
+          final int dimStart;
 
-            if (includeTimestamp) {
-              timestamp = query.getGranularity().toDateTime(((long) (entry.getKey().getKey()[0])));
-              dimStart = 1;
-            } else {
-              timestamp = null;
-              dimStart = 0;
-            }
-
-            // Add dimensions.
-            if (dimsToInclude == null) {
-              for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
-                Object dimVal = entry.getKey().getKey()[i];
-                theMap.put(
-                    query.getDimensions().get(i - dimStart).getOutputName(),
-                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-                );
-              }
-            } else {
-              Map<String, Object> dimensions = new HashMap<>();
-              for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
-                Object dimVal = entry.getKey().getKey()[i];
-                dimensions.put(
-                    query.getDimensions().get(i - dimStart).getOutputName(),
-                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-                );
-              }
-
-              for (String dimToInclude : dimsToInclude) {
-                theMap.put(dimToInclude, dimensions.get(dimToInclude));
-              }
-            }
-
-            // Add aggregations.
-            for (int i = 0; i < entry.getValues().length; i++) {
-              theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
-            }
-
-            return new MapBasedRow(timestamp, theMap);
+          if (includeTimestamp) {
+            timestamp = query.getGranularity().toDateTime(((long) (entry.getKey().getKey()[0])));
+            dimStart = 1;
+          } else {
+            timestamp = null;
+            dimStart = 0;
           }
+
+          // Add dimensions.
+          if (dimsToInclude == null) {
+            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
+              Object dimVal = entry.getKey().getKey()[i];
+              theMap.put(
+                  query.getDimensions().get(i - dimStart).getOutputName(),
+                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
+              );
+            }
+          } else {
+            Map<String, Object> dimensions = new HashMap<>();
+            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
+              Object dimVal = entry.getKey().getKey()[i];
+              dimensions.put(
+                  query.getDimensions().get(i - dimStart).getOutputName(),
+                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
+              );
+            }
+
+            for (String dimToInclude : dimsToInclude) {
+              theMap.put(dimToInclude, dimensions.get(dimToInclude));
+            }
+          }
+
+          // Add aggregations.
+          for (int i = 0; i < entry.getValues().length; i++) {
+            theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
+          }
+
+          return new MapBasedRow(timestamp, theMap);
         },
         closeable
     );
@@ -714,47 +659,30 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Comparator<Grouper.Entry<RowBasedKey>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-            {
-              final int cmp = compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
-              if (cmp != 0) {
-                return cmp;
-              }
-
-              return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+          return (entry1, entry2) -> {
+            final int cmp = compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
+            if (cmp != 0) {
+              return cmp;
             }
+
+            return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
           };
         } else {
-          return new Comparator<Grouper.Entry<RowBasedKey>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-            {
-              final int timeCompare = Longs.compare(
-                  (long) entry1.getKey().getKey()[0],
-                  (long) entry2.getKey().getKey()[0]
-              );
+          return (entry1, entry2) -> {
+            final int timeCompare = Longs.compare(
+                (long) entry1.getKey().getKey()[0],
+                (long) entry2.getKey().getKey()[0]
+            );
 
-              if (timeCompare != 0) {
-                return timeCompare;
-              }
-
-              return compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
+            if (timeCompare != 0) {
+              return timeCompare;
             }
+
+            return compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
           };
         }
       } else {
-        return new Comparator<Grouper.Entry<RowBasedKey>>()
-        {
-          @Override
-          public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-          {
-            return compareDimsInRows(entry1.getKey(), entry2.getKey(), 0);
-          }
-        };
+        return (entry1, entry2) -> compareDimsInRows(entry1.getKey(), entry2.getKey(), 0);
       }
     }
 
@@ -805,71 +733,57 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Comparator<Grouper.Entry<RowBasedKey>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-            {
-              final int cmp = compareDimsInRowsWithAggs(
-                  entry1,
-                  entry2,
-                  1,
-                  needsReverses,
-                  aggFlags,
-                  fieldIndices,
-                  isNumericField,
-                  comparators
-              );
-              if (cmp != 0) {
-                return cmp;
-              }
-
-              return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
-            }
-          };
-        } else {
-          return new Comparator<Grouper.Entry<RowBasedKey>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-            {
-              final int timeCompare = Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
-
-              if (timeCompare != 0) {
-                return timeCompare;
-              }
-
-              return compareDimsInRowsWithAggs(
-                  entry1,
-                  entry2,
-                  1,
-                  needsReverses,
-                  aggFlags,
-                  fieldIndices,
-                  isNumericField,
-                  comparators
-              );
-            }
-          };
-        }
-      } else {
-        return new Comparator<Grouper.Entry<RowBasedKey>>()
-        {
-          @Override
-          public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
-          {
-            return compareDimsInRowsWithAggs(
+          return (entry1, entry2) -> {
+            final int cmp = compareDimsInRowsWithAggs(
                 entry1,
                 entry2,
-                0,
+                1,
                 needsReverses,
                 aggFlags,
                 fieldIndices,
                 isNumericField,
                 comparators
             );
-          }
-        };
+            if (cmp != 0) {
+              return cmp;
+            }
+
+            return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+          };
+        } else {
+          return (entry1, entry2) -> {
+            final int timeCompare = Longs.compare(
+                (long) entry1.getKey().getKey()[0],
+                (long) entry2.getKey().getKey()[0]
+            );
+
+            if (timeCompare != 0) {
+              return timeCompare;
+            }
+
+            return compareDimsInRowsWithAggs(
+                entry1,
+                entry2,
+                1,
+                needsReverses,
+                aggFlags,
+                fieldIndices,
+                isNumericField,
+                comparators
+            );
+          };
+        }
+      } else {
+        return (entry1, entry2) -> compareDimsInRowsWithAggs(
+            entry1,
+            entry2,
+            0,
+            needsReverses,
+            aggFlags,
+            fieldIndices,
+            isNumericField,
+            comparators
+        );
       }
     }
 
@@ -930,8 +844,10 @@ public class RowBasedGrouperHelper
           // use natural comparison
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
-          cmp = comparator.compare(DimensionHandlerUtils.convertObjectToString(lhs),
-                                   DimensionHandlerUtils.convertObjectToString(rhs));
+          cmp = comparator.compare(
+              DimensionHandlerUtils.convertObjectToString(lhs),
+              DimensionHandlerUtils.convertObjectToString(rhs)
+          );
         }
 
         if (cmp != 0) {
@@ -977,6 +893,7 @@ public class RowBasedGrouperHelper
     // dictionary id -> rank of the sorted dictionary
     // This is initialized in the constructor and bufferComparator() with static dictionary and dynamic dictionary,
     // respectively.
+    @Nullable
     private int[] rankOfDictionaryIds = null;
 
     RowBasedKeySerde(
@@ -1114,68 +1031,53 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Grouper.BufferComparator()
-          {
-            @Override
-            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-            {
-              final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelperComparators,
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
-              if (cmp != 0) {
-                return cmp;
-              }
-
-              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
+                serdeHelperComparators,
+                lhsBuffer,
+                rhsBuffer,
+                lhsPosition,
+                rhsPosition
+            );
+            if (cmp != 0) {
+              return cmp;
             }
+
+            return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
           };
         } else {
-          return new Grouper.BufferComparator()
-          {
-            @Override
-            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-            {
-              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
 
-              if (timeCompare != 0) {
-                return timeCompare;
-              }
-
-              return compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelperComparators,
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
+            if (timeCompare != 0) {
+              return timeCompare;
             }
+
+            return compareDimsInBuffersForNullFudgeTimestamp(
+                serdeHelperComparators,
+                lhsBuffer,
+                rhsBuffer,
+                lhsPosition,
+                rhsPosition
+            );
           };
         }
       } else {
-        return new Grouper.BufferComparator()
-        {
-          @Override
-          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-          {
-            for (int i = 0; i < dimCount; i++) {
-              final int cmp = serdeHelperComparators[i].compare(
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
+        return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+          for (int i = 0; i < dimCount; i++) {
+            final int cmp = serdeHelperComparators[i].compare(
+                lhsBuffer,
+                rhsBuffer,
+                lhsPosition,
+                rhsPosition
+            );
 
-              if (cmp != 0) {
-                return cmp;
-              }
+            if (cmp != 0) {
+              return cmp;
             }
-
-            return 0;
           }
+
+          return 0;
         };
       }
     }
@@ -1242,84 +1144,69 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Grouper.BufferComparator()
-          {
-            @Override
-            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-            {
-              final int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                  adjustedSerdeHelperComparators,
-                  needsReverses,
-                  fieldCount,
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
-              if (cmp != 0) {
-                return cmp;
-              }
-
-              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-            }
-          };
-        } else {
-          return new Grouper.BufferComparator()
-          {
-            @Override
-            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-            {
-              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-
-              if (timeCompare != 0) {
-                return timeCompare;
-              }
-
-              int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                  adjustedSerdeHelperComparators,
-                  needsReverses,
-                  fieldCount,
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
-
+          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            final int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
+                adjustedSerdeHelperComparators,
+                needsReverses,
+                fieldCount,
+                lhsBuffer,
+                rhsBuffer,
+                lhsPosition,
+                rhsPosition
+            );
+            if (cmp != 0) {
               return cmp;
             }
+
+            return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+          };
+        } else {
+          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+
+            if (timeCompare != 0) {
+              return timeCompare;
+            }
+
+            int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
+                adjustedSerdeHelperComparators,
+                needsReverses,
+                fieldCount,
+                lhsBuffer,
+                rhsBuffer,
+                lhsPosition,
+                rhsPosition
+            );
+
+            return cmp;
           };
         }
       } else {
-        return new Grouper.BufferComparator()
-        {
-          @Override
-          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
-          {
-            for (int i = 0; i < fieldCount; i++) {
-              final int cmp;
-              if (needsReverses.get(i)) {
-                cmp = adjustedSerdeHelperComparators[i].compare(
-                    rhsBuffer,
-                    lhsBuffer,
-                    rhsPosition,
-                    lhsPosition
-                );
-              } else {
-                cmp = adjustedSerdeHelperComparators[i].compare(
-                    lhsBuffer,
-                    rhsBuffer,
-                    lhsPosition,
-                    rhsPosition
-                );
-              }
-
-              if (cmp != 0) {
-                return cmp;
-              }
+        return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+          for (int i = 0; i < fieldCount; i++) {
+            final int cmp;
+            if (needsReverses.get(i)) {
+              cmp = adjustedSerdeHelperComparators[i].compare(
+                  rhsBuffer,
+                  lhsBuffer,
+                  rhsPosition,
+                  lhsPosition
+              );
+            } else {
+              cmp = adjustedSerdeHelperComparators[i].compare(
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
+              );
             }
 
-            return 0;
+            if (cmp != 0) {
+              return cmp;
+            }
           }
+
+          return 0;
         };
       }
     }
@@ -1637,7 +1524,8 @@ public class RowBasedGrouperHelper
       FloatRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator)
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {

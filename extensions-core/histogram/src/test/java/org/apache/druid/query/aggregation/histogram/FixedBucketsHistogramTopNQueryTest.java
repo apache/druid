@@ -48,7 +48,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -118,7 +117,8 @@ public class FixedBucketsHistogramTopNQueryTest
         10,
         0,
         2000,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
     );
 
     TopNQuery query = new TopNQueryBuilder()
@@ -141,11 +141,9 @@ public class FixedBucketsHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
-                new QuantilePostAggregator("quantile", "histo", 0.5f)
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg,
+            new QuantilePostAggregator("quantile", "histo", 0.5f)
         )
         .build();
 
@@ -178,7 +176,7 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
@@ -205,7 +203,7 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build(),
                     ImmutableMap.<String, Object>builder()
@@ -232,16 +230,15 @@ public class FixedBucketsHistogramTopNQueryTest
                                 0,
                                 0,
                                 0
-                            )
+                            ).toString()
                         )
                         .build()
                 )
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
 
-    List<Result<TopNResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result<TopNResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 }

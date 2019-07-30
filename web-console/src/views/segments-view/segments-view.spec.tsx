@@ -16,24 +16,21 @@
  * limitations under the License.
  */
 
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
-import * as React from 'react';
+import React from 'react';
 
-import {SegmentsView} from '../segments-view/segments-view';
+import { SegmentsView } from '../segments-view/segments-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe segments-view', () => {
-  it('segments view snapshot', () => {
+describe('segments-view', () => {
+  it('matches snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView
         datasource={'test'}
         onlyUnavailable={false}
-        goToSql={(initSql: string) => {}}
+        goToQuery={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(segmentsView).toMatchSnapshot();
   });
 });

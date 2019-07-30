@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import "./variables";
+@import './variables';
 
 .console-application {
   position: absolute;
@@ -25,7 +25,7 @@
 
   .view-container {
     position: absolute;
-    top: 50px;
+    top: $header-bar-height;
     left: 0;
     right: 0;
     bottom: 0;

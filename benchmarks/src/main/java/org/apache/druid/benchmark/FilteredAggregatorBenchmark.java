@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -27,12 +28,10 @@ import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -45,10 +44,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
@@ -91,7 +90,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -106,6 +104,9 @@ public class FilteredAggregatorBenchmark
 
   @Param({"basic"})
   private String schema;
+
+  @Param({"false", "true"})
+  private String vectorize;
 
   private static final Logger log = new Logger(FilteredAggregatorBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -145,9 +146,7 @@ public class FilteredAggregatorBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
@@ -163,12 +162,6 @@ public class FilteredAggregatorBenchmark
     filter = new OrDimFilter(
         Arrays.asList(
             new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
-            new JavaScriptDimFilter(
-                "dimSequential",
-                "function(x) { return false }",
-                null,
-                JavaScriptConfig.getEnabledInstance()
-            ),
             new RegexDimFilter("dimSequential", "X", null),
             new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
             new InDimFilter("dimSequential", Collections.singletonList("X"), null)
@@ -236,7 +229,7 @@ public class FilteredAggregatorBenchmark
         .buildOnheap();
   }
 
-  private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
+  private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query, String vectorize)
   {
     QueryToolChest toolChest = factory.getToolchest();
     QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
@@ -244,7 +237,10 @@ public class FilteredAggregatorBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    final QueryPlus<T> queryToRun = QueryPlus.wrap(
+        query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
+    );
+    Sequence<T> queryResult = theRunner.run(queryToRun, ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -271,7 +267,12 @@ public class FilteredAggregatorBenchmark
         new IncrementalIndexSegment(incIndex, SegmentId.dummy("incIndex"))
     );
 
-    List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(factory, runner, query);
+    List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
+        factory,
+        runner,
+        query,
+        vectorize
+    );
     for (Result<TimeseriesResultValue> result : results) {
       blackhole.consume(result);
     }
@@ -288,7 +289,12 @@ public class FilteredAggregatorBenchmark
         new QueryableIndexSegment(qIndex, SegmentId.dummy("qIndex"))
     );
 
-    List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(factory, runner, query);
+    List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
+        factory,
+        runner,
+        query,
+        vectorize
+    );
     for (Result<TimeseriesResultValue> result : results) {
       blackhole.consume(result);
     }

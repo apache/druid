@@ -57,8 +57,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.druid.query.lookup.KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER;
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
     NamespaceExtractionCacheManager.class,
@@ -80,7 +78,8 @@ public class KafkaLookupExtractorFactoryTest
       "some.property", "some.value"
   );
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(NamespaceExtractionCacheManager.class);
+  private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(
+      NamespaceExtractionCacheManager.class);
   private final CacheHandler cacheHandler = PowerMock.createStrictMock(CacheHandler.class);
 
 
@@ -199,6 +198,7 @@ public class KafkaLookupExtractorFactoryTest
         DEFAULT_PROPERTIES
     );
     factory1.getMapRef().set(ImmutableMap.of());
+    //noinspection StringConcatenationMissingWhitespace
     final KafkaLookupExtractorFactory factory2 = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
@@ -228,6 +228,7 @@ public class KafkaLookupExtractorFactoryTest
         DEFAULT_PROPERTIES
     )));
 
+    //noinspection StringConcatenationMissingWhitespace
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
@@ -283,29 +284,23 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
         EasyMock.anyObject(TopicFilter.class),
         EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER),
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall();
 
     final AtomicBoolean threadWasInterrupted = new AtomicBoolean(false);
     consumerConnector.shutdown();
-    EasyMock.expectLastCall().andAnswer(new IAnswer<Object>()
-    {
-      @Override
-      public Object answer()
-      {
-        threadWasInterrupted.set(Thread.currentThread().isInterrupted());
-        return null;
-      }
+    EasyMock.expectLastCall().andAnswer(() -> {
+      threadWasInterrupted.set(Thread.currentThread().isInterrupted());
+      return null;
     }).times(2);
 
     PowerMock.replay(cacheManager, cacheHandler, kafkaStream, consumerConnector, consumerIterator);
@@ -379,16 +374,15 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
         EasyMock.anyObject(TopicFilter.class),
         EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER),
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
     consumerConnector.shutdown();
@@ -421,16 +415,15 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
         EasyMock.anyObject(TopicFilter.class),
         EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER),
+        EasyMock.eq(KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
     consumerConnector.shutdown();
@@ -544,21 +537,16 @@ public class KafkaLookupExtractorFactoryTest
   public void testDefaultDecoder()
   {
     final String str = "some string";
-    Assert.assertEquals(str, DEFAULT_STRING_DECODER.fromBytes(StringUtils.toUtf8(str)));
+    Assert.assertEquals(str, KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER.fromBytes(StringUtils.toUtf8(str)));
   }
 
   private IAnswer<Boolean> getBlockingAnswer()
   {
-    return new IAnswer<Boolean>()
-    {
-      @Override
-      public Boolean answer() throws Throwable
-      {
-        Thread.sleep(60000);
-        Assert.fail("Test failed to complete within 60000ms");
+    return () -> {
+      Thread.sleep(60000);
+      Assert.fail("Test failed to complete within 60000ms");
 
-        return false;
-      }
+      return false;
     };
   }
 }

@@ -65,6 +65,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
+  public Optional<SupervisorStateManager.State> getSupervisorState(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
+  }
+
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -101,26 +107,6 @@ public class SupervisorManager
     }
   }
 
-  public void stopAndRemoveAllSupervisors()
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblyStopAndRemoveSupervisorInternal(id, true));
-    }
-  }
-
-  public void suspendOrResumeAllSupervisors(boolean suspend)
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblySuspendOrResumeSupervisorInternal(id, suspend));
-    }
-  }
-
   @LifecycleStart
   public void start()
   {
@@ -129,8 +115,8 @@ public class SupervisorManager
 
     synchronized (lock) {
       Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
-      for (String id : supervisors.keySet()) {
-        SupervisorSpec spec = supervisors.get(id);
+      for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
+        final SupervisorSpec spec = supervisor.getValue();
         if (!(spec instanceof NoopSupervisorSpec)) {
           try {
             createAndStartSupervisorInternal(spec, false);
@@ -181,6 +167,12 @@ public class SupervisorManager
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
+  }
+
+  public Optional<Boolean> isSupervisorHealthy(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
   }
 
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)

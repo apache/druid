@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .header-bar {
   overflow: hidden;
 
   .logo {
     position: relative;
     width: 100px;
-    height: 50px;
+    height: $header-bar-height;
 
     svg {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%,-50%);
+      transform: translate(-50%, -50%);
       height: 75px;
     }
   }

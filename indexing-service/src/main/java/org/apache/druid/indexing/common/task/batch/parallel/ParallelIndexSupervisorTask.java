@@ -36,11 +36,11 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -50,15 +50,19 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -91,7 +95,7 @@ import java.util.stream.Collectors;
  *
  * @see ParallelIndexTaskRunner
  */
-public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHandler
+public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implements ChatHandler
 {
   public static final String TYPE = "index_parallel";
 
@@ -103,10 +107,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final AppenderatorsManager appenderatorsManager;
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
 
   private volatile ParallelIndexTaskRunner runner;
+  private volatile IndexTask sequentialIndexTask;
+
+  private boolean stopped = false;
 
   // toolbox is initlized when run() is called, and can be used for processing HTTP endpoint requests.
   private volatile TaskToolbox toolbox;
@@ -120,7 +128,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       @JacksonInject @Nullable IndexingServiceClient indexingServiceClient, // null in overlords
       @JacksonInject @Nullable ChatHandlerProvider chatHandlerProvider,     // null in overlords
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -143,6 +152,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.appenderatorsManager = appenderatorsManager;
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
@@ -190,6 +200,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @VisibleForTesting
   ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
   {
+    this.toolbox = toolbox;
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       throw new UnsupportedOperationException("Perfect roll-up is not supported yet");
     } else {
@@ -214,41 +225,72 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    return !intervals.isPresent() || isReady(taskActionClient, intervals.get());
+    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()
+        && !ingestionSchema.getIOConfig().isAppendToExisting()) {
+      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
+      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+      // the segment granularity of existing segments until the task reads all data because we don't know what segments
+      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
+      // missing force to use timeChunk lock.
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
-  static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
+  @Override
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
+      throws IOException
   {
-    final List<TaskLock> locks = getTaskLocks(actionClient);
-    if (locks.isEmpty()) {
-      try {
-        Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
-        return false;
-      }
+    return findInputSegments(
+        getDataSource(),
+        taskActionClient,
+        intervals,
+        ingestionSchema.getIOConfig().getFirehoseFactory()
+    );
+  }
+
+  @Override
+  public boolean requireLockExistingSegments()
+  {
+    return !ingestionSchema.getIOConfig().isAppendToExisting();
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    if (granularitySpec instanceof ArbitraryGranularitySpec) {
+      return null;
+    } else {
+      return granularitySpec.getSegmentGranularity();
     }
-    return true;
   }
 
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    synchronized (this) {
+      stopped = true;
+    }
     if (runner != null) {
       runner.stopGracefully();
+    } else if (sequentialIndexTask != null) {
+      sequentialIndexTask.stopGracefully(taskConfig);
     }
   }
 
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    setToolbox(toolbox);
-
     log.info(
         "Found chat handler of class[%s]",
         Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
@@ -298,27 +340,43 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    createRunner(toolbox);
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      }
+      createRunner(toolbox);
+    }
     return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
-  private TaskStatus runSequential(TaskToolbox toolbox)
+  private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
   {
-    return new IndexTask(
-        getId(),
-        getGroupId(),
-        getTaskResource(),
-        getDataSource(),
-        new IndexIngestionSpec(
-            getIngestionSchema().getDataSchema(),
-            getIngestionSchema().getIOConfig(),
-            convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
-        ),
-        getContext(),
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory
-    ).run(toolbox);
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      }
+      sequentialIndexTask = new IndexTask(
+          getId(),
+          getGroupId(),
+          getTaskResource(),
+          getDataSource(),
+          new IndexIngestionSpec(
+              getIngestionSchema().getDataSchema(),
+              getIngestionSchema().getIOConfig(),
+              convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
+          ),
+          getContext(),
+          authorizerMapper,
+          chatHandlerProvider,
+          rowIngestionMetersFactory,
+          appenderatorsManager
+      );
+    }
+    if (sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
+      return sequentialIndexTask.run(toolbox);
+    } else {
+      return TaskStatus.failure(getId());
+    }
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
@@ -333,6 +391,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         tuningConfig.getNumShards(),
         null,
         tuningConfig.getIndexSpec(),
+        tuningConfig.getIndexSpecForIntermediatePersists(),
         tuningConfig.getMaxPendingPersists(),
         true,
         false,
@@ -359,12 +418,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   public Response allocateSegment(DateTime timestamp, @Context final HttpServletRequest req)
   {
-    ChatHandlers.authorizationCheck(
-        req,
-        Action.READ,
-        getDataSource(),
-        authorizerMapper
-    );
+    ChatHandlers.authorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
     if (toolbox == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -382,6 +436,11 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     }
   }
 
+  /**
+   * Allocate a new segment for the given timestamp locally.
+   * Since the segments returned by this method overwrites any existing segments, this method should be called only
+   * when the {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   */
   @VisibleForTesting
   SegmentIdWithShardSpec allocateNewSegment(DateTime timestamp) throws IOException
   {
@@ -403,10 +462,9 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
 
     Interval interval;
     String version;
-    boolean justLockedInterval = false;
     if (bucketIntervals.isPresent()) {
-      // If the granularity spec has explicit intervals, we just need to find the interval (of the segment
-      // granularity); we already tried to lock it at task startup.
+      // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
+      // This is because we should have gotten all required locks up front when the task starts up.
       final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
       if (!maybeInterval.isPresent()) {
         throw new IAE("Could not find interval for timestamp [%s]", timestamp);
@@ -429,21 +487,17 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       if (version == null) {
         // We don't have a lock for this interval, so we should lock it now.
         final TaskLock lock = Preconditions.checkNotNull(
-            toolbox.getTaskActionClient().submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
-            "Cannot acquire a lock for interval[%s]", interval
+            toolbox.getTaskActionClient().submit(
+                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            interval
         );
         version = lock.getVersion();
-        justLockedInterval = true;
       }
     }
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
-    if (justLockedInterval && partitionNum != 0) {
-      throw new ISE(
-          "Expected partitionNum to be 0 for interval [%s] right after locking, but got [%s]",
-          interval, partitionNum
-      );
-    }
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,

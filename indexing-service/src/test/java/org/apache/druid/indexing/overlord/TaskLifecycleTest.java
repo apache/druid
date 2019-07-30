@@ -46,6 +46,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -55,6 +56,7 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -64,10 +66,11 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.KillTask;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
@@ -108,6 +111,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
@@ -226,6 +230,7 @@ public class TaskLifecycleTest
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
+  private AppenderatorsManager appenderatorsManager;
 
   private int pushedSegments;
   private int announcedSinks;
@@ -527,7 +532,9 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage);
+    appenderatorsManager = new TestAppenderatorsManager();
+
+    taskLockbox = new TaskLockbox(taskStorage, mdc);
     tac = new LocalTaskActionClientFactory(
         taskStorage,
         new TaskActionToolbox(
@@ -540,7 +547,7 @@ public class TaskLifecycleTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null);
 
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
@@ -550,6 +557,7 @@ public class TaskLifecycleTest
         return new ArrayList<>();
       }
     };
+
     return new TaskToolboxFactory(
         taskConfig,
         tac,
@@ -620,7 +628,7 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter()
     );
   }
 
@@ -690,6 +698,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -705,7 +714,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        appenderatorsManager
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -771,6 +781,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -786,7 +797,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -934,15 +946,21 @@ public class TaskLifecycleTest
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        final TaskLock myLock = Iterables.getOnlyElement(
-            toolbox.getTaskActionClient()
-                   .submit(new LockListAction())
+        final Interval interval = Intervals.of("2012-01-01/P1D");
+        final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
+            TaskLockType.EXCLUSIVE,
+            interval
         );
+
+        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
+        if (lock == null) {
+          throw new ISE("Failed to get a lock");
+        }
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
-                                               .interval(Intervals.of("2012-01-01/P1D"))
-                                               .version(myLock.getVersion())
+                                               .interval(interval)
+                                               .version(lock.getVersion())
                                                .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
@@ -1160,6 +1178,7 @@ public class TaskLifecycleTest
                 null,
                 indexSpec,
                 null,
+                null,
                 false,
                 null,
                 null,
@@ -1174,7 +1193,8 @@ public class TaskLifecycleTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        ROW_INGESTION_METERS_FACTORY
+        ROW_INGESTION_METERS_FACTORY,
+        appenderatorsManager
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1275,9 +1295,8 @@ public class TaskLifecycleTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new MockFirehoseFactory(true),
-        null,
-        // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
         null
+        // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,
@@ -1285,6 +1304,7 @@ public class TaskLifecycleTest
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
+        null,
         null,
         null,
         null,

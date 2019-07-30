@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -63,7 +64,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -76,7 +78,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
+        appenderatorsManager
     );
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
@@ -135,7 +138,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
     );
   }
 

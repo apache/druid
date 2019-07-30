@@ -73,7 +73,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   @Override
   public String compactSegments(
       List<DataSegment> segments,
-      boolean keepSegmentGranularity,
       @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       ClientCompactQueryTuningConfig tuningConfig,
@@ -96,7 +95,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
             dataSource,
             null,
             segments,
-            keepSegmentGranularity,
             targetCompactionSizeBytes,
             tuningConfig,
             context
@@ -268,6 +266,27 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
+  {
+    try {
+      final FullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskIds))
+      );
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<Map<String, TaskStatus>>()
+          {
+          }
+      );
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

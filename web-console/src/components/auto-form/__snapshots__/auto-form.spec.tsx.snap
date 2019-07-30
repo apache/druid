@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe auto-form snapshot auto-form snapshot 1`] = `
+exports[`auto-form snapshot matches snapshot 1`] = `
 <div
   class="auto-form"
 >
@@ -190,7 +190,7 @@ exports[`describe auto-form snapshot auto-form snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class="bp3-input-group"
+        class="bp3-input-group suggestible-input"
       >
         <input
           class="bp3-input"

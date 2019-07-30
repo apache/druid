@@ -202,6 +202,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -217,7 +218,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -284,6 +286,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 indexSpec,
+                null,
                 3,
                 true,
                 false,
@@ -299,7 +302,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -378,8 +382,7 @@ public class TaskSerdeTest
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null,
-                null
+                (schema, config, metrics) -> null
             ),
 
             new RealtimeTuningConfig(
@@ -393,6 +396,7 @@ public class TaskSerdeTest
                 1,
                 NoneShardSpec.instance(),
                 indexSpec,
+                null,
                 null,
                 0,
                 0,

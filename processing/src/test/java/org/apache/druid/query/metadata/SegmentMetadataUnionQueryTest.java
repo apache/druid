@@ -41,7 +41,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -97,7 +96,7 @@ public class SegmentMetadataUnionQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap,
                 mmap ? 43524 : 43056,
                 1,
                 "preferred",
@@ -123,7 +122,7 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    List result = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

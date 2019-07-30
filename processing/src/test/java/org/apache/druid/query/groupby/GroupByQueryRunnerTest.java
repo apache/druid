@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -80,6 +81,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
@@ -186,8 +188,10 @@ public class GroupByQueryRunnerTest
   private static final Closer resourceCloser = Closer.create();
 
   private final QueryRunner<Row> runner;
+  private final String runnerName;
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
+  private final boolean vectorize;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -234,6 +238,13 @@ public class GroupByQueryRunnerTest
       public String getDefaultStrategy()
       {
         return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public int getBufferGrouperInitialBuckets()
+      {
+        // Small initial table to force some growing.
+        return 4;
       }
 
       @Override
@@ -400,7 +411,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
+  public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
@@ -408,12 +419,14 @@ public class GroupByQueryRunnerTest
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
       resourceCloser.register(factoryAndCloser.rhs);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = StringUtils.format(
-            "config=%s, runner=%s",
-            config.toString(),
-            runner.toString()
-        );
-        constructors.add(new Object[]{testName, config, factory, runner});
+        for (boolean vectorize : ImmutableList.of(false, true)) {
+          final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
+
+          // Add vectorization tests for any indexes that support it.
+          if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
+            constructors.add(new Object[]{testName, config, factory, runner, vectorize});
+          }
+        }
       }
     }
 
@@ -430,19 +443,21 @@ public class GroupByQueryRunnerTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner runner,
+      boolean vectorize
   )
   {
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.runnerName = runner.toString();
+    this.vectorize = vectorize;
   }
 
   @Test
   public void testGroupBy()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -700,8 +715,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByOnMissingColumn()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -727,8 +744,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithStringPostAggregator()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -958,8 +974,17 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithStringVirtualColumn()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    // Cannot run with groupBy v1 on IncrementalIndex, because expressions would turn multi-value inputs
+    // into cardinalityless selectors, and groupBy v1 requires selectors that have a cardinality.
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)
+        && ImmutableSet.of("rtIndex", "noRollupRtIndex").contains(runnerName)) {
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(
@@ -1020,8 +1045,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithDurationGranularity()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -1061,8 +1085,7 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("[alias] already defined");
 
-    GroupByQuery
-        .builder()
+    makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -1077,14 +1100,13 @@ public class GroupByQueryRunnerTest
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       return;
     }
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("sortByDimsFirst", true))
+        .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -1123,14 +1145,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithChunkPeriod()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setContext(ImmutableMap.of("chunkPeriod", "P1D"))
+        .overrideContext(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -1152,8 +1173,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByNoAggregators()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -1189,8 +1209,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMultiValueDimension()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
@@ -1217,8 +1239,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testTwoMultiValueDimensions()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimFilter(new SelectorDimFilter("placementish", "a", null))
@@ -1283,8 +1307,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMultipleDimensionsOneOfWhichIsMultiValue1()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -1502,8 +1528,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMultipleDimensionsOneOfWhichIsMultiValueDifferentOrder()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -1721,14 +1749,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByMaxRowsLimitContextOverride()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("maxResults", 1))
+        .overrideContext(ImmutableMap.of("maxResults", 1))
         .build();
 
     List<Row> expectedResults = null;
@@ -1781,14 +1808,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByTimeoutContextOverride()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 60000))
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 60000))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -1820,14 +1846,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByMaxOnDiskStorageContextOverride()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
         .build();
 
     List<Row> expectedResults = null;
@@ -1881,14 +1906,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testNotEnoughDictionarySpaceThroughContextOverride()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
         .build();
 
     List<Row> expectedResults = null;
@@ -1942,14 +1966,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testNotEnoughDiskSpaceThroughContextOverride()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
         .build();
 
     List<Row> expectedResults = null;
@@ -2008,8 +2031,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterMaxOnDiskStorageContextOverride()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -2020,7 +2042,7 @@ public class GroupByQueryRunnerTest
                 null
             )
         )
-        .setContext(
+        .overrideContext(
             ImmutableMap.of(
                 "maxOnDiskStorage", Integer.MAX_VALUE,
                 "bufferGrouperMaxSize", Integer.MAX_VALUE
@@ -2028,13 +2050,12 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
         .build();
 
     // v1 strategy throws an exception for this query because it tries to merge the noop outer
@@ -2056,6 +2077,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithRebucketRename()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     Map<String, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
@@ -2066,8 +2090,7 @@ public class GroupByQueryRunnerTest
     map.put("premium", "premium0");
     map.put("technology", "technology0");
     map.put("travel", "travel0");
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -2123,6 +2146,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSimpleRenameRetainMissingNonInjective()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     Map<String, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
@@ -2133,8 +2159,7 @@ public class GroupByQueryRunnerTest
     map.put("premium", "premium0");
     map.put("technology", "technology0");
     map.put("travel", "travel0");
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -2200,8 +2225,7 @@ public class GroupByQueryRunnerTest
     map.put("premium", "premium0");
     map.put("technology", "technology0");
     map.put("travel", "travel0");
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -2267,8 +2291,7 @@ public class GroupByQueryRunnerTest
     map.put("premium", "premium0");
     map.put("technology", "technology0");
     map.put("travel", "travel0");
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -2333,8 +2356,7 @@ public class GroupByQueryRunnerTest
     map.put("premium", "premium0");
     map.put("technology", "technology0");
     map.put("travel", "travel0");
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -2389,8 +2411,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithUniques()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.qualityUniques)
@@ -2414,8 +2435,7 @@ public class GroupByQueryRunnerTest
   @Test(expected = IllegalArgumentException.class)
   public void testGroupByWithUniquesAndPostAggWithSameName()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new HyperUniquesAggregatorFactory(
@@ -2447,8 +2467,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithCardinality()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.qualityCardinality)
@@ -2472,8 +2494,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithFirstLast()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to "first", "last" aggregators.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
@@ -2554,8 +2578,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithNoResult()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
@@ -2577,6 +2603,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithNullProducingDimExtractionFn()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     final ExtractionFn nullExtractionFn = new RegexDimExtractionFn("(\\w{1})", false, null)
     {
       @Override
@@ -2591,8 +2620,7 @@ public class GroupByQueryRunnerTest
         return "mezzanine".equals(dimValue) ? null : super.apply(dimValue);
       }
     };
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
@@ -2651,8 +2679,7 @@ public class GroupByQueryRunnerTest
       }
     };
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
@@ -2692,22 +2719,22 @@ public class GroupByQueryRunnerTest
   {
     DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory(
-                                         "idx",
-                                         "index"
-                                     ))
-                                     .setGranularity(
-                                         new PeriodGranularity(
-                                             new Period("P1D"),
-                                             null,
-                                             tz
-                                         )
-                                     )
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory(
+            "idx",
+            "index"
+        ))
+        .setGranularity(
+            new PeriodGranularity(
+                new Period("P1D"),
+                null,
+                tz
+            )
+        )
+        .build();
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -2882,8 +2909,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergeResults()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -2897,7 +2923,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2928,7 +2954,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
@@ -2960,8 +2986,7 @@ public class GroupByQueryRunnerTest
 
   private void doTestMergeResultsWithValidLimit(final int limit)
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -2985,10 +3010,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -2997,8 +3021,7 @@ public class GroupByQueryRunnerTest
   public void testMergeResultsAcrossMultipleDaysWithLimitAndOrderBy()
   {
     final int limit = 14;
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3029,10 +3052,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3040,9 +3062,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergeResultsAcrossMultipleDaysWithLimitAndOrderByUsingMathExpressions()
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
     final int limit = 14;
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(
@@ -3081,10 +3105,9 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        mergeRunner.run(QueryPlus.wrap(fullQuery)),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3092,8 +3115,7 @@ public class GroupByQueryRunnerTest
   @Test(expected = IllegalArgumentException.class)
   public void testMergeResultsWithNegativeLimit()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3166,8 +3188,7 @@ public class GroupByQueryRunnerTest
 
   private void doTestMergeResultsWithOrderBy(LimitSpec orderBySpec, List<Row> expectedResults)
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3181,7 +3202,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3200,15 +3221,16 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
   public void testGroupByOrderLimit()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    // Cannot vectorize due to expression-based aggregator.
+    cannotVectorize();
+
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3231,7 +3253,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
 
@@ -3300,8 +3322,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithOrderLimit2()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3324,7 +3345,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3337,8 +3358,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithOrderLimit3()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3362,7 +3382,7 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "technology", 2L, 178.24917602539062D}
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3375,8 +3395,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByOrderLimitNumeric()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3407,7 +3426,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3420,7 +3439,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSameCaseOrdering()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.marketDimension,
@@ -3466,7 +3485,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithOrderLimit4()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(
@@ -3503,7 +3522,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithOrderOnHyperUnique()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(
@@ -3566,7 +3585,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithHavingOnHyperUnique()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(
@@ -3613,7 +3632,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithHavingOnFinalizedHyperUnique()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(
@@ -3663,7 +3682,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithLimitOnFinalizedHyperUnique()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.marketDimension,
@@ -3728,6 +3747,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithAlphaNumericDimensionOrder()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     Map<String, String> map = new HashMap<>();
     map.put("automotive", "health105");
     map.put("business", "health20");
@@ -3739,8 +3761,7 @@ public class GroupByQueryRunnerTest
     map.put("technology", "travel123");
     map.put("travel", "travel555");
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -3784,6 +3805,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithLookupAndLimitAndSortByDimsFirst()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     Map<String, String> map = new HashMap<>();
     map.put("automotive", "9");
     map.put("business", "8");
@@ -3795,8 +3819,7 @@ public class GroupByQueryRunnerTest
     map.put("technology", "2");
     map.put("travel", "1");
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -3810,7 +3833,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("sortByDimsFirst", true))
+        .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -3842,7 +3865,7 @@ public class GroupByQueryRunnerTest
   // in time when Druid does support this, we can re-evaluate this test.
   public void testLimitPerGrouping()
   {
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.dayGran).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.marketDimension,
@@ -3905,8 +3928,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -3925,7 +3947,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3944,15 +3966,13 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
   public void testGroupByWithOrderLimitHavingSpec()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-01-25/2011-01-28")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4051,8 +4071,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4079,14 +4098,14 @@ public class GroupByQueryRunnerTest
   @Test
   public void testHavingSpec()
   {
+
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4133,8 +4152,7 @@ public class GroupByQueryRunnerTest
         null
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4183,8 +4201,7 @@ public class GroupByQueryRunnerTest
         null
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4209,8 +4226,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4231,7 +4247,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4250,8 +4266,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
   }
 
   @Test
@@ -4293,8 +4308,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4333,7 +4347,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4352,7 +4366,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = new HashMap<>();
+    ResponseContext context = ResponseContext.createEmpty();
     // add an extra layer of merging, simulate broker forwarding query to historical
     TestHelper.assertExpectedObjects(
         expectedResults,
@@ -4460,8 +4474,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4490,8 +4503,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithRegEx()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimFilter(new RegexDimFilter("quality", "auto.*", null))
@@ -4506,15 +4518,13 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    Map<String, Object> context = new HashMap<>();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
   @Test
   public void testGroupByWithNonexistentDimension()
   {
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .addDimension("billy")
@@ -4559,17 +4569,15 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
   // A subquery identical to the query should yield identical results
   @Test
   public void testIdenticalSubquery()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4587,8 +4595,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"))
@@ -4626,8 +4633,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithMultipleIntervalsInOuterQuery()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4645,8 +4651,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
@@ -4691,8 +4696,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithMultipleIntervalsInOuterQueryAndChunkPeriod()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4708,11 +4712,10 @@ public class GroupByQueryRunnerTest
             new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("chunkPeriod", "P1D"))
+        .overrideContext(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
@@ -4759,8 +4762,7 @@ public class GroupByQueryRunnerTest
   {
     //https://github.com/apache/incubator-druid/issues/2556
 
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4778,8 +4780,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
@@ -4806,8 +4807,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testDifferentGroupingSubquery()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4819,8 +4822,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(
@@ -4842,7 +4844,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, query), "subquery"
     );
 
-    subquery = new GroupByQuery.Builder(subquery)
+    subquery = makeQueryBuilder(subquery)
         .setVirtualColumns(
             new ExpressionVirtualColumn("expr", "-index + 100", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
@@ -4869,8 +4871,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testDifferentGroupingSubqueryMultipleAggregatorsOnSameField()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4890,8 +4891,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(
@@ -4920,8 +4920,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testDifferentGroupingSubqueryWithFilter()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "quality"))
@@ -4929,8 +4928,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
@@ -4964,8 +4962,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testDifferentIntervalSubquery()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -4973,8 +4970,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.secondOnly)
         .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
@@ -4997,8 +4993,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery
-        .builder()
+    makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
@@ -5032,8 +5027,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery
-        .builder()
+    makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "__time"))
@@ -5059,8 +5053,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testEmptySubquery()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -5068,8 +5061,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
@@ -5083,8 +5075,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithPostAggregators()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -5108,8 +5099,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"))
@@ -5341,17 +5331,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithPostAggregatorsAndHaving()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setDimFilter(new JavaScriptDimFilter(
-            "quality",
-            "function(dim){ return true; }",
-            null,
-            JavaScriptConfig.getEnabledInstance()
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx_subagg", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx_subagg", "index"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5385,8 +5369,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"))
@@ -5596,8 +5579,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithMultiColumnAggregators()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    // Cannot vectorize due to javascript functionality.
+    cannotVectorize();
+
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -5652,8 +5637,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"))
@@ -5763,8 +5747,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterFilterAggregator()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
@@ -5773,8 +5756,7 @@ public class GroupByQueryRunnerTest
         .build();
 
     final DimFilter filter = new SelectorDimFilter("market", "spot", null);
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(Collections.emptyList())
@@ -5792,8 +5774,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterTimeFilter()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
@@ -5811,8 +5792,7 @@ public class GroupByQueryRunnerTest
         ImmutableList.of("1", "2", "3"),
         new TimeFormatExtractionFn("d", null, null, null, false)
     );
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(Collections.emptyList())
@@ -5839,21 +5819,19 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithContextTimeout()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
         .build();
 
     List<Row> expectedResults = Collections.singletonList(
@@ -5866,16 +5844,14 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterVirtualColumns()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ValueType.FLOAT, TestExprMacroTable.INSTANCE))
@@ -5893,17 +5869,15 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterCardinalityAggregator()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(Collections.emptyList())
@@ -5925,8 +5899,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterCountAggregator()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -5939,8 +5912,7 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
@@ -5968,8 +5940,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterDimJavascriptAggregators()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
@@ -5977,8 +5948,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "quality"))
@@ -6021,8 +5991,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithOuterJavascriptAggregators()
   {
-    final GroupByQuery subquery = GroupByQuery
-        .builder()
+    final GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
@@ -6030,8 +5999,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final GroupByQuery query = GroupByQuery
-        .builder()
+    final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "quality"))
@@ -6074,8 +6042,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithHyperUniques()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -6087,8 +6054,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"))
@@ -6210,8 +6176,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithHyperUniquesPostAggregator()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ArrayList<>())
@@ -6228,8 +6193,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ArrayList<>())
@@ -6268,8 +6232,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithFirstLast()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    // Cannot vectorize due to "first", "last" aggregators.
+    cannotVectorize();
+
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
@@ -6279,11 +6245,10 @@ public class GroupByQueryRunnerTest
             new LongLastAggregatorFactory("innerlast", "index")
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("finalize", true))
+        .overrideContext(ImmutableMap.of("finalize", true))
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(Collections.emptyList())
@@ -6308,12 +6273,14 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSubtotalsSpec()
   {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
@@ -6787,8 +6754,9 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
   }
 
+  // https://github.com/apache/incubator-druid/issues/7820
   @Test
-  public void testGroupByWithSubtotalsSpecWithLongDimensionColumn()
+  public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
   {
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
@@ -6796,6 +6764,94 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery query = GroupByQuery
         .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setDimensions(Lists.newArrayList(
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("alias", "alias_renamed")
+        ))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index"),
+                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+                new DoubleSumAggregatorFactory("idxDouble", "index")
+            )
+        )
+        .setDimFilter(new SelectorDimFilter("alias", "automotive", null))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setSubtotalsSpec(ImmutableList.of(
+            ImmutableList.of("alias_renamed"),
+            ImmutableList.of()
+        ))
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias_renamed",
+            "automotive",
+            "rows",
+            1L,
+            "idx",
+            135L,
+            "idxFloat",
+            135.88510131835938f,
+            "idxDouble",
+            135.88510131835938d
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias_renamed",
+            "automotive",
+            "rows",
+            1L,
+            "idx",
+            147L,
+            "idxFloat",
+            147.42593f,
+            "idxDouble",
+            147.42593d
+        ),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01T00:00:00.000Z",
+            "rows",
+            1L,
+            "idx",
+            135L,
+            "idxFloat",
+            135.88510131835938f,
+            "idxDouble",
+            135.88510131835938d
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02T00:00:00.000Z",
+            "rows",
+            1L,
+            "idx",
+            147L,
+            "idxFloat",
+            147.42593f,
+            "idxDouble",
+            147.42593d
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
+  }
+
+  @Test
+  public void testGroupByWithSubtotalsSpecWithLongDimensionColumn()
+  {
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.newArrayList(
@@ -7262,10 +7318,6 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-
-    for (Row row : results) {
-      System.out.println(row);
-    }
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal-long-dim");
   }
 
@@ -7276,8 +7328,7 @@ public class GroupByQueryRunnerTest
       return;
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.newArrayList(
@@ -7349,8 +7400,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithTimeColumn()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to javascript aggregator.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(
@@ -7380,8 +7433,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByTimeExtraction()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
@@ -7598,6 +7653,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByTimeExtractionWithNulls()
   {
+    // Cannot vectorize due to extraction dimension specs.
+    cannotVectorize();
+
     final DimExtractionFn nullWednesdays = new DimExtractionFn()
     {
       @Override
@@ -7629,8 +7687,7 @@ public class GroupByQueryRunnerTest
       }
     };
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
@@ -7871,15 +7928,14 @@ public class GroupByQueryRunnerTest
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
@@ -7897,7 +7953,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment"
     );
     exec.shutdownNow();
@@ -7907,6 +7963,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testBySegmentResultsUnOptimizedDimextraction()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -7930,8 +7989,7 @@ public class GroupByQueryRunnerTest
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -7946,7 +8004,7 @@ public class GroupByQueryRunnerTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
@@ -7964,7 +8022,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment"
     );
     exec.shutdownNow();
@@ -7996,8 +8054,7 @@ public class GroupByQueryRunnerTest
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
             "quality",
@@ -8012,7 +8069,7 @@ public class GroupByQueryRunnerTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
@@ -8030,7 +8087,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment-dim-extraction"
     );
     exec.shutdownNow();
@@ -8059,17 +8116,17 @@ public class GroupByQueryRunnerTest
         new SelectorDimFilter("quality", "travel", null)
     );
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new OrDimFilter(dimFilters))
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(new OrDimFilter(dimFilters))
+        .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
@@ -8113,17 +8170,17 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter("quality", "", lookupExtractionFn, null))
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(new ExtractionDimFilter("quality", "", lookupExtractionFn, null))
+        .build();
 
     List<Row> expectedResults;
 
@@ -8153,19 +8210,14 @@ public class GroupByQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(
-                                         new ExtractionDimFilter("quality", "NOT_THERE", lookupExtractionFn, null)
-                                     )
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(new ExtractionDimFilter("quality", "NOT_THERE", lookupExtractionFn, null))
+        .build();
     List<Row> expectedResults = Collections.emptyList();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -8189,23 +8241,23 @@ public class GroupByQueryRunnerTest
       extractionMap.put("", "NOT_USED");
     }
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(
-                                         new ExtractionDimFilter(
-                                             "null_column",
-                                             "REPLACED_VALUE",
-                                             lookupExtractionFn,
-                                             null
-                                         )
-                                     ).build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(
+            new ExtractionDimFilter(
+                "null_column",
+                "REPLACED_VALUE",
+                lookupExtractionFn,
+                null
+            )
+        ).build();
 
     List<Row> expectedResults = Arrays
         .asList(
@@ -8234,19 +8286,16 @@ public class GroupByQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "missing", true, false);
     DimFilter filter = new ExtractionDimFilter("quality", "mezzanineANDnews", lookupExtractionFn, null);
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(new FilteredAggregatorFactory(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         filter
-                                     ), new FilteredAggregatorFactory(
-                                         new LongSumAggregatorFactory("idx", "index"),
-                                         filter
-                                     ))
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter),
+            new FilteredAggregatorFactory(new LongSumAggregatorFactory("idx", "index"), filter)
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -8395,24 +8444,24 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(
-                                         new ExtractionDimFilter(
-                                             "quality",
-                                             "newsANDmezzanine",
-                                             lookupExtractionFn,
-                                             null
-                                         )
-                                     )
-                                     .build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(
+            new ExtractionDimFilter(
+                "quality",
+                "newsANDmezzanine",
+                lookupExtractionFn,
+                null
+            )
+        )
+        .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
@@ -8441,8 +8490,7 @@ public class GroupByQueryRunnerTest
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
@@ -8521,15 +8569,14 @@ public class GroupByQueryRunnerTest
     superFilterList.add(new JavaScriptDimFilter("quality", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance()));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
-        .setContext(ImmutableMap.of("bySegment", true));
+        .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
@@ -8547,7 +8594,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
+        theRunner.run(QueryPlus.wrap(fullQuery)),
         "bySegment-filter"
     );
     exec.shutdownNow();
@@ -8574,24 +8621,21 @@ public class GroupByQueryRunnerTest
     superFilterList.add(
         new SearchQueryDimFilter("null_column", new ContainsSearchQuerySpec("EMPTY", true), extractionFn)
     );
-    superFilterList.add(new JavaScriptDimFilter(
-        "null_column",
-        jsFn,
-        extractionFn,
-        JavaScriptConfig.getEnabledInstance()
-    ));
+    superFilterList.add(
+        new JavaScriptDimFilter("null_column", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance())
+    );
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
-                                     .setAggregatorSpecs(
-                                         QueryRunnerTestHelper.rowsCount,
-                                         new LongSumAggregatorFactory("idx", "index")
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(superFilter).build();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(superFilter).build();
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
@@ -8605,11 +8649,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByCardinalityAggWithExtractionFn()
   {
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
     String helloJsFn = "function(str) { return 'hello' }";
     ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("market", "alias"))
@@ -8689,8 +8735,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByCardinalityAggOnFloat()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to "cardinality" aggregator.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("market", "alias"))
@@ -8774,8 +8822,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
@@ -8832,8 +8879,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
@@ -8885,6 +8931,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByLongColumnWithExFn()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
@@ -8893,8 +8942,7 @@ public class GroupByQueryRunnerTest
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn))
@@ -8935,8 +8983,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG))
@@ -8972,11 +9019,13 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByLongTimeColumnWithExFn()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ExtractionDimensionSpec("__time", "time_alias", jsExtractionFn))
@@ -9017,8 +9066,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT))
@@ -9076,8 +9124,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT))
@@ -9134,8 +9181,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE))
@@ -9187,6 +9233,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByFloatColumnWithExFn()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
@@ -9195,8 +9244,7 @@ public class GroupByQueryRunnerTest
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ExtractionDimensionSpec("index", "index_alias", jsExtractionFn))
@@ -9240,8 +9288,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9297,8 +9344,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9346,8 +9392,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
     }
 
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9360,8 +9405,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery outerQuery = GroupByQuery
-        .builder()
+    GroupByQuery outerQuery = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9399,6 +9443,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByNumericStringsAsNumericWithDecoration()
   {
+    // Cannot vectorize due to regex-filtered dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
@@ -9416,8 +9463,7 @@ public class GroupByQueryRunnerTest
         true
     );
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(regexSpec, listFilteredSpec)
@@ -9451,6 +9497,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByDecorationOnNumerics()
   {
+    // Cannot vectorize due to filtered dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
@@ -9467,8 +9516,7 @@ public class GroupByQueryRunnerTest
         true
     );
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(regexSpec, listFilteredSpec)
@@ -9521,8 +9569,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9540,8 +9587,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery outerQuery = GroupByQuery
-        .builder()
+    GroupByQuery outerQuery = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9594,8 +9640,7 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery subQuery = GroupByQuery
-        .builder()
+    GroupByQuery subQuery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9606,8 +9651,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    GroupByQuery outerQuery = GroupByQuery
-        .builder()
+    GroupByQuery outerQuery = makeQueryBuilder()
         .setDataSource(subQuery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9673,6 +9717,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByStringOutputAsLong()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
@@ -9680,8 +9727,7 @@ public class GroupByQueryRunnerTest
 
     ExtractionFn strlenFn = StrlenExtractionFn.instance();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new ExtractionDimensionSpec(
@@ -9723,8 +9769,10 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithAggsOnNumericDimensions()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    // Cannot vectorize due to javascript aggregators.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -9787,6 +9835,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByNestedOuterExtractionFnOnFloatInner()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
@@ -9795,8 +9846,7 @@ public class GroupByQueryRunnerTest
     String jsFn = "function(obj) { return obj; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
@@ -9810,8 +9860,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery outerQuery = GroupByQuery
-        .builder()
+    GroupByQuery outerQuery = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
@@ -9839,13 +9888,15 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByNestedDoubleTimeExtractionFnWithLongOutputTypes()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -9862,8 +9913,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery outerQuery = GroupByQuery
-        .builder()
+    GroupByQuery outerQuery = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
@@ -9894,7 +9944,7 @@ public class GroupByQueryRunnerTest
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.marketDimension,
@@ -9910,7 +9960,7 @@ public class GroupByQueryRunnerTest
                 2
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
-        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -9940,8 +9990,7 @@ public class GroupByQueryRunnerTest
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -9952,7 +10001,7 @@ public class GroupByQueryRunnerTest
                 5
             )
         )
-        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -9961,7 +10010,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -9985,7 +10034,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
@@ -9996,7 +10044,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
         "merged"
     );
   }
@@ -10007,8 +10055,7 @@ public class GroupByQueryRunnerTest
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -10019,7 +10066,7 @@ public class GroupByQueryRunnerTest
                 5
             )
         )
-        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -10028,7 +10075,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10052,7 +10099,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
@@ -10062,7 +10108,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10072,8 +10118,7 @@ public class GroupByQueryRunnerTest
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"), new DefaultDimensionSpec("market", "market"))
@@ -10087,7 +10132,7 @@ public class GroupByQueryRunnerTest
                 5
             )
         )
-        .setContext(
+        .overrideContext(
             ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true)
         )
         .setGranularity(Granularities.ALL);
@@ -10098,7 +10143,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10122,7 +10167,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -10182,7 +10226,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10192,8 +10236,7 @@ public class GroupByQueryRunnerTest
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
-    GroupByQuery.Builder builder = GroupByQuery
-        .builder()
+    GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"), new DefaultDimensionSpec("market", "market"))
@@ -10217,7 +10260,7 @@ public class GroupByQueryRunnerTest
                 5
             )
         )
-        .setContext(
+        .overrideContext(
             ImmutableMap.of(
                 GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
                 true
@@ -10231,7 +10274,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -10255,7 +10298,6 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -10315,7 +10357,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10325,7 +10367,7 @@ public class GroupByQueryRunnerTest
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Limit push down when sorting by a post aggregator is not supported.");
 
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.marketDimension,
@@ -10344,7 +10386,7 @@ public class GroupByQueryRunnerTest
         .setPostAggregatorSpecs(
             Collections.singletonList(new ConstantPostAggregator("constant", 1))
         )
-        .setContext(
+        .overrideContext(
             ImmutableMap.of(
                 GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
                 true
@@ -10358,8 +10400,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testEmptySubqueryWithLimitPushDown()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -10376,8 +10417,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
@@ -10393,8 +10433,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithMultipleIntervalsInOuterQueryWithLimitPushDown()
   {
-    GroupByQuery subquery = GroupByQuery
-        .builder()
+    GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -10418,8 +10457,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
@@ -10469,8 +10507,7 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Cannot force limit push down when a having spec is present.");
 
-    GroupByQuery
-        .builder()
+    makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "marketalias"))
@@ -10482,7 +10519,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
-        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .setHavingSpec(new GreaterThanHavingSpec("rows", 10))
         .build();
   }
@@ -10490,13 +10527,15 @@ public class GroupByQueryRunnerTest
   @Test
   public void testTypeConversionWithMergingChainedExecutionRunner()
   {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
@@ -10545,5 +10584,39 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergingRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "type-conversion");
+  }
+
+  /**
+   * Use this method instead of makeQueryBuilder() to make sure the context is set properly. Also, avoid
+   * setContext in tests. Only use overrideContext.
+   */
+  private GroupByQuery.Builder makeQueryBuilder()
+  {
+    return GroupByQuery.builder().overrideContext(makeContext());
+  }
+
+  /**
+   * Use this method instead of makeQueryBuilder() to make sure the context is set properly. Also, avoid
+   * setContext in tests. Only use overrideContext.
+   */
+  private GroupByQuery.Builder makeQueryBuilder(final GroupByQuery query)
+  {
+    return new GroupByQuery.Builder(query).overrideContext(makeContext());
+  }
+
+  private Map<String, Object> makeContext()
+  {
+    return ImmutableMap.<String, Object>builder()
+        .put("vectorize", vectorize ? "force" : "false")
+        .put("vectorSize", 16) // Small vector size to ensure we use more than one.
+        .build();
+  }
+
+  private void cannotVectorize()
+  {
+    if (vectorize && config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Cannot vectorize!");
+    }
   }
 }

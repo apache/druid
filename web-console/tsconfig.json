@@ -1,32 +1,24 @@
 {
   "compilerOptions": {
-    "noImplicitAny": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
     "noEmitOnError": true,
     "declaration": false,
     "removeComments": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": false,
+    "strict": true,
     "skipLibCheck": true,
     "importHelpers": true,
+    "esModuleInterop": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["dom", "es2016"],
+    "lib": ["dom", "es2016", "esnext"],
     "jsx": "react",
-    "rootDirs": ["lib","src"],
-
-    "outDir": "build"
+    "rootDirs": ["lib", "src"]
   },
-
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "lib/sql-function-doc.ts"
-  ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "lib/sql-function-doc.ts"]
 }

@@ -28,11 +28,11 @@ import java.io.IOException;
 public class FilteredSequence<T> implements Sequence<T>
 {
   private final Sequence<T> baseSequence;
-  private final Predicate<T> pred;
+  private final Predicate<? super T> pred;
 
   public FilteredSequence(
       Sequence<T> baseSequence,
-      Predicate<T> pred
+      Predicate<? super T> pred
   )
   {
     this.baseSequence = baseSequence;

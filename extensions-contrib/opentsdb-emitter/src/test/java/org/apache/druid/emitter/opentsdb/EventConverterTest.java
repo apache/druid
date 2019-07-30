@@ -30,8 +30,6 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-
 public class EventConverterTest
 {
   private EventConverter converter;
@@ -66,16 +64,16 @@ public class EventConverterTest
     expectedTags.put("type", "groupBy");
 
     OpentsdbEvent opentsdbEvent = converter.convert(configuredEvent);
-    assertEquals("query.time", opentsdbEvent.getMetric());
-    assertEquals(dateTime.getMillis() / 1000L, opentsdbEvent.getTimestamp());
-    assertEquals(10, opentsdbEvent.getValue());
-    assertEquals(expectedTags, opentsdbEvent.getTags());
+    Assert.assertEquals("query.time", opentsdbEvent.getMetric());
+    Assert.assertEquals(dateTime.getMillis() / 1000L, opentsdbEvent.getTimestamp());
+    Assert.assertEquals(10, opentsdbEvent.getValue());
+    Assert.assertEquals(expectedTags, opentsdbEvent.getTags());
 
     ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "data-source")
         .setDimension("type", "groupBy")
         .build(dateTime, "foo/bar", 10)
         .build("broker", "brokerHost1");
-    assertEquals(null, converter.convert(notConfiguredEvent));
+    Assert.assertNull(converter.convert(notConfiguredEvent));
   }
 }

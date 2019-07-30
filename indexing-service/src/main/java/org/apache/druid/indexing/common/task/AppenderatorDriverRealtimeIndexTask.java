@@ -44,12 +44,16 @@ import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
@@ -72,7 +76,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -84,6 +88,7 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.servlet.http.HttpServletRequest;
@@ -94,6 +99,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -161,10 +167,16 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private final AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
+  private final LockGranularity lockGranularity;
+
+  @JsonIgnore
   private IngestionState ingestionState;
 
   @JsonIgnore
   private String errorMsg;
+
+  @JsonIgnore
+  private AppenderatorsManager appenderatorsManager;
 
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
@@ -174,7 +186,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -195,6 +208,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     this.ingestionState = IngestionState.NOT_STARTED;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.appenderatorsManager = appenderatorsManager;
+    this.lockGranularity = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
+                           ? LockGranularity.TIME_CHUNK
+                           : LockGranularity.SEGMENT;
   }
 
   @Override
@@ -244,7 +261,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                                                         .withBasePersistDirectory(toolbox.getPersistDir());
 
     final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
 
     final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
         this,
@@ -270,11 +287,39 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         log.warn("No chat handler detected");
       }
 
+      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+        toolbox.getDataSegmentServerAnnouncer().announce();
+        toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
+      }
 
-      toolbox.getDataSegmentServerAnnouncer().announce();
-      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
-
-      driver.startJob();
+      driver.startJob(
+          segmentId -> {
+            try {
+              if (lockGranularity == LockGranularity.SEGMENT) {
+                return toolbox.getTaskActionClient().submit(
+                    new SegmentLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        segmentId.getVersion(),
+                        segmentId.getShardSpec().getPartitionNum(),
+                        1000L
+                    )
+                ).isOk();
+              } else {
+                return toolbox.getTaskActionClient().submit(
+                    new TimeChunkLockAcquireAction(
+                        TaskLockType.EXCLUSIVE,
+                        segmentId.getInterval(),
+                        1000L
+                    )
+                ) != null;
+              }
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
@@ -289,8 +334,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+          throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+        }
+        final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
+            segments,
+            null,
+            null
+        );
         return toolbox.getTaskActionClient().submit(action);
       };
 
@@ -369,7 +421,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
          .emit();
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -386,12 +438,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
       toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
 
-      toolbox.getDataSegmentServerAnnouncer().unannounce();
-      toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
+      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+        toolbox.getDataSegmentServerAnnouncer().unannounce();
+        toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
+      }
     }
 
     log.info("Job done!");
-    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+    toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
     return TaskStatus.success(getId());
   }
 
@@ -426,6 +480,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       }
       catch (Exception e) {
         throw new RuntimeException(e);
+      }
+    } else {
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          // If task restore is not enabled, just interrupt immediately.
+          gracefullyStopped = true;
+          runThread.interrupt();
+        }
       }
     }
   }
@@ -682,14 +744,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     );
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       final DataSchema dataSchema,
       final RealtimeAppenderatorTuningConfig tuningConfig,
       final FireDepartmentMetrics metrics,
       final TaskToolbox toolbox
   )
   {
-    return Appenderators.createRealtime(
+    return appenderatorsManager.createRealtimeAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -726,7 +789,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 schema.getGranularitySpec().getSegmentGranularity(),
                 sequenceName,
                 previousSegmentId,
-                skipSegmentLineageCheck
+                skipSegmentLineageCheck,
+                NumberedShardSpecFactory.instance(),
+                LockGranularity.TIME_CHUNK
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

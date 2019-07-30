@@ -51,7 +51,6 @@ public class PartialDruidQuery
   private final RelNode scan;
   private final Filter whereFilter;
   private final Project selectProject;
-  private final Sort selectSort;
   private final Aggregate aggregate;
   private final Filter havingFilter;
   private final Project aggregateProject;
@@ -60,13 +59,19 @@ public class PartialDruidQuery
 
   public enum Stage
   {
+    // SCAN must be present on all queries.
     SCAN,
+
+    // WHERE_FILTER, SELECT_PROJECT may be present on any query.
     WHERE_FILTER,
     SELECT_PROJECT,
-    SELECT_SORT,
+
+    // AGGREGATE, HAING_FILTER, AGGREGATE_PROJECT can only be present on aggregating queries.
     AGGREGATE,
     HAVING_FILTER,
     AGGREGATE_PROJECT,
+
+    // SORT, SORT_PROJECT may be present on any query.
     SORT,
     SORT_PROJECT
   }
@@ -76,7 +81,6 @@ public class PartialDruidQuery
       final RelNode scan,
       final Filter whereFilter,
       final Project selectProject,
-      final Sort selectSort,
       final Aggregate aggregate,
       final Project aggregateProject,
       final Filter havingFilter,
@@ -88,7 +92,6 @@ public class PartialDruidQuery
     this.scan = Preconditions.checkNotNull(scan, "scan");
     this.whereFilter = whereFilter;
     this.selectProject = selectProject;
-    this.selectSort = selectSort;
     this.aggregate = aggregate;
     this.aggregateProject = aggregateProject;
     this.havingFilter = havingFilter;
@@ -102,7 +105,7 @@ public class PartialDruidQuery
         scanRel.getCluster(),
         scanRel.getTable().getRelOptSchema()
     );
-    return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null, null);
+    return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null);
   }
 
   public RelNode getScan()
@@ -118,11 +121,6 @@ public class PartialDruidQuery
   public Project getSelectProject()
   {
     return selectProject;
-  }
-
-  public Sort getSelectSort()
-  {
-    return selectSort;
   }
 
   public Aggregate getAggregate()
@@ -158,7 +156,6 @@ public class PartialDruidQuery
         scan,
         newWhereFilter,
         selectProject,
-        selectSort,
         aggregate,
         aggregateProject,
         havingFilter,
@@ -200,24 +197,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         theProject,
-        selectSort,
-        aggregate,
-        aggregateProject,
-        havingFilter,
-        sort,
-        sortProject
-    );
-  }
-
-  public PartialDruidQuery withSelectSort(final Sort newSelectSort)
-  {
-    validateStage(Stage.SELECT_SORT);
-    return new PartialDruidQuery(
-        builderSupplier,
-        scan,
-        whereFilter,
-        selectProject,
-        newSelectSort,
         aggregate,
         aggregateProject,
         havingFilter,
@@ -234,7 +213,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         newAggregate,
         aggregateProject,
         havingFilter,
@@ -251,7 +229,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         aggregate,
         aggregateProject,
         newHavingFilter,
@@ -268,7 +245,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         aggregate,
         newAggregateProject,
         havingFilter,
@@ -285,7 +261,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         aggregate,
         aggregateProject,
         havingFilter,
@@ -302,7 +277,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         aggregate,
         aggregateProject,
         havingFilter,
@@ -344,14 +318,11 @@ public class PartialDruidQuery
     } else if (stage.compareTo(currentStage) <= 0) {
       // Cannot go backwards.
       return false;
-    } else if (stage.compareTo(Stage.AGGREGATE) > 0 && aggregate == null) {
+    } else if (stage.compareTo(Stage.AGGREGATE) > 0 && stage.compareTo(Stage.SORT) < 0 && aggregate == null) {
       // Cannot do post-aggregation stages without an aggregation.
       return false;
-    } else if (stage.compareTo(Stage.AGGREGATE) >= 0 && selectSort != null) {
-      // Cannot do any aggregations after a select + sort.
-      return false;
     } else if (stage.compareTo(Stage.SORT) > 0 && sort == null) {
-      // Cannot add sort project without a sort
+      // Cannot do post-sort stages without a sort.
       return false;
     } else {
       // Looks good.
@@ -378,8 +349,6 @@ public class PartialDruidQuery
       return Stage.HAVING_FILTER;
     } else if (aggregate != null) {
       return Stage.AGGREGATE;
-    } else if (selectSort != null) {
-      return Stage.SELECT_SORT;
     } else if (selectProject != null) {
       return Stage.SELECT_PROJECT;
     } else if (whereFilter != null) {
@@ -409,8 +378,6 @@ public class PartialDruidQuery
         return havingFilter;
       case AGGREGATE:
         return aggregate;
-      case SELECT_SORT:
-        return selectSort;
       case SELECT_PROJECT:
         return selectProject;
       case WHERE_FILTER:
@@ -442,7 +409,6 @@ public class PartialDruidQuery
     return Objects.equals(scan, that.scan) &&
            Objects.equals(whereFilter, that.whereFilter) &&
            Objects.equals(selectProject, that.selectProject) &&
-           Objects.equals(selectSort, that.selectSort) &&
            Objects.equals(aggregate, that.aggregate) &&
            Objects.equals(havingFilter, that.havingFilter) &&
            Objects.equals(aggregateProject, that.aggregateProject) &&
@@ -457,7 +423,6 @@ public class PartialDruidQuery
         scan,
         whereFilter,
         selectProject,
-        selectSort,
         aggregate,
         havingFilter,
         aggregateProject,
@@ -473,7 +438,6 @@ public class PartialDruidQuery
            "scan=" + scan +
            ", whereFilter=" + whereFilter +
            ", selectProject=" + selectProject +
-           ", selectSort=" + selectSort +
            ", aggregate=" + aggregate +
            ", havingFilter=" + havingFilter +
            ", aggregateProject=" + aggregateProject +

@@ -47,6 +47,7 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -63,7 +64,7 @@ import java.util.Map;
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
-  private final Map<String, VersionedIntervalTimeline<String, Segment>> timelines = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
 
@@ -78,12 +79,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   )
   {
     final Segment segment = new QueryableIndexSegment(index, descriptor.getId());
-    if (!timelines.containsKey(descriptor.getDataSource())) {
-      timelines.put(descriptor.getDataSource(), new VersionedIntervalTimeline<>(Ordering.natural()));
-    }
-
-    final VersionedIntervalTimeline<String, Segment> timeline = timelines.get(descriptor.getDataSource());
-    timeline.add(descriptor.getInterval(), descriptor.getVersion(), descriptor.getShardSpec().createChunk(segment));
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines
+        .computeIfAbsent(descriptor.getDataSource(), datasource -> new VersionedIntervalTimeline<>(Ordering.natural()));
+    timeline.add(
+        descriptor.getInterval(),
+        descriptor.getVersion(),
+        descriptor.getShardSpec().createChunk(new ReferenceCountingSegment(segment))
+    );
     segments.add(descriptor);
     closeables.add(index);
     return this;
@@ -135,7 +137,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                                                                       ))
                                                                       .build();
                       }
-                      final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(
+                      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = getTimelineForTableDataSource(
                           newQuery1);
                       return makeBaseRunner(
                           newQuery1,
@@ -199,7 +201,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     }
   }
 
-  private <T> VersionedIntervalTimeline<String, Segment> getTimelineForTableDataSource(Query<T> query)
+  private <T> VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimelineForTableDataSource(Query<T> query)
   {
     if (query.getDataSource() instanceof TableDataSource) {
       return timelines.get(((TableDataSource) query.getDataSource()).getName());
@@ -215,7 +217,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final Iterable<SegmentDescriptor> specs
   )
   {
-    final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(query);
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = getTimelineForTableDataSource(query);
     if (timeline == null) {
       return new NoopQueryRunner<>();
     }
@@ -228,7 +230,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                     .create(specs)
                     .transformCat(
                         descriptor -> {
-                          final PartitionHolder<Segment> holder = timeline.findEntry(
+                          final PartitionHolder<ReferenceCountingSegment> holder = timeline.findEntry(
                               descriptor.getInterval(),
                               descriptor.getVersion()
                           );

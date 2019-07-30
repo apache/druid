@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { AboutDialog } from './about-dialog';
 
-import {AboutDialog} from './about-dialog';
-
-
-describe('describe about dialog', () => {
-  it('about dialog snapshot', () => {
-    const aboutDialog =
-     <AboutDialog
-       onClose={() => null}
-     />;
-    const { container, getByText } = render(aboutDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+describe('about dialog', () => {
+  it('matches snapshot', () => {
+    const aboutDialog = <AboutDialog onClose={() => {}} />;
+    render(aboutDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import AceEditor from 'react-ace';
 
 import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';
 
-interface JSONInputProps extends React.Props<any> {
+interface JSONInputProps {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity?: (valueValid: boolean) => void;
+  placeholder?: string;
   focus?: boolean;
   width?: string;
   height?: string;
@@ -34,11 +35,11 @@ interface JSONInputState {
   stringValue: string;
 }
 
-export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputState> {
   constructor(props: JSONInputProps) {
     super(props);
     this.state = {
-      stringValue: ''
+      stringValue: '',
     };
   }
 
@@ -46,47 +47,51 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
     const { value } = this.props;
     const stringValue = stringifyJSON(value);
     this.setState({
-      stringValue
+      stringValue,
     });
   }
 
   componentWillReceiveProps(nextProps: JSONInputProps): void {
     if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
       this.setState({
-        stringValue: stringifyJSON(nextProps.value)
+        stringValue: stringifyJSON(nextProps.value),
       });
     }
   }
 
-  render() {
-    const { onChange, updateInputValidity, focus, width, height } = this.props;
+  render(): JSX.Element {
+    const { onChange, updateInputValidity, placeholder, focus, width, height } = this.props;
     const { stringValue } = this.state;
-    return <AceEditor
-      key="hjson"
-      mode="hjson"
-      theme="solarized_dark"
-      name="ace-editor"
-      onChange={(e: string) => {
-        this.setState({stringValue: e});
-        if (validJson(e) || e === '') onChange(parseStringToJSON(e));
-        if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
-      }}
-      focus={focus}
-      fontSize={12}
-      width={width || '100%'}
-      height={height || '8vh'}
-      showPrintMargin={false}
-      showGutter={false}
-      value={stringValue}
-      editorProps={{
-        $blockScrolling: Infinity
-      }}
-      setOptions={{
-        enableBasicAutocompletion: false,
-        enableLiveAutocompletion: false,
-        showLineNumbers: false,
-        tabSize: 2
-      }}
-    />;
+    return (
+      <AceEditor
+        key="hjson"
+        mode="hjson"
+        theme="solarized_dark"
+        name="ace-editor"
+        onChange={(e: string) => {
+          this.setState({ stringValue: e });
+          if (validJson(e) || e === '') onChange(parseStringToJSON(e));
+          if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
+        }}
+        focus={focus}
+        fontSize={12}
+        width={width || '100%'}
+        height={height || '8vh'}
+        showPrintMargin={false}
+        showGutter={false}
+        value={stringValue}
+        placeholder={placeholder}
+        editorProps={{
+          $blockScrolling: Infinity,
+        }}
+        setOptions={{
+          enableBasicAutocompletion: false,
+          enableLiveAutocompletion: false,
+          showLineNumbers: false,
+          tabSize: 2,
+        }}
+        style={{}}
+      />
+    );
   }
 }

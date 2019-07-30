@@ -54,7 +54,7 @@ public class SegmentLoaderFactory
     return new SegmentLoaderLocalCacheManager(
         indexIO,
         new SegmentLoaderConfig().withLocations(
-            Collections.singletonList(new StorageLocationConfig().setPath(storageDir))),
+            Collections.singletonList(new StorageLocationConfig(storageDir, null, null))),
         jsonMapper
     );
   }
