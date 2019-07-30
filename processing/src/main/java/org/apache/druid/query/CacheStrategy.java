@@ -22,13 +22,15 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BiFunction;
 
 /**
+ *
  */
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
@@ -113,19 +115,28 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * for dimension values (e.g., a Float would become Double).
    */
   static void fetchAggregatorsFromCache(
-      Iterator<AggregatorFactory> aggIter,
+      List<AggregatorFactory> aggregators,
       Iterator<Object> resultIter,
       boolean isResultLevelCache,
-      BiFunction<String, Object, Void> addToResultFunction
+      AddToResultFunction addToResultFunction
   )
   {
-    while (aggIter.hasNext() && resultIter.hasNext()) {
-      final AggregatorFactory factory = aggIter.next();
+    for (int i = 0; i < aggregators.size(); i++) {
+      final AggregatorFactory aggregator = aggregators.get(i);
+      if (!resultIter.hasNext()) {
+        throw new ISE("Ran out of objects while reading aggregators from cache!");
+      }
+
       if (isResultLevelCache) {
-        addToResultFunction.apply(factory.getName(), resultIter.next());
+        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
       } else {
-        addToResultFunction.apply(factory.getName(), factory.deserialize(resultIter.next()));
+        addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
       }
     }
+  }
+
+  public interface AddToResultFunction
+  {
+    void apply(String aggregatorName, int aggregatorIndex, Object object);
   }
 }

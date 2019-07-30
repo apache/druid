@@ -25,19 +25,22 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ValueType;
@@ -52,6 +55,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class DefaultLimitSpec implements LimitSpec
 {
@@ -64,8 +68,9 @@ public class DefaultLimitSpec implements LimitSpec
    * Check if a limitSpec has columns in the sorting order that are not part of the grouping fields represented
    * by `dimensions`.
    *
-   * @param limitSpec LimitSpec, assumed to be non-null
+   * @param limitSpec  LimitSpec, assumed to be non-null
    * @param dimensions Grouping fields for a groupBy query
+   *
    * @return True if limitSpec has sorting columns not contained in dimensions
    */
   public static boolean sortingOrderHasNonGroupingFields(DefaultLimitSpec limitSpec, List<DimensionSpec> dimensions)
@@ -119,23 +124,18 @@ public class DefaultLimitSpec implements LimitSpec
   }
 
   @Override
-  public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions,
-      List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs,
-      Granularity granularity,
-      boolean sortByDimsFirst
-  )
+  public Function<Sequence<ResultRow>, Sequence<ResultRow>> build(final GroupByQuery query)
   {
-    // Can avoid re-sorting if the natural ordering is good enough.
+    final List<DimensionSpec> dimensions = query.getDimensions();
 
+    // Can avoid re-sorting if the natural ordering is good enough.
     boolean sortingNeeded = dimensions.size() < columns.size();
 
     final Set<String> aggAndPostAggNames = new HashSet<>();
-    for (AggregatorFactory agg : aggs) {
+    for (AggregatorFactory agg : query.getAggregatorSpecs()) {
       aggAndPostAggNames.add(agg.getName());
     }
-    for (PostAggregator postAgg : postAggs) {
+    for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
       aggAndPostAggNames.add(postAgg.getName());
     }
 
@@ -170,7 +170,7 @@ public class DefaultLimitSpec implements LimitSpec
 
     if (!sortingNeeded) {
       // If granularity is ALL, sortByDimsFirst doesn't change the sorting order.
-      sortingNeeded = !granularity.equals(Granularities.ALL) && sortByDimsFirst;
+      sortingNeeded = !query.getGranularity().equals(Granularities.ALL) && query.getContextSortByDimsFirst();
     }
 
     if (!sortingNeeded) {
@@ -178,7 +178,14 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     // Materialize the Comparator first for fast-fail error checking.
-    final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs, sortByDimsFirst);
+    final Ordering<ResultRow> ordering = makeComparator(
+        query.getResultRowPositionLookup(),
+        query.getResultRowHasTimestamp(),
+        query.getDimensions(),
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs(),
+        query.getContextSortByDimsFirst()
+    );
 
     if (isLimited()) {
       return new TopNFunction(ordering, limit);
@@ -204,21 +211,29 @@ public class DefaultLimitSpec implements LimitSpec
     throw new ISE("Unknown column in order clause[%s]", columnSpec);
   }
 
-  private Ordering<Row> makeComparator(
+  private Ordering<ResultRow> makeComparator(
+      Object2IntMap<String> rowOrderLookup,
+      boolean hasTimestamp,
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
       List<PostAggregator> postAggs,
       boolean sortByDimsFirst
   )
   {
-    Ordering<Row> timeOrdering = new Ordering<Row>()
-    {
-      @Override
-      public int compare(Row left, Row right)
+    final Ordering<ResultRow> timeOrdering;
+
+    if (hasTimestamp) {
+      timeOrdering = new Ordering<ResultRow>()
       {
-        return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
-      }
-    };
+        @Override
+        public int compare(ResultRow left, ResultRow right)
+        {
+          return Longs.compare(left.getLong(0), right.getLong(0));
+        }
+      };
+    } else {
+      timeOrdering = null;
+    }
 
     Map<String, DimensionSpec> dimensionsMap = new HashMap<>();
     for (DimensionSpec spec : dimensions) {
@@ -235,17 +250,23 @@ public class DefaultLimitSpec implements LimitSpec
       postAggregatorsMap.put(postAgg.getName(), postAgg);
     }
 
-    Ordering<Row> ordering = null;
+    Ordering<ResultRow> ordering = null;
     for (OrderByColumnSpec columnSpec : columns) {
       String columnName = columnSpec.getDimension();
-      Ordering<Row> nextOrdering = null;
+      Ordering<ResultRow> nextOrdering = null;
 
-      if (postAggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, postAggregatorsMap.get(columnName).getComparator());
-      } else if (aggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparator());
-      } else if (dimensionsMap.containsKey(columnName)) {
-        nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
+      final int columnIndex = rowOrderLookup.applyAsInt(columnName);
+
+      if (columnIndex >= 0) {
+        if (postAggregatorsMap.containsKey(columnName)) {
+          //noinspection unchecked
+          nextOrdering = metricOrdering(columnIndex, postAggregatorsMap.get(columnName).getComparator());
+        } else if (aggregatorsMap.containsKey(columnName)) {
+          //noinspection unchecked
+          nextOrdering = metricOrdering(columnIndex, aggregatorsMap.get(columnName).getComparator());
+        } else if (dimensionsMap.containsKey(columnName)) {
+          nextOrdering = dimensionOrdering(columnIndex, columnSpec.getDimensionComparator());
+        }
       }
 
       if (nextOrdering == null) {
@@ -259,37 +280,40 @@ public class DefaultLimitSpec implements LimitSpec
       ordering = ordering == null ? nextOrdering : ordering.compound(nextOrdering);
     }
 
-    if (ordering != null) {
-      ordering = sortByDimsFirst ? ordering.compound(timeOrdering) : timeOrdering.compound(ordering);
-    } else {
+    if (ordering == null) {
       ordering = timeOrdering;
+    } else if (timeOrdering != null) {
+      ordering = sortByDimsFirst ? ordering.compound(timeOrdering) : timeOrdering.compound(ordering);
     }
 
-    return ordering;
+    //noinspection unchecked
+    return ordering != null ? ordering : (Ordering) Ordering.allEqual();
   }
 
-  private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
+  private <T> Ordering<ResultRow> metricOrdering(final int column, final Comparator<T> comparator)
   {
     // As per SQL standard we need to have same ordering for metrics as dimensions i.e nulls first
     // If SQL compatibility is not enabled we use nullsLast ordering for null metrics for backwards compatibility.
-    if (NullHandling.sqlCompatible()) {
-      return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsFirst(comparator)));
-    } else {
-      return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsLast(comparator)));
-    }
+    final Comparator<T> nullFriendlyComparator = NullHandling.sqlCompatible()
+                                                 ? Comparator.nullsFirst(comparator)
+                                                 : Comparator.nullsLast(comparator);
+
+    //noinspection unchecked
+    return Ordering.from(Comparator.comparing(row -> (T) row.get(column), nullFriendlyComparator));
   }
 
-  private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
+  private Ordering<ResultRow> dimensionOrdering(final int column, final StringComparator comparator)
   {
     return Ordering.from(
-        Comparator.comparing((Row row) -> getDimensionValue(row, dimension), Comparator.nullsFirst(comparator))
+        Comparator.comparing((ResultRow row) -> getDimensionValue(row, column), Comparator.nullsFirst(comparator))
     );
   }
 
-  private static String getDimensionValue(Row row, String column)
+  @Nullable
+  private static String getDimensionValue(ResultRow row, int column)
   {
-    List<String> values = row.getDimension(column);
-    return values.isEmpty() ? null : values.get(0);
+    final List<String> values = Rows.objectToStrings(row.get(column));
+    return values.isEmpty() ? null : Iterables.getOnlyElement(values);
   }
 
   @Override
@@ -301,9 +325,9 @@ public class DefaultLimitSpec implements LimitSpec
            '}';
   }
 
-  private static class LimitingFn implements Function<Sequence<Row>, Sequence<Row>>
+  private static class LimitingFn implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
   {
-    private int limit;
+    private final int limit;
 
     public LimitingFn(int limit)
     {
@@ -311,41 +335,41 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     @Override
-    public Sequence<Row> apply(Sequence<Row> input)
+    public Sequence<ResultRow> apply(Sequence<ResultRow> input)
     {
       return input.limit(limit);
     }
   }
 
-  private static class SortingFn implements Function<Sequence<Row>, Sequence<Row>>
+  private static class SortingFn implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
   {
-    private final Ordering<Row> ordering;
+    private final Ordering<ResultRow> ordering;
 
-    public SortingFn(Ordering<Row> ordering)
+    public SortingFn(Ordering<ResultRow> ordering)
     {
       this.ordering = ordering;
     }
 
     @Override
-    public Sequence<Row> apply(@Nullable Sequence<Row> input)
+    public Sequence<ResultRow> apply(@Nullable Sequence<ResultRow> input)
     {
       return Sequences.sort(input, ordering);
     }
   }
 
-  private static class TopNFunction implements Function<Sequence<Row>, Sequence<Row>>
+  private static class TopNFunction implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
   {
-    private final Ordering<Row> ordering;
+    private final Ordering<ResultRow> ordering;
     private final int limit;
 
-    public TopNFunction(Ordering<Row> ordering, int limit)
+    public TopNFunction(Ordering<ResultRow> ordering, int limit)
     {
       this.ordering = ordering;
       this.limit = limit;
     }
 
     @Override
-    public Sequence<Row> apply(final Sequence<Row> input)
+    public Sequence<ResultRow> apply(final Sequence<ResultRow> input)
     {
       return new TopNSequence<>(input, ordering, limit);
     }

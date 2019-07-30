@@ -20,8 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import com.google.common.base.Suppliers;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -33,6 +31,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.BufferHashGrouper;
@@ -55,9 +54,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
@@ -92,7 +89,7 @@ public class VectorGroupByEngine
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);
   }
 
-  public static Sequence<Row> process(
+  public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
       final ByteBuffer processingBuffer,
@@ -107,10 +104,10 @@ public class VectorGroupByEngine
     }
 
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Row, CloseableIterator<Row>>()
+        new BaseSequence.IteratorMaker<ResultRow, CloseableIterator<ResultRow>>()
         {
           @Override
-          public CloseableIterator<Row> make()
+          public CloseableIterator<ResultRow> make()
           {
             final VectorCursor cursor = storageAdapter.makeVectorCursor(
                 Filters.toFilter(query.getDimFilter()),
@@ -123,7 +120,7 @@ public class VectorGroupByEngine
 
             if (cursor == null) {
               // Return empty iterator.
-              return new CloseableIterator<Row>()
+              return new CloseableIterator<ResultRow>()
               {
                 @Override
                 public boolean hasNext()
@@ -132,7 +129,7 @@ public class VectorGroupByEngine
                 }
 
                 @Override
-                public Row next()
+                public ResultRow next()
                 {
                   throw new NoSuchElementException();
                 }
@@ -179,7 +176,7 @@ public class VectorGroupByEngine
           }
 
           @Override
-          public void cleanup(CloseableIterator<Row> iterFromMake)
+          public void cleanup(CloseableIterator<ResultRow> iterFromMake)
           {
             try {
               iterFromMake.close();
@@ -192,7 +189,7 @@ public class VectorGroupByEngine
     );
   }
 
-  private static class VectorGroupByEngineIterator implements CloseableIterator<Row>
+  private static class VectorGroupByEngineIterator implements CloseableIterator<ResultRow>
   {
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
@@ -218,7 +215,7 @@ public class VectorGroupByEngine
     private int partiallyAggregatedRows = -1;
 
     @Nullable
-    private CloseableGrouperIterator<ByteBuffer, Row> delegate = null;
+    private CloseableGrouperIterator<ByteBuffer, ResultRow> delegate = null;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -254,7 +251,7 @@ public class VectorGroupByEngine
     }
 
     @Override
-    public Row next()
+    public ResultRow next()
     {
       if (delegate == null || !delegate.hasNext()) {
         throw new NoSuchElementException();
@@ -343,7 +340,7 @@ public class VectorGroupByEngine
       return grouper;
     }
 
-    private CloseableGrouperIterator<ByteBuffer, Row> initNewDelegate()
+    private CloseableGrouperIterator<ByteBuffer, ResultRow> initNewDelegate()
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;
@@ -399,10 +396,19 @@ public class VectorGroupByEngine
         }
       }
 
+      final boolean resultRowHasTimestamp = query.getResultRowHasTimestamp();
+      final int resultRowDimensionStart = query.getResultRowDimensionStart();
+      final int resultRowAggregatorStart = query.getResultRowAggregatorStart();
+
       return new CloseableGrouperIterator<>(
           vectorGrouper.iterator(),
           entry -> {
-            Map<String, Object> theMap = new LinkedHashMap<>();
+            final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
+
+            // Add timestamp, if necessary.
+            if (resultRowHasTimestamp) {
+              resultRow.set(0, timestamp.getMillis());
+            }
 
             // Add dimensions.
             int keyOffset = 0;
@@ -410,24 +416,28 @@ public class VectorGroupByEngine
               final GroupByVectorColumnSelector selector = selectors.get(i);
 
               selector.writeKeyToResultRow(
-                  query.getDimensions().get(i).getOutputName(),
                   entry.getKey(),
                   keyOffset,
-                  theMap
+                  resultRow,
+                  resultRowDimensionStart + i
               );
 
               keyOffset += selector.getGroupingKeySize();
             }
 
             // Convert dimension values to desired output types, possibly.
-            GroupByQueryEngineV2.convertRowTypesToOutputTypes(query.getDimensions(), theMap);
+            GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+                query.getDimensions(),
+                resultRow,
+                resultRowDimensionStart
+            );
 
             // Add aggregations.
             for (int i = 0; i < entry.getValues().length; i++) {
-              theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
+              resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);
             }
 
-            return new MapBasedRow(timestamp, theMap);
+            return resultRow;
           },
           vectorGrouper
       );
