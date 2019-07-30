@@ -37,7 +37,6 @@
     <Bug pattern="DC_DOUBLECHECK"/>
     <Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
     <Bug pattern="DM_EXIT"/>
-    <Bug pattern="DM_NUMBER_CTOR"/>
     <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
