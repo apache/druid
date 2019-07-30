@@ -236,7 +236,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           cleanupExec,
           Period.ZERO.toStandardDuration(),
           config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
-          () -> checkAndRemoveWorkersFromBlackList()
+          this::checkAndRemoveWorkersFromBlackList
       );
 
       provisioningService = provisioningStrategy.makeProvisioningService(this);
@@ -329,16 +329,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             Maps.transformEntries(
                 Maps.filterEntries(
                     workers,
-                    new Predicate<Map.Entry<String, WorkerHolder>>()
-                    {
-                      @Override
-                      public boolean apply(Map.Entry<String, WorkerHolder> input)
-                      {
-                        return !lazyWorkers.containsKey(input.getKey()) &&
-                               !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                               !blackListedWorkers.containsKey(input.getKey());
-                      }
-                    }
+                    input -> !lazyWorkers.containsKey(input.getKey()) &&
+                           !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                           !blackListedWorkers.containsKey(input.getKey())
                 ),
                 (String key, WorkerHolder value) -> value.toImmutable()
             )
@@ -566,41 +559,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     cancelWorkerCleanup(workerHostAndPort);
 
     final ListenableScheduledFuture<?> cleanupTask = cleanupExec.schedule(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            log.info("Running scheduled cleanup for Worker[%s]", workerHostAndPort);
-            try {
-              Set<HttpRemoteTaskRunnerWorkItem> tasksToFail = new HashSet<>();
-              synchronized (statusLock) {
-                for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
-                  if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-                    Worker w = e.getValue().getWorker();
-                    if (w != null && w.getHost().equals(workerHostAndPort)) {
-                      tasksToFail.add(e.getValue());
-                    }
+        () -> {
+          log.info("Running scheduled cleanup for Worker[%s]", workerHostAndPort);
+          try {
+            Set<HttpRemoteTaskRunnerWorkItem> tasksToFail = new HashSet<>();
+            synchronized (statusLock) {
+              for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
+                if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+                  Worker w = e.getValue().getWorker();
+                  if (w != null && w.getHost().equals(workerHostAndPort)) {
+                    tasksToFail.add(e.getValue());
                   }
                 }
               }
+            }
 
-              for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
-                if (!taskItem.getResult().isDone()) {
-                  log.info(
-                      "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
-                      workerHostAndPort,
-                      taskItem.getTaskId(),
-                      config.getTaskCleanupTimeout()
-                  );
-                  taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
-                }
+            for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
+              if (!taskItem.getResult().isDone()) {
+                log.info(
+                    "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
+                    workerHostAndPort,
+                    taskItem.getTaskId(),
+                    config.getTaskCleanupTimeout()
+                );
+                taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
               }
             }
-            catch (Exception e) {
-              log.makeAlert("Exception while cleaning up worker[%s]", workerHostAndPort).emit();
-              throw new RuntimeException(e);
-            }
+          }
+          catch (Exception e) {
+            log.makeAlert("Exception while cleaning up worker[%s]", workerHostAndPort).emit();
+            throw new RuntimeException(e);
           }
         },
         config.getTaskCleanupTimeout().toStandardDuration().getMillis(),
@@ -779,14 +767,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     synchronized (statusLock) {
-      Iterator<String> iterator = workers.keySet().iterator();
-      while (iterator.hasNext()) {
-        String worker = iterator.next();
-        WorkerHolder workerHolder = workers.get(worker);
+      for (Map.Entry<String, WorkerHolder> worker : workers.entrySet()) {
+        final WorkerHolder workerHolder = worker.getValue();
         try {
           if (isWorkerOkForMarkingLazy(workerHolder.getWorker()) && isLazyWorker.apply(workerHolder.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", workerHolder.getWorker().getHost());
-            lazyWorkers.put(worker, workerHolder);
+            lazyWorkers.put(worker.getKey(), workerHolder);
             if (lazyWorkers.size() == maxWorkers) {
               // only mark excess workers as lazy and allow their cleanup
               break;
@@ -835,7 +821,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return tasks.values()
                   .stream()
                   .filter(item -> item.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING)
-                  .map(item -> item.getTask())
+                  .map(HttpRemoteTaskRunnerWorkItem::getTask)
                   .collect(Collectors.toList());
     }
   }

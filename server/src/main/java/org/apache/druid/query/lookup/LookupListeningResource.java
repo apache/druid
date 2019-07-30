@@ -95,14 +95,14 @@ class LookupListeningResource extends ListenerResource
           public Object post(final Map<String, LookupExtractorFactory> lookups)
           {
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
-            for (final String name : lookups.keySet()) {
+            for (final Map.Entry<String, LookupExtractorFactory> lookup : lookups.entrySet()) {
 
               final LookupExtractorFactoryContainer factoryContainer = new LookupExtractorFactoryContainer(
                   null,
-                  lookups.get(name)
+                  lookup.getValue()
               );
 
-              manager.add(name, factoryContainer);
+              manager.add(lookup.getKey(), factoryContainer);
             }
             return ImmutableMap.of("status", "accepted", LookupModule.FAILED_UPDATES_KEY, failedUpdates);
           }

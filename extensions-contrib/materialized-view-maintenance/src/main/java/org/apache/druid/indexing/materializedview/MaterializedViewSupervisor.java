@@ -371,16 +371,12 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
-    for (Interval interval : runningVersion.keySet()) {
-      if (toBuildInterval.containsKey(interval)
-          && toBuildInterval.get(interval).equals(runningVersion.get(interval))
-          ) {
+    for (Map.Entry<Interval, String> version : runningVersion.entrySet()) {
+      final Interval interval = version.getKey();
+      final String host = version.getValue();
+      if (toBuildInterval.containsKey(interval) && toBuildInterval.get(interval).equals(host)) {
         toBuildInterval.remove(interval);
-
-      } else if (
-          toBuildInterval.containsKey(interval)
-          && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
-      ) {
+      } else if (toBuildInterval.containsKey(interval) && !toBuildInterval.get(interval).equals(host)) {
         if (taskMaster.getTaskQueue().isPresent()) {
           taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
