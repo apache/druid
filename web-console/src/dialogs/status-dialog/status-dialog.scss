@@ -15,31 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+$side-bar-width: 120px;
 
-.show-json {
-  position: relative;
-  height: 100%;
+.status-dialog {
+  &.bp3-dialog {
+    margin-top: 5vh;
+    top: 5%;
+    width: 60vw;
 
-  .top-actions {
-    text-align: right;
-    padding-bottom: 10px;
-
-    & > * {
-      display: inline-block;
-    }
-  }
-
-  .main-area {
-    height: calc(100% - 40px);
-
-    textarea {
-      height: 100%;
-      width: 100%;
-      resize: none;
+    .status-dialog-main-area {
+      height: 60vh;
+      padding: 10px;
     }
 
-    .loader {
+    .bp3-dialog-footer {
       position: relative;
+      padding-top: 5px;
+
+      .footer-actions-left {
+        position: absolute;
+        left: $side-bar-width;
+
+        & > * {
+          margin-right: 10px;
+        }
+      }
     }
   }
 }
