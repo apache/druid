@@ -35,7 +35,7 @@ export interface ShowJsonProps {
 }
 
 export interface ShowJsonState {
-  jsonValue: string;
+  jsonValue?: string;
   loading: boolean;
   error?: string;
 }
@@ -54,16 +54,13 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
         const resp = await axios.get(endpoint);
         let data = resp.data;
         if (transform) data = transform(data);
-        this.setState({
-          jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2),
-        });
         return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           loading,
           error,
-          jsonValue: result ? result : '',
+          jsonValue: result,
         });
       },
     });
@@ -86,7 +83,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
                 disabled={loading}
                 text="Save"
                 minimal
-                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+                onClick={() => downloadFile(jsonValue ? jsonValue : '', 'json', downloadFilename)}
               />
             )}
             <Button
@@ -94,7 +91,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
               minimal
               disabled={loading}
               onClick={() => {
-                copy(jsonValue, { format: 'text/plain' });
+                copy(jsonValue ? jsonValue : '', { format: 'text/plain' });
                 AppToaster.show({
                   message: 'JSON copied to clipboard',
                   intent: Intent.SUCCESS,
