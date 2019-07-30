@@ -20,40 +20,12 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 
-import java.io.File;
 import java.util.Map;
 
-public class TaskReportFileWriter
+public interface TaskReportFileWriter
 {
-  private static final Logger log = new Logger(TaskReportFileWriter.class);
+  void write(String taskId, Map<String, TaskReport> reports);
 
-  private final File reportsFile;
-  private ObjectMapper objectMapper;
-
-  public TaskReportFileWriter(File reportFile)
-  {
-    this.reportsFile = reportFile;
-  }
-
-  public void write(Map<String, TaskReport> reports)
-  {
-    try {
-      final File reportsFileParent = reportsFile.getParentFile();
-      if (reportsFileParent != null) {
-        FileUtils.forceMkdir(reportsFileParent);
-      }
-      objectMapper.writeValue(reportsFile, reports);
-    }
-    catch (Exception e) {
-      log.error(e, "Encountered exception in write().");
-    }
-  }
-
-  public void setObjectMapper(ObjectMapper objectMapper)
-  {
-    this.objectMapper = objectMapper;
-  }
+  void setObjectMapper(ObjectMapper objectMapper);
 }

@@ -51,7 +51,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -77,6 +77,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final AuthorizerMapper authorizerMapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected final CircularBuffer<Throwable> savedParseExceptions;
+  protected final AppenderatorsManager appenderatorsManager;
   protected final LockGranularity lockGranularityToUse;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
@@ -94,7 +95,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       @Nullable final ChatHandlerProvider chatHandlerProvider,
       final AuthorizerMapper authorizerMapper,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
-      @Nullable final String groupId
+      @Nullable final String groupId,
+      AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -117,6 +119,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.runnerSupplier = Suppliers.memoize(this::createTaskRunner);
+    this.appenderatorsManager = appenderatorsManager;
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
@@ -185,6 +188,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     if (taskConfig.isRestoreTasksOnRestart()) {
       getRunner().stopGracefully();
+    } else {
+      getRunner().stopForcefully();
     }
   }
 
@@ -201,7 +206,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
-    return Appenderators.createRealtime(
+    return appenderatorsManager.createRealtimeAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
