@@ -236,7 +236,46 @@ public class KafkaRecordSupplierTest
     
     recordSupplier.close();
   }
-
+  
+  @Test
+  public void testPollCustomDeserializer() throws InterruptedException, ExecutionException
+  {
+    
+    // Insert data
+    insertData();
+    
+    Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
+        StreamPartition.of(topic, 0),
+        StreamPartition.of(topic, 1)
+    );
+  
+    Map<String, Object> properties = kafkaServer.consumerProperties();
+    properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
+    properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
+  
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        properties,
+        objectMapper
+    );
+    
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    
+    List<OrderedPartitionableRecord<Integer, Long>> initialRecords = new ArrayList<>(createOrderedPartitionableRecords());
+    
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
+    }
+    
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(initialRecords.size(), polledRecords.size());
+    Assert.assertTrue(initialRecords.containsAll(polledRecords));
+    
+    recordSupplier.close();
+  }
+  
   @Test
   public void testPoll() throws InterruptedException, ExecutionException
   {
