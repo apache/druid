@@ -32,7 +32,6 @@ export interface PastSupervisor {
 }
 export interface ShowHistoryProps {
   endpoint: string;
-  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
@@ -83,7 +82,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
         panel={
           <ShowValue
             jsonValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
-            downloadFilename={downloadFilename + 'version-' + pastSupervisor.version}
+            downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
             endpoint={endpoint}
           />
         }

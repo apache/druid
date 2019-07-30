@@ -28,17 +28,9 @@ import { deepGet } from '../../utils/object-change';
 
 import './home-view.scss';
 
-export interface CardLinkOptions {
-  href: string;
-  icon: IconName;
-  title: string;
-  loading?: boolean;
-  content: JSX.Element | string;
-  error?: string;
-}
-
-export interface CardModalOptions {
-  onClick: () => void;
+export interface CardOptions {
+  onClick?: () => void;
+  href?: string;
   icon: IconName;
   title: string;
   loading?: boolean;
@@ -366,9 +358,13 @@ GROUP BY 1`,
     );
   }
 
-  renderCard(cardOptions: CardLinkOptions): JSX.Element {
+  renderCard(cardOptions: CardOptions): JSX.Element {
     return (
-      <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
+      <a
+        onClick={cardOptions.onClick}
+        href={cardOptions.href}
+        target={cardOptions.href && cardOptions.href[0] === '/' ? '_blank' : undefined}
+      >
         <Card className="home-view-card" interactive>
           <H5>
             <Icon color="#bfccd5" icon={cardOptions.icon} />
@@ -386,34 +382,12 @@ GROUP BY 1`,
     );
   }
 
-  renderModalCard(cardOptions: CardModalOptions): JSX.Element {
-    return (
-      <Card
-        className="status-card"
-        interactive
-        onClick={() => this.setState({ showStatusDialog: true })}
-      >
-        <H5>
-          <Icon color="#bfccd5" icon={cardOptions.icon} />
-          &nbsp;{cardOptions.title}
-        </H5>
-        {cardOptions.loading ? (
-          <p>Loading...</p>
-        ) : cardOptions.error ? (
-          `Error: ${cardOptions.error}`
-        ) : (
-          cardOptions.content
-        )}
-      </Card>
-    );
-  }
-
   render(): JSX.Element {
     const state = this.state;
 
     return (
       <div className="home-view app-view">
-        {this.renderModalCard({
+        {this.renderCard({
           onClick: () => this.setState({ showStatusDialog: true }),
           icon: IconNames.GRAPH,
           title: 'Status',
