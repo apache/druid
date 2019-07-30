@@ -95,6 +95,8 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
@@ -239,6 +241,11 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
             Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+
+
+            binder.bind(AppenderatorsManager.class)
+                  .to(DummyForInjectionAppenderatorsManager.class)
+                  .in(LazySingleton.class);
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);

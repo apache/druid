@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -643,7 +644,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           ingestionSchema,
           context,
           null,
-          taskClientFactory
+          taskClientFactory,
+          new TestAppenderatorsManager()
       );
       this.taskClientFactory = taskClientFactory;
     }

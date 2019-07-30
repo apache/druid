@@ -31,6 +31,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -44,12 +45,12 @@ import java.util.Properties;
 
 /**
  */
-public class ChatHandlerServerModule implements Module
+public class CliIndexerServerModule implements Module
 {
-  private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
+  private static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
   private final Properties properties;
 
-  public ChatHandlerServerModule(Properties properties)
+  public CliIndexerServerModule(Properties properties)
   {
     this.properties = properties;
   }
@@ -60,14 +61,39 @@ public class ChatHandlerServerModule implements Module
     Jerseys.addResource(binder, ChatHandlerResource.class);
     LifecycleModule.register(binder, ChatHandlerResource.class);
 
-    if (properties.containsKey(MAX_CHAT_REQUESTS_PROPERTY)) {
-      final int maxRequests = Integer.parseInt(properties.getProperty(MAX_CHAT_REQUESTS_PROPERTY));
-      JettyBindings.addQosFilter(
-          binder,
-          "/druid/worker/v1/chat/*",
-          maxRequests
-      );
+    // Use an equal number of threads for chat handler and non-chat handler requests.
+    int serverHttpNumThreads;
+    if (properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY) == null) {
+      serverHttpNumThreads = ServerConfig.getDefaultNumThreads();
+    } else {
+      serverHttpNumThreads = Integer.parseInt(properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY));
     }
+
+    JettyBindings.addQosFilter(
+        binder,
+        "/druid/worker/v1/chat/*",
+        serverHttpNumThreads
+    );
+
+    String[] notChatPaths = new String[]{
+        "/druid/v2/*", // QueryResource
+        "/status/*", // StatusResource
+        "/druid-internal/*", // SegmentListerResource, TaskManagementResource
+        "/druid/worker/v1/enable", // WorkerResource
+        "/druid/worker/v1/disable", // WorkerResource
+        "/druid/worker/v1/enabled", // WorkerResource
+        "/druid/worker/v1/tasks", // WorkerResource
+        "/druid/worker/v1/task/*", // WorkerResource
+        "/druid/v1/lookups/*", // LookupIntrospectionResource
+        "/druid-ext/*" // basic-security
+    };
+    JettyBindings.addQosFilter(
+        binder,
+        notChatPaths,
+        serverHttpNumThreads
+    );
+
+    // Be aware that lookups have a 2 maxRequest QoS filter as well.
 
     Multibinder.newSetBinder(binder, ServletFilterHolder.class).addBinding().to(TaskIdResponseHeaderFilterHolder.class);
 
@@ -104,10 +130,34 @@ public class ChatHandlerServerModule implements Module
         injector,
         lifecycle,
         node,
-        config,
+        makeAdjustedServerConfig(config),
         TLSServerConfig,
         injector.getExistingBinding(Key.get(SslContextFactory.class)),
         injector.getInstance(TLSCertificateChecker.class)
+    );
+  }
+
+  /**
+   * Adjusts the ServerConfig such that we double the number of configured HTTP threads,
+   * with one half allocated using QoS to chat handler requests, and the other half for other requests.
+   *
+   * 2 dedicated threads are added for lookup listening, which also has a QoS filter applied.
+   */
+  public ServerConfig makeAdjustedServerConfig(ServerConfig oldConfig)
+  {
+    return new ServerConfig(
+        (oldConfig.getNumThreads() * 2) + LookupModule.LOOKUP_LISTENER_QOS_MAX_REQUESTS,
+        oldConfig.getQueueSize(),
+        oldConfig.isEnableRequestLimit(),
+        oldConfig.getMaxIdleTime(),
+        oldConfig.getDefaultQueryTimeout(),
+        oldConfig.getMaxScatterGatherBytes(),
+        oldConfig.getMaxQueryTimeout(),
+        oldConfig.getMaxRequestHeaderSize(),
+        oldConfig.getGracefulShutdownTimeout(),
+        oldConfig.getUnannouncePropagationDelay(),
+        oldConfig.getInflateBufferSize(),
+        oldConfig.getCompressionLevel()
     );
   }
 }
