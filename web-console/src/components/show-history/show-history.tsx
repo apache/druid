@@ -24,6 +24,10 @@ import { ShowJson } from '..';
 
 import './show-history.scss';
 
+export interface PastSupervisor {
+  version: string;
+  spec: any;
+}
 export interface ShowHistoryProps {
   endpoint: string;
   transform?: (x: any) => any;
@@ -31,14 +35,14 @@ export interface ShowHistoryProps {
 }
 
 export interface ShowHistoryState {
-  jsonValue: [];
+  data?: PastSupervisor[];
 }
 
 export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
   constructor(props: ShowHistoryProps, context: any) {
     super(props, context);
     this.state = {
-      jsonValue: [],
+      data: [],
     };
 
     this.getJsonInfo();
@@ -50,29 +54,25 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
       const resp = await axios.get(endpoint);
       const data = resp.data;
       this.setState({
-        jsonValue: data,
+        data: data,
       });
-    } catch (e) {
-      this.setState({
-        jsonValue: [],
-      });
-    }
+    } catch {}
   };
 
   render() {
     const { transform, downloadFilename, endpoint } = this.props;
-    const { jsonValue } = this.state;
-
-    const versions = jsonValue.map((version: any, index: number) => (
+    const { data } = this.state;
+    if (!data) return;
+    const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
       <Tab
         id={index}
         key={index}
-        title={version.version}
+        title={pastSupervisor.version}
         panel={
           <ShowJson
-            defaultValue={JSON.stringify(version.spec, undefined, 2)}
+            defaultValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
             transform={transform}
-            downloadFilename={downloadFilename + 'version-' + version.version}
+            downloadFilename={downloadFilename + 'version-' + pastSupervisor.version}
             endpoint={endpoint}
           />
         }

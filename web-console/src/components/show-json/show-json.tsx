@@ -82,17 +82,19 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
                 onClick={() => downloadFile(content, 'json', downloadFilename)}
               />
             )}
-            <Button
-              text="Copy"
-              minimal
-              onClick={() => {
-                copy(content, { format: 'text/plain' });
-                AppToaster.show({
-                  message: 'JSON copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
-            />
+            {!defaultValue && (
+              <Button
+                text="Copy"
+                minimal
+                onClick={() => {
+                  copy(content, { format: 'text/plain' });
+                  AppToaster.show({
+                    message: 'JSON copied to clipboard',
+                    intent: Intent.SUCCESS,
+                  });
+                }}
+              />
+            )}
             <Button
               text="View raw"
               minimal
