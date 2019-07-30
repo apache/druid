@@ -53,11 +53,11 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
 
   /**
    * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty sketch object.
-   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptySketch
+   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptyUnion
    * because it is not exactly the same (the "build" flavor initializes based on tgtHllType, but the "merge" flavor
    * always initializes using HLL_8).
    */
-  private final byte[] emptySketch;
+  private final byte[] emptyUnion;
 
   public HllSketchMergeBufferAggregator(
       final ColumnValueSelector<HllSketch> selector,
@@ -70,10 +70,10 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     this.lgK = lgK;
     this.tgtHllType = tgtHllType;
     this.size = size;
-    this.emptySketch = new byte[size];
+    this.emptyUnion = new byte[size];
 
     //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptySketch" as a side effect of construction)
-    new Union(lgK, WritableMemory.wrap(emptySketch, ByteOrder.LITTLE_ENDIAN));
+    new Union(lgK, WritableMemory.wrap(emptyUnion, ByteOrder.LITTLE_ENDIAN));
   }
 
   @Override
@@ -84,7 +84,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     final int oldPosition = buf.position();
     try {
       buf.position(position);
-      buf.put(emptySketch);
+      buf.put(emptyUnion);
     }
     finally {
       buf.position(oldPosition);
