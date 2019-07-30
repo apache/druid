@@ -16,29 +16,43 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
+import { Button, ButtonGroup } from '@blueprintjs/core';
 import axios from 'axios';
-import copy from 'copy-to-clipboard';
 import React from 'react';
-import ReactTable from 'react-table';
+import ReactTable, { Column } from 'react-table';
 
 import { Loader } from '..';
-import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile, QueryManager } from '../../utils';
+import { QueryManager } from '../../utils';
 import { deepGet } from '../../utils/object-change';
 
 import './supervisor-statistics-table.scss';
 
+interface TaskSummary {
+  totals: Record<string, StatsEntry>;
+  movingAverages: Record<string, Record<string, StatsEntry>>;
+}
+
+interface StatsEntry {
+  processed?: number;
+  processedWithError?: number;
+  thrownAway?: number;
+  unparseable?: number;
+  [key: string]: number | undefined;
+}
+
+interface TableRow {
+  taskId: string;
+  summary: TaskSummary;
+}
+
 export interface SupervisorStatisticsTableProps {
   endpoint: string;
-  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
 export interface SupervisorStatisticsTableState {
-  data: any[];
-  jsonValue: string;
+  data?: TableRow[];
   loading: boolean;
   error?: string;
 }
@@ -47,32 +61,26 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   SupervisorStatisticsTableProps,
   SupervisorStatisticsTableState
 > {
-  private supervisorStatisticsTableQueryManager: QueryManager<null, SupervisorStatisticsTableState>;
+  private supervisorStatisticsTableQueryManager: QueryManager<null, TableRow[]>;
+
   constructor(props: SupervisorStatisticsTableProps, context: any) {
     super(props, context);
     this.state = {
-      data: [],
-      jsonValue: '',
       loading: true,
     };
     this.supervisorStatisticsTableQueryManager = new QueryManager({
       processQuery: async () => {
-        const { endpoint, transform } = this.props;
+        const { endpoint } = this.props;
         const resp = await axios.get(endpoint);
-        let data = resp.data;
-        if (transform) data = transform(data);
-        return data;
+        const data: Record<string, Record<string, TaskSummary>> = resp.data;
+
+        return Object.values(data).flatMap(v =>
+          Object.keys(v).map(k => ({ taskId: k, summary: v[k] })),
+        );
       },
       onStateChange: ({ result, loading, error }) => {
-        const dataArray: JSON[] = [];
-        if (result) {
-          Object.keys(result).forEach(key => {
-            dataArray.push(result[key]);
-          });
-        }
         this.setState({
-          jsonValue: result ? JSON.stringify(result) : '',
-          data: dataArray,
+          data: result,
           error,
           loading,
         });
@@ -84,64 +92,57 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     this.supervisorStatisticsTableQueryManager.runQuery(null);
   }
 
-  renderCell(data: {
-    processed?: number;
-    unparseable?: number;
-    thrownAway?: number;
-    processedWithError?: number;
-  }) {
-    if (data) {
-      // @ts-ignore
-      return Object.keys(data).map(key => this.renderData(key, data[key]));
+  renderCell(data: StatsEntry | undefined) {
+    if (!data) {
+      return <div>No data found</div>;
     }
-    return <div> no data found</div>;
-  }
-
-  renderData(key: string, data: number | null) {
-    if (data !== null) {
-      return <div key={key}>{`${key}: ${data.toFixed(1)}`}</div>;
-    }
-    return <div> no data found</div>;
+    return Object.keys(data).map(key => (
+      <div key={key}>{`${key}: ${Number(data[key]).toFixed(1)}`}</div>
+    ));
   }
 
   renderTable(error?: string) {
     const { data } = this.state;
-
-    let columns = [
+    console.log(data);
+    let columns: Column<TableRow>[] = [
       {
         Header: 'Task Id',
         id: 'task_id',
-        accessor: (d: {}) => Object.keys(d)[0],
+        accessor: d => d.taskId,
       },
       {
         Header: 'Totals',
         id: 'total',
-        accessor: (d: any) => {
-          return deepGet(d[Object.keys(d)[0]], 'totals.buildSegments');
+        accessor: d => {
+          return deepGet(d, 'summary.totals.buildSegments') as StatsEntry;
         },
-        Cell: (d: any) => {
-          return this.renderCell(d.value ? d.value : null);
+        Cell: d => {
+          return this.renderCell(d.value ? d.value : undefined);
         },
       },
     ];
 
-    columns = columns.concat(
-      Object.keys(deepGet(data[0][Object.keys(data[0])[0]], 'movingAverages.buildSegments'))
-        .map((interval: string, index: number) => {
-          return {
-            Header: interval,
-            id: interval,
-            key: index,
-            accessor: (d: any) => {
-              return deepGet(d[Object.keys(d)[0]], 'movingAverages.buildSegments');
+    if (data && data.length) {
+      columns = columns.concat(
+        Object.keys(deepGet(data[0], 'summary.movingAverages.buildSegments'))
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+          .map(
+            (interval: string): Column<TableRow> => {
+              return {
+                Header: interval,
+                id: interval,
+                accessor: d => {
+                  return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
+                },
+                Cell: d => {
+                  return this.renderCell(d.value ? d.value : null);
+                },
+              };
             },
-            Cell: (d: any) => {
-              return this.renderCell(d.value ? d.value[interval] : null);
-            },
-          };
-        })
-        .sort((a, b) => (a.Header.localeCompare(b.Header, undefined, { numeric: true }) ? -1 : 1)),
-    );
+          ),
+      );
+    }
+
     return (
       <ReactTable
         data={this.state.data ? this.state.data : []}
@@ -154,39 +155,15 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   }
 
   render() {
-    const { endpoint, downloadFilename } = this.props;
-    const { jsonValue, loading, error } = this.state;
+    const { endpoint } = this.props;
+    const { loading, error } = this.state;
     return (
       <div className="supervisor-statistics-table">
         <div className="top-actions">
           <ButtonGroup className="right-buttons">
-            {downloadFilename && (
-              <Button
-                disabled={!jsonValue}
-                text="Save"
-                minimal
-                onClick={() =>
-                  jsonValue ? downloadFile(jsonValue, 'json', downloadFilename) : null
-                }
-              />
-            )}
-            <Button
-              text="Copy"
-              disabled={!jsonValue}
-              minimal
-              onClick={() => {
-                if (jsonValue != null) {
-                  copy(jsonValue, { format: 'text/plain' });
-                }
-                AppToaster.show({
-                  message: 'JSON copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
-            />
             <Button
               text="View raw"
-              disabled={!jsonValue}
+              disabled={loading}
               minimal
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
