@@ -18,7 +18,8 @@
 
 import { jodaFormatToRegExp } from './joda-to-regexp';
 
-export const BASIC_TIME_FORMATS: string[] = ['iso', 'posix', 'millis', 'micro', 'nano'];
+export const NUMERIC_TIME_FORMATS: string[] = ['posix', 'millis', 'micro', 'nano'];
+export const BASIC_TIME_FORMATS: string[] = ['iso'].concat(NUMERIC_TIME_FORMATS);
 
 export const DATE_ONLY_TIME_FORMATS: string[] = [
   'dd/MM/yyyy',
