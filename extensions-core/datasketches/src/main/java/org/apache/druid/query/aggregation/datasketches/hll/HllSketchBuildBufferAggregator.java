@@ -96,7 +96,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
     // Add an HllSketch for this chunk to our sketchCache.
     final WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    putSketchIntoCache(buf, position, new HllSketch(lgK, tgtHllType, mem));
+    putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
   }
 
   /**

@@ -106,6 +106,9 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).writeLock();
     lock.lock();
     try {
+      // Not necessary to keep the constructed object since it is cheap to reconstruct by wrapping the memory.
+      // The objects are not cached as in HllSketchBuildBufferAggregator, since they never exceed the max size and
+      // never move.
       final Union union = Union.writableWrap(mem);
       union.update(sketch);
     }
