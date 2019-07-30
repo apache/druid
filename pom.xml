@@ -18,8 +18,7 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -30,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.15.0-incubating-SNAPSHOT</version>
+    <version>0.15.1-incubating</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -67,7 +66,7 @@
         <connection>scm:git:ssh://git@github.com/apache/incubator-druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/incubator-druid.git</developerConnection>
         <url>https://github.com/apache/incubator-druid.git</url>
-        <tag>0.13.0-incubating-SNAPSHOT</tag>
+        <tag>druid-0.15.1-incubating-rc1</tag>
     </scm>
 
     <properties>
@@ -1493,7 +1492,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>MIT</licenseFamilyCategory>
                                     <licenseFamilyName>MIT JQuery</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2005, 2014 jQuery Foundation, Inc. and other contributors</pattern>
                                         <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
@@ -1503,7 +1502,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Underscore</licenseFamilyCategory>
                                     <licenseFamilyName>Underscore</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Underscore is freely distributable under the MIT license</pattern>
                                     </patterns>
@@ -1511,7 +1510,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
                                     <licenseFamilyName>Allan Jardine</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
                                     </patterns>
@@ -1519,7 +1518,7 @@
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
                                     <licenseFamilyName>Allan Jardine</licenseFamilyName>
-                                    <notes></notes>
+                                    <notes />
                                     <patterns>
                                         <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
                                         <pattern>Copyright 2008-2011 Allan Jardine</pattern>
