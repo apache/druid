@@ -75,6 +75,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -200,6 +201,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final CircularBuffer<Throwable> savedParseExceptions;
   private final String stream;
   private final RowIngestionMeters rowIngestionMeters;
+  private final AppenderatorsManager appenderatorsManager;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
@@ -228,6 +230,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final AppenderatorsManager appenderatorsManager,
       final LockGranularity lockGranularityToUse
   )
   {
@@ -241,6 +244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.savedParseExceptions = savedParseExceptions;
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.appenderatorsManager = appenderatorsManager;
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -257,7 +261,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(errorMsg));
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -385,9 +389,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Throwable caughtExceptionOuter = null;
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier = task.newTaskRecordSupplier()) {
-      toolbox.getDataSegmentServerAnnouncer().announce();
-      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
+      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+        toolbox.getDataSegmentServerAnnouncer().announce();
+        toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
+      }
       appenderator = task.newAppenderator(fireDepartmentMetrics, toolbox);
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
 
@@ -878,8 +884,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           chatHandlerProvider.get().unregister(task.getId());
         }
 
-        toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
-        toolbox.getDataSegmentServerAnnouncer().unannounce();
+        if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+          toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
+          toolbox.getDataSegmentServerAnnouncer().unannounce();
+        }
       }
       catch (Throwable e) {
         if (caughtExceptionOuter != null) {
@@ -890,7 +898,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(null));
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null));
     return TaskStatus.success(task.getId());
   }
 
@@ -1367,6 +1375,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return rowIngestionMeters;
   }
 
+  public void stopForcefully()
+  {
+    log.info("Stopping forcefully (status: [%s])", status);
+    stopRequested.set(true);
+    runThread.interrupt();
+  }
 
   public void stopGracefully()
   {

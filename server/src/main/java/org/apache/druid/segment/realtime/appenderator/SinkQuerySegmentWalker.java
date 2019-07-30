@@ -74,6 +74,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
   private final String dataSource;
+
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
@@ -310,6 +311,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         false
     );
+  }
+
+  public VersionedIntervalTimeline<String, Sink> getSinkTimeline()
+  {
+    return sinkTimeline;
   }
 
   public static String makeHydrantCacheIdentifier(FireHydrant input)

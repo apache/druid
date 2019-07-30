@@ -23,7 +23,7 @@ export interface ExternalLinkProps {
 }
 
 export class ExternalLink extends React.PureComponent<ExternalLinkProps> {
-  render() {
+  render(): JSX.Element {
     const { href, children } = this.props;
 
     return (
