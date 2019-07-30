@@ -16,58 +16,27 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
-import axios from 'axios';
-import copy from 'copy-to-clipboard';
+import { Button, ButtonGroup, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { downloadFile } from '../../utils';
 
-import './show-json.scss';
+import './show-value.scss';
 
-export interface ShowJsonProps {
+export interface ShowValueProps {
   endpoint: string;
-  transform?: (x: any) => any;
   downloadFilename?: string;
+  jsonValue?: string;
 }
 
-export interface ShowJsonState {
-  jsonValue: string;
-}
-
-export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
-  constructor(props: ShowJsonProps, context: any) {
+export class ShowValue extends React.PureComponent<ShowValueProps> {
+  constructor(props: ShowValueProps, context: any) {
     super(props, context);
-    this.state = {
-      jsonValue: '',
-    };
-
-    this.getJsonInfo();
   }
 
-  private getJsonInfo = async (): Promise<void> => {
-    const { endpoint, transform } = this.props;
-
-    try {
-      const resp = await axios.get(endpoint);
-      let data = resp.data;
-      if (transform) data = transform(data);
-      this.setState({
-        jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2),
-      });
-    } catch (e) {
-      this.setState({
-        jsonValue: `Error: ` + e.response.data,
-      });
-    }
-  };
-
   render(): JSX.Element {
-    const { endpoint, downloadFilename } = this.props;
-    const { jsonValue } = this.state;
-
+    const { endpoint, downloadFilename, jsonValue } = this.props;
     return (
       <div className="show-json">
         <div className="top-actions">
@@ -76,20 +45,11 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
               <Button
                 text="Save"
                 minimal
-                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+                onClick={() =>
+                  jsonValue ? downloadFile(jsonValue, 'json', downloadFilename) : null
+                }
               />
             )}
-            <Button
-              text="Copy"
-              minimal
-              onClick={() => {
-                copy(jsonValue, { format: 'text/plain' });
-                AppToaster.show({
-                  message: 'JSON copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
-            />
             <Button
               text="View raw"
               minimal

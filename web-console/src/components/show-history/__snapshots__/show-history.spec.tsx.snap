@@ -1,28 +1,3 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`rule editor matches snapshot 1`] = `
-<div
-  class="show-history"
->
-  <div
-    class="bp3-tabs bp3-vertical tab-area"
-  >
-    <div
-      class="bp3-tab-list"
-      role="tablist"
-    >
-      <div
-        class="bp3-tab-indicator-wrapper"
-        style="display: none;"
-      >
-        <div
-          class="bp3-tab-indicator"
-        />
-      </div>
-      <div
-        class="bp3-flex-expander"
-      />
-    </div>
-  </div>
-</div>
-`;
+exports[`rule editor matches snapshot 1`] = `null`;

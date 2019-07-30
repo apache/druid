@@ -20,7 +20,9 @@ import { Tab, Tabs } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
 
-import { ShowJson } from '..';
+import { QueryManager } from '../../utils';
+import { Loader } from '../loader/loader';
+import { ShowValue } from '../show-value/show-value';
 
 import './show-history.scss';
 
@@ -36,32 +38,42 @@ export interface ShowHistoryProps {
 
 export interface ShowHistoryState {
   data?: PastSupervisor[];
+  loading: boolean;
+  error?: string;
 }
 
 export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
+  private showHistoryQueryManager: QueryManager<null, string>;
   constructor(props: ShowHistoryProps, context: any) {
     super(props, context);
     this.state = {
       data: [],
+      loading: true,
     };
 
-    this.getJsonInfo();
+    this.showHistoryQueryManager = new QueryManager({
+      processQuery: async () => {
+        const resp = await axios.get(this.props.endpoint);
+        return resp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          loading,
+          data: result,
+          error,
+        });
+      },
+    });
   }
 
-  private getJsonInfo = async (): Promise<void> => {
-    const { endpoint } = this.props;
-    try {
-      const resp = await axios.get(endpoint);
-      const data = resp.data;
-      this.setState({
-        data: data,
-      });
-    } catch {}
-  };
+  componentDidMount(): void {
+    this.showHistoryQueryManager.runQuery(null);
+  }
 
   render() {
-    const { transform, downloadFilename, endpoint } = this.props;
-    const { data } = this.state;
+    const { downloadFilename, endpoint } = this.props;
+    const { data, loading } = this.state;
+    if (loading) return <Loader />;
     if (!data) return;
     const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
       <Tab
@@ -69,9 +81,8 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
         key={index}
         title={pastSupervisor.version}
         panel={
-          <ShowJson
-            defaultValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
-            transform={transform}
+          <ShowValue
+            jsonValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
             downloadFilename={downloadFilename + 'version-' + pastSupervisor.version}
             endpoint={endpoint}
           />
