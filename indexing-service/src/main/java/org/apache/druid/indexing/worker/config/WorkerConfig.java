@@ -24,20 +24,16 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 
 /**
  */
 public class WorkerConfig
 {
   @JsonProperty
-  @NotNull
   private String ip = DruidNode.getDefaultHost();
 
   @JsonProperty
-  @NotNull
   private String version = "0";
 
   @JsonProperty
@@ -53,13 +49,11 @@ public class WorkerConfig
   @JsonProperty
   private Period intermediaryPartitionTimeout = new Period("P1D");
 
-  @Nonnull
   public String getIp()
   {
     return ip;
   }
 
-  @Nonnull
   public String getVersion()
   {
     return version;
