@@ -25,6 +25,7 @@ interface JSONInputProps {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity?: (valueValid: boolean) => void;
+  placeholder?: string;
   focus?: boolean;
   width?: string;
   height?: string;
@@ -59,7 +60,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
   }
 
   render(): JSX.Element {
-    const { onChange, updateInputValidity, focus, width, height } = this.props;
+    const { onChange, updateInputValidity, placeholder, focus, width, height } = this.props;
     const { stringValue } = this.state;
     return (
       <AceEditor
@@ -79,6 +80,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
         showPrintMargin={false}
         showGutter={false}
         value={stringValue}
+        placeholder={placeholder}
         editorProps={{
           $blockScrolling: Infinity,
         }}

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.worker;
 
+import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -40,7 +41,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 
@@ -153,7 +153,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   private File generateSegmentFile() throws IOException
   {
     final File segmentFile = tempDir.newFile();
-    FileUtils.write(segmentFile, "test data.", StandardCharsets.UTF_8);
+    FileUtils.write(segmentFile, "test data.", StringUtils.UTF8);
     return segmentFile;
   }
 
