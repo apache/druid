@@ -52,10 +52,9 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty sketch object.
-   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptyUnion
-   * because it is not exactly the same (the "build" flavor initializes based on tgtHllType, but the "merge" flavor
-   * always initializes using HLL_8).
+   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
+   * {@link HllSketchBuildBufferAggregator} does something similar, but different enough that we don't share code. The
+   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
    */
   private final byte[] emptyUnion;
 
@@ -72,8 +71,8 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     this.size = size;
     this.emptyUnion = new byte[size];
 
-    //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptySketch" as a side effect of construction)
-    new Union(lgK, WritableMemory.wrap(emptyUnion, ByteOrder.LITTLE_ENDIAN));
+    //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptyUnion" as a side effect of construction)
+    new Union(lgK, WritableMemory.wrap(emptyUnion));
   }
 
   @Override

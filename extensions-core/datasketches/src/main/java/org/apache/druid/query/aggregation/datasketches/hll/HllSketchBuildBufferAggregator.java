@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
+import com.yahoo.sketches.hll.Union;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -56,10 +57,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty sketch object.
-   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptySketch
-   * because it is not exactly the same (the "build" flavor initializes based on tgtHllType, but the "merge" flavor
-   * always initializes using HLL_8).
+   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
+   * {@link HllSketchMergeBufferAggregator} does something similar, but different enough that we don't share code. The
+   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
    */
   private final byte[] emptySketch;
 
