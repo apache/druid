@@ -74,6 +74,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   {
     final int oldPosition = buf.position();
     try {
+      buf.position(position);
       buf.put(emptySketch);
     }
     finally {
