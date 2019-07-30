@@ -192,7 +192,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
       File storageDir = loc.reserve(storageDirStr, segment);
 
-      if (null != loc) {
+      if (null != storageDir) {
         try {
           loadInLocationWithStartMarker(segment, storageDir);
           return loc;
