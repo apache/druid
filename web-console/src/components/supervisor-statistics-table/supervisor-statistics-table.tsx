@@ -154,7 +154,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { endpoint } = this.props;
     const { loading, error } = this.state;
     return (
