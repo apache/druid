@@ -78,7 +78,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    // Copy prebuilt empty sketch object.
+    // Copy prebuilt empty union object.
 
     final int oldPosition = buf.position();
     try {
