@@ -135,7 +135,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
     }
   }
 
-  public interface AddToResultFunction
+  interface AddToResultFunction
   {
     void apply(String aggregatorName, int aggregatorIndex, Object object);
   }

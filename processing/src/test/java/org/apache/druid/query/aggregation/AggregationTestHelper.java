@@ -573,7 +573,7 @@ public class AggregationTestHelper implements Closeable
 
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
   //from each segment, later deserialize and merge and finally return the results
-  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final String queryJson) throws Exception
+  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
   {
     return runQueryOnSegments(segmentDirs, readQuery(queryJson));
   }
