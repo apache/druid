@@ -24,12 +24,6 @@
       "<rootDir>src/setup-tests.ts"
     ]
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run tslint-changed-only && npm run sasslint-changed-only",
-      "pre-push": "npm run tslint && npm run sasslint"
-    }
-  },
   "prettier": {
     "trailingComma": "all",
     "tabWidth": 2,
@@ -112,7 +106,6 @@
     "enzyme-adapter-react-16": "^1.14.0",
     "enzyme-to-json": "^3.3.5",
     "fs-extra": "^8.1.0",
-    "husky": "^3.0.1",
     "identity-obj-proxy": "^3.0.0",
     "ignore-styles": "^5.0.1",
     "jest": "^24.8.0",
