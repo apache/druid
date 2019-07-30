@@ -50,6 +50,13 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   private final TgtHllType tgtHllType;
   private final int size;
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+
+  /**
+   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty sketch object.
+   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptySketch
+   * because it is not exactly the same (the "build" flavor initializes based on tgtHllType, but the "merge" flavor
+   * always initializes using HLL_8).
+   */
   private final byte[] emptySketch;
 
   public HllSketchMergeBufferAggregator(
@@ -72,6 +79,8 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
+    // Copy prebuilt empty sketch object.
+
     final int oldPosition = buf.position();
     try {
       buf.position(position);

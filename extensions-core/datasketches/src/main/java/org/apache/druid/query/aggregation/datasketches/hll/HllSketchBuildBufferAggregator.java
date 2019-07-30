@@ -42,7 +42,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  /** for locking per buffer position (power of 2 to make index computation faster) */
+  /**
+   * for locking per buffer position (power of 2 to make index computation faster)
+   */
   private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<Object> selector;
@@ -52,6 +54,14 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+
+  /**
+   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty sketch object.
+   * {@link HllSketchMergeBufferAggregator} does something similar, but we don't share code to create emptySketch
+   * because it is not exactly the same (the "build" flavor initializes based on tgtHllType, but the "merge" flavor
+   * always initializes using HLL_8).
+   */
+  private final byte[] emptySketch;
 
   public HllSketchBuildBufferAggregator(
       final ColumnValueSelector<Object> selector,
@@ -64,11 +74,27 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     this.lgK = lgK;
     this.tgtHllType = tgtHllType;
     this.size = size;
+    this.emptySketch = new byte[size];
+
+    //noinspection ResultOfObjectAllocationIgnored (HllSketch writes to "emptySketch" as a side effect of construction)
+    new HllSketch(lgK, tgtHllType, WritableMemory.wrap(emptySketch));
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
+    // Copy prebuilt empty sketch object.
+
+    final int oldPosition = buf.position();
+    try {
+      buf.position(position);
+      buf.put(emptySketch);
+    }
+    finally {
+      buf.position(oldPosition);
+    }
+
+    // Add an HllSketch for this chunk to our sketchCache.
     final WritableMemory mem = getMemory(buf).writableRegion(position, size);
     putSketchIntoCache(buf, position, new HllSketch(lgK, tgtHllType, mem));
   }
@@ -162,7 +188,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   /**
    * compute lock index to avoid boxing in Striped.get() call
+   *
    * @param position
+   *
    * @return index
    */
   static int lockIndex(final int position)
@@ -172,7 +200,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   /**
    * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+   *
    * @param hashCode
+   *
    * @return smeared hashCode
    */
   private static int smear(int hashCode)
