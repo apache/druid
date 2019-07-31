@@ -17,7 +17,7 @@
  */
 
 import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import * as d3 from 'd3';
+import d3 from 'd3';
 import { AxisScale } from 'd3';
 import React from 'react';
 

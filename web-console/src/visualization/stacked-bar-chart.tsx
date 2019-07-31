@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as d3 from 'd3';
+import d3 from 'd3';
 import { AxisScale } from 'd3';
 import React from 'react';
 

@@ -10,7 +10,6 @@
     "strict": true,
     "skipLibCheck": true,
     "importHelpers": true,
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "noUnusedParameters": true,
     "noUnusedLocals": true,
