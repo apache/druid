@@ -137,7 +137,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     super(props, context);
 
     const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: props.datasource });
+    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `"${props.datasource}"` });
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
@@ -291,7 +291,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   componentDidMount(): void {
-    if (this.props.noSqlMode) {
+    const { noSqlMode } = this.props;
+    if (noSqlMode) {
       this.segmentsNoSqlQueryManager.runQuery(null);
     }
   }
@@ -673,7 +674,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         {segmentTableActionDialogId && (
           <SegmentTableActionDialog
             segmentId={segmentTableActionDialogId}
-            dataSourceId={datasourceTableActionDialogId}
+            datasourceId={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ segmentTableActionDialogId: undefined })}
             isOpen

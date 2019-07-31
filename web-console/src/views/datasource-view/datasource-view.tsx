@@ -84,12 +84,6 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
   return loadDrop.join(', ') || 'No segments to load/drop';
 }
 
-export interface DatasourcesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
-  noSqlMode: boolean;
-}
-
 interface Datasource {
   datasource: string;
   rules: any[];
@@ -107,17 +101,34 @@ interface DatasourceQueryResultRow {
   num_rows: number;
 }
 
+interface RetentionDialogOpenOn {
+  datasource: string;
+  rules: any[];
+}
+
+interface CompactionDialogOpenOn {
+  datasource: string;
+  compactionConfig: Record<string, any>;
+}
+
+export interface DatasourcesViewProps {
+  goToQuery: (initSql: string) => void;
+  goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
+  noSqlMode: boolean;
+  initDatasource?: string;
+}
+
 export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
   defaultRules: any[];
   datasourcesError?: string;
-  datasourcesFilter: Filter[];
+  datasourceFilter: Filter[];
 
   showDisabled: boolean;
-  retentionDialogOpenOn?: { datasource: string; rules: any[] };
-  compactionDialogOpenOn?: { datasource: string; configData: any };
+  retentionDialogOpenOn?: RetentionDialogOpenOn;
+  compactionDialogOpenOn?: CompactionDialogOpenOn;
   dropDataDatasource?: string;
   enableDatasource?: string;
   killDatasource?: string;
@@ -167,12 +178,18 @@ GROUP BY 1`;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
+
+    const datasourceFilter: Filter[] = [];
+    if (props.initDatasource) {
+      datasourceFilter.push({ id: 'datasource', value: `"${props.initDatasource}"` });
+    }
+
     this.state = {
       datasourcesLoading: true,
       datasources: null,
       tiers: [],
       defaultRules: [],
-      datasourcesFilter: [],
+      datasourceFilter,
 
       showDisabled: false,
       dropReloadAction: 'drop',
@@ -422,9 +439,9 @@ GROUP BY 1`;
         }}
       >
         <p>
-          {`Are you sure you want to permanently delete the data in datasource '${killDatasource}'?`}
+          {`Are you sure you want to permanently delete the deep storage data for datasource '${killDatasource}'?`}
         </p>
-        <p>This action can not be undone.</p>
+        <p>This action is not reversible and the data deleted will be lost.</p>
       </AsyncActionDialog>
     );
   }
@@ -514,7 +531,12 @@ GROUP BY 1`;
     this.setState({ showDisabled: !showDisabled });
   }
 
-  getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
+  getDatasourceActions(
+    datasource: string,
+    disabled: boolean,
+    rules: any[],
+    compactionConfig: Record<string, any>,
+  ): BasicAction[] {
     const { goToQuery } = this.props;
 
     if (disabled) {
@@ -526,7 +548,7 @@ GROUP BY 1`;
         },
         {
           icon: IconNames.TRASH,
-          title: 'Permanently delete (kill task)',
+          title: 'Delete segments (issue kill task)',
           intent: Intent.DANGER,
           onAction: () => this.setState({ killDatasource: datasource }),
         },
@@ -537,6 +559,30 @@ GROUP BY 1`;
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
           onAction: () => goToQuery(`SELECT * FROM "${datasource}"`),
+        },
+        {
+          icon: IconNames.AUTOMATIC_UPDATES,
+          title: 'Edit retention rules',
+          onAction: () => {
+            this.setState({
+              retentionDialogOpenOn: {
+                datasource,
+                rules,
+              },
+            });
+          },
+        },
+        {
+          icon: IconNames.COMPRESSED,
+          title: 'Edit compaction configuration',
+          onAction: () => {
+            this.setState({
+              compactionDialogOpenOn: {
+                datasource,
+                compactionConfig,
+              },
+            });
+          },
         },
         {
           icon: IconNames.EXPORT,
@@ -555,6 +601,12 @@ GROUP BY 1`;
           title: 'Drop datasource (disable)',
           intent: Intent.DANGER,
           onAction: () => this.setState({ dropDataDatasource: datasource }),
+        },
+        {
+          icon: IconNames.TRASH,
+          title: 'Delete unused segments (issue kill task)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ killDatasource: datasource }),
         },
       ];
     }
@@ -584,7 +636,7 @@ GROUP BY 1`;
     return (
       <CompactionDialog
         datasource={compactionDialogOpenOn.datasource}
-        configData={compactionDialogOpenOn.configData}
+        compactionConfig={compactionDialogOpenOn.compactionConfig}
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
         onSave={this.saveCompaction}
         onDelete={this.deleteCompaction}
@@ -599,7 +651,7 @@ GROUP BY 1`;
       defaultRules,
       datasourcesLoading,
       datasourcesError,
-      datasourcesFilter,
+      datasourceFilter,
       showDisabled,
       hiddenColumns,
       showChart,
@@ -619,9 +671,9 @@ GROUP BY 1`;
               : datasourcesError || ''
           }
           filterable
-          filtered={datasourcesFilter}
+          filtered={datasourceFilter}
           onFilteredChange={filtered => {
-            this.setState({ datasourcesFilter: filtered });
+            this.setState({ datasourceFilter: filtered });
           }}
           columns={[
             {
@@ -634,7 +686,7 @@ GROUP BY 1`;
                   <a
                     onClick={() => {
                       this.setState({
-                        datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value),
+                        datasourceFilter: addFilter(datasourceFilter, 'datasource', value),
                       });
                     }}
                   >
@@ -759,10 +811,6 @@ GROUP BY 1`;
               filterable: false,
               Cell: row => {
                 const { compaction } = row.original;
-                const compactionOpenOn: { datasource: string; configData: any } | null = {
-                  datasource: row.original.datasource,
-                  configData: compaction,
-                };
                 let text: string;
                 if (compaction) {
                   text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
@@ -772,7 +820,14 @@ GROUP BY 1`;
                 return (
                   <span
                     className="clickable-cell"
-                    onClick={() => this.setState({ compactionDialogOpenOn: compactionOpenOn })}
+                    onClick={() =>
+                      this.setState({
+                        compactionDialogOpenOn: {
+                          datasource: row.original.datasource,
+                          compactionConfig: compaction,
+                        },
+                      })
+                    }
                   >
                     {text}&nbsp;
                     <ActionIcon icon={IconNames.EDIT} />
@@ -813,8 +868,13 @@ GROUP BY 1`;
               filterable: false,
               Cell: row => {
                 const datasource = row.value;
-                const { disabled } = row.original;
-                const datasourceActions = this.getDatasourceActions(datasource, disabled);
+                const { disabled, rules, compaction } = row.original;
+                const datasourceActions = this.getDatasourceActions(
+                  datasource,
+                  disabled,
+                  rules,
+                  compaction,
+                );
                 return <ActionCell actions={datasourceActions} />;
               },
               show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),

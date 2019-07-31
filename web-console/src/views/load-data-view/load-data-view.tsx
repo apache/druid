@@ -348,13 +348,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   componentDidMount(): void {
+    const { initTaskId, initSupervisorId } = this.props;
     const { spec } = this.state;
 
     this.getOverlordModules();
-    if (this.props.initTaskId) {
+    if (initTaskId) {
       this.updateStep('loading');
       this.getTaskJson();
-    } else if (this.props.initSupervisorId) {
+    } else if (initSupervisorId) {
       this.updateStep('loading');
       this.getSupervisorJson();
     } else if (isEmptyIngestionSpec(spec)) {
