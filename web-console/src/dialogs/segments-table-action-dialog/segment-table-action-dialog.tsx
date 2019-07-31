@@ -20,7 +20,7 @@ import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
-import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
+import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface SegmentTableActionDialogProps extends IDialogProps {
@@ -64,7 +64,7 @@ export class SegmentTableActionDialog extends React.PureComponent<
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Segment: ${segmentId}`}
-        bottomButtons={basicActionsToButtons(actions)}
+        actions={actions}
       >
         {activeTab === 'metadata' && (
           <ShowJson

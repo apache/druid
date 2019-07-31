@@ -16,8 +16,20 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Icon, IconName, IDialogProps, Intent } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  Icon,
+  IconName,
+  IDialogProps,
+  Intent,
+  Popover,
+} from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
+
+import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './table-action-dialog.scss';
 
@@ -31,7 +43,7 @@ export interface SideButtonMetaData {
 interface TableActionDialogProps extends IDialogProps {
   sideButtonMetadata: SideButtonMetaData[];
   onClose: () => void;
-  bottomButtons?: React.ReactNode;
+  actions?: BasicAction[];
 }
 
 export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
@@ -41,7 +53,8 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
   }
 
   render(): JSX.Element {
-    const { sideButtonMetadata, isOpen, onClose, title, bottomButtons } = this.props;
+    const { sideButtonMetadata, isOpen, onClose, title, actions } = this.props;
+    const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
     return (
       <Dialog className="table-action-dialog" isOpen={isOpen} onClose={onClose} title={title}>
@@ -62,7 +75,13 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
           <div className="main-section">{this.props.children}</div>
         </div>
         <div className={Classes.DIALOG_FOOTER}>
-          <div className="footer-actions-left">{bottomButtons}</div>
+          {actionsMenu && (
+            <div className="footer-actions-left">
+              <Popover content={actionsMenu}>
+                <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
+              </Popover>
+            </div>
+          )}
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
             <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
           </div>
