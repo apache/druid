@@ -92,35 +92,6 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
               type="button"
             >
               <span
-                class="bp3-icon bp3-icon-align-left"
-                icon="align-left"
-              >
-                <svg
-                  data-icon="align-left"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  width="20"
-                >
-                  <desc>
-                    align-left
-                  </desc>
-                  <path
-                    d="M1 7h10c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm14 14H1c-.55 0-1 .45-1 1s.45 1 1 1h14c.55 0 1-.45 1-1s-.45-1-1-1zm4-8H1c-.55 0-1 .45-1 1s.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1zM1 15h6c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
-              </span>
-              <span
-                class="bp3-button-text"
-              >
-                Payload
-              </span>
-            </button>
-            <button
-              class="bp3-button bp3-minimal tab-button"
-              type="button"
-            >
-              <span
                 class="bp3-icon bp3-icon-chart"
                 icon="chart"
               >
@@ -143,6 +114,35 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
                 class="bp3-button-text"
               >
                 Statistics
+              </span>
+            </button>
+            <button
+              class="bp3-button bp3-minimal tab-button"
+              type="button"
+            >
+              <span
+                class="bp3-icon bp3-icon-align-left"
+                icon="align-left"
+              >
+                <svg
+                  data-icon="align-left"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  width="20"
+                >
+                  <desc>
+                    align-left
+                  </desc>
+                  <path
+                    d="M1 7h10c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm14 14H1c-.55 0-1 .45-1 1s.45 1 1 1h14c.55 0 1-.45 1-1s-.45-1-1-1zm4-8H1c-.55 0-1 .45-1 1s.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1zM1 15h6c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp3-button-text"
+              >
+                Payload
               </span>
             </button>
             <button
@@ -188,7 +188,9 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
                   class="bp3-button-group right-buttons"
                 >
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -198,7 +200,9 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
                     </span>
                   </button>
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -208,7 +212,9 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
                     </span>
                   </button>
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -221,12 +227,7 @@ exports[`supervisor table action dialog matches snapshot 1`] = `
               </div>
               <div
                 class="main-area"
-              >
-                <textarea
-                  class="bp3-input"
-                  readonly=""
-                />
-              </div>
+              />
             </div>
           </div>
         </div>

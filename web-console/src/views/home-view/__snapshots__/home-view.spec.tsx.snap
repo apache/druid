@@ -4,33 +4,29 @@ exports[`home view matches snapshot 1`] = `
 <div
   className="home-view app-view"
 >
-  <a
-    href="/status"
-    target="_blank"
+  <Blueprint3.Card
+    className="status-card"
+    elevation={0}
+    interactive={true}
+    onClick={[Function]}
   >
-    <Blueprint3.Card
-      className="status-card"
-      elevation={0}
-      interactive={true}
-    >
-      <Component>
-        <Blueprint3.Icon
-          color="#bfccd5"
-          icon="graph"
-        />
-         
-        Status
-      </Component>
-      <p>
-        Loading...
-      </p>
-    </Blueprint3.Card>
-  </a>
+    <Component>
+      <Blueprint3.Icon
+        color="#bfccd5"
+        icon="graph"
+      />
+       
+      Status
+    </Component>
+    <p>
+      Loading...
+    </p>
+  </Blueprint3.Card>
   <a
     href="#datasources"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -51,7 +47,7 @@ exports[`home view matches snapshot 1`] = `
     href="#segments"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -72,7 +68,7 @@ exports[`home view matches snapshot 1`] = `
     href="#tasks"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -93,7 +89,7 @@ exports[`home view matches snapshot 1`] = `
     href="#tasks"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -114,7 +110,7 @@ exports[`home view matches snapshot 1`] = `
     href="#servers"
   >
     <Blueprint3.Card
-      className="status-card"
+      className="home-view-card"
       elevation={0}
       interactive={true}
     >
@@ -125,6 +121,27 @@ exports[`home view matches snapshot 1`] = `
         />
          
         Servers
+      </Component>
+      <p>
+        Loading...
+      </p>
+    </Blueprint3.Card>
+  </a>
+  <a
+    href="#lookups"
+  >
+    <Blueprint3.Card
+      className="home-view-card"
+      elevation={0}
+      interactive={true}
+    >
+      <Component>
+        <Blueprint3.Icon
+          color="#bfccd5"
+          icon="properties"
+        />
+         
+        Lookups
       </Component>
       <p>
         Loading...

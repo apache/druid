@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -39,7 +40,8 @@ import java.util.stream.Collectors;
 
 public class FirehoseModuleTest
 {
-  private static final Predicate<Class> IS_FIREHOSE_FACTORY = FirehoseFactory.class::isAssignableFrom;
+  private static final Predicate<Class> IS_FIREHOSE_FACTORY =
+      c -> FirehoseFactory.class.isAssignableFrom(c) && !Modifier.isAbstract(c.getModifiers());
 
   @Test
   public void testAllFirehoseFactorySubtypesRegistered() throws IOException

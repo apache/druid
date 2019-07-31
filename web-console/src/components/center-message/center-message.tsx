@@ -23,7 +23,7 @@ import './center-message.scss';
 export interface CenterMessageProps {}
 
 export class CenterMessage extends React.PureComponent<CenterMessageProps> {
-  render() {
+  render(): JSX.Element {
     return (
       <div className="center-message bp3-input">
         <div className="center-message-inner">{this.props.children}</div>

@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -71,7 +72,7 @@ public class RemoteTaskActionClientTest
 
     // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<>();
-    final List<TaskLock> expectedLocks = Collections.singletonList(new TaskLock(
+    final List<TaskLock> expectedLocks = Collections.singletonList(new TimeChunkLock(
         TaskLockType.SHARED,
         "groupId",
         "dataSource",
@@ -91,7 +92,7 @@ public class RemoteTaskActionClientTest
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,
@@ -123,7 +124,7 @@ public class RemoteTaskActionClientTest
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,

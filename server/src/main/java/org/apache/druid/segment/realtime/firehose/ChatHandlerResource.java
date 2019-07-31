@@ -32,7 +32,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import java.util.List;
 
-@Path("/druid/worker/v1")
+@Path("/druid/worker/v1/chat")
 public class ChatHandlerResource
 {
   public static final String TASK_ID_HEADER = "X-Druid-Task-Id";
@@ -47,7 +47,7 @@ public class ChatHandlerResource
     this.taskId = taskIdHolder.getTaskId();
   }
 
-  @Path("/chat/{id}")
+  @Path("/{id}")
   public Object doTaskChat(@PathParam("id") String handlerId, @Context HttpHeaders headers)
   {
     if (taskId != null) {

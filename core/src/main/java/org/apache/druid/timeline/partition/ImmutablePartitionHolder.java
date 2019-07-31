@@ -19,9 +19,11 @@
 
 package org.apache.druid.timeline.partition;
 
+import org.apache.druid.timeline.Overshadowable;
+
 /**
  */
-public class ImmutablePartitionHolder<T> extends PartitionHolder<T>
+public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends PartitionHolder<T>
 {
   public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
   {

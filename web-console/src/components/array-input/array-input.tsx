@@ -19,10 +19,12 @@
 import { TextArea } from '@blueprintjs/core';
 import React from 'react';
 
+import { compact } from '../../utils';
+
 export interface ArrayInputProps {
   className?: string;
   values: string[];
-  onChange: (newValues: string[]) => void;
+  onChange: (newValues: string[] | undefined) => void;
   placeholder?: string;
   large?: boolean;
   disabled?: boolean;
@@ -39,8 +41,8 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
   private handleChange = (e: any) => {
     const { onChange } = this.props;
     const stringValue = e.target.value;
-    const newValues = stringValue.split(',').map((v: string) => v.trim());
-    const newValuesFiltered = newValues.filter(Boolean);
+    const newValues: string[] = stringValue.split(',').map((v: string) => v.trim());
+    const newValuesFiltered = compact(newValues);
     this.setState({
       stringValue:
         newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue,
@@ -48,7 +50,7 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
     if (onChange) onChange(stringValue === '' ? undefined : newValuesFiltered);
   };
 
-  render() {
+  render(): JSX.Element {
     const { className, placeholder, large, disabled } = this.props;
     const { stringValue } = this.state;
     return (

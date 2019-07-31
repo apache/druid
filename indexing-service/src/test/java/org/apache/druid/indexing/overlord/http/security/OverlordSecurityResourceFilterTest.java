@@ -78,7 +78,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   private final String requestMethod;
   private final ResourceFilter resourceFilter;
   private final Injector injector;
-  private final Task noopTask = new NoopTask(null, null, 0, 0, null, null, null);
+  private final Task noopTask = NoopTask.create();
 
   private static boolean mockedOnceTsqa;
   private static boolean mockedOnceSM;

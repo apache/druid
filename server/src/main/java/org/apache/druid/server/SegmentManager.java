@@ -32,6 +32,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -171,10 +172,11 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
+            final ReferenceCountingSegment referenceCountingSegment = new ReferenceCountingSegment(adapter);
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
+                segment.getShardSpec().createChunk(referenceCountingSegment)
             );
             dataSourceState.addSegment(segment);
             resultSupplier.set(true);
@@ -213,16 +215,26 @@ public class SegmentManager
         (dataSourceName, dataSourceState) -> {
           if (dataSourceState == null) {
             log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
+            return null;
           } else {
             final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
                 dataSourceState.getTimeline();
 
+            final ShardSpec shardSpec = segment.getShardSpec();
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
                 segment.getVersion(),
                 // remove() internally searches for a partitionChunk to remove which is *equal* to the given
                 // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
-                segment.getShardSpec().createChunk(null)
+                segment.getShardSpec().createChunk(
+                    new ReferenceCountingSegment(
+                        null,
+                        shardSpec.getStartRootPartitionId(),
+                        shardSpec.getEndRootPartitionId(),
+                        shardSpec.getMinorVersion(),
+                        shardSpec.getAtomicUpdateGroupSize()
+                    )
+                )
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
@@ -239,10 +251,10 @@ public class SegmentManager
                   segment.getVersion()
               );
             }
-          }
 
-          // Returning null removes the entry of dataSource from the map
-          return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
+            // Returning null removes the entry of dataSource from the map
+            return dataSourceState.isEmpty() ? null : dataSourceState;
+          }
         }
     );
 

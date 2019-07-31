@@ -62,6 +62,15 @@ public class AllGranularity extends Granularity
     throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
+  /**
+   * No interval is aligned with all granularity since it's infinite.
+   */
+  @Override
+  public boolean isAligned(Interval interval)
+  {
+    return false;
+  }
+
   @Override
   public byte[] getCacheKey()
   {

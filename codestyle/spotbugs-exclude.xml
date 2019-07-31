@@ -37,7 +37,6 @@
     <Bug pattern="DC_DOUBLECHECK"/>
     <Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
     <Bug pattern="DM_EXIT"/>
-    <Bug pattern="DM_NUMBER_CTOR"/>
     <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
@@ -75,7 +74,6 @@
     <Bug pattern="OS_OPEN_STREAM"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-    <Bug pattern="RC_REF_COMPARISON_BAD_PRACTICE_BOOLEAN"/>
     <Bug pattern="REC_CATCH_EXCEPTION"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
@@ -89,5 +87,4 @@
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
-    <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
 </FindBugsFilter>

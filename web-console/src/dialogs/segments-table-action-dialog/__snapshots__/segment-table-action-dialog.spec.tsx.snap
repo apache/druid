@@ -101,7 +101,9 @@ exports[`task table action dialog matches snapshot 1`] = `
                   class="bp3-button-group right-buttons"
                 >
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -111,7 +113,9 @@ exports[`task table action dialog matches snapshot 1`] = `
                     </span>
                   </button>
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -121,7 +125,9 @@ exports[`task table action dialog matches snapshot 1`] = `
                     </span>
                   </button>
                   <button
-                    class="bp3-button bp3-minimal"
+                    class="bp3-button bp3-disabled bp3-minimal"
+                    disabled=""
+                    tabindex="-1"
                     type="button"
                   >
                     <span
@@ -134,12 +140,7 @@ exports[`task table action dialog matches snapshot 1`] = `
               </div>
               <div
                 class="main-area"
-              >
-                <textarea
-                  class="bp3-input"
-                  readonly=""
-                />
-              </div>
+              />
             </div>
           </div>
         </div>

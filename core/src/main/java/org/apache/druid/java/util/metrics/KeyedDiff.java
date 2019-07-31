@@ -41,12 +41,12 @@ public class KeyedDiff
     }
   }
 
-  public static Map<String, Long> subtract(Map<String, Long> xs, Map<String, Long> ys)
+  public static Map<String, Long> subtract(Map<String, Long> lhs, Map<String, Long> rhs)
   {
-    assert xs.keySet().equals(ys.keySet());
-    final Map<String, Long> zs = new HashMap<String, Long>();
-    for (String k : xs.keySet()) {
-      zs.put(k, xs.get(k) - ys.get(k));
+    assert lhs.keySet().equals(rhs.keySet());
+    final Map<String, Long> zs = new HashMap<>();
+    for (Map.Entry<String, Long> k : lhs.entrySet()) {
+      zs.put(k.getKey(), k.getValue() - rhs.get(k.getKey()));
     }
     return zs;
   }

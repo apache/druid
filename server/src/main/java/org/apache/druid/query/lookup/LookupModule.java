@@ -46,6 +46,7 @@ public class LookupModule implements DruidModule
 {
   static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
+  public static final int LOOKUP_LISTENER_QOS_MAX_REQUESTS = 2;
 
   public static String getTierListenerPath(String tier)
   {
@@ -80,7 +81,7 @@ public class LookupModule implements DruidModule
     JettyBindings.addQosFilter(
         binder,
         ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY,
-        2 // 1 for "normal" operation and 1 for "emergency" or other
+        LOOKUP_LISTENER_QOS_MAX_REQUESTS // 1 for "normal" operation and 1 for "emergency" or other
     );
   }
 

@@ -43,7 +43,7 @@ export function localStorageSet(key: LocalStorageKeys, value: string): void {
   localStorage.setItem(key, value);
 }
 
-export function localStorageGet(key: LocalStorageKeys): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
+export function localStorageGet(key: LocalStorageKeys): string | undefined {
+  if (typeof localStorage === 'undefined') return;
+  return localStorage.getItem(key) || undefined;
 }
