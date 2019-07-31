@@ -43,9 +43,12 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -70,6 +73,14 @@ public class FilterPartitionTest extends BaseFilterTest
     )
     {
       super(dimension, value);
+    }
+    public NoBitmapSelectorFilter(
+        String dimension,
+        String value,
+        FilterTuning filterTuning
+    )
+    {
+      super(dimension, value, filterTuning);
     }
 
     @Override
@@ -726,5 +737,85 @@ public class FilterPartitionTest extends BaseFilterTest
         dimFilter3,
         ImmutableList.of("2", "3", "4", "6", "7", "9")
     );
+  }
+
+  @Test
+  public void testAnalyze()
+  {
+    if (!(adapter instanceof QueryableIndexStorageAdapter)) {
+      return;
+    }
+    QueryableIndexStorageAdapter storageAdapter = (QueryableIndexStorageAdapter) adapter;
+    final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = storageAdapter.makeBitmapIndexSelector(BaseFilterTest.VIRTUAL_COLUMNS);
+
+    // has bitmap index, will use it by default
+    Filter normalFilter = new SelectorFilter("dim1", "HELLO");
+    QueryableIndexStorageAdapter.FilterAnalysis filterAnalysisNormal =
+        storageAdapter.analyzeFilter(normalFilter, bitmapIndexSelector, null);
+    Assert.assertTrue(filterAnalysisNormal.getPreFilterBitmap() != null);
+    Assert.assertTrue(filterAnalysisNormal.getPostFilter() == null);
+
+
+    // no bitmap index, should be a post filter
+    Filter noBitmapFilter = new NoBitmapSelectorFilter("dim1", "HELLO");
+    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterAnalysis =
+        storageAdapter.analyzeFilter(noBitmapFilter, bitmapIndexSelector, null);
+    Assert.assertTrue(noBitmapFilterAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(noBitmapFilterAnalysis.getPostFilter() != null);
+
+    // this column has a bitmap index, but is forced to not use it
+    Filter bitmapFilterWithForceNoIndexTuning = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(false, null, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithForceNoIndexTuningAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithForceNoIndexTuning, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPostFilter() != null);
+
+    // this max cardinality is too low to use bitmap index
+    Filter bitmapFilterWithCardinalityMax = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 0, 3)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMaxAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPostFilter() != null);
+
+    // this max cardinality is high enough that we can still use bitmap index
+    Filter bitmapFilterWithCardinalityMax2 = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 0, 1000)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMax2Analysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax2, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPreFilterBitmap() != null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPostFilter() == null);
+
+    // this min cardinality is too high, will not use bitmap index
+    Filter bitmapFilterWithCardinalityMin = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 1000, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMinAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMin, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPostFilter() != null);
+
+    // cannot force using bitmap if there are no bitmaps
+    Filter noBitmapFilterWithForceUse = new NoBitmapSelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, null, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterWithForceUseAnalysis =
+        storageAdapter.analyzeFilter(noBitmapFilterWithForceUse, bitmapIndexSelector, null);
+    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPostFilter() != null);
   }
 }

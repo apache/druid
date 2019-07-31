@@ -243,7 +243,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
           new IntervalDimFilter(
               intervalDimFilter.getDimension(),
               effectiveFilterIntervals,
-              intervalDimFilter.getExtractionFn()
+              intervalDimFilter.getExtractionFn(),
+              intervalDimFilter.getFilterTuning()
           ),
           this.name
       );

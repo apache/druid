@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -65,6 +66,7 @@ public class InDimFilter implements DimFilter
   private final SortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
@@ -73,7 +75,8 @@ public class InDimFilter implements DimFilter
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("values") Collection<String> values,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -85,9 +88,20 @@ public class InDimFilter implements DimFilter
     }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.longPredicateSupplier = getLongPredicateSupplier();
     this.floatPredicateSupplier = getFloatPredicateSupplier();
     this.doublePredicateSupplier = getDoublePredicateSupplier();
+  }
+
+  @VisibleForTesting
+  public InDimFilter(
+      String dimension,
+      Collection<String> values,
+      ExtractionFn extractionFn
+  )
+  {
+    this(dimension, values, extractionFn, null);
   }
 
   @JsonProperty
@@ -106,6 +120,12 @@ public class InDimFilter implements DimFilter
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -133,7 +153,7 @@ public class InDimFilter implements DimFilter
   {
     InDimFilter inFilter = optimizeLookup();
     if (inFilter.values.size() == 1) {
-      return new SelectorDimFilter(inFilter.dimension, inFilter.values.first(), inFilter.getExtractionFn());
+      return new SelectorDimFilter(inFilter.dimension, inFilter.values.first(), inFilter.getExtractionFn(), filterTuning);
     }
     return inFilter;
   }
@@ -169,7 +189,7 @@ public class InDimFilter implements DimFilter
       if (keys.isEmpty()) {
         return this;
       } else {
-        return new InDimFilter(dimension, keys, null);
+        return new InDimFilter(dimension, keys, null, filterTuning);
       }
     }
     return this;
@@ -184,7 +204,8 @@ public class InDimFilter implements DimFilter
         longPredicateSupplier,
         floatPredicateSupplier,
         doublePredicateSupplier,
-        extractionFn
+        extractionFn,
+        filterTuning
     );
   }
 
@@ -216,37 +237,6 @@ public class InDimFilter implements DimFilter
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    InDimFilter that = (InDimFilter) o;
-
-    if (values != null ? !values.equals(that.values) : that.values != null) {
-      return false;
-    }
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = values != null ? values.hashCode() : 0;
-    result = 31 * result + dimension.hashCode();
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
-  }
-
-  @Override
   public String toString()
   {
     final StringBuilder builder = new StringBuilder();
@@ -269,6 +259,28 @@ public class InDimFilter implements DimFilter
            )
            .append(")");
     return builder.toString();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InDimFilter that = (InDimFilter) o;
+    return values.equals(that.values) &&
+           dimension.equals(that.dimension) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(values, dimension, extractionFn, filterTuning);
   }
 
   // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.

@@ -43,6 +43,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
@@ -76,6 +77,7 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -84,10 +86,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class BaseFilterTest
 {
-  private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
+  static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
           new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
@@ -401,10 +404,23 @@ public abstract class BaseFilterTest
         return false;
       }
 
+      @Nullable
+      @Override
+      public FilterTuning getManualTuning()
+      {
+        return null;
+      }
+
       @Override
       public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return false;
+      }
+
+      @Override
+      public Set<String> getRequiredColumns()
+      {
+        return null;
       }
 
       @Override
@@ -478,6 +494,19 @@ public abstract class BaseFilterTest
       public boolean canVectorizeMatcher()
       {
         return theFilter.canVectorizeMatcher();
+      }
+
+      @Override
+      public Set<String> getRequiredColumns()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public FilterTuning getManualTuning()
+      {
+        return null;
       }
 
       @Override

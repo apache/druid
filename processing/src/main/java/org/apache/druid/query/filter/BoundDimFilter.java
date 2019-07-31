@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
@@ -56,6 +57,7 @@ public class BoundDimFilter implements DimFilter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public BoundDimFilter(
@@ -66,7 +68,8 @@ public class BoundDimFilter implements DimFilter
       @JsonProperty("upperStrict") Boolean upperStrict,
       @Deprecated @JsonProperty("alphaNumeric") Boolean alphaNumeric,
       @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("ordering") StringComparator ordering
+      @JsonProperty("ordering") StringComparator ordering,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -98,6 +101,22 @@ public class BoundDimFilter implements DimFilter
     this.longPredicateSupplier = makeLongPredicateSupplier();
     this.floatPredicateSupplier = makeFloatPredicateSupplier();
     this.doublePredicateSupplier = makeDoublePredicateSupplier();
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public BoundDimFilter(
+      String dimension,
+      String lower,
+      String upper,
+      Boolean lowerStrict,
+      Boolean upperStrict,
+      Boolean alphaNumeric,
+      ExtractionFn extractionFn,
+      StringComparator ordering
+  )
+  {
+    this(dimension, lower, upper, lowerStrict, upperStrict, alphaNumeric, extractionFn, ordering, null);
   }
 
   @JsonProperty
@@ -150,6 +169,12 @@ public class BoundDimFilter implements DimFilter
   public StringComparator getOrdering()
   {
     return ordering;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   public Supplier<DruidLongPredicate> getLongPredicateSupplier()
@@ -263,43 +288,30 @@ public class BoundDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     BoundDimFilter that = (BoundDimFilter) o;
-
-    if (isLowerStrict() != that.isLowerStrict()) {
-      return false;
-    }
-    if (isUpperStrict() != that.isUpperStrict()) {
-      return false;
-    }
-    if (!getDimension().equals(that.getDimension())) {
-      return false;
-    }
-    if (getUpper() != null ? !getUpper().equals(that.getUpper()) : that.getUpper() != null) {
-      return false;
-    }
-    if (getLower() != null ? !getLower().equals(that.getLower()) : that.getLower() != null) {
-      return false;
-    }
-    if (getExtractionFn() != null
-        ? !getExtractionFn().equals(that.getExtractionFn())
-        : that.getExtractionFn() != null) {
-      return false;
-    }
-    return getOrdering().equals(that.getOrdering());
+    return lowerStrict == that.lowerStrict &&
+           upperStrict == that.upperStrict &&
+           dimension.equals(that.dimension) &&
+           Objects.equals(upper, that.upper) &&
+           Objects.equals(lower, that.lower) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(ordering, that.ordering) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getDimension().hashCode();
-    result = 31 * result + (getUpper() != null ? getUpper().hashCode() : 0);
-    result = 31 * result + (getLower() != null ? getLower().hashCode() : 0);
-    result = 31 * result + (isLowerStrict() ? 1 : 0);
-    result = 31 * result + (isUpperStrict() ? 1 : 0);
-    result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
-    result = 31 * result + getOrdering().hashCode();
-    return result;
+    return Objects.hash(
+        dimension,
+        upper,
+        lower,
+        lowerStrict,
+        upperStrict,
+        extractionFn,
+        ordering,
+        filterTuning
+    );
   }
 
   @Override

@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
@@ -38,6 +39,7 @@ import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.Objects;
 
 public class JavaScriptDimFilter implements DimFilter
 {
@@ -45,6 +47,7 @@ public class JavaScriptDimFilter implements DimFilter
   private final String function;
   private final ExtractionFn extractionFn;
   private final JavaScriptConfig config;
+  private final FilterTuning filterTuning;
 
   /**
    * The field is declared volatile in order to ensure safe publication of the object
@@ -62,6 +65,7 @@ public class JavaScriptDimFilter implements DimFilter
       @JsonProperty("dimension") String dimension,
       @JsonProperty("function") String function,
       @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") FilterTuning filterTuning,
       @JacksonInject JavaScriptConfig config
   )
   {
@@ -70,7 +74,19 @@ public class JavaScriptDimFilter implements DimFilter
     this.dimension = dimension;
     this.function = function;
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.config = config;
+  }
+
+  @VisibleForTesting
+  public JavaScriptDimFilter(
+      String dimension,
+      String function,
+      ExtractionFn extractionFn,
+      JavaScriptConfig config
+  )
+  {
+    this(dimension, function, extractionFn, null, config);
   }
 
   @JsonProperty
@@ -89,6 +105,12 @@ public class JavaScriptDimFilter implements DimFilter
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -118,7 +140,7 @@ public class JavaScriptDimFilter implements DimFilter
   public Filter toFilter()
   {
     JavaScriptPredicateFactory predicateFactory = getPredicateFactory();
-    return new JavaScriptFilter(dimension, predicateFactory);
+    return new JavaScriptFilter(dimension, predicateFactory, filterTuning);
   }
 
   /**
@@ -158,44 +180,36 @@ public class JavaScriptDimFilter implements DimFilter
   }
 
   @Override
-  public String toString()
-  {
-    return "JavaScriptDimFilter{" +
-           "dimension='" + dimension + '\'' +
-           ", function='" + function + '\'' +
-           ", extractionFn='" + extractionFn + '\'' +
-           '}';
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof JavaScriptDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     JavaScriptDimFilter that = (JavaScriptDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (!function.equals(that.function)) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
+    return dimension.equals(that.dimension) &&
+           function.equals(that.function) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + function.hashCode();
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, function, extractionFn, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JavaScriptDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", function='" + function + '\'' +
+           ", extractionFn=" + extractionFn +
+           ", filterTuning=" + filterTuning +
+           '}';
   }
 
   public static class JavaScriptPredicateFactory implements DruidPredicateFactory

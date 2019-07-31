@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 public class IntervalDimFilter implements DimFilter
 {
@@ -45,12 +47,14 @@ public class IntervalDimFilter implements DimFilter
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final OrDimFilter convertedFilter;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public IntervalDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("intervals") List<Interval> intervals,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -59,8 +63,19 @@ public class IntervalDimFilter implements DimFilter
     this.dimension = dimension;
     this.intervals = Collections.unmodifiableList(JodaUtils.condenseIntervals(intervals));
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.intervalLongs = makeIntervalLongs();
     this.convertedFilter = new OrDimFilter(makeBoundDimFilters());
+  }
+
+  @VisibleForTesting
+  public IntervalDimFilter(
+      String dimension,
+      List<Interval> intervals,
+      ExtractionFn extractionFn
+  )
+  {
+    this(dimension, intervals, extractionFn, null);
   }
 
   @JsonProperty
@@ -79,6 +94,12 @@ public class IntervalDimFilter implements DimFilter
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -139,28 +160,17 @@ public class IntervalDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     IntervalDimFilter that = (IntervalDimFilter) o;
-
-    if (!getIntervals().equals(that.getIntervals())) {
-      return false;
-    }
-    if (!getDimension().equals(that.getDimension())) {
-      return false;
-    }
-    return getExtractionFn() != null
-           ? getExtractionFn().equals(that.getExtractionFn())
-           : that.getExtractionFn() == null;
-
+    return intervals.equals(that.intervals) &&
+           dimension.equals(that.dimension) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getIntervals().hashCode();
-    result = 31 * result + getDimension().hashCode();
-    result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
-    return result;
+    return Objects.hash(intervals, dimension, extractionFn, filterTuning);
   }
 
   @Override
@@ -173,7 +183,7 @@ public class IntervalDimFilter implements DimFilter
   {
     List<Pair<Long, Long>> intervalLongs = new ArrayList<>();
     for (Interval interval : intervals) {
-      intervalLongs.add(new Pair<Long, Long>(interval.getStartMillis(), interval.getEndMillis()));
+      intervalLongs.add(new Pair<>(interval.getStartMillis(), interval.getEndMillis()));
     }
     return intervalLongs;
   }
@@ -190,7 +200,8 @@ public class IntervalDimFilter implements DimFilter
           true,
           null,
           extractionFn,
-          StringComparators.NUMERIC
+          StringComparators.NUMERIC,
+          filterTuning
       );
       boundDimFilters.add(boundDimFilter);
     }

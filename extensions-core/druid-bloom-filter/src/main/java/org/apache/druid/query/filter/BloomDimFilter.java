@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
@@ -32,6 +33,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
 import java.util.HashSet;
+import java.util.Objects;
 
 /**
  */
@@ -42,12 +44,14 @@ public class BloomDimFilter implements DimFilter
   private final BloomKFilter bloomKFilter;
   private final HashCode hash;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -56,6 +60,17 @@ public class BloomDimFilter implements DimFilter
     this.bloomKFilter = bloomKFilterHolder.getFilter();
     this.hash = bloomKFilterHolder.getFilterHash();
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public BloomDimFilter(
+      String dimension,
+      BloomKFilterHolder bloomKFilterHolder,
+      ExtractionFn extractionFn
+  )
+  {
+    this(dimension, bloomKFilterHolder, extractionFn, null);
   }
 
   @Override
@@ -152,7 +167,8 @@ public class BloomDimFilter implements DimFilter
             };
           }
         },
-        extractionFn
+        extractionFn,
+        filterTuning
     );
   }
 
@@ -193,16 +209,17 @@ public class BloomDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     BloomDimFilter that = (BloomDimFilter) o;
+    return dimension.equals(that.dimension) &&
+           hash.equals(that.hash) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
 
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (hash != null ? !hash.equals(that.hash) : that.hash != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, hash, extractionFn, filterTuning);
   }
 
   @Override
@@ -215,14 +232,5 @@ public class BloomDimFilter implements DimFilter
   public HashSet<String> getRequiredColumns()
   {
     return Sets.newHashSet(dimension);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dimension.hashCode();
-    result = 31 * result + (hash != null ? hash.hashCode() : 0);
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
   }
 }

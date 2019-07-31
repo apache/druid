@@ -204,7 +204,7 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null, null);
       return this;
     }
 

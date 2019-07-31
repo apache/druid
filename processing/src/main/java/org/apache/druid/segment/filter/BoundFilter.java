@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
@@ -45,13 +46,16 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
+import java.util.Set;
 
 public class BoundFilter implements Filter
 {
   private final BoundDimFilter boundDimFilter;
   private final Comparator<String> comparator;
   private final ExtractionFn extractionFn;
+  private final FilterTuning manualFilterTuning;
 
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
@@ -65,6 +69,7 @@ public class BoundFilter implements Filter
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
     this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
     this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
+    this.manualFilterTuning = boundDimFilter.getFilterTuning();
   }
 
   @Override
@@ -148,6 +153,19 @@ public class BoundFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return boundDimFilter.getRequiredColumns();
+  }
+
+  @Nullable
+  @Override
+  public FilterTuning getManualTuning()
+  {
+    return manualFilterTuning;
   }
 
   @Override

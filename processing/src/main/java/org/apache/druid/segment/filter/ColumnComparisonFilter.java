@@ -25,6 +25,7 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueGetter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
@@ -37,18 +38,23 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
+  private final FilterTuning manualFilterTuning;
 
   public ColumnComparisonFilter(
-      final List<DimensionSpec> dimensions
+      final List<DimensionSpec> dimensions,
+      final FilterTuning filterTuning
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
+    this.manualFilterTuning = filterTuning;
   }
 
   @Override
@@ -141,10 +147,23 @@ public class ColumnComparisonFilter implements Filter
     return false;
   }
 
+  @Nullable
+  @Override
+  public FilterTuning getManualTuning()
+  {
+    return manualFilterTuning;
+  }
+
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return false;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return dimensions.stream().map(dim -> dim.getDimension()).collect(Collectors.toSet());
   }
 
   @Override

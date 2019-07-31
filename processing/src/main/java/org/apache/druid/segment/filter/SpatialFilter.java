@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.query.BitmapResultFactory;
@@ -30,10 +31,14 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
+
+import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  */
@@ -41,14 +46,17 @@ public class SpatialFilter implements Filter
 {
   private final String dimension;
   private final Bound bound;
+  private final FilterTuning manualFilterTuning;
 
   public SpatialFilter(
       String dimension,
-      Bound bound
+      Bound bound,
+      FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.bound = Preconditions.checkNotNull(bound, "bound");
+    this.manualFilterTuning = filterTuning;
   }
 
   @Override
@@ -117,6 +125,19 @@ public class SpatialFilter implements Filter
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return false;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
+  }
+
+  @Nullable
+  @Override
+  public FilterTuning getManualTuning()
+  {
+    return manualFilterTuning;
   }
 
   @Override

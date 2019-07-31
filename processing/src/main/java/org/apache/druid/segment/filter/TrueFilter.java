@@ -22,9 +22,13 @@ package org.apache.druid.segment.filter;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+
+import java.util.Collections;
+import java.util.Set;
 
 /**
  */
@@ -53,9 +57,21 @@ public class TrueFilter implements Filter
   }
 
   @Override
+  public FilterTuning getManualTuning()
+  {
+    return null;
+  }
+
+  @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return true;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Collections.emptySet();
   }
 
   @Override

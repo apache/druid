@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
@@ -39,21 +40,39 @@ public class ExpressionDimFilter implements DimFilter
 {
   private final String expression;
   private final Supplier<Expr> parsed;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public ExpressionDimFilter(
       @JsonProperty("expression") final String expression,
+      @JsonProperty("filterTuning") final FilterTuning filterTuning,
       @JacksonInject ExprMacroTable macroTable
   )
   {
     this.expression = expression;
+    this.filterTuning = filterTuning;
     this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+  }
+
+  @VisibleForTesting
+  public ExpressionDimFilter(
+      final String expression,
+      ExprMacroTable macroTable
+  )
+  {
+    this(expression, null, macroTable);
   }
 
   @JsonProperty
   public String getExpression()
   {
     return expression;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -65,7 +84,7 @@ public class ExpressionDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new ExpressionFilter(parsed);
+    return new ExpressionFilter(parsed, filterTuning);
   }
 
   @Override
@@ -89,7 +108,16 @@ public class ExpressionDimFilter implements DimFilter
   }
 
   @Override
-  public boolean equals(final Object o)
+  public String toString()
+  {
+    return "ExpressionDimFilter{" +
+           "expression='" + expression + '\'' +
+           ", filterTuning=" + filterTuning +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -97,21 +125,14 @@ public class ExpressionDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final ExpressionDimFilter that = (ExpressionDimFilter) o;
-    return Objects.equals(expression, that.expression);
+    ExpressionDimFilter that = (ExpressionDimFilter) o;
+    return expression.equals(that.expression) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(expression);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ExpressionDimFilter{" +
-           "expression='" + expression + '\'' +
-           '}';
+    return Objects.hash(expression, filterTuning);
   }
 }

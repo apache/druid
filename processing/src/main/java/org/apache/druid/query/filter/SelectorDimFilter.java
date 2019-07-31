@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -52,6 +53,7 @@ public class SelectorDimFilter implements DimFilter
   @Nullable
   private final String value;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
 
   private final Object initLock = new Object();
 
@@ -63,7 +65,8 @@ public class SelectorDimFilter implements DimFilter
   public SelectorDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("value") String value,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -71,6 +74,17 @@ public class SelectorDimFilter implements DimFilter
     this.dimension = dimension;
     this.value = NullHandling.emptyToNullIfNeeded(value);
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public SelectorDimFilter(
+      String dimension,
+      String value,
+      ExtractionFn extractionFn
+  )
+  {
+    this(dimension, value, extractionFn, null);
   }
 
   @Override
@@ -90,14 +104,14 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, Collections.singletonList(value), extractionFn).optimize();
+    return new InDimFilter(dimension, Collections.singletonList(value), extractionFn, filterTuning).optimize();
   }
 
   @Override
   public Filter toFilter()
   {
     if (extractionFn == null) {
-      return new SelectorFilter(dimension, value);
+      return new SelectorFilter(dimension, value, filterTuning);
     } else {
 
       final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
@@ -129,7 +143,7 @@ public class SelectorDimFilter implements DimFilter
           return druidDoublePredicate;
         }
       };
-      return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
+      return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn, filterTuning);
     }
   }
 
@@ -151,6 +165,12 @@ public class SelectorDimFilter implements DimFilter
     return extractionFn;
   }
 
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
+  }
+
   @Override
   public String toString()
   {
@@ -170,16 +190,17 @@ public class SelectorDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SelectorDimFilter that = (SelectorDimFilter) o;
+    return dimension.equals(that.dimension) &&
+           Objects.equals(value, that.value) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
 
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (value != null ? !value.equals(that.value) : that.value != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, value, extractionFn, filterTuning);
   }
 
   @Override
@@ -204,15 +225,6 @@ public class SelectorDimFilter implements DimFilter
   public HashSet<String> getRequiredColumns()
   {
     return Sets.newHashSet(dimension);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dimension.hashCode();
-    result = 31 * result + (value != null ? value.hashCode() : 0);
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
   }
 
 

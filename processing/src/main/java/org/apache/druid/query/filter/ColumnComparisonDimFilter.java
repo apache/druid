@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.filter.ColumnComparisonFilter;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -40,14 +42,25 @@ public class ColumnComparisonDimFilter implements DimFilter
   private static final Joiner COMMA_JOINER = Joiner.on(", ");
 
   private final List<DimensionSpec> dimensions;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public ColumnComparisonDimFilter(
-      @JsonProperty("dimensions") List<DimensionSpec> dimensions
+      @JsonProperty("dimensions") List<DimensionSpec> dimensions,
+      @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
     Preconditions.checkArgument(dimensions.size() >= 2, "dimensions must have a least 2 dimensions");
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public ColumnComparisonDimFilter(
+      List<DimensionSpec> dimensions
+  )
+  {
+    this(dimensions, null);
   }
 
   @Override
@@ -68,7 +81,7 @@ public class ColumnComparisonDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new ColumnComparisonFilter(dimensions);
+    return new ColumnComparisonFilter(dimensions, filterTuning);
   }
 
   @JsonProperty
@@ -77,11 +90,18 @@ public class ColumnComparisonDimFilter implements DimFilter
     return dimensions;
   }
 
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
+  }
+
   @Override
   public String toString()
   {
     return "ColumnComparisonDimFilter{" +
            "dimensions=[" + COMMA_JOINER.join(dimensions) + "]" +
+           ", filterTuning=" + filterTuning +
            "}";
   }
 
@@ -94,10 +114,15 @@ public class ColumnComparisonDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     ColumnComparisonDimFilter that = (ColumnComparisonDimFilter) o;
+    return dimensions.equals(that.dimensions) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
 
-    return dimensions.equals(that.dimensions);
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimensions, filterTuning);
   }
 
   @Override
@@ -113,11 +138,5 @@ public class ColumnComparisonDimFilter implements DimFilter
         .map(DimensionSpec::getDimension)
         .collect(Collectors.toSet())
     );
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return 31 * dimensions.hashCode();
   }
 }

@@ -21,7 +21,9 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.segment.ColumnSelectorFactory;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public interface BooleanFilter extends Filter
 {
@@ -48,4 +50,20 @@ public interface BooleanFilter extends Filter
       ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   );
+
+  @Override
+  default FilterTuning getManualTuning()
+  {
+    return null;
+  }
+
+  @Override
+  default Set<String> getRequiredColumns()
+  {
+    Set<String> allColumns = new HashSet<>();
+    for (Filter f : getFilters()) {
+      allColumns.addAll(f.getRequiredColumns());
+    }
+    return allColumns;
+  }
 }

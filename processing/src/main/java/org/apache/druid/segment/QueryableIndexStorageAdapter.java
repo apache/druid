@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.DateTimes;
@@ -347,7 +348,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return interval.overlap(dataInterval);
   }
 
-  private ColumnSelectorBitmapIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
+  @VisibleForTesting
+  public ColumnSelectorBitmapIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
   {
     return new ColumnSelectorBitmapIndexSelector(
         index.getBitmapFactoryForDimensions(),
@@ -356,7 +358,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  private FilterAnalysis analyzeFilter(
+  @VisibleForTesting
+  public FilterAnalysis analyzeFilter(
       @Nullable final Filter filter,
       ColumnSelectorBitmapIndexSelector bitmapIndexSelector,
       @Nullable QueryMetrics queryMetrics
@@ -389,7 +392,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (filter instanceof AndFilter) {
         // If we get an AndFilter, we can split the subfilters across both filtering stages
         for (Filter subfilter : ((AndFilter) filter).getFilters()) {
-          if (subfilter.supportsBitmapIndex(bitmapIndexSelector)) {
+
+          if (subfilter.shouldUseIndex(bitmapIndexSelector)) {
+
             preFilters.add(subfilter);
           } else {
             postFilters.add(subfilter);
@@ -397,7 +402,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       } else {
         // If we get an OrFilter or a single filter, handle the filter in one stage
-        if (filter.supportsBitmapIndex(bitmapIndexSelector)) {
+        if (filter.shouldUseIndex(bitmapIndexSelector)) {
           preFilters.add(filter);
         } else {
           postFilters.add(filter);
@@ -442,7 +447,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return new FilterAnalysis(preFilterBitmap, postFilter);
   }
 
-  private static class FilterAnalysis
+  @VisibleForTesting
+  public static class FilterAnalysis
   {
     private final Filter postFilter;
     private final ImmutableBitmap preFilterBitmap;

@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
@@ -36,6 +37,7 @@ import org.apache.druid.segment.filter.LikeFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class LikeDimFilter implements DimFilter
@@ -50,18 +52,21 @@ public class LikeDimFilter implements DimFilter
   private final Character escapeChar;
   private final ExtractionFn extractionFn;
   private final LikeMatcher likeMatcher;
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public LikeDimFilter(
       @JsonProperty("dimension") final String dimension,
       @JsonProperty("pattern") final String pattern,
       @JsonProperty("escape") final String escape,
-      @JsonProperty("extractionFn") final ExtractionFn extractionFn
+      @JsonProperty("extractionFn") final ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") final FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
 
     if (escape != null && escape.length() != 1) {
       throw new IllegalArgumentException("Escape must be null or a single character");
@@ -70,6 +75,138 @@ public class LikeDimFilter implements DimFilter
     }
 
     this.likeMatcher = LikeMatcher.from(pattern, this.escapeChar);
+  }
+
+  @VisibleForTesting
+  public LikeDimFilter(
+      final String dimension,
+      final String pattern,
+      final String escape,
+      final ExtractionFn extractionFn
+  )
+  {
+    this(dimension, pattern, escape, extractionFn, null);
+  }
+
+  @JsonProperty
+  public String getDimension()
+  {
+    return dimension;
+  }
+
+  @JsonProperty
+  public String getPattern()
+  {
+    return pattern;
+  }
+
+  @JsonProperty
+  public String getEscape()
+  {
+    return escapeChar != null ? escapeChar.toString() : null;
+  }
+
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
+  }
+
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    final byte[] patternBytes = StringUtils.toUtf8(pattern);
+    final byte[] escapeBytes = escapeChar == null ? new byte[0] : Chars.toByteArray(escapeChar);
+    final byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
+    final int sz = 4 + dimensionBytes.length + patternBytes.length + escapeBytes.length + extractionFnBytes.length;
+    return ByteBuffer.allocate(sz)
+                     .put(DimFilterUtils.LIKE_CACHE_ID)
+                     .put(dimensionBytes)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
+                     .put(patternBytes)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
+                     .put(escapeBytes)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
+                     .put(extractionFnBytes)
+                     .array();
+  }
+
+  @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new LikeFilter(dimension, extractionFn, likeMatcher, filterTuning);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LikeDimFilter that = (LikeDimFilter) o;
+    return dimension.equals(that.dimension) &&
+           pattern.equals(that.pattern) &&
+           Objects.equals(escapeChar, that.escapeChar) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, pattern, escapeChar, extractionFn, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    final StringBuilder builder = new StringBuilder();
+
+    if (extractionFn != null) {
+      builder.append(extractionFn).append("(");
+    }
+
+    builder.append(dimension);
+
+    if (extractionFn != null) {
+      builder.append(")");
+    }
+
+    builder.append(" LIKE '").append(pattern).append("'");
+
+    if (escapeChar != null) {
+      builder.append(" ESCAPE '").append(escapeChar).append("'");
+    }
+
+    return builder.toString();
   }
 
   public static class LikeMatcher
@@ -231,132 +368,5 @@ public class LikeDimFilter implements DimFilter
     {
       return suffixMatch;
     }
-  }
-
-  @JsonProperty
-  public String getDimension()
-  {
-    return dimension;
-  }
-
-  @JsonProperty
-  public String getPattern()
-  {
-    return pattern;
-  }
-
-  @JsonProperty
-  public String getEscape()
-  {
-    return escapeChar != null ? escapeChar.toString() : null;
-  }
-
-  @JsonProperty
-  public ExtractionFn getExtractionFn()
-  {
-    return extractionFn;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    final byte[] patternBytes = StringUtils.toUtf8(pattern);
-    final byte[] escapeBytes = escapeChar == null ? new byte[0] : Chars.toByteArray(escapeChar);
-    final byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
-    final int sz = 4 + dimensionBytes.length + patternBytes.length + escapeBytes.length + extractionFnBytes.length;
-    return ByteBuffer.allocate(sz)
-                     .put(DimFilterUtils.LIKE_CACHE_ID)
-                     .put(dimensionBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(patternBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(escapeBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(extractionFnBytes)
-                     .array();
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
-  public Filter toFilter()
-  {
-    return new LikeFilter(dimension, extractionFn, likeMatcher);
-  }
-
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public HashSet<String> getRequiredColumns()
-  {
-    return Sets.newHashSet(dimension);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    LikeDimFilter that = (LikeDimFilter) o;
-
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
-      return false;
-    }
-    if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) {
-      return false;
-    }
-    if (escapeChar != null ? !escapeChar.equals(that.escapeChar) : that.escapeChar != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dimension != null ? dimension.hashCode() : 0;
-    result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
-    result = 31 * result + (escapeChar != null ? escapeChar.hashCode() : 0);
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    final StringBuilder builder = new StringBuilder();
-
-    if (extractionFn != null) {
-      builder.append(extractionFn).append("(");
-    }
-
-    builder.append(dimension);
-
-    if (extractionFn != null) {
-      builder.append(")");
-    }
-
-    builder.append(" LIKE '").append(pattern).append("'");
-
-    if (escapeChar != null) {
-      builder.append(" ESCAPE '").append(escapeChar).append("'");
-    }
-
-    return builder.toString();
   }
 }
