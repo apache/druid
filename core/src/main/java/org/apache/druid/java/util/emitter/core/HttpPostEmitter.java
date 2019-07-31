@@ -251,8 +251,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
     while (true) {
       Object batchObj = concurrentBatch.get();
-      if (batchObj instanceof Integer) {
-        tryRecoverCurrentBatch((Integer) batchObj);
+      if (batchObj instanceof Long) {
+        tryRecoverCurrentBatch((Long) batchObj);
         continue;
       }
       if (batchObj == null) {
@@ -342,7 +342,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     }
   }
 
-  private void tryRecoverCurrentBatch(Integer failedBatchNumber)
+  private void tryRecoverCurrentBatch(Long failedBatchNumber)
   {
     log.info("Trying to recover currentBatch");
     long nextBatchNumber = ConcurrentAwaitableCounter.nextCount(failedBatchNumber);
