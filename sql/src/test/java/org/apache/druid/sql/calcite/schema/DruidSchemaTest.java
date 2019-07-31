@@ -395,7 +395,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                          .orElse(null);
     Assert.assertNotNull(currentSegment);
     AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(1L, currentMetadata.isRealtime());
+    Assert.assertEquals(0L, currentMetadata.isRealtime());
 
     ImmutableDruidServer realtimeServer = druidServers.stream()
                                                       .filter(s -> s.getType().equals(ServerType.REALTIME))
