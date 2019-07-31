@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -73,6 +74,19 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public final JavaType getBySegmentResultType()
   {
     return bySegmentResultType;
+  }
+
+  /**
+   * Perform any per-query decoration of an {@link ObjectMapper} that enables it to read and write objects of the
+   * query's {@link ResultType}. It is used by QueryResource on the write side, and DirectDruidClient on the read side.
+   *
+   * For most queries, this is a no-op, but it can be useful for query types that support more than one result
+   * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
+   * must return a copy.
+   */
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final QueryType query)
+  {
+    return objectMapper;
   }
 
   /**

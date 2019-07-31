@@ -35,7 +35,6 @@ import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -64,9 +63,13 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -109,9 +112,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(value = 1)
-@Warmup(iterations = 15)
-@Measurement(iterations = 30)
+@Fork(value = 2)
+@Warmup(iterations = 10)
+@Measurement(iterations = 25)
 public class GroupByBenchmark
 {
   @Param({"4"})
@@ -148,7 +151,7 @@ public class GroupByBenchmark
   private IncrementalIndex anIncrementalIndex;
   private List<QueryableIndex> queryableIndexes;
 
-  private QueryRunnerFactory<Row, GroupByQuery> factory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> factory;
 
   private BenchmarkSchemaInfo schemaInfo;
   private GroupByQuery query;
@@ -195,6 +198,34 @@ public class GroupByBenchmark
           .build();
 
       basicQueries.put("A", queryA);
+    }
+
+    { // basic.sorted
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null), new DefaultDimensionSpec("dimZipf", null))
+          .setAggregatorSpecs(queryAggs)
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .setLimitSpec(
+              new DefaultLimitSpec(
+                  Collections.singletonList(
+                      new OrderByColumnSpec(
+                          "sumLongSequential",
+                          OrderByColumnSpec.Direction.DESCENDING,
+                          StringComparators.NUMERIC
+                      )
+                  ),
+                  100
+              )
+          )
+          .build();
+
+      basicQueries.put("sorted", queryA);
     }
 
     { // basic.nested
@@ -562,14 +593,14 @@ public class GroupByBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleIncrementalIndex(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
         new IncrementalIndexSegment(anIncrementalIndex, SegmentId.dummy("incIndex"))
     );
 
-    final Sequence<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
-    final Row lastRow = results.accumulate(
+    final Sequence<ResultRow> results = GroupByBenchmark.runQuery(factory, runner, query);
+    final ResultRow lastRow = results.accumulate(
         null,
         (accumulated, in) -> in
     );
@@ -582,14 +613,14 @@ public class GroupByBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndex(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
         new QueryableIndexSegment(queryableIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
-    final Sequence<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
-    final Row lastRow = results.accumulate(
+    final Sequence<ResultRow> results = GroupByBenchmark.runQuery(factory, runner, query);
+    final ResultRow lastRow = results.accumulate(
         null,
         (accumulated, in) -> in
     );
@@ -600,18 +631,18 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole)
+  public void queryMultiQueryableIndexX(Blackhole blackhole)
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(executorService, makeMultiRunners())
         ),
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
     blackhole.consume(results);
   }
 
@@ -620,8 +651,8 @@ public class GroupByBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole)
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(executorService, makeMultiRunners())
         ),
@@ -631,8 +662,8 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
     blackhole.consume(results);
   }
 
@@ -641,12 +672,13 @@ public class GroupByBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndexWithSerde(Blackhole blackhole)
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
+    //noinspection unchecked
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             new SerializingQueryRunner<>(
                 new DefaultObjectMapper(new SmileFactory()),
-                Row.class,
+                ResultRow.class,
                 toolChest.mergeResults(
                     factory.mergeRunners(executorService, makeMultiRunners())
                 )
@@ -655,17 +687,17 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
     blackhole.consume(results);
   }
 
-  private List<QueryRunner<Row>> makeMultiRunners()
+  private List<QueryRunner<ResultRow>> makeMultiRunners()
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       String segmentName = "qIndex" + i;
-      QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+      QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),
           new QueryableIndexSegment(queryableIndexes.get(i), SegmentId.dummy(segmentName))
