@@ -66,7 +66,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Manages {@link Appenderator} instances for the Indexer task execution service, which runs all tasks in
+ * Manages {@link Appenderator} instances for the CliIndexer task execution service, which runs all tasks in
  * a single process.
  *
  * This class keeps two maps:
@@ -78,7 +78,7 @@ import java.util.concurrent.ExecutorService;
  * The per-datasource SinkQuerySegmentWalkers share a common queryExecutorService.
  *
  * Each task that requests an Appenderator from this AppenderatorsManager will receive a heap memory limit
- * equal to `druid.worker.globalIngestionHeapLimitBytes` evenly divided by `druid.worker.capacity`.
+ * equal to {@link WorkerConfig#globalIngestionHeapLimitBytes} evenly divided by {@link WorkerConfig#capacity}.
  *
  * The Appenderators created by this class share an executor pool for {@link IndexMerger} persist
  * and merge operations, with concurrent operations limited to `druid.worker.capacity` divided 2. This limit is imposed
@@ -86,8 +86,6 @@ import java.util.concurrent.ExecutorService;
  */
 public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 {
-  private static final EmittingLogger LOG = new EmittingLogger(UnifiedIndexerAppenderatorsManager.class);
-
   private final ConcurrentHashMap<String, SinkQuerySegmentWalker> datasourceSegmentWalkers = new ConcurrentHashMap<>();
 
   private final ExecutorService queryExecutorService;
@@ -242,6 +240,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   {
     if (mergeExecutor != null) {
       mergeExecutor.shutdownNow();
+      mergeExecutor = null;
     }
   }
 
@@ -252,9 +251,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   }
 
   /**
-   * This is a wrapper around AppenderatorConfig that overrides the `maxRowsInMemory` and `maxBytesInMemory`
-   * parameters. Row-based limits are disabled by setting `maxRowsInMemory` to an essentially unlimited value.
-   * `maxBytesInMemory` is overridden with the provided value.
+   * This is a wrapper around AppenderatorConfig that overrides the {@link AppenderatorConfig#getMaxBytesInMemory()}
+   * and {@link AppenderatorConfig#getMaxRowsInMemory()} parameters.
+   *
+   * Row-based limits are disabled by setting maxRowsInMemory to an essentially unlimited value.
+   * maxBytesInMemory is overridden with the provided value. These overrides replace whatever the user has specified.
    */
   private static class MemoryParameterOverridingAppenderatorConfig implements AppenderatorConfig
   {
@@ -347,9 +348,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
 
   /**
-   * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by AppenderatorImpl
-   * with a shared executor service. Merge/persist methods that are not used by AppenderatorImpl will throw
-   * an exception if called.
+   * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by
+   * {@link AppenderatorImpl} with a shared executor service. Merge/persist methods that are not used by
+   * AppenderatorImpl will throw an exception if called.
    */
   public static class LimitedPoolIndexMerger implements IndexMerger
   {
