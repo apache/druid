@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ public class HttpPostEmitterTest
   }
 
 
-  @Test(expected = ClassCastException.class)
+  @Test
   @SuppressWarnings("unchecked")
   public void testRecoveryEmitAndReturnBatch()
       throws InterruptedException, IOException, NoSuchFieldException, IllegalAccessException
@@ -90,6 +91,8 @@ public class HttpPostEmitterTest
 
     emitter.flush();
     emitter.close();
+
+    Assert.assertEquals(2, emitter.getTotalEmittedEvents());
   }
 
 }
