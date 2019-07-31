@@ -51,7 +51,7 @@ public class FilterTuning
   @JsonProperty
   public Boolean getUseIndex()
   {
-    return useIndex;
+    return useIndex != null ? useIndex : true;
   }
 
   @JsonProperty
