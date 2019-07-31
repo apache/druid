@@ -39,7 +39,7 @@ export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
-  status: string | null;
+  status?: string;
 }
 
 export interface ShowLogState {
@@ -60,7 +60,9 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   }
 
   componentDidMount(): void {
-    if (this.props.status === 'RUNNING') {
+    const { status } = this.props;
+
+    if (status === 'RUNNING') {
       this.tail();
     }
   }
@@ -102,7 +104,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     }
   };
 
-  render() {
+  render(): JSX.Element {
     const { endpoint, downloadFilename, status } = this.props;
     const { logValue } = this.state;
 

@@ -26,12 +26,12 @@ import './query-output.scss';
 
 export interface QueryOutputProps {
   loading: boolean;
-  result: HeaderRows | null;
-  error: string | null;
+  result?: HeaderRows;
+  error?: string;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
-  render() {
+  render(): JSX.Element {
     const { result, loading, error } = this.props;
 
     return (

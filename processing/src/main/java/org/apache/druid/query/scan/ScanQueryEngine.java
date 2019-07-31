@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Segment;
@@ -60,20 +61,20 @@ public class ScanQueryEngine
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "WTF?! Expected non-null legacy");
 
-    if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
-      long count = (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    if (responseContext.get(ResponseContext.CTX_COUNT) != null) {
+      long count = (long) responseContext.get(ResponseContext.CTX_COUNT);
       if (count >= query.getLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
-    final long timeoutAt = (long) responseContext.get(ScanQueryRunnerFactory.CTX_TIMEOUT_AT);
+    final long timeoutAt = (long) responseContext.get(ResponseContext.CTX_TIMEOUT_AT);
     final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -120,8 +121,8 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
 
-    if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
-      responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0L);
+    if (responseContext.get(ResponseContext.CTX_COUNT) == null) {
+      responseContext.put(ResponseContext.CTX_COUNT, 0L);
     }
     final long limit = calculateLimit(query, responseContext);
     return Sequences.concat(
@@ -187,12 +188,12 @@ public class ScanQueryEngine
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.put(
-                                ScanQueryRunnerFactory.CTX_COUNT,
-                                (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) + (offset - lastOffset)
+                                ResponseContext.CTX_COUNT,
+                                (long) responseContext.get(ResponseContext.CTX_COUNT) + (offset - lastOffset)
                             );
                             if (hasTimeout) {
                               responseContext.put(
-                                  ScanQueryRunnerFactory.CTX_TIMEOUT_AT,
+                                  ResponseContext.CTX_TIMEOUT_AT,
                                   timeoutAt - (System.currentTimeMillis() - start)
                               );
                             }
@@ -262,10 +263,10 @@ public class ScanQueryEngine
    * If we're performing time-ordering, we want to scan through the first `limit` rows in each segment ignoring the number
    * of rows already counted on other segments.
    */
-  private long calculateLimit(ScanQuery query, Map<String, Object> responseContext)
+  private long calculateLimit(ScanQuery query, ResponseContext responseContext)
   {
     if (query.getOrder().equals(ScanQuery.Order.NONE)) {
-      return query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+      return query.getLimit() - (long) responseContext.get(ResponseContext.CTX_COUNT);
     }
     return query.getLimit();
   }

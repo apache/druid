@@ -23,7 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -105,7 +105,7 @@ public class SingleTaskBackgroundRunnerTest
         node,
         null,
         null,
-        new TaskReportFileWriter(new File("fake"))
+        new SingleFileTaskReportFileWriter(new File("fake"))
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -127,7 +127,7 @@ public class SingleTaskBackgroundRunnerTest
   {
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
     );
   }
 
@@ -135,7 +135,7 @@ public class SingleTaskBackgroundRunnerTest
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
     );
     runner.stop();
     Assert.assertEquals(

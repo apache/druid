@@ -79,43 +79,43 @@ const taskTableColumns: string[] = [
 export interface TasksViewProps {
   taskId: string | undefined;
   openDialog: string | undefined;
+  goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
+  goToLoadData: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
 }
 
 export interface TasksViewState {
   supervisorsLoading: boolean;
   supervisors: any[];
-  supervisorsError: string | null;
+  supervisorsError?: string;
 
-  resumeSupervisorId: string | null;
-  suspendSupervisorId: string | null;
-  resetSupervisorId: string | null;
-  terminateSupervisorId: string | null;
+  resumeSupervisorId?: string;
+  suspendSupervisorId?: string;
+  resetSupervisorId?: string;
+  terminateSupervisorId?: string;
 
   showResumeAllSupervisors: boolean;
   showSuspendAllSupervisors: boolean;
   showTerminateAllSupervisors: boolean;
 
   tasksLoading: boolean;
-  tasks: any[] | null;
-  tasksError: string | null;
+  tasks?: any[];
+  tasksError?: string;
   taskFilter: Filter[];
-  groupTasksBy: null | 'type' | 'datasource' | 'status';
+  groupTasksBy?: 'type' | 'datasource' | 'status';
 
-  killTaskId: string | null;
+  killTaskId?: string;
 
   supervisorSpecDialogOpen: boolean;
   taskSpecDialogOpen: boolean;
-  initSpec: any;
-  alertErrorMsg: string | null;
+  alertErrorMsg?: string;
 
-  taskTableActionDialogId: string | null;
-  taskTableActionDialogStatus: string | null;
+  taskTableActionDialogId?: string;
+  taskTableActionDialogStatus?: string;
   taskTableActionDialogActions: BasicAction[];
-  supervisorTableActionDialogId: string | null;
+  supervisorTableActionDialogId?: string;
   supervisorTableActionDialogActions: BasicAction[];
   hiddenTaskColumns: LocalStorageBackedArray<string>;
   hiddenSupervisorColumns: LocalStorageBackedArray<string>;
@@ -202,33 +202,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.state = {
       supervisorsLoading: true,
       supervisors: [],
-      supervisorsError: null,
-
-      resumeSupervisorId: null,
-      suspendSupervisorId: null,
-      resetSupervisorId: null,
-      supervisorTableActionDialogId: null,
-      terminateSupervisorId: null,
 
       showResumeAllSupervisors: false,
       showSuspendAllSupervisors: false,
       showTerminateAllSupervisors: false,
 
       tasksLoading: true,
-      tasks: null,
-      tasksError: null,
       taskFilter: props.taskId ? [{ id: 'task_id', value: props.taskId }] : [],
-      groupTasksBy: null,
-
-      killTaskId: null,
 
       supervisorSpecDialogOpen: props.openDialog === 'supervisor',
       taskSpecDialogOpen: props.openDialog === 'task',
-      initSpec: null,
-      alertErrorMsg: null,
 
-      taskTableActionDialogId: null,
-      taskTableActionDialogStatus: null,
       taskTableActionDialogActions: [],
       supervisorTableActionDialogActions: [],
 
@@ -323,7 +307,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.setState({
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
-      initSpec: null,
     });
   };
 
@@ -368,20 +351,24 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     supervisorSuspended: boolean,
     type: string,
   ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
     if (type === 'kafka' || type === 'kinesis') {
-      actions.push({
-        icon: IconNames.CLOUD_UPLOAD,
-        title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(id),
-      });
+      actions.push(
+        {
+          icon: IconNames.MULTI_SELECT,
+          title: 'Go to datasource',
+          onAction: () => goToDatasource(id),
+        },
+        {
+          icon: IconNames.CLOUD_UPLOAD,
+          title: 'Open in data loader',
+          onAction: () => goToLoadData(id),
+        },
+      );
     }
     actions.push(
-      {
-        icon: IconNames.STEP_BACKWARD,
-        title: 'Reset',
-        onAction: () => this.setState({ resetSupervisorId: id }),
-      },
       {
         icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
         title: supervisorSuspended ? 'Resume' : 'Suspend',
@@ -389,6 +376,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           supervisorSuspended
             ? this.setState({ resumeSupervisorId: id })
             : this.setState({ suspendSupervisorId: id }),
+      },
+      {
+        icon: IconNames.STEP_BACKWARD,
+        title: 'Reset',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ resetSupervisorId: id }),
       },
       {
         icon: IconNames.CROSS,
@@ -418,7 +411,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         failText="Could not resume supervisor"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ resumeSupervisorId: null });
+          this.setState({ resumeSupervisorId: undefined });
         }}
         onSuccess={() => {
           this.supervisorQueryManager.rerunLastQuery();
@@ -447,7 +440,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         failText="Could not suspend supervisor"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ suspendSupervisorId: null });
+          this.setState({ suspendSupervisorId: undefined });
         }}
         onSuccess={() => {
           this.supervisorQueryManager.rerunLastQuery();
@@ -476,13 +469,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         failText="Could not reset supervisor"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ resetSupervisorId: null });
+          this.setState({ resetSupervisorId: undefined });
         }}
         onSuccess={() => {
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to reset supervisor '${resetSupervisorId}'?`}</p>
+        <p>Resetting a supervisor could lead data loss or data duplication</p>
       </AsyncActionDialog>
     );
   }
@@ -505,7 +499,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         failText="Could not terminate supervisor"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ terminateSupervisorId: null });
+          this.setState({ terminateSupervisorId: undefined });
         }}
         onSuccess={() => {
           this.supervisorQueryManager.rerunLastQuery();
@@ -620,13 +614,27 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  private getTaskActions(id: string, status: string, type: string): BasicAction[] {
+  private getTaskActions(
+    id: string,
+    datasource: string,
+    status: string,
+    type: string,
+  ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
+    if (datasource && status === 'SUCCESS') {
+      actions.push({
+        icon: IconNames.MULTI_SELECT,
+        title: 'Go to datasource',
+        onAction: () => goToDatasource(datasource),
+      });
+    }
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(undefined, id),
+        onAction: () => goToLoadData(undefined, id),
       });
     }
     if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
@@ -655,7 +663,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         failText="Could not kill task"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ killTaskId: null });
+          this.setState({ killTaskId: undefined });
         }}
         onSuccess={() => {
           this.taskQueryManager.rerunLastQuery();
@@ -827,8 +835,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 if (row.aggregated) return '';
                 const id = row.value;
                 const type = row.row.type;
-                const { status } = row.original;
-                const taskActions = this.getTaskActions(id, status, type);
+                const { datasource, status } = row.original;
+                const taskActions = this.getTaskActions(id, datasource, status, type);
                 return (
                   <ActionCell
                     onDetail={() =>
@@ -964,8 +972,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  render() {
-    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
+  render(): JSX.Element {
+    const { goToQuery, goToLoadData, noSqlMode } = this.props;
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -985,7 +993,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
@@ -1000,7 +1008,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
@@ -1048,8 +1056,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <Label>Group by</Label>
               <ButtonGroup>
                 <Button
-                  active={groupTasksBy === null}
-                  onClick={() => this.setState({ groupTasksBy: null })}
+                  active={!groupTasksBy}
+                  onClick={() => this.setState({ groupTasksBy: undefined })}
                 >
                   None
                 </Button>
@@ -1116,7 +1124,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           intent={Intent.PRIMARY}
           isOpen={Boolean(alertErrorMsg)}
           confirmButtonText="OK"
-          onConfirm={() => this.setState({ alertErrorMsg: null })}
+          onConfirm={() => this.setState({ alertErrorMsg: undefined })}
         >
           <p>{alertErrorMsg}</p>
         </Alert>
@@ -1125,16 +1133,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             isOpen
             supervisorId={supervisorTableActionDialogId}
             actions={supervisorTableActionDialogActions}
-            onClose={() => this.setState({ supervisorTableActionDialogId: null })}
+            onClose={() => this.setState({ supervisorTableActionDialogId: undefined })}
           />
         )}
-        {taskTableActionDialogId && (
+        {taskTableActionDialogId && taskTableActionDialogStatus && (
           <TaskTableActionDialog
             isOpen
             status={taskTableActionDialogStatus}
             taskId={taskTableActionDialogId}
             actions={taskTableActionDialogActions}
-            onClose={() => this.setState({ taskTableActionDialogId: null })}
+            onClose={() => this.setState({ taskTableActionDialogId: undefined })}
           />
         )}
       </>

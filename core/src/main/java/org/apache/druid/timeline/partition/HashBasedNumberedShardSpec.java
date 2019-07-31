@@ -47,8 +47,8 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
 
   @JsonCreator
   public HashBasedNumberedShardSpec(
-      @JsonProperty("partitionNum") int partitionNum,
-      @JsonProperty("partitions") int partitions,
+      @JsonProperty("partitionNum") int partitionNum,    // partitionId
+      @JsonProperty("partitions") int partitions,        // # of partitions
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JacksonInject ObjectMapper jsonMapper
   )
@@ -62,6 +62,12 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
+  }
+
+  @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == HashBasedNumberedShardSpec.class;
   }
 
   @Override

@@ -43,6 +43,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 
@@ -329,7 +330,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
               @Override
               public Sequence<Result<SearchResultValue>> run(
                   QueryPlus<Result<SearchResultValue>> queryPlus,
-                  Map<String, Object> responseContext
+                  ResponseContext responseContext
               )
               {
                 SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();
@@ -363,7 +364,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     @Override
     public Sequence<Result<SearchResultValue>> run(
         QueryPlus<Result<SearchResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<SearchResultValue>> input = queryPlus.getQuery();

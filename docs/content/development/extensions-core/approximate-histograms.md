@@ -37,6 +37,7 @@ The Approximate Histogram aggregator is deprecated. Please use <a href="../exten
 This aggregator is based on
 [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf)
 to compute approximate histograms, with the following modifications:
+
 - some tradeoffs in accuracy were made in the interest of speed (see below)
 - the sketch maintains the exact original data as long as the number of
   distinct data points is fewer than the resolutions (number of centroids),

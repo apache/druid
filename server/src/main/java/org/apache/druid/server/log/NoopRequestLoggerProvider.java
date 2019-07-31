@@ -19,10 +19,12 @@
 
 package org.apache.druid.server.log;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.logger.Logger;
 
 /**
  */
+@JsonTypeName("noop")
 public class NoopRequestLoggerProvider implements RequestLoggerProvider
 {
   private static final Logger log = new Logger(NoopRequestLoggerProvider.class);

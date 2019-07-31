@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +30,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -229,7 +229,7 @@ public class ScanQueryRunnerFactoryTest
           factory.nWayMergeAndLimit(
               groupedRunners,
               QueryPlus.wrap(query),
-              ImmutableMap.of()
+              ResponseContext.createEmpty()
           ).toList();
 
       validateSortedOutput(output, expectedEventTimestamps);

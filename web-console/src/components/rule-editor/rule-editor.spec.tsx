@@ -27,8 +27,8 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{ type: 'loadForever' }}
         tiers={['test', 'test', 'test']}
-        onChange={() => null}
-        onDelete={() => null}
+        onChange={() => {}}
+        onDelete={() => {}}
         moveUp={null}
         moveDown={null}
       />

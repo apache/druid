@@ -80,7 +80,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -364,12 +363,11 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final Map<String, Object> responseContext = new HashMap<>();
 
     defineMocks();
 
     QueryPlus queryPlus = QueryPlus.wrap(query);
-    final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);
+    final Sequence<?> res = query.getRunner(walker).run(queryPlus);
 
     List actualResults = new ArrayList();
     actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());

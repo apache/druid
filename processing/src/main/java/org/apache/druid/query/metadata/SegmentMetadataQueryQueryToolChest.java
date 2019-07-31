@@ -50,6 +50,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -112,7 +113,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public Sequence<SegmentAnalysis> doRun(
           QueryRunner<SegmentAnalysis> baseRunner,
           QueryPlus<SegmentAnalysis> queryPlus,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
