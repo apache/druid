@@ -187,7 +187,7 @@ GROUP BY 1`;
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
-      showChart: true,
+      showChart: false,
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
     };
@@ -861,14 +861,14 @@ GROUP BY 1`;
             />
           )}
           <Switch
-            checked={showDisabled}
-            label="Show disabled"
-            onChange={() => this.toggleDisabled(showDisabled)}
-          />
-          <Switch
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
+          />
+          <Switch
+            checked={showDisabled}
+            label="Show disabled"
+            onChange={() => this.toggleDisabled(showDisabled)}
           />
           <TableColumnSelector
             columns={noSqlMode ? tableColumnsNoSql : tableColumns}
