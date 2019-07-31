@@ -59,6 +59,8 @@ import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -121,16 +123,16 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
+            bindWorkerManagementClasses(binder);
 
-            binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-            binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
                   .in(LazySingleton.class);
-            Jerseys.addResource(binder, WorkerResource.class);
-            Jerseys.addResource(binder, TaskManagementResource.class);
+
+            binder.bind(AppenderatorsManager.class)
+                  .to(DummyForInjectionAppenderatorsManager.class)
+                  .in(LazySingleton.class);
+
             Jerseys.addResource(binder, ShuffleResource.class);
 
             LifecycleModule.register(binder, Server.class);
@@ -171,5 +173,14 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceTaskLogsModule(),
         new LookupSerdeModule()
     );
+  }
+
+  public static void bindWorkerManagementClasses(Binder binder)
+  {
+    binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+    binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, WorkerTaskMonitor.class);
+    Jerseys.addResource(binder, WorkerResource.class);
+    Jerseys.addResource(binder, TaskManagementResource.class);
   }
 }

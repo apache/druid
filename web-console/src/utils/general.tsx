@@ -277,6 +277,14 @@ export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined):
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
+export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
+export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
 export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }

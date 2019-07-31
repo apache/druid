@@ -706,7 +706,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           chatHandlerProvider,
           authorizerMapper,
           rowIngestionMetersFactory,
-          groupId
+          groupId,
+          null
       );
     }
 

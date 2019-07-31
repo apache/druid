@@ -59,7 +59,7 @@ public class KillTaskTest extends IngestionTestBase
     final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
 
     Assert.assertEquals(segments, announced);
-    
+
     Assert.assertTrue(
         getSegmentsMetadata().markSegmentAsUnused(
             newSegment(Intervals.of("2019-02-01/2019-03-01"), version).getId().toString()

@@ -259,7 +259,7 @@ exports[`segments-view matches snapshot 1`] = `
         Array [
           Object {
             "id": "datasource",
-            "value": "test",
+            "value": "\\"test\\"",
           },
         ]
       }

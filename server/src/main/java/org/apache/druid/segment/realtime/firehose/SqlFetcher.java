@@ -17,7 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl.prefetch;
+package org.apache.druid.segment.realtime.firehose;
+
+import org.apache.druid.data.input.impl.prefetch.CacheManager;
+import org.apache.druid.data.input.impl.prefetch.Fetcher;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.data.input.impl.prefetch.OpenedObject;
+import org.apache.druid.data.input.impl.prefetch.PrefetchConfig;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -31,7 +37,6 @@ import java.util.concurrent.ExecutorService;
  * See the javadoc of {@link PrefetchSqlFirehoseFactory} for more details.
  */
 public class SqlFetcher<T> extends Fetcher<T>
-
 {
   private static final String FETCH_FILE_PREFIX = "sqlfetch-";
 

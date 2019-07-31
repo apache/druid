@@ -30,6 +30,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -37,6 +38,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -61,7 +63,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -103,6 +105,11 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final AppenderatorsManager appenderatorsManager;
+
+  private Appenderator appenderator;
+  private Thread runThread;
+  private boolean stopped = false;
 
   @JsonCreator
   public ParallelIndexSubTask(
@@ -115,7 +122,8 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -135,6 +143,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -187,6 +196,14 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -351,10 +368,10 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#maxRowsPerSegment}
+   * If the number of rows in a segment exceeds {@link DynamicPartitionsSpec#maxRowsPerSegment}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -386,8 +403,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
-    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
@@ -397,6 +413,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
+      this.appenderator = appenderator;
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -432,7 +449,11 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            final boolean isPushRequired = addResult.isPushRequired(
+                partitionsSpec.getMaxRowsPerSegment(),
+                partitionsSpec.getMaxTotalRows()
+            );
+            if (isPushRequired) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
@@ -466,14 +487,15 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     }
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -496,5 +518,19 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      if (appenderator != null) {
+        appenderator.closeNow();
+      }
+      if (runThread != null) {
+        runThread.interrupt();
+      }
+    }
   }
 }

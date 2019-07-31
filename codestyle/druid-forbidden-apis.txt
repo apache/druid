@@ -48,4 +48,3 @@ com.google.common.io.BaseEncoding.base64
 
 @defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
 javax.annotations.concurrent.GuardedBy
-com.amazonaws.annotation.GuardedBy

@@ -42,6 +42,8 @@ import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -75,6 +77,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -155,6 +158,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   @JsonIgnore
   private List<IndexTask> indexTaskSpecs;
 
+  @JsonIgnore
+  private AppenderatorsManager appenderatorsManager;
+
   @JsonCreator
   public CompactionTask(
       @JsonProperty("id") final String id,
@@ -175,7 +181,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject CoordinatorClient coordinatorClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory
+      @JacksonInject RetryPolicyFactory retryPolicyFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -202,6 +209,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.coordinatorClient = coordinatorClient;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
+    this.appenderatorsManager = appenderatorsManager;
   }
 
   @JsonProperty
@@ -317,7 +325,9 @@ public class CompactionTask extends AbstractBatchIndexTask
               getContext(),
               authorizerMapper,
               chatHandlerProvider,
-              rowIngestionMetersFactory
+              rowIngestionMetersFactory,
+              appenderatorsManager
+
           ))
           .collect(Collectors.toList());
     }
@@ -855,8 +865,14 @@ public class CompactionTask extends AbstractBatchIndexTask
         // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
         // If this is set to something too small, compactionTask can generate small segments
         // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-        return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
+        final IndexTuningConfig newTuningConfig = tuningConfig == null
+                                                       ? IndexTuningConfig.createDefault()
+                                                       : tuningConfig;
+        if (newTuningConfig.isForceGuaranteedRollup()) {
+          return newTuningConfig.withPartitionsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
+        } else {
+          return newTuningConfig.withPartitionsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, Long.MAX_VALUE));
+        }
       } else {
         return tuningConfig;
       }
@@ -864,8 +880,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     /**
      * Check the validity of {@link #targetCompactionSizeBytes} and return a valid value. Note that
-     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#maxRowsPerSegment},
-     * {@link IndexTuningConfig#maxTotalRows}, or {@link IndexTuningConfig#numShards} together.
+     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#getPartitionsSpec} together.
      * {@link #hasPartitionConfig} checks one of those configs is set.
      *
      * Throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and {@link #hasPartitionConfig}
@@ -885,12 +900,9 @@ public class CompactionTask extends AbstractBatchIndexTask
       if (targetCompactionSizeBytes != null && tuningConfig != null) {
         Preconditions.checkArgument(
             !hasPartitionConfig(tuningConfig),
-            "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s], maxTotalRows[%s],"
-            + " or numShards[%s] of tuningConfig",
+            "targetCompactionSizeBytes[%s] cannot be used with partitionsSpec[%s]",
             targetCompactionSizeBytes,
-            tuningConfig.getMaxRowsPerSegment(),
-            tuningConfig.getMaxTotalRows(),
-            tuningConfig.getNumShards()
+            tuningConfig.getPartitionsSpec()
         );
         return targetCompactionSizeBytes;
       } else {
@@ -907,9 +919,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
     {
       if (tuningConfig != null) {
-        return tuningConfig.getMaxRowsPerSegment() != null
-               || tuningConfig.getMaxTotalRows() != null
-               || tuningConfig.getNumShards() != null;
+        return tuningConfig.getPartitionsSpec() != null;
       } else {
         return false;
       }
@@ -926,6 +936,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final CoordinatorClient coordinatorClient;
     private final SegmentLoaderFactory segmentLoaderFactory;
     private final RetryPolicyFactory retryPolicyFactory;
+    private final AppenderatorsManager appenderatorsManager;
 
     @Nullable
     private Interval interval;
@@ -952,7 +963,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         RowIngestionMetersFactory rowIngestionMetersFactory,
         CoordinatorClient coordinatorClient,
         SegmentLoaderFactory segmentLoaderFactory,
-        RetryPolicyFactory retryPolicyFactory
+        RetryPolicyFactory retryPolicyFactory,
+        AppenderatorsManager appenderatorsManager
     )
     {
       this.dataSource = dataSource;
@@ -963,6 +975,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       this.coordinatorClient = coordinatorClient;
       this.segmentLoaderFactory = segmentLoaderFactory;
       this.retryPolicyFactory = retryPolicyFactory;
+      this.appenderatorsManager = appenderatorsManager;
     }
 
     public Builder interval(Interval interval)
@@ -1034,7 +1047,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           rowIngestionMetersFactory,
           coordinatorClient,
           segmentLoaderFactory,
-          retryPolicyFactory
+          retryPolicyFactory,
+          appenderatorsManager
       );
     }
   }
