@@ -323,7 +323,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(segments.size(), 4);
+    Assert.assertEquals(4, segments.size());
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
@@ -335,7 +335,7 @@ public class DruidSchemaTest extends CalciteTestBase
 
     // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 3);
+    Assert.assertEquals(3, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
@@ -346,7 +346,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(segments.size(), 4);
+    Assert.assertEquals(4, segments.size());
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
@@ -357,7 +357,7 @@ public class DruidSchemaTest extends CalciteTestBase
 
     // The following line can cause NPE without segmentMetadata null check in DruidSchema#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(schema.getSegmentMetadataSnapshot().size(), 3);
+    Assert.assertEquals(3, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
@@ -373,9 +373,9 @@ public class DruidSchemaTest extends CalciteTestBase
                                                 .filter(segment -> segment.getDataSource().equals("foo3"))
                                                 .findFirst()
                                                 .orElse(null);
-
+    Assert.assertNotNull(existingSegment);
     final AvailableSegmentMetadata metadata = segmentsMetadata.get(existingSegment.getId());
-    Assert.assertEquals(metadata.isRealtime(), 1L);
+    Assert.assertEquals(1L, metadata.isRealtime());
     // get the historical server
     final ImmutableDruidServer historicalServer = druidServers.stream()
                                                         .filter(s -> s.getType().equals(ServerType.HISTORICAL))
@@ -393,13 +393,15 @@ public class DruidSchemaTest extends CalciteTestBase
                                          .filter(segment -> segment.getDataSource().equals("foo3"))
                                          .findFirst()
                                          .orElse(null);
+    Assert.assertNotNull(currentSegment);
     AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(currentMetadata.isRealtime(), 1L);
+    Assert.assertEquals(1L, currentMetadata.isRealtime());
 
     ImmutableDruidServer realtimeServer = druidServers.stream()
                                                       .filter(s -> s.getType().equals(ServerType.REALTIME))
                                                       .findAny()
                                                       .orElse(null);
+    Assert.assertNotNull(realtimeServer);
     // drop existingSegment from realtime task
     schema.removeServerSegment(realtimeServer.getMetadata(), existingSegment);
     segmentsMetadata = schema.getSegmentMetadataSnapshot();
@@ -407,8 +409,9 @@ public class DruidSchemaTest extends CalciteTestBase
                              .filter(segment -> segment.getDataSource().equals("foo3"))
                              .findFirst()
                              .orElse(null);
+    Assert.assertNotNull(currentSegment);
     currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(currentMetadata.isRealtime(), 0L);
+    Assert.assertEquals(0L, currentMetadata.isRealtime());
   }
 
 }

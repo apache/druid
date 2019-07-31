@@ -74,6 +74,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -438,15 +439,17 @@ public class DruidSchema extends AbstractSchema
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
       final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
-      final ImmutableSet<DruidServerMetadata> servers = FluentIterable.from(segmentServers)
-                                                                      .filter(Predicates.not(Predicates.equalTo(server)))
-                                                                      .toSet();
-      final DruidServerMetadata realtimeServer = servers.stream()
-                                                  .filter(metadata -> metadata.getType().equals(ServerType.REALTIME))
-                                                  .findAny()
-                                                  .orElse(null);
+      final ImmutableSet<DruidServerMetadata> servers = FluentIterable
+          .from(segmentServers)
+          .filter(Predicates.not(Predicates.equalTo(server)))
+          .toSet();
+      final Optional<DruidServerMetadata> realtimeServer = servers
+          .stream()
+          .filter(metadata -> metadata.getType().equals(ServerType.REALTIME))
+          .findAny();
+
       // if there is no realtime server in the replicas, isRealtime flag should be unset
-      long isRealtime = realtimeServer == null ? 0 : 1;
+      long isRealtime = realtimeServer.isPresent() ? 1 : 0;
       final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
           .from(segmentMetadata)
           .withReplicas(servers)
