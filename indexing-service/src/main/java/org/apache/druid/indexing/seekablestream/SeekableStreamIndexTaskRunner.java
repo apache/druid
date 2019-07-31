@@ -636,7 +636,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
-                      if (addResult.isPushRequired(tuningConfig) && !sequenceToUse.isCheckpointed()) {
+                      final boolean isPushRequired = addResult.isPushRequired(
+                          tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
+                          tuningConfig.getPartitionsSpec().getMaxTotalRows()
+                      );
+                      if (isPushRequired && !sequenceToUse.isCheckpointed()) {
                         sequenceToCheckpoint = sequenceToUse;
                       }
                       isPersistRequired |= addResult.isPersistRequired();

@@ -17,34 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.indexer.partitions;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-
-import java.util.Collections;
 import java.util.List;
 
 /**
+ * PartitionsSpec based on dimension values.
  */
-public class IndexingHadoopModule implements DruidModule
+public interface DimensionBasedPartitionsSpec extends PartitionsSpec
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.<Module>singletonList(
-        new SimpleModule(getClass().getSimpleName())
-            .registerSubtypes(
-                new NamedType(HadoopyStringInputRowParser.class, "hadoopyString")
-            )
-    );
-  }
-
-  @Override
-  public void configure(Binder binder)
-  {
-  }
+  List<String> getPartitionDimensions();
 }
