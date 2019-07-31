@@ -23,7 +23,7 @@ import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile } from '../../utils';
+import { downloadFile, QueryManager } from '../../utils';
 
 import './show-log.scss';
 
@@ -35,6 +35,8 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
+let timeOut: number | undefined;
+
 export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
@@ -43,56 +45,72 @@ export interface ShowLogProps {
 }
 
 export interface ShowLogState {
-  logValue: string;
+  logValue?: string;
+  loading: boolean;
+  error?: string;
   tail: boolean;
 }
 
 export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
+  private showLogQueryManager: QueryManager<null, string>;
+  private tailQueryManager: QueryManager<null, void>;
   public log = React.createRef<HTMLTextAreaElement>();
 
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
     this.state = {
-      logValue: '',
       tail: true,
+      loading: true,
     };
-    this.getLogInfo();
+
+    this.showLogQueryManager = new QueryManager({
+      processQuery: async () => {
+        const { endpoint, tailOffset } = this.props;
+        const resp = await axios.get(endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''));
+        const data = resp.data;
+
+        let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
+        if (tailOffset) logValue = removeFirstPartialLine(logValue);
+        return logValue;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          logValue: result,
+          loading,
+          error,
+        });
+      },
+    });
+
+    this.tailQueryManager = new QueryManager({
+      processQuery: async () => {
+        await this.showLogQueryManager.runQuery(null);
+        if (this.state.tail) {
+          if (this.log.current) {
+            this.log.current.scrollTo(0, this.log.current.scrollHeight);
+          }
+          timeOut = Number(
+            setTimeout(() => {
+              this.tailQueryManager.runQuery(null);
+            }, 2000),
+          );
+        }
+      },
+    });
   }
 
   componentDidMount(): void {
     const { status } = this.props;
 
     if (status === 'RUNNING') {
-      this.tail();
+      this.tailQueryManager.runQuery(null);
     }
+
+    this.showLogQueryManager.runQuery(null);
   }
 
-  private getLogInfo = async (): Promise<void> => {
-    const { endpoint, tailOffset } = this.props;
-    try {
-      const resp = await axios.get(endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''));
-      const data = resp.data;
-
-      let logValue = typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
-      if (tailOffset) logValue = removeFirstPartialLine(logValue);
-      this.setState({ logValue });
-    } catch (e) {
-      this.setState({
-        logValue: `Error: ` + e.response.data,
-      });
-    }
-  };
-
-  async tail() {
-    await this.getLogInfo();
-    if (this.state.tail) {
-      if (this.log.current) {
-        this.log.current.scrollTo(0, this.log.current.scrollHeight);
-      }
-      setTimeout(() => {
-        this.tail();
-      }, 2000);
-    }
+  componentWillUnmount(): void {
+    clearTimeout(timeOut);
   }
 
   private handleCheckboxChange = () => {
@@ -100,13 +118,13 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
       tail: !this.state.tail,
     });
     if (!this.state.tail) {
-      this.tail();
+      this.tailQueryManager.runQuery(null);
     }
   };
 
   render(): JSX.Element {
     const { endpoint, downloadFilename, status } = this.props;
-    const { logValue } = this.state;
+    const { logValue, error } = this.state;
 
     return (
       <div className="show-log">
@@ -123,14 +141,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
               <Button
                 text="Save"
                 minimal
-                onClick={() => downloadFile(logValue, 'plain', downloadFilename)}
+                onClick={() => downloadFile(logValue ? logValue : '', 'plain', downloadFilename)}
               />
             )}
             <Button
               text="Copy"
               minimal
               onClick={() => {
-                copy(logValue, { format: 'text/plain' });
+                copy(logValue ? logValue : '', { format: 'text/plain' });
                 AppToaster.show({
                   message: 'Log copied to clipboard',
                   intent: Intent.SUCCESS,
@@ -145,7 +163,12 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <textarea className="bp3-input" readOnly value={logValue} ref={this.log} />
+          <textarea
+            className="bp3-input"
+            readOnly
+            value={logValue ? logValue : error}
+            ref={this.log}
+          />
         </div>
       </div>
     );
