@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 .bar-chart {
   .hovered-bar {
     fill: transparent;
@@ -27,7 +26,7 @@
 
   .gridline-x {
     line {
-      stroke-dasharray: 5,5;
+      stroke-dasharray: 5, 5;
       opacity: 0.5;
     }
   }
