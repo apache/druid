@@ -99,7 +99,7 @@ export class ${camelName} extends React.PureComponent<${camelName}Props, ${camel
 
   }
 
-  render() {
+  render(): JSX.Element {
     return <div className="${name}">
       Stuff...
     </div>;

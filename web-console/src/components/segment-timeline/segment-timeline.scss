@@ -16,29 +16,43 @@
  * limitations under the License.
  */
 
-import { IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
-import React from 'react';
+.segment-timeline {
+  display: grid;
+  grid-template-columns: 85% 15%;
+  height: 100%;
+  margin-top: 10px;
 
-export interface BasicAction {
-  icon?: IconName;
-  title: string;
-  intent?: Intent;
-  onAction: () => void;
-}
+  .loader {
+    width: 85%;
+  }
 
-export function basicActionsToMenu(basicActions: BasicAction[]): JSX.Element | undefined {
-  if (!basicActions.length) return;
-  return (
-    <Menu>
-      {basicActions.map((action, i) => (
-        <MenuItem
-          key={i}
-          icon={action.icon}
-          text={action.title}
-          intent={action.intent}
-          onClick={action.onAction}
-        />
-      ))}
-    </Menu>
-  );
+  .loading-error {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+  }
+
+  .bar-chart-tooltip {
+    margin-top: 15px;
+    text-align: center;
+
+    div {
+      display: inline-block;
+      width: 200px;
+    }
+  }
+
+  .no-data-text {
+    position: absolute;
+    left: 30vw;
+    top: 15vh;
+    font-size: 20px;
+  }
+
+  .side-control {
+    padding-left: 1vw;
+    padding-top: 5vh;
+  }
 }

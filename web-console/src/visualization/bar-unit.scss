@@ -16,29 +16,6 @@
  * limitations under the License.
  */
 
-import { IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
-import React from 'react';
-
-export interface BasicAction {
-  icon?: IconName;
-  title: string;
-  intent?: Intent;
-  onAction: () => void;
-}
-
-export function basicActionsToMenu(basicActions: BasicAction[]): JSX.Element | undefined {
-  if (!basicActions.length) return;
-  return (
-    <Menu>
-      {basicActions.map((action, i) => (
-        <MenuItem
-          key={i}
-          icon={action.icon}
-          text={action.title}
-          intent={action.intent}
-          onClick={action.onAction}
-        />
-      ))}
-    </Menu>
-  );
+.bar-chart-unit {
+  transform: translateX(65px);
 }

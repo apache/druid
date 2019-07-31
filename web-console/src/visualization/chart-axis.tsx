@@ -16,38 +16,31 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, IDialogProps, Intent } from '@blueprintjs/core';
+import * as d3 from 'd3';
 import React from 'react';
 
-import { ShowJson } from '../../components';
-
-import './status-dialog.scss';
-
-interface StatusDialogProps extends IDialogProps {
-  onClose: () => void;
-  title: string;
+interface ChartAxisProps extends React.Props<any> {
+  transform: string;
+  scale: any;
+  className?: string;
 }
 
-export class StatusDialog extends React.PureComponent<StatusDialogProps> {
-  constructor(props: StatusDialogProps) {
+interface ChartAxisState {}
+
+export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
+  constructor(props: ChartAxisProps) {
     super(props);
     this.state = {};
   }
 
   render(): JSX.Element {
-    const { onClose, title, isOpen } = this.props;
-
+    const { transform, scale, className } = this.props;
     return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen={isOpen} title={title}>
-        <div className={'status-dialog-main-area'}>
-          <ShowJson endpoint={`/status`} downloadFilename={'status'} />
-        </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
-          </div>
-        </div>
-      </Dialog>
+      <g
+        className={`axis ${className}`}
+        transform={transform}
+        ref={node => d3.select(node).call(scale)}
+      />
     );
   }
 }

@@ -60,7 +60,9 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   }
 
   componentDidMount(): void {
-    if (this.props.status === 'RUNNING') {
+    const { status } = this.props;
+
+    if (status === 'RUNNING') {
       this.tail();
     }
   }

@@ -16,38 +16,40 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, IDialogProps, Intent } from '@blueprintjs/core';
 import React from 'react';
 
-import { ShowJson } from '../../components';
+import './bar-unit.scss';
 
-import './status-dialog.scss';
-
-interface StatusDialogProps extends IDialogProps {
-  onClose: () => void;
-  title: string;
+interface BarChartUnitProps extends React.Props<any> {
+  x: number | undefined;
+  y: number;
+  width: number;
+  height: number;
+  style?: any;
+  onClick?: () => void;
+  onHover?: () => void;
+  offHover?: () => void;
 }
 
-export class StatusDialog extends React.PureComponent<StatusDialogProps> {
-  constructor(props: StatusDialogProps) {
+interface BarChartUnitState {}
+
+export class BarUnit extends React.Component<BarChartUnitProps, BarChartUnitState> {
+  constructor(props: BarChartUnitProps) {
     super(props);
     this.state = {};
   }
 
   render(): JSX.Element {
-    const { onClose, title, isOpen } = this.props;
-
+    const { x, y, width, height, style, onClick, onHover, offHover } = this.props;
     return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen={isOpen} title={title}>
-        <div className={'status-dialog-main-area'}>
-          <ShowJson endpoint={`/status`} downloadFilename={'status'} />
-        </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
-          </div>
-        </div>
-      </Dialog>
+      <g
+        className={`bar-chart-unit`}
+        onClick={onClick}
+        onMouseOver={onHover}
+        onMouseLeave={offHover}
+      >
+        <rect x={x} y={y} width={width} height={height} style={style} />
+      </g>
     );
   }
 }
