@@ -83,7 +83,6 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
     <Bug pattern="SR_NOT_CHECKED"/>
-    <Bug pattern="SS_SHOULD_BE_STATIC"/>
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
