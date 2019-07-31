@@ -25,7 +25,7 @@ import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/ta
 
 interface SegmentTableActionDialogProps extends IDialogProps {
   segmentId?: string;
-  dataSourceId?: string;
+  datasourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
 }
@@ -46,7 +46,7 @@ export class SegmentTableActionDialog extends React.PureComponent<
   }
 
   render(): React.ReactNode {
-    const { segmentId, onClose, dataSourceId, actions } = this.props;
+    const { segmentId, onClose, datasourceId, actions } = this.props;
     const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
@@ -68,7 +68,7 @@ export class SegmentTableActionDialog extends React.PureComponent<
       >
         {activeTab === 'metadata' && (
           <ShowJson
-            endpoint={`/druid/coordinator/v1/metadata/datasources/${dataSourceId}/segments/${segmentId}`}
+            endpoint={`/druid/coordinator/v1/metadata/datasources/${datasourceId}/segments/${segmentId}`}
             downloadFilename={`Segment-metadata-${segmentId}.json`}
           />
         )}

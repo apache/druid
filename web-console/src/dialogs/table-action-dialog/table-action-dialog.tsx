@@ -53,7 +53,7 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
   }
 
   render(): JSX.Element {
-    const { sideButtonMetadata, isOpen, onClose, title, actions } = this.props;
+    const { sideButtonMetadata, isOpen, onClose, title, actions, children } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
     return (
@@ -72,7 +72,7 @@ export class TableActionDialog extends React.PureComponent<TableActionDialogProp
               />
             ))}
           </div>
-          <div className="main-section">{this.props.children}</div>
+          <div className="main-section">{children}</div>
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           {actionsMenu && (
