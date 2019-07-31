@@ -29,7 +29,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class IPv4AddressMatchMacroTest extends MacroTestBase
+public class IPv4AddressMatchExprMacroTest extends MacroTestBase
 {
   private static final Expr IPV4 = ExprEval.of("192.168.0.1").toExpr();
   private static final Expr IPV4_LONG = ExprEval.of(3232235521L).toExpr();
@@ -40,8 +40,6 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   private static final Expr IPV6_MAPPED = ExprEval.of("::ffff:192.168.0.1").toExpr();
   private static final Expr SUBNET_192_168 = ExprEval.of("192.168.0.0/16").toExpr();
   private static final Expr SUBNET_10 = ExprEval.of("10.0.0.0/8").toExpr();
-  private static final Expr INCLUSIVE = ExprEval.of("true").toExpr();
-  private static final Expr NOT_INCLUSIVE = ExprEval.of("false").toExpr();
   private static final Expr NOT_LITERAL = new NotLiteralExpr(null);
 
   private IPv4AddressMatchExprMacro target;
@@ -55,7 +53,7 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2-3 arguments");
+    expectException(IllegalArgumentException.class, "must have 2 arguments");
 
     target.apply(Collections.emptyList());
   }
@@ -63,9 +61,9 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2-3 arguments");
+    expectException(IllegalArgumentException.class, "must have 2 arguments");
 
-    target.apply(Arrays.asList(IPV4, SUBNET_192_168, INCLUSIVE, NOT_LITERAL));
+    target.apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
   }
 
   @Test
@@ -83,14 +81,6 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
 
     Expr invalidSubnet = ExprEval.of("192.168.0.1/invalid").toExpr();
     target.apply(Arrays.asList(IPV4, invalidSubnet));
-  }
-
-  @Test
-  public void testInclusiveArgNotLiteral()
-  {
-    expectException(IllegalArgumentException.class, "inclusive arg must be a literal");
-
-    target.apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
   }
 
   @Test
@@ -129,7 +119,7 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   @Test
   public void testMatchingStringArgIPv6Mapped()
   {
-    Assert.assertTrue(eval(IPV6_MAPPED, SUBNET_192_168));
+    Assert.assertFalse(eval(IPV6_MAPPED, SUBNET_192_168));
   }
 
   @Test
@@ -172,7 +162,7 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   @Test
   public void testMatchingStringArgUnsignedInt()
   {
-    Assert.assertTrue(eval(IPV4_UINT, SUBNET_192_168));
+    Assert.assertFalse(eval(IPV4_UINT, SUBNET_192_168));
   }
 
   @Test
@@ -185,47 +175,9 @@ public class IPv4AddressMatchMacroTest extends MacroTestBase
   public void testInclusive()
   {
     Expr subnet = SUBNET_192_168;
-    Assert.assertTrue(eval(IPV4_NETWORK, subnet, INCLUSIVE));
-    Assert.assertTrue(eval(IPV4, subnet, INCLUSIVE));
-    Assert.assertTrue(eval(IPV4_BROADCAST, subnet, INCLUSIVE));
-  }
-
-  @Test
-  public void testNotInclusive()
-  {
-    Expr subnet = SUBNET_192_168;
-    Assert.assertFalse(eval(IPV4_NETWORK, subnet, NOT_INCLUSIVE));
-    Assert.assertTrue(eval(IPV4, subnet, NOT_INCLUSIVE));
-    Assert.assertFalse(eval(IPV4_BROADCAST, subnet, NOT_INCLUSIVE));
-  }
-
-  @Test
-  public void testDefaultNotInclusive()
-  {
-    Expr subnet = SUBNET_192_168;
-    Assert.assertFalse(eval(IPV4_NETWORK, subnet));
+    Assert.assertTrue(eval(IPV4_NETWORK, subnet));
     Assert.assertTrue(eval(IPV4, subnet));
-    Assert.assertFalse(eval(IPV4_BROADCAST, subnet));
-  }
-
-  @Test
-  public void testInclusiveAsLong()
-  {
-    Expr subnet = SUBNET_192_168;
-    Expr inclusive = ExprEval.of(1L).toExpr();
-    Assert.assertTrue(eval(IPV4_NETWORK, subnet, inclusive));
-    Assert.assertTrue(eval(IPV4, subnet, inclusive));
-    Assert.assertTrue(eval(IPV4_BROADCAST, subnet, inclusive));
-  }
-
-  @Test
-  public void testNotInclusiveAsLong()
-  {
-    Expr subnet = SUBNET_192_168;
-    Expr notInclusive = ExprEval.of(0L).toExpr();
-    Assert.assertFalse(eval(IPV4_NETWORK, subnet, notInclusive));
-    Assert.assertTrue(eval(IPV4, subnet, notInclusive));
-    Assert.assertFalse(eval(IPV4_BROADCAST, subnet, notInclusive));
+    Assert.assertTrue(eval(IPV4_BROADCAST, subnet));
   }
 
   private boolean eval(Expr... args)

@@ -63,7 +63,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   public void testNullStringArg()
   {
     Expr nullString = ExprEval.of(null).toExpr();
-    Assert.assertEquals(NULL, eval(nullString));
+    Assert.assertSame(NULL, eval(nullString));
   }
 
   @Test
@@ -98,7 +98,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   public void testValidStringArgIPv6Mapped()
   {
     Expr ipv6Mapped = ExprEval.of("::ffff:192.168.0.1").toExpr();
-    Assert.assertEquals(EXPECTED, eval(ipv6Mapped));
+    Assert.assertEquals(NULL, eval(ipv6Mapped));
   }
 
   @Test
@@ -111,7 +111,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   public void testValidStringArgUnsignedInt()
   {
     Expr unsignedInt = ExprEval.of("3232235521").toExpr();
-    Assert.assertEquals(EXPECTED, eval(unsignedInt));
+    Assert.assertEquals(NULL, eval(unsignedInt));
   }
 
   @Test

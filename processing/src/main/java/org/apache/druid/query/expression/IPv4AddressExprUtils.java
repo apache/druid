@@ -24,11 +24,14 @@ import com.google.common.net.InetAddresses;
 import javax.annotation.Nullable;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.util.regex.Pattern;
 
 class IPv4AddressExprUtils
 {
+  private static final Pattern IPV4_PATTERN = Pattern.compile("(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})");
+
   /**
-   * @return True if argument cannot be represented by an unsigned integer (4 bytes)
+   * @return True if argument cannot be represented by an unsigned integer (4 bytes), else false
    */
   static boolean overflowsUnsignedInt(long value)
   {
@@ -36,24 +39,44 @@ class IPv4AddressExprUtils
   }
 
   /**
-   * @return IPv4 address dotted-decimal notated string or null if the argument is not a valid IPv4 address string or
-   * IPv6 IPv4-mapped address string.
+   * @return True if argument is a valid IPv4 address dotted-decimal string
    */
-  @Nullable
-  static String extractIPv4Address(String string)
+  static boolean isValidAddress(@Nullable String string)
   {
-    if (string != null) {
-      try {
-        InetAddress address = InetAddresses.forString(string);
-        if (address instanceof Inet4Address) {
-          return address.getHostAddress();
-        }
-      }
-      catch (IllegalArgumentException ignored) {
-        // fall through
+    return string != null && IPV4_PATTERN.matcher(string).matches();
+  }
+
+  @Nullable
+  static Inet4Address parse(@Nullable String string)
+  {
+    // Explicitly check for valid address to avoid overhead of InetAddresses#forString() potentially
+    // throwing IllegalArgumentException
+    if (isValidAddress(string)) {
+      // Do not use java.lang.InetAddress#getByName() as it may do DNS lookups
+      InetAddress address = InetAddresses.forString(string);
+      if (address instanceof Inet4Address) {
+        return (Inet4Address) address;
       }
     }
-
     return null;
+  }
+
+  static Inet4Address parse(int value)
+  {
+    return InetAddresses.fromInteger(value);
+  }
+
+  /**
+   * @return IPv4 address dotted-decimal notated string
+   */
+  static String toString(Inet4Address address)
+  {
+    return address.getHostAddress();
+  }
+
+  static long toLong(Inet4Address address)
+  {
+    int value = InetAddresses.coerceToInteger(address);
+    return Integer.toUnsignedLong(value);
   }
 }

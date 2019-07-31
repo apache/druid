@@ -198,8 +198,14 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 
 ## IP Address Functions
+
+For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string
+(e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). The `subnet`
+argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g.,
+"192.168.0.0/16").
+
 | function | description |
 | --- | --- |
-| ipv4address_match(address, subnet [,inclusive]) | Returns 1 if the string or long IP `address` belongs to the `subnet` CIDR notation literal string, else 0. The optional literal boolean `inclusive` parameter indicates whether the network and broadcast IP addresses should be included in the subnet and defaults to `false`. This function is more efficient when operating on IP addresses as longs instead of strings.|
-| ipv4address_parse(address) | Parses string or long into an IPv4 address as a long. Returns null if `address` cannot be represented as an IPv4 address. |
-| ipv4address_stringify(address) | Converts string or long IPv4 address into an IPv4 address dotted-decimal notated string. Return null if `address` cannot be represented as an IPv4 address.|
+| ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
+| ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
+| ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|

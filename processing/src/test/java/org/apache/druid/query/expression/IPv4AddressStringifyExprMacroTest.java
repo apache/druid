@@ -29,7 +29,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class IPv4AddressStringifyMacroTest extends MacroTestBase
+public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
 {
   private static final Expr VALID = ExprEval.of(3232235521L).toExpr();
   private static final String EXPECTED = "192.168.0.1";
@@ -132,7 +132,7 @@ public class IPv4AddressStringifyMacroTest extends MacroTestBase
   public void testValidStringArgIPv6Mapped()
   {
     Expr ipv6Mapped = ExprEval.of("::ffff:192.168.0.1").toExpr();
-    Assert.assertEquals(EXPECTED, eval(ipv6Mapped));
+    Assert.assertNull(eval(ipv6Mapped));
   }
 
   @Test
@@ -145,7 +145,7 @@ public class IPv4AddressStringifyMacroTest extends MacroTestBase
   public void testValidStringArgUnsignedInt()
   {
     Expr unsignedInt = ExprEval.of("3232235521").toExpr();
-    Assert.assertEquals(EXPECTED, eval(unsignedInt));
+    Assert.assertNull(eval(unsignedInt));
   }
 
   private Object eval(Expr arg)

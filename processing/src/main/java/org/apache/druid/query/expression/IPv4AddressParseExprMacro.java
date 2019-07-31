@@ -19,37 +19,27 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.net.InetAddresses;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.List;
 
 /**
  * <pre>
- * Implements an expression that parses string or long into an IPv4 address stored (as an unsigned
+ * Implements an expression that parses a string or long into an IPv4 address stored (as an unsigned
  * int) in a long.
  *
  * Expression signatures:
- * - long ipv4address_parse(string)
- * - long ipv4address_parse(long)
+ * - long ipv4_parse(string)
+ * - long ipv4_parse(long)
  *
- * Valid argument formats are:
- * - IPv4 address dotted-decimal notation string (e.g., "198.168.0.1")
- * - IPv6 IPv4-mapped adress string (e.g., "::ffff:192.168.0.1")
- * - unsigned int long (e.g., 3232235521)
- * - unsigned int string (e.g., "3232235521")
- *
+ * String arguments should be formatted as a dotted-decimal.
+ * Long arguments that can be represented as an IPv4 address are passed through.
  * Invalid arguments return null.
- *
- * The overloaded signature allows applying the expression to a dimension with mixed string and long
- * representations of IPv4 addresses.
  * </pre>
  *
  * @see IPv4AddressStringifyExprMacro
@@ -57,7 +47,7 @@ import java.util.List;
  */
 public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String NAME = "ipv4address_parse";
+  public static final String NAME = "ipv4_parse";
 
   @Override
   public String name()
@@ -69,7 +59,7 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() != 1) {
-      throw new IAE("Function[%s] must have 1 argument", name());
+      throw new IAE(ExprUtils.createErrMsg(name(), "must have 1 argument"));
     }
 
     Expr arg = args.get(0);
@@ -85,20 +75,15 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        String stringValue = arg.eval(bindings).asString();
-        if (stringValue == null) {
-          return ExprEval.ofLong(null);
+        ExprEval eval = arg.eval(bindings);
+        switch (eval.type()) {
+          case STRING:
+            return evalAsString(eval);
+          case LONG:
+            return evalAsLong(eval);
+          default:
+            return ExprEval.ofLong(null);
         }
-
-        // Assume use cases in order of most frequent to least are:
-        // 1) convert string to long
-        // 2) convert long to long
-        Long value = parseAsString(stringValue);
-        if (value == null) {
-          value = parseAsLong(stringValue);
-        }
-
-        return ExprEval.ofLong(value);
       }
 
       @Override
@@ -112,35 +97,18 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
     return new IPv4AddressParseExpr(arg);
   }
 
-  @Nullable
-  private static Long parseAsString(String stringValue)
+  private static ExprEval evalAsString(ExprEval eval)
   {
-    try {
-      // Do not use java.lang.InetAddress#getByName() as it may do DNS lookups
-      InetAddress address = InetAddresses.forString(stringValue);
-      if (address instanceof Inet4Address) {
-        int value = InetAddresses.coerceToInteger(address);
-        return Integer.toUnsignedLong(value);
-      }
-    }
-    catch (IllegalArgumentException ignored) {
-      // fall through (Invalid IPv4 adddress string)
-    }
-    return null;
+    Inet4Address address = IPv4AddressExprUtils.parse(eval.asString());
+    Long value = address == null ? null : IPv4AddressExprUtils.toLong(address);
+    return ExprEval.ofLong(value);
   }
 
-  @Nullable
-  private static Long parseAsLong(String stringValue)
+  private static ExprEval evalAsLong(ExprEval eval)
   {
-    try {
-      Long value = Long.valueOf(stringValue);
-      if (!IPv4AddressExprUtils.overflowsUnsignedInt(value)) {
-        return value;
-      }
+    if (eval.isNumericNull() || !IPv4AddressExprUtils.overflowsUnsignedInt(eval.asLong())) {
+      return eval;
     }
-    catch (NumberFormatException ignored) {
-      // fall through
-    }
-    return null;
+    return ExprEval.ofLong(null);
   }
 }
