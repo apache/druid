@@ -173,7 +173,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           null,
           null,
           rowIngestionMetersFactory,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          null
       ));
     }
     return taskList;

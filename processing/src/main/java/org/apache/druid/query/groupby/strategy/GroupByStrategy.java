@@ -27,6 +27,7 @@ import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
@@ -34,7 +35,6 @@ import org.apache.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BinaryOperator;
 
@@ -72,7 +72,7 @@ public interface GroupByStrategy
       GroupByQueryQueryToolChest toolChest
   );
 
-  Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, Map<String, Object> responseContext);
+  Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, ResponseContext responseContext);
 
   /**
    * See {@link org.apache.druid.query.QueryToolChest#createMergeFn(Query)} for details, allows

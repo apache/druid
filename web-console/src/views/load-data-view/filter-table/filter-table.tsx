@@ -37,7 +37,7 @@ export interface FilterTableProps {
 }
 
 export class FilterTable extends React.PureComponent<FilterTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleData,
       columnFilter,
@@ -52,7 +52,7 @@ export class FilterTable extends React.PureComponent<FilterTableProps> {
         className="filter-table -striped -highlight"
         data={sampleData.rows}
         columns={filterMap(sampleData.header, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          if (!caseInsensitiveContains(columnName, columnFilter)) return;
           const timestamp = columnName === '__time';
           const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
           const filter = dimensionFilters[filterIndex];

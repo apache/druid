@@ -22,6 +22,7 @@ package org.apache.druid.client.cache;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -29,14 +30,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
+/**
+ * {@link CachePopulator} implementation that populates a cache on the same thread that is processing the
+ * {@link Sequence}. Used if config "druid.*.cache.numBackgroundThreads" is 0 (the default).
+ */
 public class ForegroundCachePopulator implements CachePopulator
 {
   private static final Logger log = new Logger(ForegroundCachePopulator.class);
 
-  private final Object lock = new Object();
   private final ObjectMapper objectMapper;
   private final CachePopulatorStats cachePopulatorStats;
   private final long maxEntrySize;
@@ -61,7 +64,7 @@ public class ForegroundCachePopulator implements CachePopulator
   )
   {
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    final AtomicBoolean tooBig = new AtomicBoolean(false);
+    final MutableBoolean tooBig = new MutableBoolean(false);
     final JsonGenerator jsonGenerator;
 
     try {
@@ -75,20 +78,18 @@ public class ForegroundCachePopulator implements CachePopulator
         Sequences.map(
             sequence,
             input -> {
-              if (!tooBig.get()) {
-                synchronized (lock) {
-                  try {
-                    jsonGenerator.writeObject(cacheFn.apply(input));
+              if (!tooBig.isTrue()) {
+                try {
+                  jsonGenerator.writeObject(cacheFn.apply(input));
 
-                    // Not flushing jsonGenerator before checking this, but should be ok since Jackson buffers are
-                    // typically just a few KB, and we don't want to waste cycles flushing.
-                    if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
-                      tooBig.set(true);
-                    }
+                  // Not flushing jsonGenerator before checking this, but should be ok since Jackson buffers are
+                  // typically just a few KB, and we don't want to waste cycles flushing.
+                  if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
+                    tooBig.setValue(true);
                   }
-                  catch (IOException e) {
-                    throw new RuntimeException(e);
-                  }
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
                 }
               }
 
@@ -100,24 +101,22 @@ public class ForegroundCachePopulator implements CachePopulator
           @Override
           public void after(final boolean isDone, final Throwable thrown) throws Exception
           {
-            synchronized (lock) {
-              jsonGenerator.close();
+            jsonGenerator.close();
 
-              if (isDone) {
-                // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
-                if (tooBig.get() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
-                  cachePopulatorStats.incrementOversized();
-                  return;
-                }
+            if (isDone) {
+              // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
+              if (tooBig.isTrue() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
+                cachePopulatorStats.incrementOversized();
+                return;
+              }
 
-                try {
-                  cache.put(cacheKey, bytes.toByteArray());
-                  cachePopulatorStats.incrementOk();
-                }
-                catch (Exception e) {
-                  log.warn(e, "Unable to write to cache");
-                  cachePopulatorStats.incrementError();
-                }
+              try {
+                cache.put(cacheKey, bytes.toByteArray());
+                cachePopulatorStats.incrementOk();
+              }
+              catch (Exception e) {
+                log.warn(e, "Unable to write to cache");
+                cachePopulatorStats.incrementError();
               }
             }
           }

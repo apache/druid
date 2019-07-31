@@ -20,6 +20,8 @@ import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
+import { ShowHistory } from '../../components/show-history/show-history';
+import { SupervisorStatisticsTable } from '../../components/supervisor-statistics-table/supervisor-statistics-table';
 import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
@@ -31,7 +33,7 @@ interface SupervisorTableActionDialogProps extends IDialogProps {
 }
 
 interface SupervisorTableActionDialogState {
-  activeTab: 'status' | 'payload' | 'stats' | 'history';
+  activeTab: 'status' | 'stats' | 'payload' | 'history';
 }
 
 export class SupervisorTableActionDialog extends React.PureComponent<
@@ -56,16 +58,16 @@ export class SupervisorTableActionDialog extends React.PureComponent<
         onClick: () => this.setState({ activeTab: 'status' }),
       },
       {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' }),
-      },
-      {
         icon: 'chart',
         text: 'Statistics',
         active: activeTab === 'stats',
         onClick: () => this.setState({ activeTab: 'stats' }),
+      },
+      {
+        icon: 'align-left',
+        text: 'Payload',
+        active: activeTab === 'payload',
+        onClick: () => this.setState({ activeTab: 'payload' }),
       },
       {
         icon: 'history',
@@ -90,20 +92,20 @@ export class SupervisorTableActionDialog extends React.PureComponent<
             downloadFilename={`supervisor-status-${supervisorId}.json`}
           />
         )}
+        {activeTab === 'stats' && (
+          <SupervisorStatisticsTable
+            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
+            downloadFilename={`supervisor-stats-${supervisorId}.json`}
+          />
+        )}
         {activeTab === 'payload' && (
           <ShowJson
             endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
             downloadFilename={`supervisor-payload-${supervisorId}.json`}
           />
         )}
-        {activeTab === 'stats' && (
-          <ShowJson
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
-            downloadFilename={`supervisor-stats-${supervisorId}.json`}
-          />
-        )}
         {activeTab === 'history' && (
-          <ShowJson
+          <ShowHistory
             endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`}
             downloadFilename={`supervisor-history-${supervisorId}.json`}
           />

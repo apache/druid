@@ -28,6 +28,7 @@ If you have been running an evaluation Druid cluster using local deep storage an
 more production-capable deep storage system such as S3 or HDFS, this document describes the necessary steps.
 
 Migration of deep storage involves the following steps at a high level:
+
 - Copying segments from local deep storage to the new deep storage
 - Exporting Druid's segments table from metadata
 - Rewriting the load specs in the exported segment data to reflect the new deep storage location

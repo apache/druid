@@ -61,7 +61,7 @@ import {
   parseJson,
   QueryState,
 } from '../../utils';
-import { possibleDruidFormatForValues } from '../../utils/druid-time';
+import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
   changeParallel,
@@ -120,6 +120,7 @@ import {
   getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
+  SampleEntry,
   sampleForConnect,
   sampleForFilter,
   sampleForParser,
@@ -139,33 +140,41 @@ import { TransformTable } from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
-function showRawLine(line: string): string {
-  if (line.includes('\n')) {
-    return `<Multi-line row, length: ${line.length}>`;
+function showRawLine(line: SampleEntry): string {
+  const raw = line.raw;
+  if (raw.includes('\n')) {
+    return `[Multi-line row, length: ${raw.length}]`;
   }
-  if (line.length > 1000) {
-    return line.substr(0, 1000) + '...';
+  if (raw.length > 1000) {
+    return raw.substr(0, 1000) + '...';
   }
-  return line;
+  return raw;
+}
+
+function showBlankLine(line: SampleEntry): string {
+  return line.parsed ? `[Row: ${JSON.stringify(line.parsed)}]` : '[Binary data]';
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
   if (!headerAndRows) return getEmptyTimestampSpec();
 
-  const timestampSpecs = headerAndRows.header
-    .map(sampleHeader => {
-      const possibleFormat = possibleDruidFormatForValues(
-        filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[sampleHeader] : null)),
-      );
-      if (!possibleFormat) return null;
-      return {
-        column: sampleHeader,
-        format: possibleFormat,
-      };
-    })
-    .filter(Boolean);
+  const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
+    const possibleFormat = possibleDruidFormatForValues(
+      filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[sampleHeader] : undefined)),
+    );
+    if (!possibleFormat) return;
+    return {
+      column: sampleHeader,
+      format: possibleFormat,
+    };
+  });
 
-  return timestampSpecs[0] || getEmptyTimestampSpec();
+  return (
+    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
+    timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
+    timestampSpecs[0] || // Fall back to the first one
+    getEmptyTimestampSpec() // Ok, empty it is...
+  );
 }
 
 type Step =
@@ -220,25 +229,25 @@ const VIEW_TITLE: Record<Step, string> = {
 };
 
 export interface LoadDataViewProps {
-  initSupervisorId?: string | null;
-  initTaskId?: string | null;
+  initSupervisorId?: string;
+  initTaskId?: string;
   goToTask: (taskId: string | undefined, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
   step: Step;
   spec: IngestionSpec;
-  cacheKey: string | undefined;
+  cacheKey?: string;
   // dialogs / modals
   showResetConfirm: boolean;
-  newRollup: boolean | null;
-  newDimensionMode: DimensionMode | null;
+  newRollup?: boolean;
+  newDimensionMode?: DimensionMode;
   showViewValueModal: boolean;
   str: string;
 
   // welcome
-  overlordModules: string[] | null;
-  selectedComboType: IngestionComboTypeWithExtra | null;
+  overlordModules?: string[];
+  selectedComboType?: IngestionComboTypeWithExtra;
 
   // general
   sampleStrategy: SampleStrategy;
@@ -246,7 +255,7 @@ export interface LoadDataViewState {
   specialColumnsOnly: boolean;
 
   // for ioConfig
-  inputQueryState: QueryState<string[]>;
+  inputQueryState: QueryState<SampleEntry[]>;
 
   // for parser
   parserQueryState: QueryState<HeaderAndRows>;
@@ -254,7 +263,7 @@ export interface LoadDataViewState {
   // for flatten
   flattenQueryState: QueryState<HeaderAndRows>;
   selectedFlattenFieldIndex: number;
-  selectedFlattenField: FlattenField | null;
+  selectedFlattenField?: FlattenField;
 
   // for timestamp
   timestampQueryState: QueryState<{
@@ -265,12 +274,12 @@ export interface LoadDataViewState {
   // for transform
   transformQueryState: QueryState<HeaderAndRows>;
   selectedTransformIndex: number;
-  selectedTransform: Transform | null;
+  selectedTransform?: Transform;
 
   // for filter
   filterQueryState: QueryState<HeaderAndRows>;
   selectedFilterIndex: number;
-  selectedFilter: DruidFilter | null;
+  selectedFilter?: DruidFilter;
   showGlobalFilter: boolean;
 
   // for schema
@@ -280,9 +289,11 @@ export interface LoadDataViewState {
     metricsSpec: MetricSpec[];
   }>;
   selectedDimensionSpecIndex: number;
-  selectedDimensionSpec: DimensionSpec | null;
+  selectedDimensionSpec?: DimensionSpec;
   selectedMetricSpecIndex: number;
-  selectedMetricSpec: MetricSpec | null;
+  selectedMetricSpec?: MetricSpec;
+
+  continueToSpec: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -294,18 +305,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.state = {
       step: 'welcome',
       spec,
-      cacheKey: undefined,
 
       // dialogs / modals
       showResetConfirm: false,
       showViewValueModal: false,
-      newRollup: null,
-      newDimensionMode: null,
       str: '',
-
-      // welcome
-      overlordModules: null,
-      selectedComboType: null,
 
       // general
       sampleStrategy: 'start',
@@ -321,7 +325,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       // for flatten
       flattenQueryState: QueryState.INIT,
       selectedFlattenFieldIndex: -1,
-      selectedFlattenField: null,
 
       // for timestamp
       timestampQueryState: QueryState.INIT,
@@ -329,20 +332,18 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       // for transform
       transformQueryState: QueryState.INIT,
       selectedTransformIndex: -1,
-      selectedTransform: null,
 
       // for filter
       filterQueryState: QueryState.INIT,
       selectedFilterIndex: -1,
-      selectedFilter: null,
       showGlobalFilter: false,
 
       // for dimensions
       schemaQueryState: QueryState.INIT,
       selectedDimensionSpecIndex: -1,
-      selectedDimensionSpec: null,
       selectedMetricSpecIndex: -1,
-      selectedMetricSpec: null,
+
+      continueToSpec: false,
     };
   }
 
@@ -360,6 +361,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       this.updateStep('welcome');
     } else {
       this.updateStep('connect');
+    }
+
+    if (isEmptyIngestionSpec(spec)) {
+      this.setState({ continueToSpec: true });
     }
   }
 
@@ -407,12 +412,39 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
 
-  render() {
-    const { step } = this.state;
+  render(): JSX.Element {
+    const { step, continueToSpec } = this.state;
+    if (!continueToSpec) {
+      return (
+        <div className={classNames('load-data-continue-view load-data-view')}>
+          <Card className={'spec-card'} interactive onClick={this.handleResetSpec}>
+            <Icon className="spec-card-icon" icon={IconNames.ASTERISK} iconSize={30} />
+            <div className={'spec-card-header'}>
+              Start a new spec
+              <div className={'spec-card-caption'}>Start a new ingestion flow</div>
+            </div>
+          </Card>
+          <Card
+            className={'spec-card'}
+            interactive
+            onClick={() => this.setState({ continueToSpec: true })}
+          >
+            <Icon className="spec-card-icon" icon={IconNames.REPEAT} iconSize={30} />
+            <div className={'spec-card-header'}>
+              Continue from previous spec
+              <div className={'spec-card-caption'}>
+                Continue from most recent spec you were working on
+              </div>
+            </div>
+          </Card>
+          {this.renderResetConfirm()}
+        </div>
+      );
+    }
+
     return (
       <div className={classNames('load-data-view', 'app-view', step)}>
         {this.renderStepNav()}
-
         {step === 'welcome' && this.renderWelcomeStep()}
         {step === 'connect' && this.renderConnectStep()}
         {step === 'parser' && this.renderParserStep()}
@@ -508,7 +540,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         className={classNames({ disabled: !goodToGo, active: selectedComboType === comboType })}
         interactive
         onClick={() => {
-          this.setState({ selectedComboType: selectedComboType !== comboType ? comboType : null });
+          this.setState({
+            selectedComboType: selectedComboType !== comboType ? comboType : undefined,
+          });
         }}
       >
         <img src={UrlBaser.base(`/assets/${getIngestionImage(comboType)}.png`)} />
@@ -528,8 +562,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:static-s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
           {this.renderIngestionCard('hadoop')}
+          {this.renderIngestionCard('index:ingestSegment')}
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
+          {this.renderIngestionCard('index:inline')}
           {/* this.renderIngestionCard('example') */}
           {this.renderIngestionCard('other')}
         </div>
@@ -585,6 +621,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               Files must be in a text format and must be accessible to all the Druid processes in
               the cluster.
             </p>
+          </>
+        );
+
+      case 'index:ingestSegment':
+        return (
+          <>
+            <p>Reindex data from existing Druid segments.</p>
+            <p>
+              Reindexing data allows you to filter rows, add, transform, and delete columns, as well
+              as change the partitioning of the data.
+            </p>
+          </>
+        );
+
+      case 'index:inline':
+        return (
+          <>
+            <p>Ingest a small amount of data directly from the clipboard.</p>
           </>
         );
 
@@ -649,6 +703,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     switch (selectedComboType) {
       case 'index:http':
       case 'index:local':
+      case 'index:ingestSegment':
+      case 'index:inline':
       case 'index:static-s3':
       case 'index:static-google-blobstore':
       case 'kafka':
@@ -659,9 +715,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               text="Connect data"
               rightIcon={IconNames.ARROW_RIGHT}
               onClick={() => {
-                this.setState({
-                  spec: updateIngestionType(spec, selectedComboType as any),
-                });
+                this.updateSpec(updateIngestionType(spec, selectedComboType as any));
                 setTimeout(() => {
                   this.updateStep('connect');
                 }, 10);
@@ -733,6 +787,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({ showResetConfirm: true });
   };
 
+  private handleResetSpec = () => {
+    this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
+    this.updateSpec({} as any);
+  };
+
   renderResetConfirm() {
     const { showResetConfirm } = this.state;
     if (!showResetConfirm) return null;
@@ -745,10 +804,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         intent={Intent.DANGER}
         isOpen
         onCancel={() => this.setState({ showResetConfirm: false })}
-        onConfirm={() => {
-          this.setState({ showResetConfirm: false });
-          this.updateSpec({} as any);
-        }}
+        onConfirm={this.handleResetSpec}
       >
         <p>This will discard the current progress in the spec.</p>
       </Alert>
@@ -789,7 +845,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     this.setState({
       cacheKey: sampleResponse.cacheKey,
-      inputQueryState: new QueryState({ data: sampleResponse.data.map((d: any) => d.raw) }),
+      inputQueryState: new QueryState({ data: sampleResponse.data }),
     });
   }
 
@@ -818,8 +874,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           className="raw-lines"
           value={
             inputData.length
-              ? (inputData.every(l => !l)
-                  ? inputData.map(_ => '<Binary data>')
+              ? (inputData.every(l => !l.raw)
+                  ? inputData.map(showBlankLine)
                   : inputData.map(showRawLine)
                 ).join('\n')
               : 'No data returned from sampler'
@@ -887,7 +943,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !inputQueryState.data,
           onNextStep: () => {
             if (!inputQueryState.data) return;
-            this.updateSpec(fillDataSourceName(fillParser(spec, inputQueryState.data)));
+            this.updateSpec(
+              fillDataSourceName(fillParser(spec, inputQueryState.data.map(l => l.raw))),
+            );
           },
         })}
       </>
@@ -902,7 +960,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1092,7 +1150,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const close = () => {
       this.setState({
         selectedFlattenFieldIndex: -1,
-        selectedFlattenField: null,
+        selectedFlattenField: undefined,
       });
     };
 
@@ -1179,7 +1237,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const timestampSpec =
       deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1348,7 +1406,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1493,7 +1551,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const close = () => {
       this.setState({
         selectedTransformIndex: -1,
-        selectedTransform: null,
+        selectedTransform: undefined,
       });
     };
 
@@ -1572,7 +1630,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
     const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -1733,7 +1791,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const close = () => {
       this.setState({
         selectedFilterIndex: -1,
-        selectedFilter: null,
+        selectedFilter: undefined,
       });
     };
 
@@ -1877,7 +1935,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const dimensionsSpec: DimensionsSpec =
       deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || EMPTY_OBJECT;
 
-    let issue: string | null = null;
+    let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     } else if (issueWithParser(parser)) {
@@ -2102,9 +2160,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private onDimensionOrMetricSelect = (
-    selectedDimensionSpec: DimensionSpec | null,
+    selectedDimensionSpec: DimensionSpec | undefined,
     selectedDimensionSpecIndex: number,
-    selectedMetricSpec: MetricSpec | null,
+    selectedMetricSpec: MetricSpec | undefined,
     selectedMetricSpecIndex: number,
   ) => {
     this.setState({
@@ -2117,7 +2175,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderChangeRollupAction() {
     const { newRollup, spec, sampleStrategy, cacheKey } = this.state;
-    if (newRollup === null) return;
+    if (typeof newRollup === 'undefined') return;
 
     return (
       <AsyncActionDialog
@@ -2139,7 +2197,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         successText={`Rollup was ${newRollup ? 'enabled' : 'disabled'}. Schema has been updated.`}
         failText="Could change rollup"
         intent={Intent.WARNING}
-        onClose={() => this.setState({ newRollup: null })}
+        onClose={() => this.setState({ newRollup: undefined })}
       >
         <p>{`Are you sure you want to ${newRollup ? 'enable' : 'disable'} rollup?`}</p>
         <p>Making this change will reset any work you have done in this section.</p>
@@ -2149,7 +2207,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderChangeDimensionModeAction() {
     const { newDimensionMode, spec, sampleStrategy, cacheKey } = this.state;
-    if (newDimensionMode === null) return;
+    if (typeof newDimensionMode === 'undefined') return;
     const autoDetect = newDimensionMode === 'auto-detect';
 
     return (
@@ -2174,7 +2232,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         }. Schema has been updated.`}
         failText="Could change dimension mode"
         intent={Intent.WARNING}
-        onClose={() => this.setState({ newDimensionMode: null })}
+        onClose={() => this.setState({ newDimensionMode: undefined })}
       >
         <p>
           {autoDetect
@@ -2192,7 +2250,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const close = () => {
       this.setState({
         selectedDimensionSpecIndex: -1,
-        selectedDimensionSpec: null,
+        selectedDimensionSpec: undefined,
       });
     };
 
@@ -2278,7 +2336,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const close = () => {
       this.setState({
         selectedMetricSpecIndex: -1,
-        selectedMetricSpec: null,
+        selectedMetricSpec: undefined,
       });
     };
 

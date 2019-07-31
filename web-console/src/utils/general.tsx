@@ -101,10 +101,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
-    return true;
-  }
-  if (value === null) return false;
+  if (value == null) return false;
   const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
@@ -276,8 +273,16 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
-  return (xs.map(f) as any).filter(Boolean);
+export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+}
+
+export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
+export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
 }
 
 export function alphanumericCompare(a: string, b: string): number {

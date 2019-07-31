@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -176,6 +177,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         ),
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -396,7 +398,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           ingestionSchema,
           context,
           indexingServiceClient,
-          taskClientFactory
+          taskClientFactory,
+          new TestAppenderatorsManager()
       );
     }
 

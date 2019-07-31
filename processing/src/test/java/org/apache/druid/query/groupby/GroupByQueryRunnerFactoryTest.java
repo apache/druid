@@ -35,6 +35,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.CloserRule;
@@ -50,9 +51,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -97,13 +96,13 @@ public class GroupByQueryRunnerFactoryTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return factory.getToolchest().mergeResults(
                 new QueryRunner()
                 {
                   @Override
-                  public Sequence run(QueryPlus queryPlus, Map responseContext)
+                  public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
                   {
                     final Query query = queryPlus.getQuery();
                     try {
@@ -127,7 +126,7 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query));
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

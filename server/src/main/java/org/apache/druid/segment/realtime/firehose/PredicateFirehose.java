@@ -40,6 +40,7 @@ public class PredicateFirehose implements Firehose
   private final Firehose firehose;
   private final Predicate<InputRow> predicate;
 
+  @Nullable
   private InputRow savedInputRow = null;
 
   public PredicateFirehose(Firehose firehose, Predicate<InputRow> predicate)

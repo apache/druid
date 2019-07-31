@@ -28,7 +28,7 @@ describe('task table action dialog', () => {
         dataSourceId="test"
         segmentId="test"
         actions={[{ title: 'test', onAction: () => null }]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );

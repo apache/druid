@@ -39,6 +39,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -52,17 +53,12 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
 {
-  // This variable indicates when a running query should be expired,
-  // and is effective only when 'timeout' of queryContext has a positive value.
-  public static final String CTX_TIMEOUT_AT = "timeoutAt";
-  public static final String CTX_COUNT = "count";
   private final ScanQueryQueryToolChest toolChest;
   private final ScanQueryEngine engine;
   private final ScanQueryConfig scanQueryConfig;
@@ -98,7 +94,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       // Note: this variable is effective only when queryContext has a timeout.
       // See the comment of CTX_TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
-      responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
+      responseContext.put(ResponseContext.CTX_TIMEOUT_AT, timeoutAt);
 
       if (query.getOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
@@ -311,7 +307,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   Sequence<ScanResultValue> nWayMergeAndLimit(
       List<List<QueryRunner<ScanResultValue>>> groupedRunners,
       QueryPlus<ScanResultValue> queryPlus,
-      Map<String, Object> responseContext
+      ResponseContext responseContext
   )
   {
     // Starting from the innermost Sequences.map:
@@ -366,7 +362,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
 
     @Override
-    public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
+    public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, ResponseContext responseContext)
     {
       Query<ScanResultValue> query = queryPlus.getQuery();
       if (!(query instanceof ScanQuery)) {
@@ -374,9 +370,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       }
 
       // it happens in unit tests
-      final Number timeoutAt = (Number) responseContext.get(CTX_TIMEOUT_AT);
+      final Number timeoutAt = (Number) responseContext.get(ResponseContext.CTX_TIMEOUT_AT);
       if (timeoutAt == null || timeoutAt.longValue() == 0L) {
-        responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
+        responseContext.put(ResponseContext.CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
       }
       return engine.process((ScanQuery) query, segment, responseContext);
     }

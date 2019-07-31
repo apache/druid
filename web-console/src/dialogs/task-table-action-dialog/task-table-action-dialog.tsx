@@ -28,7 +28,7 @@ interface TaskTableActionDialogProps extends IDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
-  status: string | null;
+  status?: string;
 }
 
 interface TaskTableActionDialogState {

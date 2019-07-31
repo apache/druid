@@ -40,6 +40,7 @@ As part of this repo:
 - `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
 - `old-console/` - Files for the overlord console
 - `public/` - The compiled destination of the file powering this console
+- `assets/` - The images (and other assets) used within the console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console 
 

@@ -112,16 +112,16 @@ export interface DatasourcesViewState {
   datasources: Datasource[] | null;
   tiers: string[];
   defaultRules: any[];
-  datasourcesError: string | null;
+  datasourcesError?: string;
   datasourcesFilter: Filter[];
 
   showDisabled: boolean;
-  retentionDialogOpenOn: { datasource: string; rules: any[] } | null;
-  compactionDialogOpenOn: { datasource: string; configData: any } | null;
-  dropDataDatasource: string | null;
-  enableDatasource: string | null;
-  killDatasource: string | null;
-  dropReloadDatasource: string | null;
+  retentionDialogOpenOn?: { datasource: string; rules: any[] };
+  compactionDialogOpenOn?: { datasource: string; configData: any };
+  dropDataDatasource?: string;
+  enableDatasource?: string;
+  killDatasource?: string;
+  dropReloadDatasource?: string;
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
   hiddenColumns: LocalStorageBackedArray<string>;
@@ -172,16 +172,9 @@ GROUP BY 1`;
       datasources: null,
       tiers: [],
       defaultRules: [],
-      datasourcesError: null,
       datasourcesFilter: [],
 
       showDisabled: false,
-      retentionDialogOpenOn: null,
-      compactionDialogOpenOn: null,
-      dropDataDatasource: null,
-      enableDatasource: null,
-      killDatasource: null,
-      dropReloadDatasource: null,
       dropReloadAction: 'drop',
       dropReloadInterval: '',
       hiddenColumns: new LocalStorageBackedArray<string>(
@@ -261,7 +254,7 @@ GROUP BY 1`;
           datasources: result ? result.datasources : null,
           tiers: result ? result.tiers : [],
           defaultRules: result ? result.defaultRules : [],
-          datasourcesError: error,
+          datasourcesError: error || undefined,
         });
       },
     });
@@ -316,7 +309,7 @@ GROUP BY 1`;
         failText="Could not drop data"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ dropDataDatasource: null });
+          this.setState({ dropDataDatasource: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
@@ -347,7 +340,7 @@ GROUP BY 1`;
         failText="Could not enable datasource"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ enableDatasource: null });
+          this.setState({ enableDatasource: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
@@ -383,7 +376,7 @@ GROUP BY 1`;
         failText={`Could not ${isDrop ? 'drop' : 'reload'} data`}
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ dropReloadDatasource: null });
+          this.setState({ dropReloadDatasource: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
@@ -422,7 +415,7 @@ GROUP BY 1`;
         failText="Could not submit kill task"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ killDatasource: null });
+          this.setState({ killDatasource: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
@@ -463,7 +456,7 @@ GROUP BY 1`;
     const { datasources, defaultRules } = this.state;
     if (!datasources) return;
 
-    this.setState({ retentionDialogOpenOn: null });
+    this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState({
         retentionDialogOpenOn: {
@@ -475,10 +468,10 @@ GROUP BY 1`;
   };
 
   private saveCompaction = async (compactionConfig: any) => {
-    if (compactionConfig === null) return;
+    if (!compactionConfig) return;
     try {
       await axios.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
-      this.setState({ compactionDialogOpenOn: null });
+      this.setState({ compactionDialogOpenOn: undefined });
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
@@ -490,7 +483,7 @@ GROUP BY 1`;
 
   private deleteCompaction = async () => {
     const { compactionDialogOpenOn } = this.state;
-    if (compactionDialogOpenOn === null) return;
+    if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;
     AppToaster.show({
       message: `Are you sure you want to delete ${datasource}'s compaction?`,
@@ -500,7 +493,7 @@ GROUP BY 1`;
         onClick: async () => {
           try {
             await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
-            this.setState({ compactionDialogOpenOn: null }, () =>
+            this.setState({ compactionDialogOpenOn: undefined }, () =>
               this.datasourceQueryManager.rerunLastQuery(),
             );
           } catch (e) {
@@ -577,7 +570,7 @@ GROUP BY 1`;
         rules={retentionDialogOpenOn.rules}
         tiers={tiers}
         onEditDefaults={this.editDefaultRules}
-        onCancel={() => this.setState({ retentionDialogOpenOn: null })}
+        onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
         onSave={this.saveRules}
       />
     );
@@ -592,7 +585,7 @@ GROUP BY 1`;
       <CompactionDialog
         datasource={compactionDialogOpenOn.datasource}
         configData={compactionDialogOpenOn.configData}
-        onClose={() => this.setState({ compactionDialogOpenOn: null })}
+        onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
         onSave={this.saveCompaction}
         onDelete={this.deleteCompaction}
       />
@@ -840,7 +833,7 @@ GROUP BY 1`;
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { goToQuery, noSqlMode } = this.props;
     const { showDisabled, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
 

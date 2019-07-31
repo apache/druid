@@ -27,8 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 
 public class MaterializedViewQueryRunner<T> implements QueryRunner<T>
@@ -43,7 +42,7 @@ public class MaterializedViewQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     Query query = queryPlus.getQuery();
     return new MergeSequence<>(
