@@ -267,7 +267,7 @@ public class QueryResource implements QueryCountStatsProvider
             RESPONSE_CTX_HEADER_LEN_LIMIT
         );
         if (serializationResult.isReduced()) {
-          log.warn(
+          log.info(
               "Response Context truncated for id [%s] . Full context is [%s].",
               queryId,
               serializationResult.getFullResult()

@@ -20,6 +20,7 @@
 package org.apache.druid.query.context;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
@@ -27,22 +28,24 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 public class ResponseContextTest
 {
 
-  public enum ExtensionResponseContextKey implements ResponseContext.BaseKey
+  enum ExtensionResponseContextKey implements ResponseContext.BaseKey
   {
     EXTENSION_KEY_1("extension_key_1"),
     EXTENSION_KEY_2("extension_key_2", (oldValue, newValue) -> (long) oldValue + (long) newValue);
 
     static {
       for (ResponseContext.BaseKey key : values()) {
-        ResponseContext.Key.addKey(key);
+        ResponseContext.Key.registerKey(key);
       }
     }
 
@@ -72,6 +75,39 @@ public class ResponseContextTest
     {
       return mergeFunction;
     }
+  }
+
+  private final ResponseContext.BaseKey nonregisteredKey = new ResponseContext.BaseKey()
+  {
+    @Override
+    public String getName()
+    {
+      return "non-registered-key";
+    }
+
+    @Override
+    public BiFunction<Object, Object, Object> getMergeFunction()
+    {
+      return (Object a, Object b) -> a;
+    }
+  };
+
+  @Test(expected = IllegalStateException.class)
+  public void putISETest()
+  {
+    ResponseContext.createEmpty().put(nonregisteredKey, new Object());
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void addISETest()
+  {
+    ResponseContext.createEmpty().add(nonregisteredKey, new Object());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void registerKeyIAETest()
+  {
+    ResponseContext.Key.registerKey(ResponseContext.Key.NUM_SCANNED_ROWS);
   }
 
   @Test
@@ -156,21 +192,103 @@ public class ResponseContextTest
     );
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void mergeISETest()
+  {
+    final ResponseContext ctx = new ResponseContext()
+    {
+      @Override
+      protected Map<BaseKey, Object> getDelegate()
+      {
+        return ImmutableMap.of(nonregisteredKey, "non-registered-key");
+      }
+    };
+    ResponseContext.createEmpty().merge(ctx);
+  }
+
   @Test
-  public void serializeWith() throws JsonProcessingException
+  public void serializeWithCorrectnessTest() throws JsonProcessingException
+  {
+    final ResponseContext ctx1 = ResponseContext.createEmpty();
+    ctx1.add(ResponseContext.Key.ETAG, "string-value");
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    Assert.assertEquals(
+        mapper.writeValueAsString(ImmutableMap.of("ETag", "string-value")),
+        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+    );
+
+    final ResponseContext ctx2 = ResponseContext.createEmpty();
+    ctx2.add(ResponseContext.Key.NUM_SCANNED_ROWS, 100);
+    Assert.assertEquals(
+        mapper.writeValueAsString(ImmutableMap.of("count", 100)),
+        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+    );
+  }
+
+  @Test
+  public void serializeWithTruncateValueTest() throws JsonProcessingException
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100L);
     ctx.put(ResponseContext.Key.ETAG, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
-    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, 1000);
+    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
     Assert.assertEquals(fullString, res1.getTruncatedResult());
-    final ResponseContext reducedCtx = ResponseContext.createEmpty();
-    reducedCtx.merge(ctx);
-    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 20);
-    reducedCtx.remove(ResponseContext.Key.ETAG);
-    Assert.assertEquals(objectMapper.writeValueAsString(reducedCtx.getDelegate()), res2.getTruncatedResult());
+    final ResponseContext ctxCopy = ResponseContext.createEmpty();
+    ctxCopy.merge(ctx);
+    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 30);
+    ctxCopy.remove(ResponseContext.Key.ETAG);
+    ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
+    Assert.assertEquals(objectMapper.writeValueAsString(ctxCopy.getDelegate()), res2.getTruncatedResult());
+  }
+
+  @Test
+  public void serializeWithTruncateArrayTest() throws JsonProcessingException
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100L);
+    ctx.put(
+        ResponseContext.Key.UNCOVERED_INTERVALS,
+        Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    );
+    ctx.put(
+        ResponseContext.Key.MISSING_SEGMENTS,
+        Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    );
+    final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
+    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
+    Assert.assertEquals(fullString, res1.getTruncatedResult());
+    final ResponseContext ctxCopy = ResponseContext.createEmpty();
+    ctxCopy.merge(ctx);
+    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 70);
+    ctxCopy.put(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(0, 1, 2, 3, 4));
+    ctxCopy.put(ResponseContext.Key.MISSING_SEGMENTS, Collections.emptyList());
+    ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
+    Assert.assertEquals(objectMapper.writeValueAsString(ctxCopy.getDelegate()), res2.getTruncatedResult());
+  }
+
+  @Test
+  public void deserializeTest() throws IOException
+  {
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final ResponseContext ctx = ResponseContext.deserialize(
+        mapper.writeValueAsString(ImmutableMap.of("ETag", "string-value", "count", 100)),
+        mapper
+    );
+    Assert.assertEquals("string-value", ctx.get(ResponseContext.Key.ETAG));
+    Assert.assertEquals(100, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void deserializeISETest() throws IOException
+  {
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    ResponseContext.deserialize(
+        mapper.writeValueAsString(ImmutableMap.of("ETag_unexpected", "string-value")),
+        mapper
+    );
   }
 
   @Test
@@ -185,7 +303,7 @@ public class ResponseContextTest
         ResponseContext.Key.keyOf(ExtensionResponseContextKey.EXTENSION_KEY_2.getName())
     );
     for (ResponseContext.BaseKey key : ExtensionResponseContextKey.values()) {
-      Assert.assertTrue(ResponseContext.Key.getKeys().contains(key));
+      Assert.assertTrue(ResponseContext.Key.getAllRegisteredKeys().contains(key));
     }
   }
 

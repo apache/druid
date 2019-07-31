@@ -19,23 +19,25 @@
 
 package org.apache.druid.query.context;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 
@@ -52,6 +54,7 @@ public abstract class ResponseContext
    */
   public interface BaseKey
   {
+    @JsonValue
     String getName();
     /**
      * Merge function associated with a key: Object (Object oldValue, Object newValue)
@@ -60,15 +63,16 @@ public abstract class ResponseContext
   }
 
   /**
-   * Keys associated with objects in the context. The enum is extension-friendly.
-   * <p>If it's necessary to have some new keys in the context then they could be described in a separate enum:
+   * Keys associated with objects in the context.
+   * <p>
+   * If it's necessary to have some new keys in the context then they might be listed in a separate enum:
    * <pre>{@code
    * public enum ExtensionResponseContextKey implements BaseKey
    * {
    *   EXTENSION_KEY_1("extension_key_1"), EXTENSION_KEY_2("extension_key_2");
    *
    *   static {
-   *     for (ResponseContextKey key : values()) ResponseContext.Key.addKey(key);
+   *     for (BaseKey key : values()) ResponseContext.Key.registerKey(key);
    *   }
    *
    *   private final String name;
@@ -85,7 +89,7 @@ public abstract class ResponseContext
    *   @Override public BiFunction<Object, Object, Object> getMergeFunction() { return mergeFunction; }
    * }
    * }</pre>
-   * Make sure all extension enum values added with Key.addKey method.
+   * Make sure all extension enum values added with {@link Key#registerKey} method.
    */
   public enum Key implements BaseKey
   {
@@ -125,7 +129,7 @@ public abstract class ResponseContext
     ETAG("ETag"),
     /**
      * Query fail time (current time + timeout).
-     * The final value in comparison to continuously updated TIMEOUT_AT.
+     * It is not updated continuously as TIMEOUT_AT.
      */
     QUERY_FAIL_DEADLINE_MILLIS("queryFailTime"),
     /**
@@ -155,47 +159,60 @@ public abstract class ResponseContext
     CPU_CONSUMED_NANOS(
         "cpuConsumed",
             (oldValue, newValue) -> (long) oldValue + (long) newValue
+    ),
+    /**
+     * Indicates if a {@link ResponseContext} was truncated during serialization.
+     */
+    TRUNCATED(
+        "trancated",
+            (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
     );
 
     /**
      * TreeMap is used to have the natural ordering of its keys
      */
-    private static Map<String, BaseKey> map = new TreeMap<>();
+    private static final Map<String, BaseKey> registeredKeys = new TreeMap<>();
 
     static {
       for (BaseKey key : values()) {
-        addKey(key);
+        registerKey(key);
       }
     }
 
     /**
-     * The primary way of registering context keys.
-     * Only the keys registered this way are considered during the context merge.
+     * Primary way of registering context keys.
+     * @throws IllegalArgumentException if the key has already been registered.
      */
-    public static void addKey(BaseKey key)
+    public static void registerKey(BaseKey key)
     {
-      Preconditions.checkState(
-          !map.containsKey(key.getName()),
-          "ResponseContext keys already has the key with [%s] name",
+      Preconditions.checkArgument(
+          !registeredKeys.containsKey(key.getName()),
+          "Key [%s] has already been registered as a context key",
           key.getName()
       );
-      map.put(key.getName(), key);
+      registeredKeys.put(key.getName(), key);
     }
 
     /**
-     * Returns a key associated with the name if the key was added via addKey method
+     * Returns a registered key associated with the name {@param name}.
+     * @throws IllegalStateException if a corresponding key has not been registered.
      */
     public static BaseKey keyOf(String name)
     {
-      return map.get(name);
+      Preconditions.checkState(
+          registeredKeys.containsKey(name),
+          "Key [%s] has not yet been registered as a context key",
+          name
+      );
+      return registeredKeys.get(name);
     }
 
     /**
-     * Returns all keys the enum contains and the added via addKey method
+     * Returns all keys registered via {@link Key#registerKey}.
      */
-    public static Collection<BaseKey> getKeys()
+    public static Collection<BaseKey> getAllRegisteredKeys()
     {
-      return map.values();
+      return registeredKeys.values();
     }
 
     private final String name;
@@ -236,66 +253,74 @@ public abstract class ResponseContext
     return DefaultResponseContext.createEmpty();
   }
 
+  /**
+   * Deserializes a string into {@link ResponseContext} using given {@link ObjectMapper}.
+   * @throws IllegalStateException if one of the deserialized map keys has not been registered.
+   */
   public static ResponseContext deserialize(String responseContext, ObjectMapper objectMapper) throws IOException
   {
-    final Map<String, Object> delegate = objectMapper.readValue(
+    final Map<String, Object> keyNameToObjects = objectMapper.readValue(
         responseContext,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    return new ResponseContext()
-    {
-      @Override
-      protected Map<String, Object> getDelegate()
-      {
-        return delegate;
-      }
-    };
+    final ResponseContext context = ResponseContext.createEmpty();
+    keyNameToObjects.forEach((keyName, value) -> {
+      final BaseKey key = Key.keyOf(keyName);
+      context.add(key, value);
+    });
+    return context;
   }
 
-  protected abstract Map<String, Object> getDelegate();
+  protected abstract Map<BaseKey, Object> getDelegate();
 
+  /**
+   * Associates the specified object with the specified key.
+   * @throws IllegalStateException if the key has not been registered.
+   */
   public Object put(BaseKey key, Object value)
   {
-    return getDelegate().put(key.getName(), value);
+    final BaseKey registeredKey = Key.keyOf(key.getName());
+    return getDelegate().put(registeredKey, value);
   }
 
   public Object get(BaseKey key)
   {
-    return getDelegate().get(key.getName());
+    return getDelegate().get(key);
   }
 
   public Object remove(BaseKey key)
   {
-    return getDelegate().remove(key.getName());
+    return getDelegate().remove(key);
   }
 
   /**
    * Adds (merges) a new value associated with a key to an old value.
    * See merge function of a context key for a specific implementation.
+   * @throws IllegalStateException if the key has not been registered.
    */
   public Object add(BaseKey key, Object value)
   {
-    return getDelegate().merge(key.getName(), value, key.getMergeFunction());
+    final BaseKey registeredKey = Key.keyOf(key.getName());
+    return getDelegate().merge(registeredKey, value, key.getMergeFunction());
   }
 
   /**
-   * Merges a response context into current.
-   * This method merges only keys from the enum {@link Key}.
+   * Merges a response context into the current.
+   * @throws IllegalStateException If a key of the {@code responseContext} has not been registered.
    */
   public void merge(ResponseContext responseContext)
   {
-    for (BaseKey key : Key.getKeys()) {
-      final Object newValue = responseContext.get(key);
+    responseContext.getDelegate().forEach((key, newValue) -> {
       if (newValue != null) {
         add(key, newValue);
       }
-    }
+    });
   }
 
   /**
    * Serializes the context given that the resulting string length is less than the provided limit.
-   * The method removes max-length fields one by one if the resulting string length is greater than the limit.
-   * The resulting string might be correctly deserialized as a {@link ResponseContext}.
+   * This method tries to remove some elements from context collections if it's needed to satisfy the limit.
+   * The resulting string might be correctly deserialized to {@link ResponseContext}.
    */
   public SerializationResult serializeWith(ObjectMapper objectMapper, int maxCharsNumber) throws JsonProcessingException
   {
@@ -303,28 +328,49 @@ public abstract class ResponseContext
     if (fullSerializedString.length() <= maxCharsNumber) {
       return new SerializationResult(fullSerializedString, fullSerializedString);
     } else {
-      final HashMap<String, Object> copiedMap = new HashMap<>(getDelegate());
-      final PriorityQueue<Map.Entry<String, String>> serializedValueEntries = new PriorityQueue<>(
-          Comparator.comparing((Map.Entry<String, String> e) -> e.getValue().length()).reversed()
-      );
-      for (Map.Entry<String, Object> e : copiedMap.entrySet()) {
-        serializedValueEntries.add(new AbstractMap.SimpleImmutableEntry<>(
-            e.getKey(),
-            objectMapper.writeValueAsString(e.getValue())
-        ));
-      }
-      // quadratic complexity: while loop with map serialization on each iteration
-      while (!copiedMap.isEmpty() && !serializedValueEntries.isEmpty()) {
-        final Map.Entry<String, String> maxLengthEntry = serializedValueEntries.poll();
-        Preconditions.checkNotNull(maxLengthEntry);
-        copiedMap.remove(maxLengthEntry.getKey());
-        final String reducedSerializedString = objectMapper.writeValueAsString(copiedMap);
-        if (reducedSerializedString.length() <= maxCharsNumber) {
-          return new SerializationResult(reducedSerializedString, fullSerializedString);
+      // Indicates that the context is truncated during serialization.
+      add(Key.TRUNCATED, true);
+      final ObjectNode contextJsonNode = objectMapper.valueToTree(getDelegate());
+      final ArrayList<Map.Entry<String, JsonNode>> sortedNodesByLength = Lists.newArrayList(contextJsonNode.fields());
+      final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
+          Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
+      sortedNodesByLength.sort(valueLengthReversedComparator);
+      int needToRemoveCharsNumber = fullSerializedString.length() - maxCharsNumber;
+      // In general, the complexity of this block is O(n*m*log(m)) where n - context size, m - context's array size
+      for (Map.Entry<String, JsonNode> e : sortedNodesByLength) {
+        final String fieldName = e.getKey();
+        final JsonNode node = e.getValue();
+        if (!node.isArray() || needToRemoveCharsNumber >= node.toString().length()) {
+          if (node.isArray()) {
+            final int lengthBeforeRemove = node.toString().length();
+            // Empty array could be correctly deserialized so we remove only its elements.
+            ((ArrayNode) node).removeAll();
+            final int lengthAfterRemove = node.toString().length();
+            needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
+          } else {
+            // In general, a context should not contain nulls so we completely remove the field.
+            contextJsonNode.remove(fieldName);
+            // Since the field is completely removed (name + value) we need to do a recalculation
+            needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
+          }
+        } else {
+          final ArrayNode arrNode = (ArrayNode) node;
+          while (node.size() > 0 && needToRemoveCharsNumber > 0) {
+            final int lengthBeforeRemove = arrNode.toString().length();
+            // Reducing complexity by removing half of array's elements
+            final int removeUntil = node.size() / 2;
+            for (int removeAt = node.size() - 1; removeAt >= removeUntil; removeAt--) {
+              arrNode.remove(removeAt);
+            }
+            final int lengthAfterRemove = arrNode.toString().length();
+            needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
+          }
+        }
+        if (needToRemoveCharsNumber <= 0) {
+          break;
         }
       }
-      final String serializedEmptyMap = objectMapper.writeValueAsString(copiedMap);
-      return new SerializationResult(serializedEmptyMap, fullSerializedString);
+      return new SerializationResult(contextJsonNode.toString(), fullSerializedString);
     }
   }
 

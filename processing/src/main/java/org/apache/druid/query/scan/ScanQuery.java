@@ -336,7 +336,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", virtualColumns=" + getVirtualColumns() +
            ", resultFormat='" + resultFormat + '\'' +
            ", batchSize=" + batchSize +
-           ", limit=" + scanRowsLimit +
+           ", scanRowsLimit=" + scanRowsLimit +
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
            ", legacy=" + legacy +
