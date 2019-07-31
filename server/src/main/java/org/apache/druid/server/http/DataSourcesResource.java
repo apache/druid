@@ -279,15 +279,15 @@ public class DataSourcesResource
    * When this method is removed, a new method needs to be introduced corresponding to
    * the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
    * Ultimately we want to have no method with kill parameter -
-   * DELETE `{dataSourceName}` will be used to mark all segments belonging to a data source as unused, and
-   * DELETE `{dataSourceName}/intervals/{interval}` will be used to kill segments within an interval
+   * DELETE `{dataSourceName}` to mark all segments belonging to a data source as unused, and
+   * DELETE `{dataSourceName}/intervals/{interval}` to kill unused segments within an interval
    */
   @DELETE
   @Deprecated
   @Path("/{dataSourceName}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response markAsUnusedAllSegmentsOrKillSegmentsInInterval(
+  public Response markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
       @QueryParam("interval") final String interval
@@ -299,7 +299,7 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killSegmentsInInterval(dataSourceName, interval);
+      return killUnusedSegmentsInInterval(dataSourceName, interval);
     } else {
       MarkSegments markSegments = () -> segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
@@ -310,7 +310,7 @@ public class DataSourcesResource
   @Path("/{dataSourceName}/intervals/{interval}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response killSegmentsInInterval(
+  public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @PathParam("interval") final String interval
   )

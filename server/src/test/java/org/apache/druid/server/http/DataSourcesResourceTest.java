@@ -594,7 +594,7 @@ public class DataSourcesResourceTest
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, null, null, indexingServiceClient, null);
-    Response response = dataSourcesResource.killSegmentsInInterval("datasource1", interval);
+    Response response = dataSourcesResource.killUnusedSegmentsInInterval("datasource1", interval);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(null, response.getEntity());
@@ -610,7 +610,7 @@ public class DataSourcesResourceTest
         new DataSourcesResource(inventoryView, null, null, indexingServiceClient, null);
     try {
       Response response =
-          dataSourcesResource.markAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
+          dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???");
       // 400 (Bad Request) or an IllegalArgumentException is expected.
       Assert.assertEquals(400, response.getStatus());
       Assert.assertNotNull(response.getEntity());
