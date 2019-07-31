@@ -226,10 +226,10 @@ public class ResponseContextTest
   }
 
   @Test
-  public void serializeWithTruncateValueTest() throws JsonProcessingException
+  public void serializeWithTruncateValueTest() throws IOException
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100L);
+    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100);
     ctx.put(ResponseContext.Key.ETAG, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
@@ -240,14 +240,17 @@ public class ResponseContextTest
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 30);
     ctxCopy.remove(ResponseContext.Key.ETAG);
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
-    Assert.assertEquals(objectMapper.writeValueAsString(ctxCopy.getDelegate()), res2.getTruncatedResult());
+    Assert.assertEquals(
+        ctxCopy.getDelegate(),
+        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+    );
   }
 
   @Test
-  public void serializeWithTruncateArrayTest() throws JsonProcessingException
+  public void serializeWithTruncateArrayTest() throws IOException
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100L);
+    ctx.put(ResponseContext.Key.NUM_SCANNED_ROWS, 100);
     ctx.put(
         ResponseContext.Key.UNCOVERED_INTERVALS,
         Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -266,7 +269,10 @@ public class ResponseContextTest
     ctxCopy.put(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(0, 1, 2, 3, 4));
     ctxCopy.put(ResponseContext.Key.MISSING_SEGMENTS, Collections.emptyList());
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
-    Assert.assertEquals(objectMapper.writeValueAsString(ctxCopy.getDelegate()), res2.getTruncatedResult());
+    Assert.assertEquals(
+        ctxCopy.getDelegate(),
+        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+    );
   }
 
   @Test

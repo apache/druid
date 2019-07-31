@@ -164,7 +164,7 @@ public abstract class ResponseContext
      * Indicates if a {@link ResponseContext} was truncated during serialization.
      */
     TRUNCATED(
-        "trancated",
+        "truncated",
             (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
     );
 
