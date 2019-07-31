@@ -21,11 +21,13 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.LegacyDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -72,7 +74,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        true
+        ImmutableList.of()
     );
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(nativeRequestLogLine.getQueryStats())
@@ -101,7 +103,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        true
+        ImmutableList.of()
     );
 
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
@@ -151,7 +153,7 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        false
+        ImmutableList.of(Query.SEGMENT_METADATA)
     );
 
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
