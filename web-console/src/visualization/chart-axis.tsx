@@ -16,30 +16,31 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import * as d3 from 'd3';
+import React from 'react';
 
-.data-sources-view {
-  height: 100%;
-  width: 100%;
-  overflow: auto;
+interface ChartAxisProps extends React.Props<any> {
+  transform: string;
+  scale: any;
+  className?: string;
+}
 
-  .clickable-cell {
-    cursor: pointer;
+interface ChartAxisState {}
+
+export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
+  constructor(props: ChartAxisProps) {
+    super(props);
+    this.state = {};
   }
 
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: 50%; //$view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-
-    &.full-height {
-      top: 50px;
-    }
+  render(): JSX.Element {
+    const { transform, scale, className } = this.props;
+    return (
+      <g
+        className={`axis ${className}`}
+        transform={transform}
+        ref={node => d3.select(node).call(scale)}
+      />
+    );
   }
 }

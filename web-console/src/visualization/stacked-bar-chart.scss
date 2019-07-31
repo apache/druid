@@ -16,30 +16,18 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-
-.data-sources-view {
-  height: 100%;
-  width: 100%;
-  overflow: auto;
-
-  .clickable-cell {
-    cursor: pointer;
+.bar-chart {
+  .hovered-bar {
+    fill: transparent;
+    stroke: #ffffff;
+    stroke-width: 1.5px;
+    transform: translateX(65px);
   }
 
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: 50%; //$view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-
-    &.full-height {
-      top: 50px;
+  .gridline-x {
+    line {
+      stroke-dasharray: 5, 5;
+      opacity: 0.5;
     }
   }
 }

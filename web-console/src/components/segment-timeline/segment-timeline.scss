@@ -16,30 +16,43 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-
-.data-sources-view {
+.segment-timeline {
+  display: grid;
+  grid-template-columns: 85% 15%;
   height: 100%;
-  width: 100%;
-  overflow: auto;
+  margin-top: 10px;
 
-  .clickable-cell {
-    cursor: pointer;
+  .loader {
+    width: 85%;
   }
 
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
+  .loading-error {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
   }
 
-  .ReactTable {
-    position: absolute;
-    top: 50%; //$view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
+  .bar-chart-tooltip {
+    margin-top: 15px;
+    text-align: center;
 
-    &.full-height {
-      top: 50px;
+    div {
+      display: inline-block;
+      width: 200px;
     }
+  }
+
+  .no-data-text {
+    position: absolute;
+    left: 30vw;
+    top: 15vh;
+    font-size: 20px;
+  }
+
+  .side-control {
+    padding-left: 1vw;
+    padding-top: 5vh;
   }
 }
