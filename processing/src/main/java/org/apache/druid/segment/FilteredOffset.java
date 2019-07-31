@@ -56,7 +56,7 @@ public final class FilteredOffset extends Offset
           rowOffsetMatcherFactory
       );
     } else {
-      if (postFilter.supportsBitmapIndex(bitmapIndexSelector)) {
+      if (postFilter.shouldUseIndex(bitmapIndexSelector)) {
         filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(
             postFilter.getBitmapIndex(bitmapIndexSelector)
         );
