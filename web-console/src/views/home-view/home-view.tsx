@@ -23,22 +23,14 @@ import { sum } from 'd3-array';
 import React from 'react';
 
 import { StatusDialog } from '../../dialogs/status-dialog/status-dialog';
-import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
+import { compact, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../utils';
 import { deepGet } from '../../utils/object-change';
 
 import './home-view.scss';
 
-export interface CardLinkOptions {
-  href: string;
-  icon: IconName;
-  title: string;
-  loading?: boolean;
-  content: JSX.Element | string;
-  error?: string;
-}
-
-export interface CardModalOptions {
-  onClick: () => void;
+export interface CardOptions {
+  onClick?: () => void;
+  href?: string;
   icon: IconName;
   title: string;
   loading?: boolean;
@@ -85,6 +77,7 @@ export interface HomeViewState {
   historicalCount: number;
   middleManagerCount: number;
   peonCount: number;
+  indexerCount: number;
   serverCountError?: string;
 
   showStatusDialog: boolean;
@@ -136,6 +129,7 @@ export class HomeView extends React.PureComponent<HomeViewProps, HomeViewState> 
       historicalCount: 0,
       middleManagerCount: 0,
       peonCount: 0,
+      indexerCount: 0,
 
       showStatusDialog: false,
 
@@ -306,6 +300,7 @@ GROUP BY 1`,
           historicalCount: result ? result.historical : 0,
           middleManagerCount: result ? result.middle_manager : 0,
           peonCount: result ? result.peon : 0,
+          indexerCount: result ? result.indexer : 0,
           serverCountError: error,
         });
       },
@@ -366,9 +361,13 @@ GROUP BY 1`,
     );
   }
 
-  renderCard(cardOptions: CardLinkOptions): JSX.Element {
+  renderCard(cardOptions: CardOptions): JSX.Element {
     return (
-      <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
+      <a
+        onClick={cardOptions.onClick}
+        href={cardOptions.href}
+        target={cardOptions.href && cardOptions.href[0] === '/' ? '_blank' : undefined}
+      >
         <Card className="home-view-card" interactive>
           <H5>
             <Icon color="#bfccd5" icon={cardOptions.icon} />
@@ -386,26 +385,18 @@ GROUP BY 1`,
     );
   }
 
-  renderModalCard(cardOptions: CardModalOptions): JSX.Element {
-    return (
-      <Card
-        className="status-card"
-        interactive
-        onClick={() => this.setState({ showStatusDialog: true })}
-      >
-        <H5>
-          <Icon color="#bfccd5" icon={cardOptions.icon} />
-          &nbsp;{cardOptions.title}
-        </H5>
-        {cardOptions.loading ? (
-          <p>Loading...</p>
-        ) : cardOptions.error ? (
-          `Error: ${cardOptions.error}`
-        ) : (
-          cardOptions.content
-        )}
-      </Card>
-    );
+  renderPluralIfNeededPair(
+    count1: number,
+    singular1: string,
+    count2: number,
+    singular2: string,
+  ): JSX.Element | undefined {
+    const text = compact([
+      count1 ? pluralIfNeeded(count1, singular1) : undefined,
+      count2 ? pluralIfNeeded(count2, singular2) : undefined,
+    ]).join(', ');
+    if (!text) return;
+    return <p>{text}</p>;
   }
 
   render(): JSX.Element {
@@ -413,7 +404,7 @@ GROUP BY 1`,
 
     return (
       <div className="home-view app-view">
-        {this.renderModalCard({
+        {this.renderCard({
           onClick: () => this.setState({ showStatusDialog: true }),
           icon: IconNames.GRAPH,
           title: 'Status',
@@ -504,19 +495,30 @@ GROUP BY 1`,
           loading: state.serverCountLoading,
           content: (
             <>
-              <p>{`${pluralIfNeeded(state.overlordCount, 'overlord')}, ${pluralIfNeeded(
+              {this.renderPluralIfNeededPair(
+                state.overlordCount,
+                'overlord',
                 state.coordinatorCount,
                 'coordinator',
-              )}`}</p>
-              <p>{`${pluralIfNeeded(state.routerCount, 'router')}, ${pluralIfNeeded(
+              )}
+              {this.renderPluralIfNeededPair(
+                state.routerCount,
+                'router',
                 state.brokerCount,
                 'broker',
-              )}`}</p>
-              <p>{`${pluralIfNeeded(state.historicalCount, 'historical')}, ${pluralIfNeeded(
+              )}
+              {this.renderPluralIfNeededPair(
+                state.historicalCount,
+                'historical',
                 state.middleManagerCount,
                 'middle manager',
-              )}`}</p>
-              {Boolean(state.peonCount) && <p>{pluralIfNeeded(state.peonCount, 'peon')}</p>}
+              )}
+              {this.renderPluralIfNeededPair(
+                state.peonCount,
+                'peon',
+                state.indexerCount,
+                'indexer',
+              )}
             </>
           ),
           error: state.serverCountError ? state.serverCountError : undefined,

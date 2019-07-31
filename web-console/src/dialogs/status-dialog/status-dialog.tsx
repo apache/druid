@@ -34,7 +34,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps> {
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { onClose, title, isOpen } = this.props;
 
     return (

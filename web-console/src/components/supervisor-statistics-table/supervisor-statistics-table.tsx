@@ -96,9 +96,9 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     if (!data) {
       return <div>No data found</div>;
     }
-    return Object.keys(data).map(key => (
-      <div key={key}>{`${key}: ${Number(data[key]).toFixed(1)}`}</div>
-    ));
+    return Object.keys(data)
+      .sort()
+      .map(key => <div key={key}>{`${key}: ${Number(data[key]).toFixed(1)}`}</div>);
   }
 
   renderTable(error?: string) {
@@ -154,7 +154,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { endpoint } = this.props;
     const { loading, error } = this.state;
     return (
