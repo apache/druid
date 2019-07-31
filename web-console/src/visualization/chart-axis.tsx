@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import d3 from 'd3';
+import * as d3 from 'd3';
 import React from 'react';
 
 interface ChartAxisProps extends React.Props<any> {
@@ -33,7 +33,7 @@ export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { transform, scale, className } = this.props;
     return (
       <g

@@ -49,7 +49,7 @@ export class BarGroup extends React.Component<BarGroupProps, BarGroupState> {
     return nextProps.hoverOn === this.props.hoverOn;
   }
 
-  render() {
+  render(): JSX.Element[] | null {
     const {
       dataToRender,
       changeActiveDatasource,

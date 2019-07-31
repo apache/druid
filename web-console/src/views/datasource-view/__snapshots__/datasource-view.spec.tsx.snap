@@ -18,6 +18,11 @@ exports[`data source view matches snapshot 1`] = `
     />
     <Blueprint3.Switch
       checked={false}
+      label="Show segment timeline"
+      onChange={[Function]}
+    />
+    <Blueprint3.Switch
+      checked={false}
       label="Show disabled"
       onChange={[Function]}
     />
@@ -58,7 +63,7 @@ exports[`data source view matches snapshot 1`] = `
     TrComponent={[Function]}
     TrGroupComponent={[Function]}
     aggregatedKey="_aggregated"
-    className=""
+    className="-striped -highlight full-height"
     collapseOnDataChange={true}
     collapseOnPageChange={true}
     collapseOnSortingChange={true}

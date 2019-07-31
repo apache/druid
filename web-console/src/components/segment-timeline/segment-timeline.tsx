@@ -17,7 +17,7 @@
  */
 
 import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import d3 from 'd3';
+import * as d3 from 'd3';
 import { AxisScale } from 'd3';
 import React from 'react';
 
@@ -33,16 +33,16 @@ interface SegmentTimelineProps extends React.Props<any> {
 }
 
 interface SegmentTimelineState {
-  data: Record<string, any>;
+  data?: Record<string, any>;
   datasources: string[];
-  stackedData: Record<string, BarUnitData[]>;
-  singleDatasourceData: Record<string, Record<string, BarUnitData[]>>;
+  stackedData?: Record<string, BarUnitData[]>;
+  singleDatasourceData?: Record<string, Record<string, BarUnitData[]>>;
   activeDatasource: string | null;
   activeDataType: string; // "countData" || "sizeData"
   dataToRender: BarUnitData[];
   timeSpan: number; // by months
   loading: boolean;
-  error: string | null;
+  error?: string;
   xScale: AxisScale<Date> | null;
   yScale: AxisScale<number> | null;
   dStart: Date;
@@ -74,7 +74,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
   private dataQueryManager: QueryManager<null, any>;
   private datasourceQueryManager: QueryManager<null, any>;
   private colors = [
-    'b33040',
+    '#b33040',
     '#d25c4d',
     '#f2b447',
     '#d9d574',
@@ -82,7 +82,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
     '#57ceff',
     '#789113',
     '#098777',
-    'b33040',
+    '#b33040',
     '#d2757b',
     '#f29063',
     '#d9a241',
@@ -108,7 +108,6 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       activeDataType: 'countData',
       timeSpan: 3,
       loading: true,
-      error: null,
       xScale: null,
       yScale: null,
       dEnd: dEnd,
@@ -130,11 +129,10 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
         return { data, stackedData, singleDatasourceData };
       },
       onStateChange: ({ result, loading, error }) => {
-        if (result === null) return;
         this.setState({
-          data: result.data,
-          stackedData: result.stackedData,
-          singleDatasourceData: result.singleDatasourceData,
+          data: result ? result.data : undefined,
+          stackedData: result ? result.stackedData : undefined,
+          singleDatasourceData: result ? result.singleDatasourceData : undefined,
           loading,
           error,
         });
@@ -176,11 +174,17 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       prevProps.chartWidth !== this.props.chartWidth ||
       prevProps.chartHeight !== this.props.chartHeight
     ) {
-      const scales: BarChartScales | null = this.calculateScales();
-      const dataToRender: BarUnitData[] = activeDatasource
-        ? singleDatasourceData[activeDataType][activeDatasource]
-        : stackedData[activeDataType];
-      if (scales) {
+      const scales: BarChartScales | undefined = this.calculateScales();
+      let dataToRender: BarUnitData[] | undefined;
+      dataToRender = activeDatasource
+        ? singleDatasourceData
+          ? singleDatasourceData[activeDataType][activeDatasource]
+          : undefined
+        : stackedData
+        ? stackedData[activeDataType]
+        : undefined;
+
+      if (scales && dataToRender) {
         this.setState({
           dataToRender,
           xScale: scales.xScale,
@@ -192,8 +196,8 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
 
   private processRawData(data: any) {
     if (data === null) return [];
-    const countData: { [key: string]: any } = {};
-    const sizeData: { [key: string]: any } = {};
+    const countData: Record<string, any> = {};
+    const sizeData: Record<string, any> = {};
     data.forEach((entry: any) => {
       const start = entry.start;
       const day = start.split('T')[0];
@@ -286,7 +290,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
     return singleDatasourceData;
   }
 
-  private calculateScales(): BarChartScales | null {
+  private calculateScales(): BarChartScales | undefined {
     const { chartWidth, chartHeight } = this.props;
     const {
       data,
@@ -296,7 +300,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       dStart,
       dEnd,
     } = this.state;
-    if (Object.keys(data).length === 0) return null;
+    if (!data || !Object.keys(data).length) return;
     const activeData = data[activeDataType];
     const xDomain: Date[] = [dStart, dEnd];
     let yDomain: number[] = [
@@ -305,25 +309,29 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
         ? 0
         : activeData.reduce((max: any, d: any) => (max.total > d.total ? max : d)).total,
     ];
+
     if (
       activeDatasource !== null &&
-      singleDatasourceData[activeDataType][activeDatasource] !== undefined
+      singleDatasourceData![activeDataType][activeDatasource] !== undefined
     ) {
       yDomain = [
         0,
-        singleDatasourceData[activeDataType][activeDatasource].reduce((max: any, d: any) =>
+        singleDatasourceData![activeDataType][activeDatasource].reduce((max: any, d: any) =>
           max.y > d.y ? max : d,
         ).y,
       ];
     }
+
     const xScale: AxisScale<Date> = d3
       .scaleTime()
       .domain(xDomain)
       .range([0, chartWidth - this.chartMargin.left - this.chartMargin.right]);
+
     const yScale: AxisScale<number> = d3
       .scaleLinear()
       .rangeRound([chartHeight - this.chartMargin.top - this.chartMargin.bottom, 0])
       .domain(yDomain);
+
     return {
       xScale,
       yScale,
@@ -390,7 +398,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
       );
     }
 
-    if (data[activeDataType].length === 0) {
+    if (data![activeDataType].length === 0) {
       return (
         <div>
           <span className={'no-data-text'}>No data available for the time span selected</span>
@@ -400,7 +408,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
 
     if (
       activeDatasource !== null &&
-      data[activeDataType].every((d: any) => d[activeDatasource] === undefined)
+      data![activeDataType].every((d: any) => d[activeDatasource] === undefined)
     ) {
       return (
         <div>
@@ -430,7 +438,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { datasources, activeDataType, activeDatasource, timeSpan } = this.state;
 
     return (

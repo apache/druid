@@ -39,7 +39,7 @@ export class BarUnit extends React.Component<BarChartUnitProps, BarChartUnitStat
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { x, y, width, height, style, onClick, onHover, offHover } = this.props;
     return (
       <g

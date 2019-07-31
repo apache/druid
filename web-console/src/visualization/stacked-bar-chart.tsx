@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import d3 from 'd3';
+import * as d3 from 'd3';
 import { AxisScale } from 'd3';
 import React from 'react';
 
@@ -151,7 +151,7 @@ export class StackedBarChart extends React.Component<StackedBarChartProps, Stack
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { activeDataType, formatTick } = this.props;
     const { hoverOn } = this.state;
     return (
