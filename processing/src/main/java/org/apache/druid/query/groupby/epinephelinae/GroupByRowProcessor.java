@@ -46,6 +46,8 @@ import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -170,7 +172,7 @@ public class GroupByRowProcessor
     );
   }
 
-  public static Sequence<Row> getRowsFromGrouper(GroupByQuery query, List<String> subtotalSpec, Supplier<Grouper> grouper)
+  public static Sequence<Row> getRowsFromGrouper(GroupByQuery query, @Nullable List<String> subtotalSpec, Supplier<Grouper> grouper)
   {
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()

@@ -425,7 +425,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
       List<Sequence<Row>> subtotalsResults = new ArrayList<>(subtotals.size());
 
-      Map<String, DimensionSpec> queryDimensionSpecs = new HashMap(queryWithoutSubtotalsSpec.getDimensions().size());
+      Map<String, DimensionSpec> queryDimensionSpecs = new HashMap<>(queryWithoutSubtotalsSpec.getDimensions().size());
       for (DimensionSpec dimSpec : queryWithoutSubtotalsSpec.getDimensions()) {
         queryDimensionSpecs.put(dimSpec.getOutputName(), dimSpec);
       }

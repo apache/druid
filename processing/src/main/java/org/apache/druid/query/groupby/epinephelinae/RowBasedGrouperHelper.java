@@ -137,7 +137,7 @@ public class RowBasedGrouperHelper
   public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
-      final Map<String, ValueType> rawInputRowSignature,
+      @Nullable final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
@@ -380,7 +380,7 @@ public class RowBasedGrouperHelper
   public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
-      final List<String> dimsToInclude,
+      @Nullable final List<String> dimsToInclude,
       final Closeable closeable
   )
   {
