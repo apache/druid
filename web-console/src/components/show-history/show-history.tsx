@@ -32,7 +32,6 @@ export interface PastSupervisor {
 }
 export interface ShowHistoryProps {
   endpoint: string;
-  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
@@ -70,11 +69,12 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
     this.showHistoryQueryManager.runQuery(null);
   }
 
-  render() {
+  render(): JSX.Element | null {
     const { downloadFilename, endpoint } = this.props;
     const { data, loading } = this.state;
     if (loading) return <Loader />;
-    if (!data) return;
+    if (!data) return null;
+
     const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
       <Tab
         id={index}
@@ -83,7 +83,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
         panel={
           <ShowValue
             jsonValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
-            downloadFilename={downloadFilename + 'version-' + pastSupervisor.version}
+            downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
             endpoint={endpoint}
           />
         }

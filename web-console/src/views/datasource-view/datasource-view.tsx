@@ -19,6 +19,7 @@
 import { Button, FormGroup, InputGroup, Intent, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import classNames from 'classnames';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -30,6 +31,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { ActionIcon } from '../../components/action-icon/action-icon';
+import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -123,6 +125,9 @@ export interface DatasourcesViewState {
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
   hiddenColumns: LocalStorageBackedArray<string>;
+  showChart: boolean;
+  chartWidth: number;
+  chartHeight: number;
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -175,6 +180,9 @@ GROUP BY 1`;
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
+      showChart: false,
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4,
     };
 
     this.datasourceQueryManager = new QueryManager({
@@ -252,9 +260,31 @@ GROUP BY 1`;
     });
   }
 
+  private handleResize = () => {
+    this.setState({
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4,
+    });
+  };
+
+  private refresh = (auto: any): void => {
+    this.datasourceQueryManager.rerunLastQuery(auto);
+    // this looks ugly, but it forces the chart to re-render when refresh is clicked
+    this.setState(
+      {
+        showChart: !this.state.showChart,
+      },
+      () =>
+        this.setState({
+          showChart: !this.state.showChart,
+        }),
+    );
+  };
+
   componentDidMount(): void {
     const { noSqlMode } = this.props;
     this.datasourceQueryManager.runQuery(noSqlMode);
+    window.addEventListener('resize', this.handleResize);
   }
 
   componentWillUnmount(): void {
@@ -572,6 +602,7 @@ GROUP BY 1`;
       datasourcesFilter,
       showDisabled,
       hiddenColumns,
+      showChart,
     } = this.state;
     let data = datasources || [];
     if (!showDisabled) {
@@ -790,6 +821,7 @@ GROUP BY 1`;
             },
           ]}
           defaultPageSize={50}
+          className={classNames(`-striped -highlight`, showChart ? '' : 'full-height')}
         />
         {this.renderDropDataAction()}
         {this.renderEnableAction()}
@@ -803,13 +835,15 @@ GROUP BY 1`;
 
   render(): JSX.Element {
     const { goToQuery, noSqlMode } = this.props;
-    const { showDisabled, hiddenColumns } = this.state;
+    const { showDisabled, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
 
     return (
       <div className="data-sources-view app-view">
         <ViewControlBar label="Datasources">
           <RefreshButton
-            onRefresh={auto => this.datasourceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              this.refresh(auto);
+            }}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
           {!noSqlMode && (
@@ -819,6 +853,11 @@ GROUP BY 1`;
               onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
             />
           )}
+          <Switch
+            checked={showChart}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showChart: !showChart })}
+          />
           <Switch
             checked={showDisabled}
             label="Show disabled"
@@ -830,6 +869,11 @@ GROUP BY 1`;
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
+        {showChart && (
+          <div className={'chart-container'}>
+            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+          </div>
+        )}
         {this.renderDatasourceTable()}
       </div>
     );

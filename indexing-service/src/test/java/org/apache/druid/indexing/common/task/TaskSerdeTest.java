@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.ClientKillQuery;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -129,7 +130,7 @@ public class TaskSerdeTest
     Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"numShards\":10}",
+        "{\"type\":\"index\", \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
@@ -137,7 +138,7 @@ public class TaskSerdeTest
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10}",
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
@@ -153,7 +154,7 @@ public class TaskSerdeTest
     Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
@@ -167,7 +168,7 @@ public class TaskSerdeTest
     thrown.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
 
     jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10}",
+        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
   }
@@ -194,17 +195,17 @@ public class TaskSerdeTest
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
                 null,
-                10000,
+                null,
                 10,
                 null,
                 null,
                 9999,
                 null,
                 null,
+                new DynamicPartitionsSpec(10000, null),
                 indexSpec,
                 null,
                 3,
-                true,
                 false,
                 null,
                 null,
@@ -278,17 +279,17 @@ public class TaskSerdeTest
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
                 null,
-                10000,
+                null,
                 10,
                 null,
                 null,
                 null,
                 null,
                 null,
+                new DynamicPartitionsSpec(10000, null),
                 indexSpec,
                 null,
                 3,
-                true,
                 false,
                 null,
                 null,

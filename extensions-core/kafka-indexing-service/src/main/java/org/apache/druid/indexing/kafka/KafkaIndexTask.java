@@ -34,7 +34,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -154,8 +153,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       final Map<String, Object> props = new HashMap<>(((KafkaIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
 
       props.put("auto.offset.reset", "none");
-      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
 
       return new KafkaRecordSupplier(props, configMapper);
     }
