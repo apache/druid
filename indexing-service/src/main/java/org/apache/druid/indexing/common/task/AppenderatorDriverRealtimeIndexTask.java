@@ -368,7 +368,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.isPushRequired(tuningConfig)) {
+              final boolean isPushRequired = addResult.isPushRequired(
+                  tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
+                  tuningConfig.getPartitionsSpec().getMaxTotalRows()
+              );
+              if (isPushRequired) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);
                 sequenceNumber++;
                 sequenceName = makeSequenceName(getId(), sequenceNumber);

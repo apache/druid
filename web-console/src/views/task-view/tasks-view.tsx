@@ -79,9 +79,10 @@ const taskTableColumns: string[] = [
 export interface TasksViewProps {
   taskId: string | undefined;
   openDialog: string | undefined;
+  goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
+  goToLoadData: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
 }
 
@@ -350,13 +351,22 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     supervisorSuspended: boolean,
     type: string,
   ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
     if (type === 'kafka' || type === 'kinesis') {
-      actions.push({
-        icon: IconNames.CLOUD_UPLOAD,
-        title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(id),
-      });
+      actions.push(
+        {
+          icon: IconNames.MULTI_SELECT,
+          title: 'Go to datasource',
+          onAction: () => goToDatasource(id),
+        },
+        {
+          icon: IconNames.CLOUD_UPLOAD,
+          title: 'Open in data loader',
+          onAction: () => goToLoadData(id),
+        },
+      );
     }
     actions.push(
       {
@@ -604,13 +614,27 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  private getTaskActions(id: string, status: string, type: string): BasicAction[] {
+  private getTaskActions(
+    id: string,
+    datasource: string,
+    status: string,
+    type: string,
+  ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
+    if (datasource && status === 'SUCCESS') {
+      actions.push({
+        icon: IconNames.MULTI_SELECT,
+        title: 'Go to datasource',
+        onAction: () => goToDatasource(datasource),
+      });
+    }
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(undefined, id),
+        onAction: () => goToLoadData(undefined, id),
       });
     }
     if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
@@ -811,8 +835,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 if (row.aggregated) return '';
                 const id = row.value;
                 const type = row.row.type;
-                const { status } = row.original;
-                const taskActions = this.getTaskActions(id, status, type);
+                const { datasource, status } = row.original;
+                const taskActions = this.getTaskActions(id, datasource, status, type);
                 return (
                   <ActionCell
                     onDetail={() =>
@@ -949,7 +973,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   render(): JSX.Element {
-    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
+    const { goToQuery, goToLoadData, noSqlMode } = this.props;
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -969,7 +993,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
@@ -984,7 +1008,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
