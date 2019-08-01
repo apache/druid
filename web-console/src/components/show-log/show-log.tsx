@@ -93,7 +93,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   }
 
   componentWillUnmount(): void {
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
   }
 
   private handleCheckboxChange = () => {
@@ -103,7 +103,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     if (!this.state.tail) {
       interval = Number(setInterval(() => this.showLogQueryManager.runQuery(null), 2000));
     } else {
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     }
   };
 
