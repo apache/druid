@@ -190,6 +190,7 @@ public interface Expr
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
+  @SuppressWarnings("JavadocReference")
   class BindingDetails
   {
     private final ImmutableSet<IdentifierExpr> freeVariables;
