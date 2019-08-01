@@ -167,7 +167,7 @@ public class Parser
    */
   public static Expr applyUnappliedIdentifiers(Expr expr, Expr.BindingDetails bindingDetails, List<String> toApply)
   {
-    if (toApply.size() == 0) {
+    if (toApply.isEmpty()) {
       return expr;
     }
     List<String> unapplied = toApply.stream()
@@ -207,7 +207,7 @@ public class Parser
         unapplied.stream().filter(x -> !expectedArrays.contains(x)).collect(Collectors.toList());
 
     // if lifting the lambdas got rid of all missing bindings, return the transformed expression
-    if (remainingUnappliedArgs.size() == 0) {
+    if (remainingUnappliedArgs.isEmpty()) {
       return newExpr;
     }
 
@@ -304,7 +304,7 @@ public class Parser
                                  .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBindingIdentifier()))
                                  .collect(Collectors.toList());
 
-    if (unappliedLambdaBindings.size() == 0) {
+    if (unappliedLambdaBindings.isEmpty()) {
       return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
     }
 
@@ -387,7 +387,7 @@ public class Parser
   {
     final Set<String> conflicted =
         Sets.intersection(bindingDetails.getScalarColumns(), bindingDetails.getArrayColumns());
-    if (conflicted.size() != 0) {
+    if (!conflicted.isEmpty()) {
       throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }
   }

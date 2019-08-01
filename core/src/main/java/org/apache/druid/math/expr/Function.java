@@ -1851,7 +1851,7 @@ interface Function
     @Override
     public void validateArguments(List<Expr> args)
     {
-      if (!(args.size() > 0)) {
+      if (args.isEmpty()) {
         throw new IAE("Function[%s] needs at least 1 argument", name());
       }
     }
