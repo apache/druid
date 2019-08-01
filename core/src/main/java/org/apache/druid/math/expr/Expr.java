@@ -179,6 +179,9 @@ public interface Expr
    * allow functions to explicitly declare that they utilize array typed values, used when determining if some types of
    * optimizations can be applied when constructing the expression column value selector.
    *
+   * @see Parser#applyUnappliedIdentifiers
+   * @see Parser#applyUnapplied
+   * @see Parser#liftApplyLambda
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
