@@ -17,24 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.having;
+package org.apache.druid.query.groupby;
 
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.Map;
-
-public abstract class BaseHavingSpec implements HavingSpec
+public class ResultRowTest
 {
-  @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
+  @Test
+  public void testSerde() throws Exception
   {
-    // Do nothing.
-  }
-
-  @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
-  {
-
+    final ResultRow row = ResultRow.of(1, 2, 3);
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Assert.assertEquals(row, objectMapper.readValue("[1, 2, 3]", ResultRow.class));
+    Assert.assertEquals(row, objectMapper.readValue(objectMapper.writeValueAsBytes(row), ResultRow.class));
   }
 }

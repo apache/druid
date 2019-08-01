@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
@@ -39,8 +38,9 @@ import org.apache.druid.segment.StorageAdapter;
 import java.util.concurrent.ExecutorService;
 
 /**
+ *
  */
-public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
+public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, GroupByQuery>
 {
   private final GroupByStrategySelector strategySelector;
   private final GroupByQueryQueryToolChest toolChest;
@@ -56,38 +56,40 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   }
 
   @Override
-  public QueryRunner<Row> createRunner(final Segment segment)
+  public QueryRunner<ResultRow> createRunner(final Segment segment)
   {
     return new GroupByQueryRunner(segment, strategySelector);
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(final ExecutorService exec, final Iterable<QueryRunner<Row>> queryRunners)
+  public QueryRunner<ResultRow> mergeRunners(
+      final ExecutorService exec,
+      final Iterable<QueryRunner<ResultRow>> queryRunners
+  )
   {
     // mergeRunners should take ListeningExecutorService at some point
     final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
 
-    return new QueryRunner<Row>()
+    return new QueryRunner<ResultRow>()
     {
       @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+      public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
       {
-        QueryRunner<Row> rowQueryRunner = strategySelector.strategize((GroupByQuery) queryPlus.getQuery()).mergeRunners(
-            queryExecutor,
-            queryRunners
-        );
+        QueryRunner<ResultRow> rowQueryRunner = strategySelector
+            .strategize((GroupByQuery) queryPlus.getQuery())
+            .mergeRunners(queryExecutor, queryRunners);
         return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
   }
 
   @Override
-  public QueryToolChest<Row, GroupByQuery> getToolchest()
+  public QueryToolChest<ResultRow, GroupByQuery> getToolchest()
   {
     return toolChest;
   }
 
-  private static class GroupByQueryRunner implements QueryRunner<Row>
+  private static class GroupByQueryRunner implements QueryRunner<ResultRow>
   {
     private final StorageAdapter adapter;
     private final GroupByStrategySelector strategySelector;
@@ -99,9 +101,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+    public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
     {
-      Query<Row> query = queryPlus.getQuery();
+      Query<ResultRow> query = queryPlus.getQuery();
       if (!(query instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
