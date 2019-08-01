@@ -426,7 +426,7 @@ public class ExprListenerImpl extends ExprBaseListener
    * {@link IdentifierExpr#identifier} be the same as {@link IdentifierExpr#bindingIdentifier} because they have
    * synthetic bindings set at evaluation time. This is done to aid in analysis needed for the automatic expression
    * translation which maps scalar expressions to multi-value inputs. See
-   * {@link Parser#applyUnappliedIdentifiers(Expr, Expr.BindingDetails, List)}} for additional details.
+   * {@link Parser#applyUnappliedBindings(Expr, Expr.BindingDetails, List)}} for additional details.
    */
   private IdentifierExpr createIdentifierExpr(String binding)
   {

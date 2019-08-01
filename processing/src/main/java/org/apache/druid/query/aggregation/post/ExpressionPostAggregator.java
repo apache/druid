@@ -118,7 +118,7 @@ public class ExpressionPostAggregator implements PostAggregator
         macroTable,
         finalizers,
         parsed,
-        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredColumns()));
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredBindings()));
   }
 
   private ExpressionPostAggregator(

@@ -90,11 +90,11 @@ public interface Expr
   }
 
   /**
-   * Returns the string identifier to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
+   * Returns the string key to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
    * else null
    */
   @Nullable
-  default String getIdentifierBindingIfIdentifier()
+  default String getBindingIfIdentifier()
   {
     // overridden by things that are identifiers
     return null;
@@ -163,15 +163,17 @@ public interface Expr
   /**
    * Information about the context in which {@link IdentifierExpr} are used in a greater {@link Expr}, listing
    * the 'free variables' (total set of required input columns or values) and distinguishing between which identifiers
-   * are used as scalar values and which are used as array values.
+   * are used as scalar inputs and which are used as array inputs.
    *
    * This type is primarily used at query time when creating expression column selectors to decide if an expression
-   * can properly deal with a multi-valued input column and also to determine if certain optimizations can be taken.
+   * can properly deal with a multi-valued column input, and also to determine if certain optimizations can be taken.
    *
-   * Current implementations of {@link #analyzeInputs()} only 'shallowly' recognize {@link Function} and
+   * Current implementations of {@link #analyzeInputs()} provide context about {@link Function} and
    * {@link ApplyFunction} arguments which are direct children {@link IdentifierExpr} as scalar or array typed.
-   * Identifiers inside of argument expressions which are other expression types will not be considered to belong
-   * directly to that function, and so are classified by their children instead.
+   * This is defined by {@link Function#getScalarInputs(List)}, {@link Function#getArrayInputs(List)} and
+   * {@link ApplyFunction#getArrayInputs(List)}. Identifiers that are nested inside of argument expressions which
+   * are other expression types will not be considered to belong directly to that function, and so are classified by the
+   * context their children are using them as instead.
    *
    * This means in rare cases and mostly for "questionable" expressions which we still allow to function 'correctly',
    * these lists might not be fully reliable without a complete type inference system in place. Due to this shortcoming,
@@ -179,7 +181,10 @@ public interface Expr
    * allow functions to explicitly declare that they utilize array typed values, used when determining if some types of
    * optimizations can be applied when constructing the expression column value selector.
    *
-   * @see Parser#applyUnappliedIdentifiers
+   * @see Function#getScalarInputs
+   * @see Function#getArrayInputs
+   * @see ApplyFunction#getArrayInputs
+   * @see Parser#applyUnappliedBindings
    * @see Parser#applyUnapplied
    * @see Parser#liftApplyLambda
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
@@ -219,41 +224,42 @@ public interface Expr
     }
 
     /**
-     * Get the list of required column inputs to evaluate an expression
+     * Get the list of required column inputs to evaluate an expression ({@link IdentifierExpr#binding})
      */
-    public List<String> getRequiredColumnsList()
+    public List<String> getRequiredBindingsList()
     {
       return new ArrayList<>(
-          freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet())
+          freeVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet())
       );
     }
 
     /**
-     * Get the set of required column inputs to evaluate an expression, {@link IdentifierExpr#bindingIdentifier}
+     * Get the set of required column inputs to evaluate an expression ({@link IdentifierExpr#binding})
      */
-    public Set<String> getRequiredColumns()
+    public Set<String> getRequiredBindings()
     {
-      return freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return freeVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
     }
 
     /**
-     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with scalar operators and functions
+     * Set of {@link IdentifierExpr#binding} which are used as scalar inputs to operators and functions.
      */
-    public Set<String> getScalarColumns()
+    public Set<String> getScalarBindings()
     {
-      return scalarVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return scalarVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
     }
 
     /**
-     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#binding} which are used as array inputs to operators, functions, and apply
+     * functions.
      */
-    public Set<String> getArrayColumns()
+    public Set<String> getArrayBindings()
     {
-      return arrayVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return arrayVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
     }
 
     /**
-     * Total set of 'free' identifiers of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
+     * Total set of 'free' inputs of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
      */
     public Set<IdentifierExpr> getFreeVariables()
     {
@@ -261,7 +267,7 @@ public interface Expr
     }
 
     /**
-     * Set of {@link IdentifierExpr#identifier} which are used with scalar operators and functions.
+     * Set of {@link IdentifierExpr#identifier} which are used as scalar inputs to operators and functions.
      */
     public Set<String> getScalarVariables()
     {
@@ -269,7 +275,8 @@ public interface Expr
     }
 
     /**
-     * Set of {@link IdentifierExpr#identifier} which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#identifier} which are used as array inputs to operators, functions, and apply
+     * functions.
      */
     public Set<String> getArrayVariables()
     {
@@ -277,9 +284,14 @@ public interface Expr
     }
 
     /**
-     * Returns true if the expression has any array inputs. Note that in some cases, this can be true and
-     * {@link BindingDetails#getArrayVariables} can be empty. This is because arrayVariables contains a best-effort list
-     * of {@link IdentifierExpr} which were explicitly used as an array argument
+     * Returns true if any expression in the expression tree has any array inputs. Note that in some cases, this can be
+     * true and {@link #getArrayBindings()} or {@link #getArrayVariables()} can be empty.
+     *
+     * This is because these collections contain identifiers/bindings which were classified as either scalar or array
+     * inputs based on the context of their usage by {@link Expr#analyzeInputs()}, where as this value and
+     * {@link #isOutputArray()} are set based on information reported by {@link Function#hasArrayInputs()},
+     * {@link Function#hasArrayOutput()}, and {@link ApplyFunction#hasArrayOutput(LambdaExpr)}, without regards to
+     * identifiers or anything else.
      */
     public boolean hasInputArrays()
     {
@@ -287,7 +299,8 @@ public interface Expr
     }
 
     /**
-     * Returns true if this expression evaluates to an array type
+     * Returns true if any expression in this expression tree produces array outputs as reported by
+     * {@link Function#hasArrayOutput()} or {@link ApplyFunction#hasArrayOutput(LambdaExpr)}
      */
     public boolean isOutputArray()
     {
@@ -649,28 +662,37 @@ class DoubleArrayExpr extends ConstantExpr
 class IdentifierExpr implements Expr
 {
   private final String identifier;
-  private final String bindingIdentifier;
+  private final String binding;
 
+  /**
+   * Construct a identifier expression for a {@link LambdaExpr}, where the {@link #identifier} is equal to
+   * {@link #binding}
+   */
   IdentifierExpr(String value)
   {
     this.identifier = value;
-    this.bindingIdentifier = value;
+    this.binding = value;
   }
 
-  IdentifierExpr(String identifier, String bindingIdentifier)
+  /**
+   * Construct a normal identifier expression, where {@link #binding} is the key to fetch the backing value from
+   * {@link Expr.ObjectBinding} and the {@link #identifier} is a unique string that identifies this usage of the
+   * binding.
+   */
+  IdentifierExpr(String identifier, String binding)
   {
     this.identifier = identifier;
-    this.bindingIdentifier = bindingIdentifier;
+    this.binding = binding;
   }
 
   @Override
   public String toString()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   /**
-   * Unique identifier
+   * Unique identifier for the binding
    */
   @Nullable
   public String getIdentifier()
@@ -679,12 +701,12 @@ class IdentifierExpr implements Expr
   }
 
   /**
-   * Value binding identifier
+   * Value binding, key to retrieve value from {@link Expr.ObjectBinding#get(String)}
    */
   @Nullable
-  public String getBindingIdentifier()
+  public String getBinding()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   @Nullable
@@ -696,9 +718,9 @@ class IdentifierExpr implements Expr
 
   @Nullable
   @Override
-  public String getIdentifierBindingIfIdentifier()
+  public String getBindingIfIdentifier()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   @Nullable
@@ -717,7 +739,7 @@ class IdentifierExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.bestEffortOf(bindings.get(bindingIdentifier));
+    return ExprEval.bestEffortOf(bindings.get(binding));
   }
 
   @Override
