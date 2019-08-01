@@ -25,7 +25,7 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { QueryManager } from './utils';
+import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import {
   DatasourcesView,
@@ -56,20 +56,27 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  static MESSAGE_KEY = 'druid-console-message';
-  static MESSAGE_DISMISSED = 'dismissed';
+  static STATUS_TIMEOUT = 2000;
+
   private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
   static async discoverCapabilities(): Promise<Capabilities> {
+    const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
+
     try {
-      await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
+      await axios.post(
+        '/druid/v2/sql',
+        { query: 'SELECT 1337', context: { timeout: ConsoleApplication.STATUS_TIMEOUT } },
+        { timeout: ConsoleApplication.STATUS_TIMEOUT },
+      );
     } catch (e) {
       const { response } = e;
       if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
         return 'working-with-sql'; // other failure
       }
       try {
-        await axios.get('/status');
+        await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
       } catch (e) {
         return 'broken'; // total failure
       }
