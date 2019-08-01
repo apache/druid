@@ -87,7 +87,7 @@ Also include hdfs-storage core extension to conf/druid/_common/common.runtime.
 
 druid.extensions.directory=dist/druid/extensions
 druid.extensions.hadoopDependenciesDir=dist/druid/hadoop-dependencies
-druid.extensions.loadList=["druid-parser-route", "mysql-metadata-storage", "druid-hdfs-storage", "druid-kerberos"]
+druid.extensions.loadList=["mysql-metadata-storage", "druid-hdfs-storage", "druid-kerberos"]
 ```
 ### Hadoop Jars
 
