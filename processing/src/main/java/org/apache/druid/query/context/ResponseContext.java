@@ -336,35 +336,35 @@ public abstract class ResponseContext
           Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
       sortedNodesByLength.sort(valueLengthReversedComparator);
       int needToRemoveCharsNumber = fullSerializedString.length() - maxCharsNumber;
-      // In general, the complexity of this block is O(n*m*log(m)) where n - context size, m - context's array size
+      // The complexity of this block is O(n*m*log(m)) where n - context size, m - context's array size
       for (Map.Entry<String, JsonNode> e : sortedNodesByLength) {
         final String fieldName = e.getKey();
         final JsonNode node = e.getValue();
-        if (!node.isArray() || needToRemoveCharsNumber >= node.toString().length()) {
-          if (node.isArray()) {
+        if (node.isArray()) {
+          if (needToRemoveCharsNumber >= node.toString().length()) {
             final int lengthBeforeRemove = node.toString().length();
             // Empty array could be correctly deserialized so we remove only its elements.
             ((ArrayNode) node).removeAll();
             final int lengthAfterRemove = node.toString().length();
             needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
           } else {
-            // In general, a context should not contain nulls so we completely remove the field.
-            contextJsonNode.remove(fieldName);
-            // Since the field is completely removed (name + value) we need to do a recalculation
-            needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
-          }
-        } else {
-          final ArrayNode arrNode = (ArrayNode) node;
-          while (node.size() > 0 && needToRemoveCharsNumber > 0) {
-            final int lengthBeforeRemove = arrNode.toString().length();
-            // Reducing complexity by removing half of array's elements
-            final int removeUntil = node.size() / 2;
-            for (int removeAt = node.size() - 1; removeAt >= removeUntil; removeAt--) {
-              arrNode.remove(removeAt);
+            final ArrayNode arrNode = (ArrayNode) node;
+            while (node.size() > 0 && needToRemoveCharsNumber > 0) {
+              final int lengthBeforeRemove = arrNode.toString().length();
+              // Reducing complexity by removing half of array's elements
+              final int removeUntil = node.size() / 2;
+              for (int removeAt = node.size() - 1; removeAt >= removeUntil; removeAt--) {
+                arrNode.remove(removeAt);
+              }
+              final int lengthAfterRemove = arrNode.toString().length();
+              needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
             }
-            final int lengthAfterRemove = arrNode.toString().length();
-            needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
-          }
+          } // node is not an array
+        } else {
+          // In general, a context should not contain nulls so we completely remove the field.
+          contextJsonNode.remove(fieldName);
+          // Since the field is completely removed (name + value) we need to do a recalculation
+          needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
         }
         if (needToRemoveCharsNumber <= 0) {
           break;
