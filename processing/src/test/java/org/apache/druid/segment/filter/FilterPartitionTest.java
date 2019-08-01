@@ -74,6 +74,7 @@ public class FilterPartitionTest extends BaseFilterTest
     {
       super(dimension, value);
     }
+
     public NoBitmapSelectorFilter(
         String dimension,
         String value,
