@@ -360,9 +360,9 @@ public class DruidSchema extends AbstractSchema
     synchronized (lock) {
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
-      // segmentReplicatable is used to determine if segments are served by historical or realtime servers
-      final long isRealtime = server.segmentReplicatable() ? 0 : 1;
       if (segmentMetadata == null) {
+        // segmentReplicatable is used to determine if segments are served by historical or realtime servers
+        long isRealtime = server.segmentReplicatable() ? 0 : 1;
         segmentMetadata = AvailableSegmentMetadata.builder(
             segment,
             isRealtime,
@@ -388,7 +388,7 @@ public class DruidSchema extends AbstractSchema
         final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
             .from(segmentMetadata)
             .withReplicas(servers)
-            .withRealtime(isRealtime)
+            .withRealtime(recomputeIsRealtime(servers))
             .build();
         knownSegments.put(segment.getId(), metadataWithNumReplicas);
         if (server.segmentReplicatable()) {
@@ -444,17 +444,11 @@ public class DruidSchema extends AbstractSchema
           .from(segmentServers)
           .filter(Predicates.not(Predicates.equalTo(server)))
           .toSet();
-      final Optional<DruidServerMetadata> historicalServer = servers
-          .stream()
-          .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL))
-          .findAny();
 
-      // if there is any historical server in the replicas, isRealtime flag should be unset
-      final long isRealtime = historicalServer.isPresent() ? 0 : 1;
       final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
           .from(segmentMetadata)
           .withReplicas(servers)
-          .withRealtime(isRealtime)
+          .withRealtime(recomputeIsRealtime(servers))
           .build();
       knownSegments.put(segment.getId(), metadataWithNumReplicas);
       lock.notifyAll();
@@ -484,6 +478,18 @@ public class DruidSchema extends AbstractSchema
     }
 
     return retVal;
+  }
+
+  private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)
+  {
+    final Optional<DruidServerMetadata> historicalServer = servers
+        .stream()
+        .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL))
+        .findAny();
+
+    // if there is any historical server in the replicas, isRealtime flag should be unset
+    final long isRealtime = historicalServer.isPresent() ? 0 : 1;
+    return isRealtime;
   }
 
   /**
