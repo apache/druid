@@ -44,7 +44,7 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
-  addFilterNoParens,
+  addFilterNoQuotes,
   booleanCustomTableFilter,
   formatDuration,
   getDruidErrorMessage,
@@ -105,7 +105,10 @@ export interface TasksViewState {
   tasksLoading: boolean;
   tasks?: any[];
   tasksError?: string;
+
   taskFilter: Filter[];
+  supervisorFilter: Filter[];
+
   groupTasksBy?: 'type' | 'datasource' | 'status';
 
   killTaskId?: string;
@@ -201,6 +204,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
+
+    const taskFilter: Filter[] = [];
+    if (props.taskId) taskFilter.push({ id: 'task_id', value: props.taskId });
+    if (props.datasourceId) taskFilter.push({ id: 'datasource', value: props.datasourceId });
+
+    const supervisorFilter: Filter[] = [];
+    if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
+
     this.state = {
       supervisorsLoading: true,
       supervisors: [],
@@ -210,16 +221,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       showTerminateAllSupervisors: false,
 
       tasksLoading: true,
-      taskFilter: props.taskId
-        ? props.datasourceId
-          ? [
-              { id: 'task_id', value: props.taskId },
-              { id: 'datasource', value: props.datasourceId },
-            ]
-          : [{ id: 'task_id', value: props.taskId }]
-        : this.props.datasourceId
-        ? [{ id: 'datasource', value: props.datasourceId }]
-        : [],
+      taskFilter: taskFilter,
+      supervisorFilter: supervisorFilter,
 
       supervisorSpecDialogOpen: props.openDialog === 'supervisor',
       taskSpecDialogOpen: props.openDialog === 'task',
@@ -529,6 +532,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       supervisorsError,
       hiddenSupervisorColumns,
       taskFilter,
+      supervisorFilter,
     } = this.state;
     return (
       <>
@@ -540,16 +544,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               ? 'No supervisors'
               : supervisorsError || ''
           }
+          filtered={supervisorFilter}
           onFilteredChange={filtered => {
-            const { taskFilter } = this.state;
-            const datasourceFilter = filtered.filter(filter => filter.id === 'datasource')[0];
-            this.setState({
-              taskFilter: datasourceFilter
-                ? addFilterNoParens(taskFilter, datasourceFilter.id, datasourceFilter.value)
-                : taskFilter.filter(filter => filter.id !== 'datasource'),
-            });
+            const datasources = filtered.filter(filter => filter.id === 'datasource')[0];
+            let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
+            if (datasources) {
+              newTaskFilter = addFilterNoQuotes(newTaskFilter, datasources.id, datasources.value);
+            }
+            this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
           }}
-          defaultFiltered={taskFilter.filter(filter => filter.id === 'datasource')}
           filterable
           columns={[
             {
@@ -705,6 +708,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
+      supervisorFilter,
     } = this.state;
     return (
       <>
@@ -715,7 +719,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
-            this.setState({ taskFilter: filtered });
+            const datasources = filtered.filter(filter => filter.id === 'datasource')[0];
+            let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
+            if (datasources) {
+              newSupervisorFilter = addFilterNoQuotes(
+                newSupervisorFilter,
+                datasources.id,
+                datasources.value,
+              );
+            }
+            this.setState({ supervisorFilter: newSupervisorFilter, taskFilter: filtered });
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
           pivotBy={groupTasksBy ? [groupTasksBy] : []}

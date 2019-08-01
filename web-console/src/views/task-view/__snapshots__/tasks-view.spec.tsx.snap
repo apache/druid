@@ -239,14 +239,7 @@ exports[`tasks view matches snapshot 1`] = `
         data={Array []}
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
-        defaultFiltered={
-          Array [
-            Object {
-              "id": "datasource",
-              "value": "datasource",
-            },
-          ]
-        }
+        defaultFiltered={Array []}
         defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
@@ -262,6 +255,14 @@ exports[`tasks view matches snapshot 1`] = `
           }
         }
         filterable={true}
+        filtered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         freezeWhenExpanded={false}
         getLoadingProps={[Function]}
         getNoDataProps={[Function]}

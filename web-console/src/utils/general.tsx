@@ -44,7 +44,7 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
-export function addFilterNoParens(filters: Filter[], id: string, value: string): Filter[] {
+export function addFilterNoQuotes(filters: Filter[], id: string, value: string): Filter[] {
   value = `${value}`;
   const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {

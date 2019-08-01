@@ -178,8 +178,14 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToTask = (taskId?: string, openDialog?: string, datasource?: string) => {
+  private goToTaskWithTaskId = (taskId?: string, openDialog?: string) => {
     this.taskId = taskId;
+    if (openDialog) this.openDialog = openDialog;
+    window.location.hash = 'tasks';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToTaskWithDatasource = (datasource?: string, openDialog?: string) => {
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
@@ -224,7 +230,7 @@ export class ConsoleApplication extends React.PureComponent<
       <LoadDataView
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
-        goToTask={this.goToTask}
+        goToTask={this.goToTaskWithTaskId}
       />,
       'narrow-pad',
     );
@@ -241,7 +247,7 @@ export class ConsoleApplication extends React.PureComponent<
       <DatasourcesView
         initDatasource={this.datasource}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTask}
+        goToTask={this.goToTaskWithDatasource}
         goToSegments={this.goToSegments}
         noSqlMode={noSqlMode}
       />,
@@ -285,7 +291,7 @@ export class ConsoleApplication extends React.PureComponent<
       <ServersView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTask}
+        goToTask={this.goToTaskWithTaskId}
         noSqlMode={noSqlMode}
       />,
     );

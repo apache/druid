@@ -113,7 +113,7 @@ interface CompactionDialogOpenOn {
 
 export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
-  goToTask: (taskId?: string, openDialog?: string, datasource?: string) => void;
+  goToTask: (datasource?: string, openDialog?: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
   noSqlMode: boolean;
   initDatasource?: string;
@@ -564,7 +564,7 @@ GROUP BY 1`;
         {
           icon: IconNames.GANTT_CHART,
           title: 'Go to tasks',
-          onAction: () => goToTask(undefined, undefined, datasource),
+          onAction: () => goToTask(datasource),
         },
         {
           icon: IconNames.AUTOMATIC_UPDATES,
