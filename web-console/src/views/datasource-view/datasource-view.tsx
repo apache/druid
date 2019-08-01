@@ -37,6 +37,7 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   countBy,
+  escapeSqlIdentifier,
   formatBytes,
   formatNumber,
   getDruidErrorMessage,
@@ -558,7 +559,7 @@ GROUP BY 1`;
         {
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
-          onAction: () => goToQuery(`SELECT * FROM "${datasource}"`),
+          onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
         },
         {
           icon: IconNames.AUTOMATIC_UPDATES,
