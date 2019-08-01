@@ -35,7 +35,7 @@ function removeFirstPartialLine(log: string): string {
   return lines.join('\n');
 }
 
-let timeOut: number | undefined;
+let interval: number | undefined;
 
 export interface ShowLogProps {
   endpoint: string;
@@ -53,7 +53,6 @@ export interface ShowLogState {
 
 export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   private showLogQueryManager: QueryManager<null, string>;
-  private tailQueryManager: QueryManager<null, void>;
   public log = React.createRef<HTMLTextAreaElement>();
 
   constructor(props: ShowLogProps, context: any) {
@@ -81,36 +80,20 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
         });
       },
     });
-
-    this.tailQueryManager = new QueryManager({
-      processQuery: async () => {
-        await this.showLogQueryManager.runQuery(null);
-        if (this.state.tail) {
-          if (this.log.current) {
-            this.log.current.scrollTo(0, this.log.current.scrollHeight);
-          }
-          timeOut = Number(
-            setTimeout(() => {
-              this.tailQueryManager.runQuery(null);
-            }, 2000),
-          );
-        }
-      },
-    });
   }
 
   componentDidMount(): void {
     const { status } = this.props;
 
     if (status === 'RUNNING') {
-      this.tailQueryManager.runQuery(null);
+      interval = Number(setInterval(() => this.showLogQueryManager.runQuery(null), 2000));
     }
 
     this.showLogQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
-    clearTimeout(timeOut);
+    clearInterval(interval);
   }
 
   private handleCheckboxChange = () => {
@@ -118,7 +101,9 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
       tail: !this.state.tail,
     });
     if (!this.state.tail) {
-      this.tailQueryManager.runQuery(null);
+      interval = Number(setInterval(() => this.showLogQueryManager.runQuery(null), 2000));
+    } else {
+      clearInterval(interval);
     }
   };
 
