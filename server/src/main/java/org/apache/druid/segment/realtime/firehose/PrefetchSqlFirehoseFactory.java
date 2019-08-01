@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl.prefetch;
+package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,7 +29,12 @@ import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.SqlFirehose;
+import org.apache.druid.data.input.impl.prefetch.CacheManager;
+import org.apache.druid.data.input.impl.prefetch.Fetcher;
+import org.apache.druid.data.input.impl.prefetch.JsonIterator;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.data.input.impl.prefetch.OpenedObject;
+import org.apache.druid.data.input.impl.prefetch.PrefetchConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;

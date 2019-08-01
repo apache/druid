@@ -37,7 +37,6 @@
     <Bug pattern="DC_DOUBLECHECK"/>
     <Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
     <Bug pattern="DM_EXIT"/>
-    <Bug pattern="DM_NUMBER_CTOR"/>
     <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
@@ -84,9 +83,7 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
     <Bug pattern="SR_NOT_CHECKED"/>
-    <Bug pattern="SS_SHOULD_BE_STATIC"/>
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
-    <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
 </FindBugsFilter>

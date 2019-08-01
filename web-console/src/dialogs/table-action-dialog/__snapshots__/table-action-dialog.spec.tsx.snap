@@ -62,9 +62,6 @@ exports[`table action dialog matches snapshot 1`] = `
           class="bp3-dialog-footer"
         >
           <div
-            class="footer-actions-left"
-          />
-          <div
             class="bp3-dialog-footer-actions"
           >
             <button

@@ -17,24 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.having;
+package org.apache.druid.indexer.partitions;
 
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import java.util.List;
 
-import java.util.Map;
-
-public abstract class BaseHavingSpec implements HavingSpec
+/**
+ * PartitionsSpec based on dimension values.
+ */
+public interface DimensionBasedPartitionsSpec extends PartitionsSpec
 {
-  @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
-  {
-    // Do nothing.
-  }
-
-  @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
-  {
-
-  }
+  List<String> getPartitionDimensions();
 }

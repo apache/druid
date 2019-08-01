@@ -40,6 +40,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -128,7 +129,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       );
       gbqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
-      Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
+      Sequence<ResultRow> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
       try {
         // use localhost for remote address
         requestLogger.logNativeQuery(RequestLogLine.forNative(
@@ -147,7 +148,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
         throw Throwables.propagate(e);
       }
 
-      resultsSeq = results;
+      resultsSeq = results.map(row -> row.toMapBasedRow(gbq));
     } else {
       // no dimensions, so optimize this as a TimeSeries
       TimeseriesQuery tsq = new TimeseriesQuery(
@@ -203,7 +204,8 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
             maq.getAveragerSpecs(),
             maq.getPostAggregatorSpecs(),
             maq.getAggregatorSpecs()
-        ));
+        )
+    );
 
     // Apply any postAveragers
     Sequence<Row> movingAvgResultsWithPostAveragers =
@@ -218,7 +220,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
         );
 
     // Apply any having, sorting, and limits
-    movingAvgResults = ((MovingAverageQuery) maq).applyLimit(movingAvgResults);
+    movingAvgResults = maq.applyLimit(movingAvgResults);
 
     return movingAvgResults;
 

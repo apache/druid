@@ -26,6 +26,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -34,6 +35,7 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -41,13 +43,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class SqlFirehoseFactoryTest
@@ -67,14 +69,16 @@ public class SqlFirehoseFactoryTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
 
-  private final MapInputRowParser parser = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              new ArrayList<>(),
-              new ArrayList<>()
-          )
+  private final InputRowParser parser = TransformSpec.NONE.decorate(
+      new MapInputRowParser(
+        new TimeAndDimsParseSpec(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
+                new ArrayList<>(),
+                new ArrayList<>()
+            )
+        )
       )
   );
   private TestDerbyConnector derbyConnector;
@@ -100,18 +104,9 @@ public class SqlFirehoseFactoryTest
   private void assertResult(List<Row> rows, List<String> sqls)
   {
     Assert.assertEquals(10 * sqls.size(), rows.size());
-    rows.sort((r1, r2) -> {
-      int c = r1.getTimestamp().compareTo(r2.getTimestamp());
-      if (c != 0) {
-        return c;
-      }
-      c = Integer.valueOf(r1.getDimension("a").get(0)).compareTo(Integer.valueOf(r2.getDimension("a").get(0)));
-      if (c != 0) {
-        return c;
-      }
-
-      return Integer.valueOf(r1.getDimension("b").get(0)).compareTo(Integer.valueOf(r2.getDimension("b").get(0)));
-    });
+    rows.sort(Comparator.comparing(Row::getTimestamp)
+                        .thenComparingInt(r -> Integer.valueOf(r.getDimension("a").get(0)))
+                        .thenComparingInt(r -> Integer.valueOf(r.getDimension("b").get(0))));
     int rowCount = 0;
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < sqls.size(); j++) {
@@ -147,15 +142,10 @@ public class SqlFirehoseFactoryTest
   private void dropTable(final String tableName)
   {
     derbyConnector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                  .execute();
-            return null;
-          }
+        (HandleCallback<Void>) handle -> {
+          handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+                .execute();
+          return null;
         }
     );
   }

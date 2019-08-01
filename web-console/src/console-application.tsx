@@ -105,13 +105,13 @@ export class ConsoleApplication extends React.PureComponent<
     });
   }
 
-  private supervisorId: string | undefined;
-  private taskId: string | undefined;
-  private openDialog: string | undefined;
-  private datasource: string | undefined;
-  private onlyUnavailable: boolean | undefined;
-  private initQuery: string | undefined;
-  private middleManager: string | undefined;
+  private supervisorId?: string;
+  private taskId?: string;
+  private openDialog?: string;
+  private datasource?: string;
+  private onlyUnavailable?: boolean;
+  private initQuery?: string;
+  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -158,10 +158,23 @@ export class ConsoleApplication extends React.PureComponent<
     }, 50);
   }
 
-  private goToLoadDataView = (supervisorId?: string, taskId?: string) => {
+  private goToLoadData = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToDatasources = (datasource: string) => {
+    this.datasource = datasource;
+    window.location.hash = 'datasources';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToSegments = (datasource: string, onlyUnavailable = false) => {
+    this.datasource = datasource;
+    this.onlyUnavailable = onlyUnavailable;
+    window.location.hash = 'segments';
     this.resetInitialsWithDelay();
   };
 
@@ -169,13 +182,6 @@ export class ConsoleApplication extends React.PureComponent<
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
-    this.resetInitialsWithDelay();
-  };
-
-  private goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = `"${datasource}"`;
-    this.onlyUnavailable = onlyUnavailable;
-    window.location.hash = 'segments';
     this.resetInitialsWithDelay();
   };
 
@@ -232,6 +238,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
+        initDatasource={this.datasource}
         goToQuery={this.goToQuery}
         goToSegments={this.goToSegments}
         noSqlMode={noSqlMode}
@@ -259,9 +266,10 @@ export class ConsoleApplication extends React.PureComponent<
       <TasksView
         taskId={this.taskId}
         openDialog={this.openDialog}
+        goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
         goToMiddleManager={this.goToMiddleManager}
-        goToLoadDataView={this.goToLoadDataView}
+        goToLoadData={this.goToLoadData}
         noSqlMode={noSqlMode}
       />,
     );
@@ -284,7 +292,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer('lookups', <LookupsView />);
   };
 
-  render() {
+  render(): JSX.Element {
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {

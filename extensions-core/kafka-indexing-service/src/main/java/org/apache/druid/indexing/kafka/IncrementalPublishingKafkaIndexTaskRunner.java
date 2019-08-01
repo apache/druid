@@ -37,6 +37,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
@@ -72,6 +73,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,
       RowIngestionMetersFactory rowIngestionMetersFactory,
+      AppenderatorsManager appenderatorsManager,
       LockGranularity lockGranularityToUse
   )
   {
@@ -82,6 +84,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         chatHandlerProvider,
         savedParseExceptions,
         rowIngestionMetersFactory,
+        appenderatorsManager,
         lockGranularityToUse
     );
     this.task = task;

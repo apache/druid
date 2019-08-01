@@ -35,13 +35,13 @@ describe('parse data table', () => {
 
     const parseDataTable = (
       <ParseDataTable
-        openModal={() => null}
+        openModal={() => {}}
         sampleData={sampleData}
         columnFilter=""
         canFlatten={false}
         flattenedColumnsOnly={false}
         flattenFields={[]}
-        onFlattenFieldSelect={() => null}
+        onFlattenFieldSelect={() => {}}
       />
     );
 

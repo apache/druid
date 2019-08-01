@@ -36,7 +36,7 @@ export class JSONCollapse extends React.PureComponent<JSONCollapseProps, JSONCol
     };
   }
 
-  render() {
+  render(): JSX.Element {
     const { stringValue, buttonText } = this.props;
     const { isOpen } = this.state;
     const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);

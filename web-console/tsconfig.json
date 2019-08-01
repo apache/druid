@@ -16,7 +16,7 @@
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["dom", "es2016"],
+    "lib": ["dom", "es2016", "esnext"],
     "jsx": "react",
     "rootDirs": ["lib", "src"]
   },

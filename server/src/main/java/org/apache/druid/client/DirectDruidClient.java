@@ -508,7 +508,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(queryResultType, future, url, query, host, objectMapper, null);
+            return new JsonParserIterator<T>(
+                queryResultType,
+                future,
+                url,
+                query,
+                host,
+                toolChest.decorateObjectMapper(objectMapper, query),
+                null
+            );
           }
 
           @Override

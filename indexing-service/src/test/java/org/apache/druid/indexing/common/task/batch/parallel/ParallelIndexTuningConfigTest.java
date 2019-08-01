@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -60,11 +61,12 @@ public class ParallelIndexTuningConfigTest
   {
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
-        100,
+        null,
         10,
         1000L,
-        100L,
         null,
+        null,
+        new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.UNCOMPRESSED,

@@ -21,10 +21,7 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BaseQuery;
@@ -93,10 +90,10 @@ public class GroupByQueryTest
                                            .addDimension(new DefaultDimensionSpec("baz", "baz", ValueType.STRING))
                                            .build();
 
-    final Ordering<Row> rowOrdering = query.getRowOrdering(false);
+    final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);
     final int compare = rowOrdering.compare(
-        new MapBasedRow(0L, ImmutableMap.of("foo", 1, "bar", 1f, "baz", "a")),
-        new MapBasedRow(0L, ImmutableMap.of("foo", 1L, "bar", 1d, "baz", "b"))
+        ResultRow.of(1, 1f, "a"),
+        ResultRow.of(1L, 1d, "b")
     );
     Assert.assertEquals(-1, compare);
   }

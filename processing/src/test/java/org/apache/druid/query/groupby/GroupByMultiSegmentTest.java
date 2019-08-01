@@ -31,7 +31,6 @@ import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -99,7 +98,7 @@ public class GroupByMultiSegmentTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -314,8 +313,8 @@ public class GroupByMultiSegmentTest
   @Test
   public void testHavingAndNoLimitPushDown()
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners())
         ),
@@ -343,10 +342,11 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query));
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "world",
         "metA", 150L
@@ -356,12 +356,12 @@ public class GroupByMultiSegmentTest
     Assert.assertEquals(expectedRow, results.get(0));
   }
 
-  private List<QueryRunner<Row>> makeGroupByMultiRunners()
+  private List<QueryRunner<ResultRow>> makeGroupByMultiRunners()
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
 
     for (QueryableIndex qindex : groupByIndices) {
-      QueryRunner<Row> runner = makeQueryRunner(
+      QueryRunner<ResultRow> runner = makeQueryRunner(
           groupByFactory,
           SegmentId.dummy(qindex.toString()),
           new QueryableIndexSegment(qindex, SegmentId.dummy(qindex.toString()))
@@ -422,11 +422,13 @@ public class GroupByMultiSegmentTest
 
   public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
+    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
+    {
       @Override
       public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
       {
-        return new QueryRunner<T>() {
+        return new QueryRunner<T>()
+        {
           @Override
           public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {

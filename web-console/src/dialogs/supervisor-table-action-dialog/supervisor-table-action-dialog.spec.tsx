@@ -29,7 +29,7 @@ describe('supervisor table action dialog', () => {
       <SupervisorTableActionDialog
         supervisorId={'test'}
         actions={[basicAction, basicAction, basicAction, basicAction]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );
