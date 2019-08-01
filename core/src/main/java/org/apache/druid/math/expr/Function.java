@@ -77,7 +77,7 @@ interface Function
   }
 
   /**
-   * Returns true if a function takes an array arguments
+   * Returns true if a function expects any array arguments
    */
   default boolean hasArrayInputs()
   {
@@ -85,7 +85,8 @@ interface Function
   }
 
   /**
-   * Returns true if function produces an array
+   * Returns true if function produces an array. All {@link Function} implementations are expected to
+   * exclusively produce either scalar or array values.
    */
   default boolean hasArrayOutput()
   {

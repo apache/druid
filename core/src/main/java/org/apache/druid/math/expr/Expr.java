@@ -164,6 +164,23 @@ public interface Expr
    * Information about the context in which {@link IdentifierExpr} are used in a greater {@link Expr}, listing
    * the 'free variables' (total set of required input columns or values) and distinguishing between which identifiers
    * are used as scalar values and which are used as array values.
+   *
+   * This type is primarily used at query time when creating expression column selectors to decide if an expression
+   * can properly deal with a multi-valued input column and also to determine if certain optimizations can be taken.
+   *
+   * Current implementations of {@link #analyzeInputs()} only 'shallowly' recognize {@link Function} and
+   * {@link ApplyFunction} arguments which are direct children {@link IdentifierExpr} as scalar or array typed.
+   * Identifiers inside of argument expressions which are other expression types will not be considered to belong
+   * directly to that function, and so are classified by their children instead.
+   *
+   * This means in rare cases and mostly for "questionable" expressions which we still allow to function 'correctly',
+   * these lists might not be fully reliable without a complete type inference system in place. Due to this shortcoming,
+   * boolean values {@link BindingDetails#hasInputArrays()} and {@link BindingDetails#isOutputArray()} are provided to
+   * allow functions to explicitly declare that they utilize array typed values, used when determining if some types of
+   * optimizations can be applied when constructing the expression column value selector.
+   *
+   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
+   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
   class BindingDetails
   {
@@ -258,8 +275,8 @@ public interface Expr
 
     /**
      * Returns true if the expression has any array inputs. Note that in some cases, this can be true and
-     * {@link BindingDetails#getArrayVariables} can be empty, since the latter can only shallowly collect identifiers
-     * that are explicitly used as arrays.
+     * {@link BindingDetails#getArrayVariables} can be empty. This is because arrayVariables contains a best-effort list
+     * of {@link IdentifierExpr} which were explicitly used as an array argument
      */
     public boolean hasInputArrays()
     {
@@ -888,12 +905,11 @@ class ApplyFunctionExpr implements Expr
     }
 
     lambdaBindingDetails = lambdaExpr.analyzeInputs();
-    boolean isArrayOutput = function.hasArrayOutput() || (function instanceof ApplyFunction.BaseFoldFunction
-                                                          && lambdaBindingDetails.isOutputArray());
+
     bindingDetails = accumulator.with(lambdaBindingDetails)
                                 .withArrayArguments(function.getArrayInputs(argsExpr))
                                 .withArrayInputs(true)
-                                .withArrayOutput(isArrayOutput);
+                                .withArrayOutput(function.hasArrayOutput(lambdaExpr));
     argsBindingDetails = argBindingDetailsBuilder.build();
   }
 
