@@ -233,7 +233,8 @@ GROUP BY 1`;
 
         let unused: string[] = [];
         if (this.state.showUnused) {
-          // Using 'includeDisabled' parameter for compatibility. Should be changed to 'includeUnused' in Druid 0.17
+          // Using 'includeDisabled' parameter for compatibility.
+          // Should be changed to 'includeUnused' in Druid 0.17
           const unusedResp = await axios.get(
             '/druid/coordinator/v1/metadata/datasources?includeDisabled',
           );
@@ -252,9 +253,7 @@ GROUP BY 1`;
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        const allDatasources = (datasources as any).concat(
-            unused.map(d => ({ datasource: d, unused: true })),
-        );
+        const allDatasources = (datasources as any).concat(unused.map(d => ({ datasource: d, unused: true })),);
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
@@ -373,25 +372,24 @@ GROUP BY 1`;
     const { dataSourceToMarkSegmentsByIntervalIn, useUnuseAction, useUnuseInterval } = this.state;
     if (!dataSourceToMarkSegmentsByIntervalIn) return;
     const isUse = useUnuseAction === 'use';
-
+    const usedWord = isUse ? 'used' : 'unused';
     return (
       <AsyncActionDialog
         action={async () => {
           if (!useUnuseInterval) return;
+          const param = isUse ? 'markUsed' : 'markUnused';
           const resp = await axios.post(
-            `/druid/coordinator/v1/datasources/${dataSourceToMarkSegmentsByIntervalIn}/${
-              isUse ? 'markUsed' : 'markUnused' 
-            }`,
+            `/druid/coordinator/v1/datasources/${dataSourceToMarkSegmentsByIntervalIn}/${param}`,
             {
               interval: useUnuseInterval,
             },
           );
           return resp.data;
         }}
-        confirmButtonText={`Mark as ${isUse ? 'used' : 'unused'} segments in the interval in data source`}
+        confirmButtonText={`Mark as ${usedWord} segments in the interval in data source`}
         confirmButtonDisabled={!/.\/./.test(useUnuseInterval)}
-        successText={`Segments in the interval in data source have been marked as ${isUse ? 'used' : 'unused'}`}
-        failText={`Failed to mark as ${isUse ? 'used' : 'unused'} segments in the interval in data source`}
+        successText={`Segments in the interval in data source have been marked as ${usedWord}`}
+        failText={`Failed to mark as ${usedWord} segments in the interval in data source`}
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ dataSourceToMarkSegmentsByIntervalIn: undefined });
@@ -400,7 +398,7 @@ GROUP BY 1`;
           this.datasourceQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Please select the interval in which you want to mark segments as ${isUse ? 'used' : 'unused'}?`}</p>
+        <p>{`Please select the interval in which you want to mark segments as ${usedWord}?`}</p>
         <FormGroup>
           <InputGroup
             value={useUnuseInterval}
@@ -545,7 +543,9 @@ GROUP BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used all segments',
-          onAction: () => this.setState({ dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource }),
+          onAction: () => this.setState({
+            dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource
+          }),
         },
         {
           icon: IconNames.TRASH,
@@ -588,14 +588,18 @@ GROUP BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used segments by interval',
-          onAction: () =>
-            this.setState({ dataSourceToMarkSegmentsByIntervalIn: datasource, useUnuseAction: 'use' }),
+          onAction: () => this.setState({
+            dataSourceToMarkSegmentsByIntervalIn: datasource,
+            useUnuseAction: 'use'
+          }),
         },
         {
           icon: IconNames.IMPORT,
           title: 'Mark as unused segments by interval',
-          onAction: () =>
-            this.setState({ dataSourceToMarkSegmentsByIntervalIn: datasource, useUnuseAction: 'unuse' }),
+          onAction: () => this.setState({
+            dataSourceToMarkSegmentsByIntervalIn: datasource,
+            useUnuseAction: 'unuse'
+          }),
         },
         {
           icon: IconNames.IMPORT,
