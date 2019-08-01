@@ -266,7 +266,7 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
+  static ColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
       final ColumnSelectorFactory metricFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,

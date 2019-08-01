@@ -53,25 +53,19 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected BaseDoubleColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected double nullValue()
   {
-    return getDoubleColumnSelector(
-        metricFactory,
-        Double.NEGATIVE_INFINITY
-    );
+    return Double.NEGATIVE_INFINITY;
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
+  protected Aggregator buildAggregator(BaseDoubleColumnValueSelector selector)
   {
     return new DoubleMaxAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      BaseDoubleColumnValueSelector selector
-  )
+  protected BufferAggregator buildBufferAggregator(BaseDoubleColumnValueSelector selector)
   {
     return new DoubleMaxBufferAggregator(selector);
   }
