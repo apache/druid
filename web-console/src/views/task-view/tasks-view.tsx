@@ -546,10 +546,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
-            const datasources = filtered.filter(filter => filter.id === 'datasource')[0];
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
             let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
-            if (datasources) {
-              newTaskFilter = addFilterNoQuotes(newTaskFilter, datasources.id, datasources.value);
+            if (datasourceFilter) {
+              newTaskFilter = addFilterNoQuotes(
+                newTaskFilter,
+                datasourceFilter.id,
+                datasourceFilter.value,
+              );
             }
             this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
           }}
@@ -719,13 +723,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
-            const datasources = filtered.filter(filter => filter.id === 'datasource')[0];
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
             let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
-            if (datasources) {
+            if (datasourceFilter) {
               newSupervisorFilter = addFilterNoQuotes(
                 newSupervisorFilter,
-                datasources.id,
-                datasources.value,
+                datasourceFilter.id,
+                datasourceFilter.value,
               );
             }
             this.setState({ supervisorFilter: newSupervisorFilter, taskFilter: filtered });
