@@ -46,6 +46,16 @@ public class FilteredRequestLoggerTest
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
+  private final SegmentMetadataQuery testSegmentMetadataQuery = new SegmentMetadataQuery(
+          new LegacyDataSource("foo"),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+  );
 
   public FilteredRequestLoggerTest()
   {
@@ -114,8 +124,7 @@ public class FilteredRequestLoggerTest
             .andReturn(new QueryStats(ImmutableMap.of("query/time", 1000)))
             .once();
     EasyMock.expect(nativeRequestLogLine.getQuery())
-            .andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
-                    null, null, null, null, null, null, null))
+            .andReturn(testSegmentMetadataQuery)
             .times(2);
 
     RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
@@ -126,8 +135,7 @@ public class FilteredRequestLoggerTest
             .andReturn(new QueryStats(ImmutableMap.of("sqlQuery/time", 2000)))
             .once();
     EasyMock.expect(sqlRequestLogLine.getQuery())
-            .andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
-                    null, null, null, null, null, null, null))
+            .andReturn(testSegmentMetadataQuery)
             .times(2);
 
     EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine, delegate);
@@ -161,8 +169,7 @@ public class FilteredRequestLoggerTest
             .andReturn(new QueryStats(ImmutableMap.of("query/time", 10000)))
             .once();
     EasyMock.expect(nativeRequestLogLine.getQuery())
-            .andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
-                    null, null, null, null, null, null, null))
+            .andReturn(testSegmentMetadataQuery)
             .once();
 
     RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
@@ -170,8 +177,7 @@ public class FilteredRequestLoggerTest
             .andReturn(new QueryStats(ImmutableMap.of("sqlQuery/time", 10000)))
             .once();
     EasyMock.expect(sqlRequestLogLine.getQuery())
-            .andReturn(new SegmentMetadataQuery(new LegacyDataSource("foo"),
-                    null, null, null, null, null, null, null))
+            .andReturn(testSegmentMetadataQuery)
             .once();
 
     EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine, delegate);

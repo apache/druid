@@ -50,7 +50,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   private long sqlQueryTimeThresholdMs = 0;
 
   @JsonProperty
-  private List<String> queryTypeBlacklist = ImmutableList.of();
+  private List<String> mutedQueryTypes = ImmutableList.of();
 
   @Override
   public RequestLogger get()
@@ -59,7 +59,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
         delegate.get(),
         queryTimeThresholdMs,
         sqlQueryTimeThresholdMs,
-        queryTypeBlacklist
+        mutedQueryTypes
     );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
@@ -70,17 +70,19 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     private final RequestLogger logger;
     private final long queryTimeThresholdMs;
     private final long sqlQueryTimeThresholdMs;
-    private final List<String> queryTypeBlacklist;
+    private final List<String> mutedQueryTypes;
 
-    public FilteredRequestLogger(RequestLogger logger,
-                                 long queryTimeThresholdMs,
-                                 long sqlQueryTimeThresholdMs,
-                                 List<String> queryTypeBlacklist)
+    public FilteredRequestLogger(
+            RequestLogger logger,
+            long queryTimeThresholdMs,
+            long sqlQueryTimeThresholdMs,
+            List<String> mutedQueryTypes
+    )
     {
       this.logger = logger;
       this.queryTimeThresholdMs = queryTimeThresholdMs;
       this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
-      this.queryTypeBlacklist = queryTypeBlacklist;
+      this.mutedQueryTypes = mutedQueryTypes;
     }
 
     public long getQueryTimeThresholdMs()
@@ -113,7 +115,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
       Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
       if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
         Query query = requestLogLine.getQuery();
-        if (query != null && queryTypeBlacklist.contains(query.getType())) {
+        if (query != null && mutedQueryTypes.contains(query.getType())) {
           return;
         }
         logger.logNativeQuery(requestLogLine);
@@ -126,7 +128,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
       Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
       if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
         Query query = requestLogLine.getQuery();
-        if (query != null && queryTypeBlacklist.contains(query.getType())) {
+        if (query != null && mutedQueryTypes.contains(query.getType())) {
           return;
         }
         logger.logSqlQuery(requestLogLine);
@@ -140,7 +142,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
              "logger=" + logger +
              ", queryTimeThresholdMs=" + queryTimeThresholdMs +
              ", sqlQueryTimeThresholdMs=" + sqlQueryTimeThresholdMs +
-             ", queryTypeBlacklist=" + queryTypeBlacklist +
+             ", mutedQueryTypes=" + mutedQueryTypes +
              '}';
     }
   }
