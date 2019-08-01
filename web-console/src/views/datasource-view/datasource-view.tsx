@@ -113,6 +113,7 @@ interface CompactionDialogOpenOn {
 
 export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
+  goToTask: (taskId?: string, openDialog?: string, datasource?: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
   noSqlMode: boolean;
   initDatasource?: string;
@@ -537,7 +538,7 @@ GROUP BY 1`;
     rules: any[],
     compactionConfig: Record<string, any>,
   ): BasicAction[] {
-    const { goToQuery } = this.props;
+    const { goToQuery, goToTask } = this.props;
 
     if (disabled) {
       return [
@@ -559,6 +560,11 @@ GROUP BY 1`;
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
           onAction: () => goToQuery(`SELECT * FROM "${datasource}"`),
+        },
+        {
+          icon: IconNames.GANTT_CHART,
+          title: 'Go to tasks',
+          onAction: () => goToTask(undefined, undefined, datasource),
         },
         {
           icon: IconNames.AUTOMATIC_UPDATES,

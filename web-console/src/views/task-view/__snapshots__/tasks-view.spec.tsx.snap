@@ -239,7 +239,14 @@ exports[`tasks view matches snapshot 1`] = `
         data={Array []}
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
-        defaultFiltered={Array []}
+        defaultFiltered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
@@ -288,6 +295,7 @@ exports[`tasks view matches snapshot 1`] = `
         noDataText=""
         ofText="of"
         onFetchData={[Function]}
+        onFilteredChange={[Function]}
         originalKey="_original"
         pageJumpText="jump to page"
         pageSizeOptions={
@@ -578,6 +586,10 @@ exports[`tasks view matches snapshot 1`] = `
             Object {
               "id": "task_id",
               "value": "test",
+            },
+            Object {
+              "id": "datasource",
+              "value": "datasource",
             },
           ]
         }

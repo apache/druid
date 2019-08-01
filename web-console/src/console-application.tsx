@@ -178,8 +178,9 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToTask = (taskId: string | undefined, openDialog?: string) => {
+  private goToTask = (taskId?: string, openDialog?: string, datasource?: string) => {
     this.taskId = taskId;
+    this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
@@ -240,6 +241,7 @@ export class ConsoleApplication extends React.PureComponent<
       <DatasourcesView
         initDatasource={this.datasource}
         goToQuery={this.goToQuery}
+        goToTask={this.goToTask}
         goToSegments={this.goToSegments}
         noSqlMode={noSqlMode}
       />,
@@ -265,6 +267,7 @@ export class ConsoleApplication extends React.PureComponent<
       'tasks',
       <TasksView
         taskId={this.taskId}
+        datasourceId={this.datasource}
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}

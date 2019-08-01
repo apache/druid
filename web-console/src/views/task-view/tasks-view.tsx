@@ -44,6 +44,7 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
+  addFilterNoParens,
   booleanCustomTableFilter,
   formatDuration,
   getDruidErrorMessage,
@@ -78,6 +79,7 @@ const taskTableColumns: string[] = [
 
 export interface TasksViewProps {
   taskId: string | undefined;
+  datasourceId: string | undefined;
   openDialog: string | undefined;
   goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
@@ -208,7 +210,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       showTerminateAllSupervisors: false,
 
       tasksLoading: true,
-      taskFilter: props.taskId ? [{ id: 'task_id', value: props.taskId }] : [],
+      taskFilter: props.taskId
+        ? props.datasourceId
+          ? [
+              { id: 'task_id', value: props.taskId },
+              { id: 'datasource', value: props.datasourceId },
+            ]
+          : [{ id: 'task_id', value: props.taskId }]
+        : this.props.datasourceId
+        ? [{ id: 'datasource', value: props.datasourceId }]
+        : [],
 
       supervisorSpecDialogOpen: props.openDialog === 'supervisor',
       taskSpecDialogOpen: props.openDialog === 'task',
@@ -517,6 +528,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       supervisorsLoading,
       supervisorsError,
       hiddenSupervisorColumns,
+      taskFilter,
     } = this.state;
     return (
       <>
@@ -528,6 +540,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               ? 'No supervisors'
               : supervisorsError || ''
           }
+          onFilteredChange={filtered => {
+            const { taskFilter } = this.state;
+            const datasourceFilter = filtered.filter(filter => filter.id === 'datasource')[0];
+            this.setState({
+              taskFilter: datasourceFilter
+                ? addFilterNoParens(taskFilter, datasourceFilter.id, datasourceFilter.value)
+                : taskFilter.filter(filter => filter.id !== 'datasource'),
+            });
+          }}
+          defaultFiltered={taskFilter.filter(filter => filter.id === 'datasource')}
           filterable
           columns={[
             {
@@ -684,7 +706,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       groupTasksBy,
       hiddenTaskColumns,
     } = this.state;
-
     return (
       <>
         <ReactTable
