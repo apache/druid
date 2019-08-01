@@ -28,7 +28,9 @@ import java.util.regex.Pattern;
 
 class IPv4AddressExprUtils
 {
-  private static final Pattern IPV4_PATTERN = Pattern.compile("(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})");
+  private static final Pattern IPV4_PATTERN = Pattern.compile(
+      "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+  );
 
   /**
    * @return True if argument cannot be represented by an unsigned integer (4 bytes), else false

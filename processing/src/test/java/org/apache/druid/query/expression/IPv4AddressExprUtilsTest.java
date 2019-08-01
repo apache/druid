@@ -25,13 +25,42 @@ import org.junit.Test;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
 
 public class IPv4AddressExprUtilsTest
 {
-  private static final String IPV4 = "192.168.0.1";
+  private static final List<String> VALID_IPV4_ADDRESSES = Arrays.asList(
+      "192.168.0.1",
+      "0.0.0.0",
+      "255.255.255.255",
+      "255.0.0.0",
+      "0.255.0.0",
+      "0.0.255.0",
+      "0.0.0.255"
+  );
+  private static final List<String> INVALID_IPV4_ADDRESSES = Arrays.asList(
+      "druid.apache.org",  // no octets are numbers
+      "a.b.c.d",  // no octets are numbers
+      "abc.def.ghi.jkl",  // no octets are numbers
+      "1..3.4",  // missing octet
+      "1.2..4",  // missing octet
+      "1.2.3..", // missing octet
+      "1",  // missing octets
+      "1.2",  // missing octets
+      "1.2.3",  // missing octet
+      "1.2.3.4.5",  // too many octets
+      "256.0.0.0",  // first octet too large
+      "0.265.0.0",  // second octet too large
+      "0.0.266.0",  // third octet too large
+      "0.0.0.355",  // fourth octet too large
+      "a.2.3.4",  // first octet not number
+      "1.a.3.4",  // second octet not number
+      "1.2.c.4",  // third octet not number
+      "1.2.3.d"  // fourth octet not number
+  );
   private static final String IPV6_MAPPED = "::ffff:192.168.0.1";
   private static final String IPV6_COMPATIBLE = "::192.168.0.1";
-  private static final String NOT_IP_ADDRESS = "druid.apache.org";
 
   @Test
   public void testOverflowsUnsignedIntTooLow()
@@ -72,7 +101,9 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testIsValidAddressIPv4()
   {
-    Assert.assertTrue(IPv4AddressExprUtils.isValidAddress(IPV4));
+    for (String address : VALID_IPV4_ADDRESSES) {
+      Assert.assertTrue(getErrMsg(address), IPv4AddressExprUtils.isValidAddress(address));
+    }
   }
 
   @Test
@@ -90,7 +121,9 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testIsValidAddressNotIpAddress()
   {
-    Assert.assertFalse(IPv4AddressExprUtils.isValidAddress(NOT_IP_ADDRESS));
+    for (String address : INVALID_IPV4_ADDRESSES) {
+      Assert.assertFalse(getErrMsg(address), IPv4AddressExprUtils.isValidAddress(address));
+    }
   }
 
   @Test
@@ -102,9 +135,12 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testParseIPv4()
   {
-    Inet4Address address = IPv4AddressExprUtils.parse(IPV4);
-    Assert.assertNotNull(address);
-    Assert.assertEquals(IPV4, address.getHostAddress());
+    for (String string : VALID_IPV4_ADDRESSES) {
+      String errMsg = getErrMsg(string);
+      Inet4Address address = IPv4AddressExprUtils.parse(string);
+      Assert.assertNotNull(errMsg, address);
+      Assert.assertEquals(errMsg, string, address.getHostAddress());
+    }
   }
 
   @Test
@@ -122,7 +158,9 @@ public class IPv4AddressExprUtilsTest
   @Test
   public void testParseNotIpAddress()
   {
-    Assert.assertNull(IPv4AddressExprUtils.parse(NOT_IP_ADDRESS));
+    for (String address : INVALID_IPV4_ADDRESSES) {
+      Assert.assertNull(getErrMsg(address), IPv4AddressExprUtils.parse(address));
+    }
   }
 
   @Test
@@ -146,5 +184,11 @@ public class IPv4AddressExprUtilsTest
     byte[] bytes = new byte[]{(byte) 0xC0, (byte) 0xA8, 0x00, 0x01};
     InetAddress address = InetAddress.getByAddress(bytes);
     Assert.assertEquals(0xC0A80001L, IPv4AddressExprUtils.toLong((Inet4Address) address));
+  }
+
+  private String getErrMsg(String msg)
+  {
+    String prefix = "Failed: ";
+    return prefix + msg;
   }
 }
