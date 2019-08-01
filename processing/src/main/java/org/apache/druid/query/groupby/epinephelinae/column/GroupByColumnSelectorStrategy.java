@@ -20,10 +20,10 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 /**
  * Contains a collection of query processing methods for type-specific operations used exclusively by
@@ -45,10 +45,10 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   int getGroupingKeySize();
 
   /**
-   * Read a value from a grouping key and add it to the group by query result map, using the output name specified
+   * Read a value from a grouping key and add it to the group by query result row, using the output name specified
    * in a DimensionSpec.
    *
-   * An implementation may choose to not add anything to the result map
+   * An implementation may choose to not add anything to the result row
    * (e.g., as the String implementation does for empty rows)
    *
    * selectorPlus provides access to:
@@ -56,24 +56,24 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * - the dimension value selector
    * - the DimensionSpec for this dimension from the query
    *
-   * @param selectorPlus dimension info containing the key offset, value selector, and dimension spec
-   * @param resultMap result map for the group by query being served
-   * @param key grouping key
+   * @param selectorPlus      dimension info containing the key offset, value selector, and dimension spec
+   * @param resultRow         result row for the group by query being served
+   * @param key               grouping key
    * @param keyBufferPosition buffer position for the grouping key, added to support chaining multiple {@link ColumnSelectorStrategy}
    */
   void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   );
 
   /**
    * Retrieve a row object from the {@link ColumnValueSelector} and put it in valuess at columnIndex.
    *
-   * @param selector Value selector for a column.
+   * @param selector    Value selector for a column.
    * @param columnIndex Index of the column within the row values array
-   * @param valuess Row values array, one index per column
+   * @param valuess     Row values array, one index per column
    */
   void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
@@ -85,10 +85,10 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * If the size of the row is > 0, write 1 to stack[] at columnIndex, otherwise write 0.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
-   * @param columnIndex Index of the column within the row values array
-   * @param rowObj Row value object for this column
-   * @param keyBuffer grouping key
-   * @param stack array containing the current within-row value index for each column
+   * @param columnIndex       Index of the column within the row values array
+   * @param rowObj            Row value object for this column
+   * @param keyBuffer         grouping key
+   * @param stack             array containing the current within-row value index for each column
    */
   void initGroupingKeyColumnValue(
       int keyBufferPosition,
@@ -106,12 +106,18 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * Otherwise, return false.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
-   * @param rowObj Row value object for this column (e.g., IndexedInts)
-   * @param rowValIdx Index of the current value being grouped on within the row
-   * @param keyBuffer grouping key
+   * @param rowObj            Row value object for this column (e.g., IndexedInts)
+   * @param rowValIdx         Index of the current value being grouped on within the row
+   * @param keyBuffer         grouping key
+   *
    * @return true if rowValIdx < size of rowObj, false otherwise
    */
-  boolean checkRowIndexAndAddValueToGroupingKey(int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer);
+  boolean checkRowIndexAndAddValueToGroupingKey(
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
+  );
 
   /**
    * Retrieve a single object using the {@link ColumnValueSelector}.  The reading column must have a single value.

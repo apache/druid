@@ -19,6 +19,12 @@
 
 package org.apache.druid.query.groupby.having;
 
+import org.apache.druid.query.aggregation.AggregatorFactory;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class HavingSpecUtil
 {
   static final byte CACHE_TYPE_ID_ALWAYS = 0x0;
@@ -32,4 +38,11 @@ public class HavingSpecUtil
   static final byte CACHE_TYPE_ID_NOT = 0x8;
   static final byte CACHE_TYPE_ID_OR = 0x9;
   static final byte CACHE_TYPE_ID_COUNTING = 0xA;
+
+  public static Map<String, AggregatorFactory> computeAggregatorsMap(List<AggregatorFactory> aggregatorSpecs)
+  {
+    Map<String, AggregatorFactory> map = new HashMap<>(aggregatorSpecs.size());
+    aggregatorSpecs.forEach(v -> map.put(v.getName(), v));
+    return map;
+  }
 }

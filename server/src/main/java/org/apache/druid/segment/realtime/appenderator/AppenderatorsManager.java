@@ -127,4 +127,9 @@ public interface AppenderatorsManager
    * Only Tasks running in Peons (i.e., as separate processes) should make their own individual node announcements.
    */
   boolean shouldTaskMakeNodeAnnouncements();
+
+  /**
+   * Shut down the AppenderatorsManager.
+   */
+  void shutdown();
 }

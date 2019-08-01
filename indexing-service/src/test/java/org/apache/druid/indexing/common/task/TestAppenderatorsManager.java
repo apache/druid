@@ -144,4 +144,10 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   {
     return true;
   }
+
+  @Override
+  public void shutdown()
+  {
+
+  }
 }

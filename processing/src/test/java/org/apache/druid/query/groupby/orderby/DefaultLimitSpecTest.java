@@ -21,46 +21,46 @@ package org.apache.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
+ *
  */
 public class DefaultLimitSpecTest
 {
-  private final List<Row> testRowsList;
-  private final Sequence<Row> testRowsSequence;
+  private final List<ResultRow> testRowsList;
+  private final List<ResultRow> testRowsWithTimestampList;
 
   public DefaultLimitSpecTest()
   {
     testRowsList = ImmutableList.of(
-        createRow("2011-04-01", "k1", 10.0, "k2", 1L, "k3", 2L),
-        createRow("2011-04-01", "k1", 20.0, "k2", 3L, "k3", 1L),
-        createRow("2011-04-01", "k1", 9.0, "k2", 2L, "k3", 3L)
+        ResultRow.of(10.0, 1L, 2L),
+        ResultRow.of(20.0, 3L, 1L),
+        ResultRow.of(9.0, 2L, 3L)
     );
 
-    testRowsSequence = Sequences.simple(testRowsList);
+    testRowsWithTimestampList = ImmutableList.of(
+        ResultRow.of(DateTimes.of("2011-04-01").getMillis(), 10.0, 1L, 2L),
+        ResultRow.of(DateTimes.of("2011-04-01").getMillis(), 20.0, 3L, 1L),
+        ResultRow.of(DateTimes.of("2011-04-01").getMillis(), 9.0, 2L, 3L)
+    );
   }
 
   @Test
@@ -93,7 +93,8 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
-                                                                    StringComparators.NUMERIC)), 10),
+                                                                    StringComparators.NUMERIC
+        )), 10),
         spec
     );
 
@@ -110,7 +111,8 @@ public class DefaultLimitSpecTest
 
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
-                                                                    StringComparators.NUMERIC)), 10),
+                                                                    StringComparators.NUMERIC
+        )), 10),
         spec
     );
 
@@ -125,7 +127,8 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
-                                                                    StringComparators.LEXICOGRAPHIC)), 10),
+                                                                    StringComparators.LEXICOGRAPHIC
+        )), 10),
         spec
     );
 
@@ -140,7 +143,8 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
-                                                                    StringComparators.LEXICOGRAPHIC)), 10),
+                                                                    StringComparators.LEXICOGRAPHIC
+        )), 10),
         spec
     );
 
@@ -155,17 +159,17 @@ public class DefaultLimitSpecTest
         2
     );
 
-    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.of(),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        Granularities.NONE,
-        false
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setGranularity(Granularities.NONE)
+                    .build()
     );
 
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        limitFn.apply(testRowsSequence).toList()
+        ImmutableList.of(testRowsWithTimestampList.get(0), testRowsWithTimestampList.get(1)),
+        limitFn.apply(Sequences.simple(testRowsWithTimestampList)).toList()
     );
   }
 
@@ -177,17 +181,19 @@ public class DefaultLimitSpecTest
         2
     );
 
-    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.of(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE)),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        Granularities.ALL,
-        true
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setGranularity(Granularities.ALL)
+                    .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+                    .build()
     );
 
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        limitFn.apply(testRowsSequence).toList()
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
   }
 
@@ -199,17 +205,19 @@ public class DefaultLimitSpecTest
         2
     );
 
-    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.of(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE)),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        Granularities.NONE,
-        true
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setGranularity(Granularities.NONE)
+                    .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+                    .build()
     );
 
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        limitFn.apply(testRowsSequence).toList()
+        ImmutableList.of(testRowsWithTimestampList.get(2), testRowsWithTimestampList.get(0)),
+        limitFn.apply(Sequences.simple(testRowsWithTimestampList)).toList()
     );
   }
 
@@ -221,19 +229,20 @@ public class DefaultLimitSpecTest
         2
     );
 
-    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.of(new DefaultDimensionSpec("k1", "k1")),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        Granularities.NONE,
-        false
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setGranularity(Granularities.ALL)
+                    .build()
     );
 
     // Note: This test encodes the fact that limitSpec sorts numbers like strings; we might want to change this
     // in the future.
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(1)),
-        limitFn.apply(testRowsSequence).toList()
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
   }
 
@@ -247,91 +256,19 @@ public class DefaultLimitSpecTest
         2
     );
 
-    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.of(
-            new DefaultDimensionSpec("k1", "k1")
-        ),
-        ImmutableList.of(
-            new LongSumAggregatorFactory("k2", "k2")
-        ),
-        ImmutableList.of(
-            new ConstantPostAggregator("k3", 1L)
-        ),
-        Granularities.NONE,
-        false
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1"))
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("k2", "k2"))
+                    .setPostAggregatorSpecs(ImmutableList.of(new ConstantPostAggregator("k3", 1L)))
+                    .setGranularity(Granularities.NONE)
+                    .build()
     );
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        limitFn.apply(testRowsSequence).toList()
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
-
-    // if there is an aggregator with same name then that is used to build ordering
-    limitFn = limitSpec.build(
-        ImmutableList.of(
-            new DefaultDimensionSpec("k1", "k1")
-        ),
-        ImmutableList.of(
-            new LongSumAggregatorFactory("k1", "k1")
-        ),
-        ImmutableList.of(
-            new ConstantPostAggregator("k3", 1L)
-        ),
-        Granularities.NONE,
-        false
-    );
-    Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        limitFn.apply(testRowsSequence).toList()
-    );
-
-    // if there is a post-aggregator with same name then that is used to build ordering
-    limitFn = limitSpec.build(
-        ImmutableList.of(
-            new DefaultDimensionSpec("k1", "k1")
-        ),
-        ImmutableList.of(
-            new LongSumAggregatorFactory("k2", "k2")
-        ),
-        ImmutableList.of(
-            new ArithmeticPostAggregator(
-                "k1",
-                "+",
-                ImmutableList.of(
-                    new ConstantPostAggregator("x", 1),
-                    new ConstantPostAggregator("y", 1))
-            )
-        ),
-        Granularities.NONE,
-        false
-    );
-    Assert.assertEquals(
-        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List) limitFn.apply(testRowsSequence).toList()
-    );
-
-    // makes same result
-    limitFn = limitSpec.build(
-        ImmutableList.of(new DefaultDimensionSpec("k1", "k1")),
-        ImmutableList.of(new LongSumAggregatorFactory("k2", "k2")),
-        ImmutableList.of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE)),
-        Granularities.NONE,
-        false
-    );
-    Assert.assertEquals(
-        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List) limitFn.apply(testRowsSequence).toList()
-    );
-  }
-
-  private Row createRow(String timestamp, Object... vals)
-  {
-    Preconditions.checkArgument(vals.length % 2 == 0);
-
-    Map<String, Object> theVals = new HashMap<>();
-    for (int i = 0; i < vals.length; i += 2) {
-      theVals.put(vals[i].toString(), vals[i + 1]);
-    }
-
-    return new MapBasedRow(DateTimes.of(timestamp), theVals);
   }
 }

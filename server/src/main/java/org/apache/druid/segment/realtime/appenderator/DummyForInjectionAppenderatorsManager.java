@@ -117,4 +117,10 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
   {
     throw new UOE(ERROR_MSG);
   }
+
+  @Override
+  public void shutdown()
+  {
+    throw new UOE(ERROR_MSG);
+  }
 }

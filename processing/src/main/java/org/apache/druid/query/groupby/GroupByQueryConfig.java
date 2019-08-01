@@ -31,6 +31,7 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
   public static final String CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY = "forcePushDownNestedQuery";
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
+  public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";

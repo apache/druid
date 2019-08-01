@@ -54,7 +54,7 @@ public class Transformer
       valueMatcher = transformSpec.getFilter().toFilter()
                                   .makeMatcher(
                                       RowBasedColumnSelectorFactory.create(
-                                          rowSupplierForValueMatcher,
+                                          rowSupplierForValueMatcher::get,
                                           rowSignature
                                       )
                                   );

@@ -428,7 +428,7 @@ If you have been editing the configurations on your local machine, you can use *
 rsync -az apache-druid-#{DRUIDVERSION}/ MASTER_SERVER:apache-druid-#{DRUIDVERSION}/
 ```
 
-### No Zookeper on Master
+### No Zookeeper on Master
 
 From the distribution root, run the following command to start the Master server:
 
