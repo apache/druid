@@ -1035,8 +1035,8 @@ Worker select strategies control how Druid assigns tasks to middleManagers.
 
 ###### Equal Distribution
 
-Tasks are assigned to the middleManager with the most spare capacity at the time the task begins running. This is
-useful if you want work evenly distributed across your middleManagers.
+Tasks are assigned to the middleManager with the most free slots at the time the task begins running. This is useful if
+you want work evenly distributed across your middleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
