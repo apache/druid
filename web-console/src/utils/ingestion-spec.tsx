@@ -1499,7 +1499,6 @@ export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
 
 export interface TuningConfig {
   type: string;
-  targetPartitionSize?: number;
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
   maxTotalRows?: number;
@@ -1535,26 +1534,10 @@ export function getPartitionRelatedTuningSpecFormFields(
   switch (specType) {
     case 'index':
     case 'index_parallel':
-      const myIsParallel = specType === 'index_parallel';
       return [
-        {
-          name: 'partitionDimensions',
-          type: 'string-array',
-          disabled: myIsParallel,
-          info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
-              </p>
-            </>
-          ),
-        },
         {
           name: 'forceGuaranteedRollup',
           type: 'boolean',
-          disabled: myIsParallel,
           info: (
             <>
               <p>Does not currently work with parallel ingestion</p>
@@ -1569,17 +1552,21 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'targetPartitionSize',
-          type: 'number',
+          name: 'partitionDimensions',
+          type: 'string-array',
+          isDefined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
           info: (
             <>
-              Target number of rows to include in a partition, should be a number that targets
-              segments of 500MB~1GB.
+              <p>Does not currently work with parallel ingestion</p>
+              <p>
+                The dimensions to partition on. Leave blank to select all dimensions. Only used with
+                forceGuaranteedRollup = true, will be ignored otherwise.
+              </p>
             </>
           ),
         },
         {
-          name: 'numShards',
+          name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
           type: 'number',
           info: (
             <>
@@ -1594,6 +1581,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
+          isDefined: (t: TuningConfig) => t.numShards == null, // Can not be set if numShards is specified
           info: <>Determines how many rows are in each segment.</>,
         },
         {
@@ -1601,6 +1589,27 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'number',
           defaultValue: 20000000,
           info: <>Total number of rows in segments waiting for being pushed.</>,
+        },
+        {
+          name: 'maxNumMergeTasks',
+          type: 'number',
+          defaultValue: 10,
+          isDefined: (t: TuningConfig) =>
+            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+          info: <>Number of tasks to merge partial segments after shuffle.</>,
+        },
+        {
+          name: 'maxNumSegmentsToMerge',
+          type: 'number',
+          defaultValue: 100,
+          isDefined: (t: TuningConfig) =>
+            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+          info: (
+            <>
+              Max limit for the number of segments a single task can merge at the same time after
+              shuffle.
+            </>
+          ),
         },
       ];
 
@@ -1626,6 +1635,35 @@ export function getPartitionRelatedTuningSpecFormFields(
 }
 
 const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
+  {
+    name: 'maxNumSubTasks',
+    type: 'number',
+    defaultValue: 1,
+    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: (
+      <>
+        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
+        worker tasks up to maxNumSubTasks regardless of the available task slots. If this value is
+        set to 1, the supervisor task processes data ingestion on its own instead of spawning worker
+        tasks. If this value is set to too large, too many worker tasks can be created which might
+        block other ingestion.
+      </>
+    ),
+  },
+  {
+    name: 'maxRetry',
+    type: 'number',
+    defaultValue: 3,
+    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: <>Maximum number of retries on task failures.</>,
+  },
+  {
+    name: 'taskStatusCheckPeriodMs',
+    type: 'number',
+    defaultValue: 1000,
+    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: <>Polling period in milliseconds to check running task statuses.</>,
+  },
   {
     name: 'maxRowsInMemory',
     type: 'number',
@@ -1719,41 +1757,17 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxNumSubTasks',
-    type: 'number',
-    defaultValue: 1,
-    info: (
-      <>
-        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
-        worker tasks up to maxNumSubTasks regardless of the available task slots. If this value is
-        set to 1, the supervisor task processes data ingestion on its own instead of spawning worker
-        tasks. If this value is set to too large, too many worker tasks can be created which might
-        block other ingestion.
-      </>
-    ),
-  },
-  {
-    name: 'maxRetry',
-    type: 'number',
-    defaultValue: 3,
-    info: <>Maximum number of retries on task failures.</>,
-  },
-  {
-    name: 'taskStatusCheckPeriodMs',
-    type: 'number',
-    defaultValue: 1000,
-    info: <>Polling period in milliseconds to check running task statuses.</>,
-  },
-  {
     name: 'chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
+    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
     name: 'chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
+    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {

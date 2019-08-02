@@ -820,7 +820,13 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  if (compaction.targetCompactionSizeBytes == null) {
+                    text = `Target: Default (${formatBytes(
+                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                    )})`;
+                  } else {
+                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  }
                 } else {
                   text = 'None';
                 }
