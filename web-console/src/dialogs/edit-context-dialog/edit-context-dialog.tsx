@@ -24,7 +24,8 @@ import './edit-context-dialog.scss';
 
 export interface EditContextDialogProps {
   queryContext: QueryContext;
-  onClose: (queryContext: QueryContext) => void;
+  onSubmit: (queryContext: QueryContext) => void;
+  onClose: () => void;
 }
 
 export interface EditContextDialogState {
@@ -64,14 +65,14 @@ export class EditContextDialog extends React.PureComponent<
   };
 
   render(): JSX.Element {
-    const { onClose } = this.props;
+    const { onClose, onSubmit } = this.props;
     const { queryContextText, error, queryContextUpdated } = this.state;
 
     return (
       <Dialog
         className="edit-context-dialog"
         isOpen
-        onClose={() => onClose(queryContextUpdated)}
+        onClose={() => onClose()}
         title={'Edit Query Context'}
       >
         <TextArea value={queryContextText} onChange={this.onTextChange} autoFocus />
@@ -80,7 +81,17 @@ export class EditContextDialog extends React.PureComponent<
             disabled={error}
             text={'Close'}
             intent={Intent.PRIMARY}
-            onClick={() => onClose(queryContextUpdated)}
+            onClick={() => {
+              onClose();
+            }}
+          />
+          <Button
+            disabled={error}
+            text={'Submit'}
+            intent={Intent.PRIMARY}
+            onClick={() => {
+              onSubmit(queryContextUpdated);
+            }}
           />
         </div>
       </Dialog>

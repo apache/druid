@@ -23,7 +23,9 @@ import { EditContextDialog } from './edit-context-dialog';
 
 describe('clipboard dialog', () => {
   it('matches snapshot', () => {
-    const compactionDialog = <EditContextDialog queryContext={{}} onClose={() => {}} />;
+    const compactionDialog = (
+      <EditContextDialog queryContext={{}} onSubmit={() => null} onClose={() => null} />
+    );
     render(compactionDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
