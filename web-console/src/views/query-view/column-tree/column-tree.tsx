@@ -21,20 +21,20 @@ import { IconNames } from '@blueprintjs/icons';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
-import { groupBy } from '../../../utils';
+import { escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './column-tree.scss';
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata: ColumnMetadata[] | null;
+  columnMetadata?: ColumnMetadata[];
   onQueryStringChange: (queryString: string) => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata: ColumnMetadata[] | null;
-  columnTree: ITreeNode[] | null;
+  prevColumnMetadata?: ColumnMetadata[];
+  columnTree?: ITreeNode[];
   selectedTreeIndex: number;
 }
 
@@ -88,8 +88,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   constructor(props: ColumnTreeProps, context: any) {
     super(props, context);
     this.state = {
-      prevColumnMetadata: null,
-      columnTree: null,
       selectedTreeIndex: 0,
     };
   }
@@ -120,7 +118,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.setState({ selectedTreeIndex: Number(e.target.value) });
   };
 
-  render() {
+  render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
     if (columnMetadataLoading) {
       return (
@@ -155,39 +153,54 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return;
 
+    const selectedNode = columnTree[selectedTreeIndex];
     switch (nodePath.length) {
       case 1: // Datasource
-        const tableSchema = columnTree[selectedTreeIndex].label;
+        const tableSchema = selectedNode.label;
+        let columns: string[];
+        if (nodeData.childNodes) {
+          columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
+        } else {
+          columns = ['*'];
+        }
         if (tableSchema === 'druid') {
-          onQueryStringChange(`SELECT *
-FROM "${nodeData.label}"
+          onQueryStringChange(`SELECT ${columns.join(', ')}
+FROM ${escapeSqlIdentifier(String(nodeData.label))}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
         } else {
-          onQueryStringChange(`SELECT *
+          onQueryStringChange(`SELECT ${columns.join(', ')}
 FROM ${tableSchema}.${nodeData.label}`);
         }
         break;
 
       case 2: // Column
-        const schemaNode = columnTree[selectedTreeIndex];
+        const schemaNode = selectedNode;
         const columnSchema = schemaNode.label;
-        const columnTable = schemaNode.childNodes ? schemaNode.childNodes[nodePath[0]].label : '?';
+        const columnTable = schemaNode.childNodes
+          ? String(schemaNode.childNodes[nodePath[0]].label)
+          : '?';
         if (columnSchema === 'druid') {
           if (nodeData.icon === IconNames.TIME) {
-            onQueryStringChange(`SELECT TIME_FLOOR("${nodeData.label}", 'PT1H') AS "Time", COUNT(*) AS "Count"
-FROM "${columnTable}"
+            onQueryStringChange(`SELECT
+  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
 ORDER BY "Time" ASC`);
           } else {
-            onQueryStringChange(`SELECT "${nodeData.label}", COUNT(*) AS "Count"
-FROM "${columnTable}"
+            onQueryStringChange(`SELECT
+  "${nodeData.label}",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
 ORDER BY "Count" DESC`);
           }
         } else {
-          onQueryStringChange(`SELECT "${nodeData.label}", COUNT(*) AS "Count"
+          onQueryStringChange(`SELECT
+  ${escapeSqlIdentifier(String(nodeData.label))},
+  COUNT(*) AS "Count"
 FROM ${columnSchema}.${columnTable}
 GROUP BY 1
 ORDER BY "Count" DESC`);

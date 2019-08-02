@@ -163,7 +163,7 @@ export class RetentionDialog extends React.PureComponent<
     });
   };
 
-  render() {
+  render(): JSX.Element {
     const { datasource, onCancel, onEditDefaults } = this.props;
     const { currentRules, historyRecords } = this.state;
 

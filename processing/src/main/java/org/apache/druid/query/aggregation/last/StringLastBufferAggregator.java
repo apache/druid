@@ -108,7 +108,7 @@ public class StringLastBufferAggregator implements BufferAggregator
     mutationBuffer.position(position);
 
     Long timeValue = mutationBuffer.getLong(position);
-    Integer stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
+    int stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
 
     SerializablePairLongString serializablePair;
 

@@ -58,7 +58,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
     onClose();
   }
 
-  render() {
+  render(): JSX.Element {
     const { onClose, title } = this.props;
     const { spec } = this.state;
 

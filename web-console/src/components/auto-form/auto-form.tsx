@@ -42,7 +42,7 @@ export interface Field<T> {
 
 export interface AutoFormProps<T> {
   fields: Field<T>[];
-  model: T | null;
+  model: T | undefined;
   onChange: (newModel: T) => void;
   showCustom?: (model: T) => boolean;
   updateJSONValidity?: (jsonValidity: boolean) => void;
@@ -205,6 +205,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
         updateInputValidity={updateInputValidity}
+        placeholder={field.placeholder}
       />
     );
   }
@@ -283,7 +284,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
     return (
       <div className="auto-form">

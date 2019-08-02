@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
@@ -30,7 +31,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A String strategy that builds an internal String<->Integer dictionary for
@@ -52,7 +52,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   public void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   )
   {
@@ -61,12 +61,9 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
       final String value = dictionary.get(id);
-      resultMap.put(
-          selectorPlus.getOutputName(),
-          value
-      );
+      resultRow.set(selectorPlus.getResultRowPosition(), value);
     } else {
-      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultStringValue());
+      resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValue());
     }
   }
 

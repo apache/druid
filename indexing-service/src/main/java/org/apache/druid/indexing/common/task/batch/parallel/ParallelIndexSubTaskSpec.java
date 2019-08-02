@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 
 import java.util.Map;
 
@@ -61,7 +62,8 @@ class ParallelIndexSubTaskSpec extends SubTaskSpec<ParallelIndexSubTask>
         getIngestionSpec(),
         getContext(),
         null,
-        null
+        null,
+        new DummyForInjectionAppenderatorsManager()
     );
   }
 }

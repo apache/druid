@@ -42,7 +42,7 @@ export function getColumnTypeFromHeaderAndRows(
   column: string,
 ): string {
   return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : null)),
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
   );
 }
 

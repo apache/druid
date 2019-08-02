@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -139,6 +140,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
             null,
             null,
             null,
+            null,
             2,
             null,
             null,
@@ -159,7 +161,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
         new NoopIndexingServiceClient(),
         new NoopChatHandlerProvider(),
         new AuthorizerMapper(Collections.emptyMap()),
-        new DropwizardRowIngestionMetersFactory()
+        new DropwizardRowIngestionMetersFactory(),
+        new TestAppenderatorsManager()
     );
   }
 }

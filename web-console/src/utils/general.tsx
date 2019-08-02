@@ -44,6 +44,20 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
+export function addFilterNoQuotes(filters: Filter[], id: string, value: string): Filter[] {
+  value = `${value}`;
+  const currentFilter = filters.find(f => f.id === id);
+  if (currentFilter) {
+    filters = filters.filter(f => f.id !== id);
+    if (currentFilter.value !== value) {
+      filters = filters.concat({ id, value });
+    }
+  } else {
+    filters = filters.concat({ id, value });
+  }
+  return filters;
+}
+
 export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
@@ -101,10 +115,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
-    return true;
-  }
-  if (value === null) return false;
+  if (value == null) return false;
   const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
@@ -280,6 +291,14 @@ export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined):
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
+export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
+export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
 export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
@@ -315,4 +334,8 @@ export function downloadFile(text: string, type: string, filename: string): void
     type: blobType,
   });
   FileSaver.saveAs(blob, filename);
+}
+
+export function escapeSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
 }
