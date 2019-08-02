@@ -310,6 +310,7 @@ public class IntermediaryDataManager
         );
         final File destFile = location.reserve(partitionFilePath, segment.getId().toString(), tempZippedFile.length());
         if (destFile != null) {
+          FileUtils.forceMkdirParent(destFile);
           org.apache.druid.java.util.common.FileUtils.writeAtomically(
               destFile,
               out -> Files.asByteSource(tempZippedFile).copyTo(out)
@@ -320,6 +321,7 @@ public class IntermediaryDataManager
               subTaskId,
               destFile
           );
+          return unzippedSizeBytes;
         }
       }
       throw new ISE("Can't find location to handle segment[%s]", segment);
