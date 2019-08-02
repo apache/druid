@@ -140,7 +140,11 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
-        <MenuItem icon={IconNames.HELP} text="Edit Context" onClick={renderEditContextDialog} />
+        <MenuItem
+          icon={IconNames.PROPERTIES}
+          text="Edit Context"
+          onClick={renderEditContextDialog}
+        />
       </Menu>
     );
   }
