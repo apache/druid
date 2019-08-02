@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TaskLockConfig
 {
   @JsonProperty
-  private final boolean forceTimeChunkLock = true;
+  private boolean forceTimeChunkLock = true;
 
   public boolean isForceTimeChunkLock()
   {
