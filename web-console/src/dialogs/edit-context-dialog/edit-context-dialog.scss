@@ -16,25 +16,17 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.edit-context-dialog {
+  &.bp3-dialog {
+    padding-bottom: 10px;
+  }
 
-import { RunButton } from './run-button';
+  .bp3-input {
+    margin: 10px;
+    height: 400px;
+  }
 
-describe('run button', () => {
-  it('matches snapshot', () => {
-    const runButton = (
-      <RunButton
-        renderEditContextDialog={() => null}
-        runeMode={false}
-        queryContext={{}}
-        onQueryContextChange={() => {}}
-        onRun={() => {}}
-        onExplain={() => {}}
-      />
-    );
-
-    const { container } = render(runButton);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .bp3-dialog-footer-actions {
+    padding-right: 10px;
+  }
+}

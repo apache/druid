@@ -24,6 +24,7 @@ import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
 import { QueryPlanDialog } from '../../dialogs';
+import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -77,6 +78,8 @@ export interface QueryViewState {
   explainResult?: BasicQueryExplanation | SemiJoinQueryExplanation | string;
   loadingExplain: boolean;
   explainError?: string;
+
+  editContextDialogOpen: boolean;
 }
 
 interface QueryResult {
@@ -138,6 +141,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
       explainDialogOpen: false,
       loadingExplain: false,
+
+      editContextDialogOpen: false,
     };
 
     this.metadataQueryManager = new QueryManager({
@@ -316,6 +321,20 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
+  renderEditContextDialog() {
+    const { editContextDialogOpen, queryContext } = this.state;
+    if (!editContextDialogOpen) return;
+
+    return (
+      <EditContextDialog
+        onClose={(queryContext: QueryContext) =>
+          this.setState({ queryContext, editContextDialogOpen: false })
+        }
+        queryContext={queryContext}
+      />
+    );
+  }
+
   renderMainArea() {
     const {
       queryString,
@@ -348,6 +367,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           />
           <div className="control-bar">
             <RunButton
+              renderEditContextDialog={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
               onQueryContextChange={this.handleQueryContextChange}
@@ -407,6 +427,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         )}
         {this.renderMainArea()}
         {this.renderExplainDialog()}
+        {this.renderEditContextDialog()}
       </div>
     );
   }
