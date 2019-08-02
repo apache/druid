@@ -32,7 +32,6 @@ export interface PastSupervisor {
 }
 export interface ShowHistoryProps {
   endpoint: string;
-  transform?: (x: any) => any;
   downloadFilename?: string;
 }
 
@@ -43,7 +42,7 @@ export interface ShowHistoryState {
 }
 
 export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
-  private showHistoryQueryManager: QueryManager<null, string>;
+  private showHistoryQueryManager: QueryManager<string, PastSupervisor[]>;
   constructor(props: ShowHistoryProps, context: any) {
     super(props, context);
     this.state = {
@@ -52,8 +51,8 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
     };
 
     this.showHistoryQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get(this.props.endpoint);
+      processQuery: async (endpoint: string) => {
+        const resp = await axios.get(endpoint);
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -67,14 +66,15 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
   }
 
   componentDidMount(): void {
-    this.showHistoryQueryManager.runQuery(null);
+    this.showHistoryQueryManager.runQuery(this.props.endpoint);
   }
 
-  render() {
+  render(): JSX.Element | null {
     const { downloadFilename, endpoint } = this.props;
     const { data, loading } = this.state;
     if (loading) return <Loader />;
-    if (!data) return;
+    if (!data) return null;
+
     const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
       <Tab
         id={index}
@@ -83,7 +83,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
         panel={
           <ShowValue
             jsonValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
-            downloadFilename={downloadFilename + 'version-' + pastSupervisor.version}
+            downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
             endpoint={endpoint}
           />
         }

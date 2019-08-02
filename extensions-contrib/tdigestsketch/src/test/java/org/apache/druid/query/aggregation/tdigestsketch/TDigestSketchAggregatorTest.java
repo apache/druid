@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -28,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -102,7 +102,7 @@ public class TDigestSketchAggregatorTest
   @Test
   public void buildingSketchesAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -144,12 +144,12 @@ public class TDigestSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(1); // "quantiles"
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -160,7 +160,7 @@ public class TDigestSketchAggregatorTest
   @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -199,13 +199,13 @@ public class TDigestSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(1); // "quantiles"
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -216,7 +216,7 @@ public class TDigestSketchAggregatorTest
   @Test
   public void testIngestingSketches() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_sketch_data.tsv").getFile()),
         String.join(
             "\n",
@@ -264,12 +264,12 @@ public class TDigestSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(1); // "quantiles"
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value

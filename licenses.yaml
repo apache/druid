@@ -362,6 +362,16 @@ libraries:
 
 ---
 
+name: Apache Commons Net
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6
+libraries:
+  - commons-net: commons-net
+
+---
+
 name: Apache Commons Pool
 license_category: binary
 module: java-core
@@ -2305,7 +2315,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.17.1
+version: 3.18.0
 
 ---
 
@@ -2314,7 +2324,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.9.1
+version: 3.10.0
 
 ---
 
@@ -2901,7 +2911,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ben Newman
-version: 0.13.2
+version: 0.13.3
 license_file_path: licenses/bin/regenerator-runtime.MIT
 
 ---
@@ -2992,6 +3002,15 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Microsoft Corp.
 version: 1.10.0
+
+---
+
+name: "tslib"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Microsoft Corp.
+version: 1.9.3
 
 ---
 

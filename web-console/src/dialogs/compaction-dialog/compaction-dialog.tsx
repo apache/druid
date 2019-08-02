@@ -25,10 +25,10 @@ import './compaction-dialog.scss';
 
 export interface CompactionDialogProps {
   onClose: () => void;
-  onSave: (config: any) => void;
+  onSave: (config: Record<string, any>) => void;
   onDelete: () => void;
   datasource: string;
-  configData: any;
+  compactionConfig?: Record<string, any>;
 }
 
 export interface CompactionDialogState {
@@ -48,7 +48,7 @@ export class CompactionDialog extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    const { datasource, configData } = this.props;
+    const { datasource, compactionConfig } = this.props;
     let config: Record<string, any> = {
       dataSource: datasource,
       inputSegmentSizeBytes: 419430400,
@@ -59,16 +59,23 @@ export class CompactionDialog extends React.PureComponent<
       taskPriority: 25,
       tuningConfig: null,
     };
-    if (configData !== undefined) {
-      config = configData;
+    if (compactionConfig !== undefined) {
+      config = compactionConfig;
     }
     this.setState({
       currentConfig: config,
     });
   }
 
+  private handleSubmit = () => {
+    const { onSave } = this.props;
+    const { currentConfig } = this.state;
+    if (!currentConfig) return;
+    onSave(currentConfig);
+  };
+
   render(): JSX.Element {
-    const { onClose, onSave, onDelete, datasource, configData } = this.props;
+    const { onClose, onDelete, datasource, compactionConfig } = this.props;
     const { currentConfig, allJSONValid } = this.state;
     return (
       <Dialog
@@ -119,13 +126,13 @@ export class CompactionDialog extends React.PureComponent<
               text="Delete"
               intent={Intent.DANGER}
               onClick={onDelete}
-              disabled={configData === undefined}
+              disabled={!compactionConfig}
             />
             <Button text="Close" onClick={onClose} />
             <Button
               text="Submit"
               intent={Intent.PRIMARY}
-              onClick={() => onSave(currentConfig)}
+              onClick={this.handleSubmit}
               disabled={!currentConfig || !allJSONValid}
             />
           </div>

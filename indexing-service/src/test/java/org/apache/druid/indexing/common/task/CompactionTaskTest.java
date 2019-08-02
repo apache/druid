@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -285,6 +286,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -293,7 +295,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -456,13 +457,14 @@ public class CompactionTaskTest
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
-        6,
+        null,
         500000,
         1000000L,
         null,
         null,
         null,
         null,
+        new HashedPartitionsSpec(6, null, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -471,7 +473,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -520,10 +521,11 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
-        6L,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(null, 6, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -532,7 +534,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -583,8 +584,9 @@ public class CompactionTaskTest
         1000000L,
         null,
         null,
-        3,
         null,
+        null,
+        new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -593,7 +595,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -844,13 +845,14 @@ public class CompactionTaskTest
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
-        6,
+        null,
         500000,
         1000000L,
         null,
         null,
         null,
         null,
+        new HashedPartitionsSpec(6, null, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -859,7 +861,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -1033,13 +1034,14 @@ public class CompactionTaskTest
         expectedSegmentIntervals,
         new IndexTuningConfig(
             null,
-            41943040, // automatically computed targetPartitionSize
+            null,
             500000,
             1000000L,
             Long.MAX_VALUE,
             null,
             null,
             null,
+            new HashedPartitionsSpec(41943040, null, null), // automatically computed targetPartitionSize
             new IndexSpec(
                 new RoaringBitmapSerdeFactory(true),
                 CompressionStrategy.LZ4,
@@ -1048,7 +1050,6 @@ public class CompactionTaskTest
             ),
             null,
             5000,
-            true,
             true,
             false,
             null,

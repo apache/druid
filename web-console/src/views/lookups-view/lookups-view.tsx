@@ -370,7 +370,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       <div className="lookups-view app-view">
         <ViewControlBar label="Lookups">
           <RefreshButton
-            onRefresh={() => this.lookupsQueryManager.rerunLastQuery()}
+            onRefresh={auto => this.lookupsQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}
           />
           {!lookupsError && (

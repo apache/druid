@@ -61,7 +61,7 @@ import {
   parseJson,
   QueryState,
 } from '../../utils';
-import { possibleDruidFormatForValues } from '../../utils/druid-time';
+import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
   changeParallel,
@@ -169,7 +169,12 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
     };
   });
 
-  return timestampSpecs[0] || getEmptyTimestampSpec();
+  return (
+    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
+    timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
+    timestampSpecs[0] || // Fall back to the first one
+    getEmptyTimestampSpec() // Ok, empty it is...
+  );
 }
 
 type Step =
@@ -343,13 +348,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   componentDidMount(): void {
+    const { initTaskId, initSupervisorId } = this.props;
     const { spec } = this.state;
 
     this.getOverlordModules();
-    if (this.props.initTaskId) {
+    if (initTaskId) {
       this.updateStep('loading');
       this.getTaskJson();
-    } else if (this.props.initSupervisorId) {
+    } else if (initSupervisorId) {
       this.updateStep('loading');
       this.getSupervisorJson();
     } else if (isEmptyIngestionSpec(spec)) {

@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -47,6 +48,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,14 +62,15 @@ public class GroupByQueryHelper
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
+      @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
-      final boolean combine
+      NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Granularity gran = query.getGranularity();
     final DateTime timeStart = query.getIntervals().get(0).getStart();
+    final boolean combine = subquery == null;
 
     DateTime granTimeStart = timeStart;
     if (!(Granularities.ALL.equals(gran))) {
@@ -142,23 +145,28 @@ public class GroupByQueryHelper
       @Override
       public IncrementalIndex accumulate(IncrementalIndex accumulated, T in)
       {
+        final MapBasedRow mapBasedRow;
 
         if (in instanceof MapBasedRow) {
-          try {
-            MapBasedRow row = (MapBasedRow) in;
-            accumulated.add(
-                new MapBasedInputRow(
-                    row.getTimestamp(),
-                    dimensions,
-                    row.getEvent()
-                )
-            );
-          }
-          catch (IndexSizeExceededException e) {
-            throw new ResourceLimitExceededException(e.getMessage());
-          }
+          mapBasedRow = (MapBasedRow) in;
+        } else if (in instanceof ResultRow) {
+          final ResultRow row = (ResultRow) in;
+          mapBasedRow = row.toMapBasedRow(combine ? query : subquery);
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
+        }
+
+        try {
+          accumulated.add(
+              new MapBasedInputRow(
+                  mapBasedRow.getTimestamp(),
+                  dimensions,
+                  mapBasedRow.getEvent()
+              )
+          );
+        }
+        catch (IndexSizeExceededException e) {
+          throw new ResourceLimitExceededException(e.getMessage());
         }
 
         return accumulated;
@@ -189,39 +197,31 @@ public class GroupByQueryHelper
   // Used by GroupByStrategyV1
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
+      @Nullable GroupByQuery subquery,
       GroupByQueryConfig config,
       NonBlockingPool<ByteBuffer> bufferPool,
-      Sequence<Row> rows,
-      boolean combine
+      Sequence<ResultRow> rows
   )
   {
-    Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
-        query,
-        config,
-        bufferPool,
-        combine
-    );
+    final Pair<IncrementalIndex, Accumulator<IncrementalIndex, ResultRow>> indexAccumulatorPair =
+        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config, bufferPool);
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
 
   // Used by GroupByStrategyV1
-  public static Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
+  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex<?> index)
   {
     return Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
-        new Function<Row, Row>()
-        {
-          @Override
-          public Row apply(Row input)
-          {
-            final MapBasedRow row = (MapBasedRow) input;
-            return new MapBasedRow(
-                query.getGranularity()
-                     .toDateTime(row.getTimestampFromEpoch()),
-                row.getEvent()
-            );
+        input -> {
+          final ResultRow resultRow = toResultRow(query, input);
+
+          if (query.getResultRowHasTimestamp()) {
+            resultRow.set(0, query.getGranularity().toDateTime(resultRow.getLong(0)).getMillis());
           }
+
+          return resultRow;
         }
     );
   }
@@ -257,5 +257,29 @@ public class GroupByQueryHelper
 
     // Don't include post-aggregators since we don't know what types they are.
     return types.build();
+  }
+
+  public static ResultRow toResultRow(final GroupByQuery query, final Row row)
+  {
+    final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithPostAggregators());
+    int i = 0;
+
+    if (query.getResultRowHasTimestamp()) {
+      resultRow.set(i++, row.getTimestampFromEpoch());
+    }
+
+    for (DimensionSpec dimensionSpec : query.getDimensions()) {
+      resultRow.set(i++, row.getRaw(dimensionSpec.getOutputName()));
+    }
+
+    for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+      resultRow.set(i++, row.getRaw(aggregatorFactory.getName()));
+    }
+
+    for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+      resultRow.set(i++, row.getRaw(postAggregator.getName()));
+    }
+
+    return resultRow;
   }
 }
