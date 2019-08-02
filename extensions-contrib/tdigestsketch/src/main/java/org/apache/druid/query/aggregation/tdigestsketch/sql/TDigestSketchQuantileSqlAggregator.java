@@ -37,8 +37,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
+import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -91,7 +91,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = StringUtils.format("%s:agg", name);
+    final String sketchName = StringUtils.format("%s:agg", name);
 
     // this is expected to be quantile fraction
     final RexNode quantileArg = Expressions.fromFieldAccess(
@@ -106,7 +106,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     }
 
     final double quantile = ((Number) RexLiteral.value(quantileArg)).floatValue();
-    Integer compression = null;
+    Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     if (aggregateCall.getArgList().size() > 2) {
       final RexNode compressionArg = Expressions.fromFieldAccess(
           rowSignature,
@@ -120,29 +120,14 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     for (final Aggregation existing : existingAggregations) {
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
         if (factory instanceof TDigestSketchAggregatorFactory) {
-          final TDigestSketchAggregatorFactory theFactory = (TDigestSketchAggregatorFactory) factory;
+          final boolean matches = TDigestSketchUtils.matchingAggregatorFactoryExists(
+              input,
+              compression,
+              existing,
+              (TDigestSketchAggregatorFactory) factory
+          );
 
-          // Check input for equivalence.
-          final boolean inputMatches;
-          final VirtualColumn virtualInput = existing.getVirtualColumns()
-                                                     .stream()
-                                                     .filter(
-                                                         virtualColumn ->
-                                                             virtualColumn.getOutputName()
-                                                                          .equals(theFactory.getFieldName())
-                                                     )
-                                                     .findFirst()
-                                                     .orElse(null);
-
-          if (virtualInput == null) {
-            inputMatches = input.isDirectColumnAccess()
-                           && input.getDirectColumn().equals(theFactory.getFieldName());
-          } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
-                                                                   .equals(input.getExpression());
-          }
-
-          if (inputMatches) {
+          if (matches) {
             // Found existing one. Use this.
             return Aggregation.create(
                 ImmutableList.of(),
@@ -165,7 +150,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
 
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new TDigestSketchAggregatorFactory(
-          histogramName,
+          sketchName,
           input.getDirectColumn(),
           compression
       );
@@ -177,7 +162,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
       );
       virtualColumns.add(virtualColumn);
       aggregatorFactory = new TDigestSketchAggregatorFactory(
-          histogramName,
+          sketchName,
           virtualColumn.getOutputName(),
           compression
       );
@@ -189,8 +174,8 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
         new TDigestSketchToQuantilePostAggregator(
             name,
             new FieldAccessPostAggregator(
-                histogramName,
-                histogramName
+                sketchName,
+                sketchName
             ),
             quantile
         )

@@ -34,8 +34,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -89,45 +89,32 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
 
     final AggregatorFactory aggregatorFactory;
     final String aggName = StringUtils.format("%s:agg", name);
-    final RexNode maxNumEntriesOperand = Expressions.fromFieldAccess(
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
 
-    if (!maxNumEntriesOperand.isA(SqlKind.LITERAL)) {
-      // maxNumEntriesOperand must be a literal in order to plan.
-      return null;
+    Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
+    if (aggregateCall.getArgList().size() > 1) {
+      RexNode compressionOperand = Expressions.fromFieldAccess(
+          rowSignature,
+          project,
+          aggregateCall.getArgList().get(1)
+      );
+      if (!compressionOperand.isA(SqlKind.LITERAL)) {
+        // compressionOperand must be a literal in order to plan.
+        return null;
+      }
+      compression = ((Number) RexLiteral.value(compressionOperand)).intValue();
     }
-
-    final Integer compression = ((Number) RexLiteral.value(maxNumEntriesOperand)).intValue();
 
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
         if (factory instanceof TDigestSketchAggregatorFactory) {
           final TDigestSketchAggregatorFactory theFactory = (TDigestSketchAggregatorFactory) factory;
-
-          // Check input for equivalence.
-          final boolean inputMatches;
-          final VirtualColumn virtualInput = existing.getVirtualColumns()
-                                                     .stream()
-                                                     .filter(
-                                                         virtualColumn ->
-                                                             virtualColumn.getOutputName()
-                                                                          .equals(theFactory.getFieldName())
-                                                     )
-                                                     .findFirst()
-                                                     .orElse(null);
-
-          if (virtualInput == null) {
-            inputMatches = input.isDirectColumnAccess()
-                           && input.getDirectColumn().equals(theFactory.getFieldName());
-          } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
-                                                                   .equals(input.getExpression());
-          }
-          final boolean matches = inputMatches && theFactory.getCompression() == compression;
+          final boolean matches = TDigestSketchUtils.matchingAggregatorFactoryExists(
+              input,
+              compression,
+              existing,
+              (TDigestSketchAggregatorFactory) factory
+          );
 
           if (matches) {
             // Found existing one. Use this.
@@ -170,8 +157,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
 
   private static class TDigestGenerateSketchSqlAggFunction extends SqlAggFunction
   {
-    //private static final String SIGNATURE1 = "'" + NAME + "(column)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, compression)'\n";
+    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'\n";
 
     TDigestGenerateSketchSqlAggFunction()
     {
@@ -181,9 +167,12 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.OTHER),
           null,
-          OperandTypes.and(
-              OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL),
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+          OperandTypes.or(
+              OperandTypes.ANY,
+              OperandTypes.and(
+                  OperandTypes.sequence(SIGNATURE_WITH_COMPRESSION, OperandTypes.ANY, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              )
           ),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,

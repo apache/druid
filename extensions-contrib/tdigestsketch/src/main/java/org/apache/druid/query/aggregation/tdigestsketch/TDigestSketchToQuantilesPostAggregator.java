@@ -25,8 +25,8 @@ import com.google.common.base.Preconditions;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Arrays;
@@ -143,7 +143,7 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID).appendCacheable(field);
+        PostAggregatorIds.TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID).appendCacheable(field);
     for (final double value : fractions) {
       builder.appendDouble(value);
     }

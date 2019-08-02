@@ -25,8 +25,8 @@ import com.google.common.base.Preconditions;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
@@ -52,7 +52,7 @@ public class TDigestSketchToQuantilePostAggregator implements PostAggregator
   public TDigestSketchToQuantilePostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("fractions") final double fraction
+      @JsonProperty("fraction") final double fraction
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
@@ -112,7 +112,7 @@ public class TDigestSketchToQuantilePostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID).appendCacheable(field);
+        PostAggregatorIds.TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID).appendCacheable(field);
     builder.appendDouble(fraction);
     return builder.build();
   }

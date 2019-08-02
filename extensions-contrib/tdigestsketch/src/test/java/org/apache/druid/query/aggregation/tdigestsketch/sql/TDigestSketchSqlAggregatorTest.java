@@ -211,6 +211,32 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   }
 
   @Test
+  public void testDefaultCompressionForTDigestGenerateSketchAgg() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT\n"
+                       + "TDIGEST_GENERATE_SKETCH(m1)"
+                       + "FROM foo";
+
+    // Log query
+    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(ImmutableList.of(
+                  new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
+              ))
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
+  }
+
+  @Test
   public void testComputingQuantileOnPreAggregatedSketch() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
@@ -368,6 +394,44 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                   new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.0f),
                   new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a0:agg"), 0.5f),
                   new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a0:agg"), 1.0f)
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
+  }
+
+  @Test
+  public void testCompressionParamForTDigestQuantileAgg() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT\n"
+                       + "TDIGEST_QUANTILE(m1, 0.0), TDIGEST_QUANTILE(m1, 0.5, 200), TDIGEST_QUANTILE(m1, 1.0, 300)\n"
+                       + "FROM foo";
+
+    // Log query
+    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(ImmutableList.of(
+                  new TDigestSketchAggregatorFactory("a0:agg", "m1",
+                                                     TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION
+                  ),
+                  new TDigestSketchAggregatorFactory("a1:agg", "m1",
+                                                     200
+                  ),
+                  new TDigestSketchAggregatorFactory("a2:agg", "m1",
+                                                     300
+                  )))
+              .postAggregators(
+                  new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.0f),
+                  new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.5f),
+                  new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 1.0f)
               )
               .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
               .build(),
