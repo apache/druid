@@ -370,7 +370,7 @@ exports[`tasks view matches snapshot 1`] = `
                 onClick={[Function]}
                 popoverProps={Object {}}
                 shouldDismissPopover={true}
-                text="Go to SQL"
+                text="See in SQL view"
               />
             </Blueprint3.Menu>
           }
