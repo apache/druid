@@ -41,6 +41,7 @@ import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
@@ -103,6 +104,7 @@ public class CliIndexer extends ServerRunnable
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
+            JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
             CliPeon.bindTaskConfigAndClients(binder);
