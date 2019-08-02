@@ -33,7 +33,12 @@ You can run a task to overwrite existing data. The segments created by an overwr
 Note that the overshadow relation holds only for the same time chunk and the same data source.
 These overshadowed segments are not considered in query processing to filter out stale data.
 
-A segment `s1` can overshadow another `s2` if
+Each segment has a _major_ version and a _minor_ version. The major version is
+represented as a timestamp in the format of [`"yyyy-MM-dd'T'hh:mm:ss"`](https://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)
+while the minor version is an integer number. These major and minor versions
+are used to determine the overshadow relation between segments as seen below. 
+
+A segment `s1` overshadows another `s2` if
 
 - `s1` has a higher major version than `s2`.
 - `s1` has the same major version and a higher minor version than `s2`.
@@ -48,28 +53,38 @@ Here are some examples.
 ## Locking
 
 If you are running two or more [druid tasks](./tasks.html) which generate segments for the same data source and the same time chunk,
-the generated segments could potentially overshadow each other which could lead to incorrect query results.
+the generated segments could potentially overshadow each other, which could lead to incorrect query results.
 
-To avoid this problem, tasks should get locks first before creating any segment in Druid.
-There are two types of locks, i.e., _time chunk lock_ and _segment lock_, and each task can use different types of locks.
+To avoid this problem, tasks will attempt to get locks prior to creating any segment in Druid.
+There are two types of locks, i.e., _time chunk lock_ and _segment lock_.
 
 When the time chunk lock is used, a task locks the entire time chunk of a data source where generated segments will be written.
 For example, suppose we have a task ingesting data into the time chunk of `2019-01-01T00:00:00.000Z/2019-01-02T00:00:00.000Z` of the `wikipedia` data source.
-With the time chunk locking, this task should lock the entire time chunk of `2019-01-01T00:00:00.000Z/2019-01-02T00:00:00.000Z` of the `wikipedia` data source
-before it creates any segments. As long as it holds the lock, any other task can't create segments for the same time chunk of the same data source.
+With the time chunk locking, this task will lock the entire time chunk of `2019-01-01T00:00:00.000Z/2019-01-02T00:00:00.000Z` of the `wikipedia` data source
+before it creates any segments. As long as it holds the lock, any other tasks will be unable to create segments for the same time chunk of the same data source.
 The segments created with the time chunk locking have a _higher_ major version than existing segments. Their minor version is always `0`.
 
 When the segment lock is used, a task locks individual segments instead of the entire time chunk.
 As a result, two or more tasks can create segments for the same time chunk of the same data source simultaneously
 if they are reading different segments.
-For example, a Kafka indexing task and a compaction task can always write segments into the same time chunk of the same data source simultaneously
-because the Kafka indexing task always appends new segments while the compaction task always overwrites existing segments.
+For example, a Kafka indexing task and a compaction task can always write segments into the same time chunk of the same data source simultaneously.
+The reason for this is because a Kafka indexing task always appends new segments, while a compaction task always overwrites existing segments.
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
+
+To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#task-context).
+Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to use automatically.
+Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
+when an overwriting task changes the segment granularity.
+Also, the segment locking is supported by only native indexing tasks and Kafka/Kinesis indexing tasks.
+The Hadoop indexing tasks and realtime indexing tasks (with [Tranquility](./stream-push.html)) don't support it yet.
+
+`forceTimeChunkLock` in the task context is only applied to individual tasks.
+If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.html#overlord-operations).
 
 Lock requests can conflict with each other if two or more tasks try to get locks for the overlapped time chunks of the same data source.
 Note that the lock conflict can happen between different locks types.
 
-The behavior on lock conflicts depends on the [task priority](#priority).
+The behavior on lock conflicts depends on the [task priority](#task-lock-priority).
 If all tasks of conflicting lock requests have the same priority, then the task who requested first will get the lock.
 Other tasks will wait for the task to release the lock.
 
@@ -85,12 +100,9 @@ when it is _publishing segments_ in a critical section. Its locks become preempt
 Note that locks are shared by the tasks of the same groupId.
 For example, Kafka indexing tasks of the same supervisor have the same groupId and share all locks with each other.
 
-## Priority
+## Task Lock Priority
 
-Each task has a priority which is used for lock acquisition.
-A lock of a higher priority can preempt another lock of a lower-priority if they conflict with each other.
-
-Tasks can have different default priorities depening on their types. Here is a list of default priorities. Higher the number, higher the priority.
+Each task type has a different default lock priority. The below table shows the default priorities of different task types. Higher the number, higher the priority.
 
 |task type|default priority|
 |---------|----------------|
