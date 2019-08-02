@@ -44,7 +44,7 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
-  addFilterNoQuotes,
+  addFilterRaw,
   booleanCustomTableFilter,
   formatDuration,
   getDruidErrorMessage,
@@ -549,7 +549,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
             let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
             if (datasourceFilter) {
-              newTaskFilter = addFilterNoQuotes(
+              newTaskFilter = addFilterRaw(
                 newTaskFilter,
                 datasourceFilter.id,
                 datasourceFilter.value,
@@ -726,7 +726,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
             let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
             if (datasourceFilter) {
-              newSupervisorFilter = addFilterNoQuotes(
+              newSupervisorFilter = addFilterRaw(
                 newSupervisorFilter,
                 datasourceFilter.id,
                 datasourceFilter.value,

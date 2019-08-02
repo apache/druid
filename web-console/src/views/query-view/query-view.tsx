@@ -175,8 +175,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         if (QueryView.isRune(queryString)) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(queryString);
+          if (!isEmptyContext(queryContext)) Object.assign(runeQuery.context, queryContext);
 
-          if (!isEmptyContext(queryContext)) runeQuery.context = queryContext;
           let runeResult: any[];
           try {
             const runeResultResp = await axios.post('/druid/v2', runeQuery);
@@ -199,9 +199,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             query: actualQuery,
             resultFormat: 'array',
             header: true,
+            context: isEmptyContext(queryContext) ? undefined : queryContext,
           };
 
-          if (!isEmptyContext(queryContext)) queryPayload.context = queryContext;
           let sqlResult: any[];
           try {
             const sqlResultResp = await axios.post('/druid/v2/sql', queryPayload);

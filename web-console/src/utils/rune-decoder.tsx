@@ -61,6 +61,10 @@ function processArrayWithEvent(rune: any[]): HeaderRows {
   return flatArrayToHeaderRows(rune.map(r => r.event));
 }
 
+function processArrayWithArray(rune: any[][]): HeaderRows {
+  return flatArrayToHeaderRows(rune);
+}
+
 function processArrayWithResult(rune: any[]): HeaderRows {
   return flatArrayToHeaderRows(rune.map(r => r.result));
 }
@@ -83,9 +87,10 @@ function processSegmentMetadata(rune: any[]): HeaderRows {
 
 export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
   let queryType = runeQuery.queryType;
+  const effectiveContext = runeQuery.context || {};
   if (typeof queryType !== 'string') throw new Error('must have queryType');
   if (!SUPPORTED_QUERY_TYPES.includes(queryType)) {
-    const treatQueryTypeAs = (runeQuery.context || {}).treatQueryTypeAs;
+    const treatQueryTypeAs = effectiveContext.treatQueryTypeAs;
     if (typeof treatQueryTypeAs === 'string') {
       if (SUPPORTED_QUERY_TYPES.includes(treatQueryTypeAs)) {
         queryType = treatQueryTypeAs;
@@ -114,7 +119,11 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
       return processArrayWithResultArray(runeResult);
 
     case 'groupBy':
-      return processArrayWithEvent(runeResult);
+      if (effectiveContext.resultAsArray) {
+        return processArrayWithArray(runeResult);
+      } else {
+        return processArrayWithEvent(runeResult);
+      }
 
     case 'timeBoundary':
     case 'dataSourceMetadata':
