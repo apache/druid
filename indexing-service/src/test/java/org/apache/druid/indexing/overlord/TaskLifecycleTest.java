@@ -560,6 +560,7 @@ public class TaskLifecycleTest
 
     return new TaskToolboxFactory(
         taskConfig,
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         tac,
         emitter,
         dataSegmentPusher,
