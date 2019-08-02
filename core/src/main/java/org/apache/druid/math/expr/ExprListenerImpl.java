@@ -422,8 +422,8 @@ public class ExprListenerImpl extends ExprBaseListener
   /**
    * All {@link IdentifierExpr} that are *not* bound to a {@link LambdaExpr} identifier, will recieve a unique
    * {@link IdentifierExpr#identifier} value which may or may not be the same as the
-   * {@link IdentifierExpr#bindingIdentifier} value. {@link LambdaExpr} identifiers however, will always have
-   * {@link IdentifierExpr#identifier} be the same as {@link IdentifierExpr#bindingIdentifier} because they have
+   * {@link IdentifierExpr#binding} value. {@link LambdaExpr} identifiers however, will always have
+   * {@link IdentifierExpr#identifier} be the same as {@link IdentifierExpr#binding} because they have
    * synthetic bindings set at evaluation time. This is done to aid in analysis needed for the automatic expression
    * translation which maps scalar expressions to multi-value inputs. See
    * {@link Parser#applyUnappliedBindings(Expr, Expr.BindingDetails, List)}} for additional details.
